@@ -15,6 +15,7 @@ import {
   ShoppingCartOutlined,
   PersonOutline,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { label: "Nước Hoa Nam", href: "#" },
@@ -24,6 +25,7 @@ const navItems = [
 ];
 
 export const Header = () => {
+  const navigate = useNavigate();
   return (
     <AppBar
       position="sticky"
@@ -88,6 +90,7 @@ export const Header = () => {
               startIcon={<PersonOutline />}
               color="inherit"
               sx={{ fontWeight: 500 }}
+              onClick={() => navigate("/login")}
             >
               Đăng nhập
             </Button>
