@@ -11,6 +11,8 @@ import { RegisterPage } from "./pages/RegisterPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
+import ShipmentOrderPage from "./pages/ShipmentOrderPage";
+import ReceiveShipmentPage from "./pages/ReceiveShipmentPage";
 import "./App.css";
 
 function App() {
@@ -23,6 +25,8 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/shipment-order" element={<ShipmentOrderPage />} />
+            <Route path="/receive-shipment" element={<ReceiveShipmentPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
             {/* Admin Routes */}
