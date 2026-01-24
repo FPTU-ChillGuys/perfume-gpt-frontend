@@ -5,6 +5,7 @@ import {
   Security,
   ArrowForward,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 
 const features = [
   {
@@ -22,6 +23,7 @@ const features = [
 ];
 
 export const FeatureSection = () => {
+  const navigate = useNavigate();
   return (
     <Box sx={{ py: 8, bgcolor: "background.paper" }}>
       <Container maxWidth="xl">
@@ -85,6 +87,10 @@ export const FeatureSection = () => {
                 bgcolor: "secondary.main",
                 color: "white",
               },
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/register");
             }}
           >
             ĐĂNG KÝ NGAY

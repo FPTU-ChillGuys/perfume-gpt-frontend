@@ -8,14 +8,25 @@ import {
   Button,
   Typography,
   InputAdornment,
+  Menu,
+  MenuItem,
+  Divider,
+  ListItemIcon,
+  Avatar,
 } from "@mui/material";
 import {
   Search,
   FavoriteBorder,
   ShoppingCartOutlined,
   PersonOutline,
+  ArrowDropDown,
+  ArrowDropUp,
+  Dashboard as DashboardIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
+import { useState } from "react";
 
 const navItems = [
   { label: "Nước Hoa Nam", href: "#" },
@@ -26,6 +37,31 @@ const navItems = [
 
 export const Header = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleDashboard = () => {
+    if (user?.role === "admin") {
+      navigate("/admin/dashboard");
+    } else if (user?.role === "staff") {
+      navigate("/staff/dashboard");
+    }
+    handleMenuClose();
+  };
+
+  const handleLogout = () => {
+    logout();
+    handleMenuClose();
+  };
+
   return (
     <AppBar
       position="sticky"
@@ -42,7 +78,8 @@ export const Header = () => {
             component="h1"
             color="primary"
             fontWeight="bold"
-            sx={{ flexShrink: 0 }}
+            sx={{ flexShrink: 0, cursor: "pointer" }}
+            onClick={() => navigate("/")}
           >
             PerfumeGPT
           </Typography>
@@ -86,14 +123,108 @@ export const Header = () => {
             <IconButton color="default">
               <ShoppingCartOutlined />
             </IconButton>
-            <Button
-              startIcon={<PersonOutline />}
-              color="inherit"
-              sx={{ fontWeight: 500 }}
-              onClick={() => navigate("/login")}
-            >
-              Đăng nhập
-            </Button>
+
+            {isAuthenticated && user ? (
+              <>
+                <Button
+                  endIcon={anchorEl ? <ArrowDropUp /> : <ArrowDropDown />}
+                  color="inherit"
+                  onClick={handleMenuOpen}
+                  sx={{
+                    textTransform: "none",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    px: 1.5,
+                  }}
+                >
+                  <Avatar
+                    sx={{
+                      width: 32,
+                      height: 32,
+                      mr: 1,
+                      bgcolor: "primary.main",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    {user.name.charAt(0).toUpperCase()}
+                  </Avatar>
+                  {user.email}
+                </Button>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleMenuClose}
+                  anchorOrigin={{
+                    vertical: "bottom",
+                    horizontal: "right",
+                  }}
+                  transformOrigin={{
+                    vertical: "top",
+                    horizontal: "right",
+                  }}
+                  PaperProps={{
+                    sx: {
+                      mt: 1.5,
+                      minWidth: 220,
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                    },
+                  }}
+                >
+                  <Box sx={{ px: 2, py: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      {user.name}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block" }}
+                    >
+                      {user.email}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        display: "inline-block",
+                        mt: 0.5,
+                        px: 1,
+                        py: 0.25,
+                        bgcolor: "primary.main",
+                        color: "white",
+                        borderRadius: 1,
+                        fontSize: "0.7rem",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {user.role}
+                    </Typography>
+                  </Box>
+                  <Divider />
+                  {(user.role === "admin" || user.role === "staff") && (
+                    <MenuItem onClick={handleDashboard} sx={{ py: 1.5 }}>
+                      <ListItemIcon>
+                        <DashboardIcon fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="body2">Dashboard</Typography>
+                    </MenuItem>
+                  )}
+                  <MenuItem onClick={handleLogout} sx={{ py: 1.5 }}>
+                    <ListItemIcon>
+                      <LogoutIcon fontSize="small" />
+                    </ListItemIcon>
+                    <Typography variant="body2">Đăng xuất</Typography>
+                  </MenuItem>
+                </Menu>
+              </>
+            ) : (
+              <Button
+                startIcon={<PersonOutline />}
+                color="inherit"
+                sx={{ fontWeight: 500 }}
+                onClick={() => navigate("/login")}
+              >
+                Đăng nhập
+              </Button>
+            )}
           </Box>
         </Toolbar>
       </Container>

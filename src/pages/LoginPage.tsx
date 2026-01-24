@@ -9,6 +9,8 @@ import {
   InputAdornment,
   IconButton,
   Divider,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 import {
   Visibility,
@@ -18,17 +20,39 @@ import {
   ArrowBack,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // TODO: Implement login logic
-    console.log("Login:", { email, password });
+    e.stopPropagation();
+
+    if (isLoading) return; // Prevent double submission
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      await login({ email, password });
+      // Navigation is handled by AuthContext based on role
+    } catch (err: any) {
+      console.error("Login error:", err);
+      const errorMessage =
+        err?.message ||
+        err?.response?.data?.message ||
+        "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -109,7 +133,14 @@ export const LoginPage = () => {
           </Typography>
 
           {/* Form */}
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
+            {/* Error Alert */}
+            {error && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error}
+              </Alert>
+            )}
+
             {/* Email Input */}
             <Box mb={1.5}>
               <Typography variant="body2" fontWeight={600} mb={0.5}>
@@ -121,6 +152,8 @@ export const LoginPage = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 size="small"
+                required
+                disabled={isLoading}
               />
             </Box>
 
@@ -154,6 +187,8 @@ export const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 size="small"
+                required
+                disabled={isLoading}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -161,6 +196,7 @@ export const LoginPage = () => {
                         onClick={() => setShowPassword(!showPassword)}
                         edge="end"
                         size="small"
+                        disabled={isLoading}
                       >
                         {showPassword ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -176,6 +212,7 @@ export const LoginPage = () => {
               variant="contained"
               fullWidth
               size="large"
+              disabled={isLoading}
               sx={{
                 mt: 2,
                 mb: 1.5,
@@ -187,7 +224,11 @@ export const LoginPage = () => {
                 },
               }}
             >
-              ĐĂNG NHẬP
+              {isLoading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                "ĐĂNG NHẬP"
+              )}
             </Button>
           </form>
 
