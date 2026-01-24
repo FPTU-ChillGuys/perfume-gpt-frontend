@@ -1,86 +1,128 @@
-import { Search, Heart, ShoppingCart, User } from "lucide-react";
+import {
+  AppBar,
+  Toolbar,
+  Box,
+  Container,
+  TextField,
+  IconButton,
+  Button,
+  Typography,
+  InputAdornment,
+} from "@mui/material";
+import {
+  Search,
+  FavoriteBorder,
+  ShoppingCartOutlined,
+  PersonOutline,
+} from "@mui/icons-material";
+
+const navItems = [
+  { label: "Nước Hoa Nam", href: "#" },
+  { label: "Nước Hoa Nữ", href: "#" },
+  { label: "GiftSet", href: "#" },
+  { label: "Thương Hiệu", href: "#" },
+];
 
 export const Header = () => {
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
+    <AppBar
+      position="sticky"
+      color="inherit"
+      elevation={0}
+      sx={{ borderBottom: 1, borderColor: "divider" }}
+    >
       {/* Top Bar */}
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between gap-8">
+      <Container maxWidth="xl">
+        <Toolbar sx={{ py: 1, justifyContent: "space-between" }}>
           {/* Logo */}
-          <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold text-red-600">PerfumeGPT</h1>
-          </div>
+          <Typography
+            variant="h5"
+            component="h1"
+            color="primary"
+            fontWeight="bold"
+            sx={{ flexShrink: 0 }}
+          >
+            PerfumeGPT
+          </Typography>
 
           {/* Search Bar */}
-          <div className="flex-1 max-w-2xl">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Tìm kiếm sản phẩm..."
-                className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-              />
-              <Search
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-            </div>
-          </div>
+          <Box
+            sx={{
+              flex: 1,
+              maxWidth: 640,
+              mx: 4,
+              display: "flex",
+              justifyContent: "center",
+            }}
+          >
+            <TextField
+              fullWidth
+              size="small"
+              placeholder="Tìm kiếm sản phẩm..."
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <Search color="action" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
 
           {/* Right Icons */}
-          <div className="flex items-center gap-6">
-            <button className="text-gray-900 hover:text-red-600">
-              <Heart size={24} fill="currentColor" />
-            </button>
-            <button className="text-gray-900 hover:text-red-600">
-              <ShoppingCart size={24} fill="currentColor" />
-            </button>
-            <button className="flex items-center gap-2 text-gray-900 hover:text-red-600">
-              <User size={24} fill="currentColor" />
-              <span className="text-sm font-medium">Đăng nhập</span>
-            </button>
-          </div>
-        </div>
-      </div>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
+              alignItems: "center",
+              flexShrink: 0,
+            }}
+          >
+            <IconButton color="default">
+              <FavoriteBorder />
+            </IconButton>
+            <IconButton color="default">
+              <ShoppingCartOutlined />
+            </IconButton>
+            <Button
+              startIcon={<PersonOutline />}
+              color="inherit"
+              sx={{ fontWeight: 500 }}
+            >
+              Đăng nhập
+            </Button>
+          </Box>
+        </Toolbar>
+      </Container>
 
       {/* Navigation */}
-      <nav>
-        <div className="container mx-auto px-4">
-          <ul className="flex items-center justify-center gap-8 py-4">
-            <li>
-              <a
-                href="#"
-                className="text-gray-700 hover:text-red-600 font-medium"
-              >
-                Nước Hoa Nam
-              </a>
-            </li>
-            <li>
-              <a
-                href="#"
-                className="text-gray-700 hover:text-red-600 font-medium"
-              >
-                Nước Hoa Nữ
-              </a>
-            </li>
-            <li>
-              <a
-                href="#"
-                className="text-gray-700 hover:text-red-600 font-medium"
-              >
-                GiftSet
-              </a>
-            </li>
-            <li>
-              <a
-                href="#"
-                className="text-gray-700 hover:text-red-600 font-medium"
-              >
-                Thương Hiệu
-              </a>
-            </li>
-          </ul>
-        </div>
-      </nav>
-    </header>
+      <Container maxWidth="xl">
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 4,
+            py: 2,
+          }}
+        >
+          {navItems.map((item) => (
+            <Button
+              key={item.label}
+              href={item.href}
+              color="inherit"
+              sx={{
+                fontWeight: 500,
+                color: "text.primary",
+                "&:hover": {
+                  color: "primary.main",
+                },
+              }}
+            >
+              {item.label}
+            </Button>
+          ))}
+        </Box>
+      </Container>
+    </AppBar>
   );
 };

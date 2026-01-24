@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { Box } from "@mui/material";
 import { Header } from "../components/layout/Header";
 import { Footer } from "../components/layout/Footer";
 import { ScrollToTop } from "../components/common/ScrollToTop";
@@ -9,11 +10,20 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: "background.default",
+      }}
+    >
       <Header />
-      <main className="flex-1">{children}</main>
+      <Box component="main" sx={{ flex: 1 }}>
+        {children}
+      </Box>
       <Footer />
       <ScrollToTop />
-    </div>
+    </Box>
   );
 };

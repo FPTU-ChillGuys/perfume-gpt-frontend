@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { ArrowUp } from "lucide-react";
+import { Fab, Zoom } from "@mui/material";
+import { KeyboardArrowUp } from "@mui/icons-material";
 
 export const ScrollToTop = () => {
   const [isVisible, setIsVisible] = useState(false);
@@ -28,16 +29,21 @@ export const ScrollToTop = () => {
   };
 
   return (
-    <>
-      {isVisible && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-50 p-3 bg-red-600 text-white rounded-full shadow-lg hover:bg-red-700 transition-all duration-300 hover:scale-110"
-          aria-label="Scroll to top"
-        >
-          <ArrowUp size={24} />
-        </button>
-      )}
-    </>
+    <Zoom in={isVisible}>
+      <Fab
+        color="primary"
+        size="medium"
+        aria-label="scroll to top"
+        onClick={scrollToTop}
+        sx={{
+          position: "fixed",
+          bottom: 32,
+          right: 32,
+          zIndex: 1000,
+        }}
+      >
+        <KeyboardArrowUp />
+      </Fab>
+    </Zoom>
   );
 };

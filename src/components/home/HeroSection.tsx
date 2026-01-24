@@ -1,48 +1,151 @@
+import { Box, Container, Typography, Button, Grid } from "@mui/material";
+
 export const HeroSection = () => {
   return (
-    <section className="relative h-[500px] bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 overflow-hidden">
-      {/* Background Image (placeholder) */}
-      <div className="absolute inset-0 bg-black/40"></div>
+    <Box
+      sx={{
+        position: "relative",
+        height: 500,
+        background:
+          "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1e3a8a 100%)",
+        overflow: "hidden",
+      }}
+    >
+      {/* Background Overlay */}
+      <Box
+        sx={{
+          position: "absolute",
+          inset: 0,
+          bgcolor: "rgba(0, 0, 0, 0.4)",
+        }}
+      />
 
       {/* Content */}
-      <div className="container mx-auto px-4 h-full relative z-10">
-        <div className="grid md:grid-cols-2 gap-8 h-full items-center">
+      <Container
+        maxWidth="xl"
+        sx={{
+          height: "100%",
+          position: "relative",
+          zIndex: 10,
+        }}
+      >
+        <Grid
+          container
+          spacing={4}
+          sx={{ height: "100%", alignItems: "center" }}
+        >
           {/* Left Content */}
-          <div className="text-white">
-            <p className="text-sm tracking-wider mb-4 text-gray-300">
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Typography
+              variant="overline"
+              sx={{
+                color: "grey.300",
+                letterSpacing: 2,
+                mb: 2,
+                display: "block",
+              }}
+            >
               EXCLUSIVE RELEASE
-            </p>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
+            </Typography>
+            <Typography
+              variant="h1"
+              sx={{
+                color: "white",
+                fontSize: { xs: "3rem", md: "4rem" },
+                fontWeight: "bold",
+                mb: 3,
+                lineHeight: 1.2,
+              }}
+            >
               ELIXIR
               <br />
               ABSOLU
-            </h1>
-            <p className="text-gray-300 mb-8 max-w-md leading-relaxed">
+            </Typography>
+            <Typography
+              variant="body1"
+              sx={{
+                color: "grey.300",
+                mb: 4,
+                maxWidth: 500,
+                lineHeight: 1.7,
+              }}
+            >
               Khơi gợi những nốt hương quyến rũ, sang trọng với hương thơm từ
               hoa hồng, vani và xạ hương, tôn lên sự đẳng cấp trong từng giây
               phút.
-            </p>
-            <div className="flex gap-4">
-              <button className="bg-white text-gray-900 px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition">
+            </Typography>
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button
+                variant="contained"
+                size="large"
+                color="inherit"
+                sx={{
+                  bgcolor: "white",
+                  color: "grey.900",
+                  "&:hover": { bgcolor: "grey.100" },
+                }}
+              >
                 Mua Ngay
-              </button>
-              <button className="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition">
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                sx={{
+                  borderColor: "white",
+                  color: "white",
+                  borderWidth: 2,
+                  "&:hover": {
+                    borderWidth: 2,
+                    bgcolor: "rgba(255, 255, 255, 0.1)",
+                  },
+                }}
+              >
                 Chi tiết
-              </button>
-            </div>
-          </div>
+              </Button>
+            </Box>
+          </Grid>
 
           {/* Right Image Placeholder */}
-          <div className="hidden md:flex items-center justify-center">
-            <div className="w-64 h-80 bg-gradient-to-br from-pink-600/30 to-purple-600/30 rounded-lg backdrop-blur-sm flex items-center justify-center">
-              <div className="text-white/50 text-center">
-                <div className="w-32 h-48 mx-auto bg-white/10 rounded-lg mb-4"></div>
-                <p className="text-sm">Product Image</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+          <Grid
+            size={{ xs: 12, md: 6 }}
+            sx={{
+              display: { xs: "none", md: "flex" },
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <Box
+              sx={{
+                width: 256,
+                height: 320,
+                background:
+                  "linear-gradient(135deg, rgba(219, 39, 119, 0.3) 0%, rgba(147, 51, 234, 0.3) 100%)",
+                borderRadius: 2,
+                backdropFilter: "blur(8px)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Box
+                sx={{ textAlign: "center", color: "rgba(255, 255, 255, 0.5)" }}
+              >
+                <Box
+                  sx={{
+                    width: 128,
+                    height: 192,
+                    mx: "auto",
+                    mb: 2,
+                    bgcolor: "rgba(255, 255, 255, 0.1)",
+                    borderRadius: 2,
+                  }}
+                />
+                <Typography variant="body2">Product Image</Typography>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
+    </Box>
   );
 };
