@@ -37,6 +37,13 @@ export interface BatchData {
   createdAt: string;
 }
 
+export interface BatchVerifyData {
+  batchCode: string;
+  manufactureDate: string;
+  expiryDate: string;
+  quantity: number;
+}
+
 export interface ImportDetailData {
   id: string;
   variantId: string;
@@ -48,6 +55,20 @@ export interface ImportDetailData {
   rejectQuantity: number;
   note: string | null;
   batches: BatchData[];
+}
+
+export interface ConfirmationBatchItem extends BatchVerifyData {
+  // Additional fields for UI
+}
+
+export interface ConfirmationImportDetail {
+  id: string;
+  variantName: string;
+  variantSku: string;
+  quantity: number;
+  rejectQuantity: number;
+  note: string | null;
+  batches: BatchVerifyData[];
 }
 
 export interface ImportTicketDetailResponse {
@@ -73,9 +94,10 @@ export interface ImportTicketDetailResponse {
 
 export interface ImportDetailVerify {
   importDetailId: string;
+  acceptedQuantity: number;
   rejectQuantity: number;
   note: string | null;
-  batches: BatchData[];
+  batches: BatchVerifyData[];
 }
 
 export interface VerifyTicketRequest {
@@ -128,7 +150,6 @@ class ReceiveShipmentService {
 
   async getImportTicketDetail(ticketId: string): Promise<ImportTicketDetailResponse> {
     try {
-      console.log("📦 Fetching ticket detail:", ticketId);
       const response = await axiosInstance.get<ImportTicketDetailResponse>(
         `${this.ENDPOINT}/${ticketId}`
       );
@@ -137,7 +158,6 @@ class ReceiveShipmentService {
         throw new Error(response.data.message || "Failed to fetch ticket details");
       }
 
-      console.log("✅ Ticket detail fetched:", response.data.payload);
       return response.data;
     } catch (error: any) {
       console.error("Get ticket detail error:", error);
@@ -174,6 +194,28 @@ class ReceiveShipmentService {
         error.response?.data?.message ||
           error.message ||
           "Failed to verify ticket"
+      );
+    }
+  }
+
+  async updateTicketStatus(ticketId: string, status: string): Promise<VerifyTicketResponse> {
+    try {
+      const response = await axiosInstance.put<VerifyTicketResponse>(
+        `${this.ENDPOINT}/status/${ticketId}`,
+        { status }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to update ticket status");
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Update ticket status error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update ticket status"
       );
     }
   }

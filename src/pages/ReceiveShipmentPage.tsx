@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { receiveShipmentService, type ImportTicketDetailResponse, type ImportTicketItem, type ImportDetailData } from "../services/receiveShipmentService";
+import { receiveShipmentService, type ImportTicketDetailResponse, type ImportTicketItem, type ImportDetailData, type BatchVerifyData } from "../services/receiveShipmentService";
 
 interface ConfirmationItem extends ImportDetailData {
   verified: boolean;
   actualReceived: number;
   damaged: number;
+  verifyBatches: BatchVerifyData[];
 }
 
 const ReceiveShipmentPage: React.FC = () => {
@@ -18,15 +19,18 @@ const ReceiveShipmentPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadingTickets, setLoadingTickets] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
+  const [showBatchModal, setShowBatchModal] = useState<boolean>(false);
+  const [editingItemIdx, setEditingItemIdx] = useState<number>(-1);
+  const [selectedStatus, setSelectedStatus] = useState<string>("Pending");
 
-  // Load tickets on mount
+  // Load tickets on mount or when status changes
   useEffect(() => {
     const loadTickets = async () => {
       try {
         setLoadingTickets(true);
         const response = await receiveShipmentService.getImportTickets(
           undefined,
-          "Pending",
+          selectedStatus || undefined,
           1,
           10
         );
@@ -39,7 +43,7 @@ const ReceiveShipmentPage: React.FC = () => {
     };
 
     loadTickets();
-  }, []);
+  }, [selectedStatus]);
 
   const handleSelectTicket = async (ticketId: string) => {
     try {
@@ -59,6 +63,12 @@ const ReceiveShipmentPage: React.FC = () => {
           verified: false,
           actualReceived: 0,
           damaged: 0,
+          verifyBatches: detail.batches.map((batch) => ({
+            batchCode: batch.batchCode,
+            manufactureDate: batch.manufactureDate,
+            expiryDate: batch.expiryDate,
+            quantity: batch.importQuantity,
+          })),
         })
       );
 
@@ -71,17 +81,196 @@ const ReceiveShipmentPage: React.FC = () => {
     }
   };
 
-  const handleItemChange = (idx: number, field: string, value: any) => {
-    const newItems = [...items];
-    const item = newItems[idx];
-    if (field === "verified") {
-      item.verified = value;
-    } else if (field === "actualReceived") {
-      item.actualReceived = Number(value);
-    } else if (field === "damaged") {
-      item.damaged = Number(value);
+  const handleUpdateTicketStatus = async () => {
+    try {
+      setError("");
+      setIsLoading(true);
+
+      if (!ticketData) {
+        setError("Please load a ticket first");
+        return;
+      }
+
+      await receiveShipmentService.updateTicketStatus(ticketData.id, "InProgress");
+      
+      // Update local state
+      if (ticketData) {
+        ticketData.status = "InProgress";
+        setTicketData({ ...ticketData });
+      }
+
+      alert("Ticket status updated to In Progress!");
+    } catch (err: any) {
+      console.error("❌ Failed to update status:", err);
+      setError(err.message || "Failed to update ticket status");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleBatchChange = (itemIdx: number, batchIdx: number, field: string, value: string) => {
+    const newItems = [...items];
+    const item = newItems[itemIdx];
+    const batch = item.verifyBatches[batchIdx];
+    
+    switch (field) {
+      case "batchCode":
+        batch.batchCode = value;
+        break;
+      case "manufactureDate":
+        batch.manufactureDate = value;
+        break;
+      case "expiryDate":
+        batch.expiryDate = value;
+        break;
+      case "quantity":
+        batch.quantity = Number(value);
+        break;
+      default:
+        break;
+    }
+
+    // Auto-calculate based on total batch quantity vs ordered quantity
+    const totalBatchQty = item.verifyBatches.reduce((sum, b) => sum + b.quantity, 0);
+    const shortage = Math.max(0, item.quantity - totalBatchQty);
+    
+    // damaged = shortage (missing units)
+    item.damaged = shortage;
+    // actualReceived = total batches received
+    item.actualReceived = totalBatchQty;
+
     setItems(newItems);
+  };
+
+  const openBatchModal = (itemIdx: number) => {
+    setEditingItemIdx(itemIdx);
+    setShowBatchModal(true);
+  };
+
+  const closeBatchModal = () => {
+    setShowBatchModal(false);
+    setEditingItemIdx(-1);
+  };
+
+  const addNewBatch = () => {
+    if (editingItemIdx >= 0) {
+      const newItems = [...items];
+      const item = newItems[editingItemIdx];
+      item.verifyBatches.push({
+        batchCode: "",
+        manufactureDate: "",
+        expiryDate: "",
+        quantity: 0,
+      });
+
+      // Auto-calculate based on total batch quantity vs ordered quantity
+      const totalBatchQty = item.verifyBatches.reduce((sum, b) => sum + b.quantity, 0);
+      const shortage = Math.max(0, item.quantity - totalBatchQty);
+      item.damaged = shortage;
+      item.actualReceived = totalBatchQty;
+
+      setItems(newItems);
+    }
+  };
+
+  const deleteBatch = (batchIdx: number) => {
+    if (editingItemIdx >= 0) {
+      const newItems = [...items];
+      const item = newItems[editingItemIdx];
+      item.verifyBatches.splice(batchIdx, 1);
+
+      // Auto-calculate based on total batch quantity vs ordered quantity
+      const totalBatchQty = item.verifyBatches.reduce((sum, b) => sum + b.quantity, 0);
+      const shortage = Math.max(0, item.quantity - totalBatchQty);
+      item.damaged = shortage;
+      item.actualReceived = totalBatchQty;
+
+      setItems(newItems);
+    }
+  };
+
+  const getItemVerificationStatus = (item: ConfirmationItem): { status: "valid" | "warning" | "invalid"; icon: string; reason: string } => {
+    // Check if batches are properly filled
+    const invalidBatches = item.verifyBatches.filter(
+      (batch) =>
+        !batch.batchCode ||
+        !batch.manufactureDate ||
+        !batch.expiryDate ||
+        batch.quantity <= 0
+    );
+
+    // RED X - Invalid (Cannot confirm)
+    if (invalidBatches.length > 0) {
+      return { status: "invalid", icon: "✕", reason: "Incomplete batch info" };
+    }
+
+    // No batches added
+    if (item.verifyBatches.length === 0) {
+      return { status: "invalid", icon: "✕", reason: "No batches added" };
+    }
+
+    // YELLOW ~ - Warning (Can confirm but with issues)
+    // Check for damaged units
+    if (item.damaged > 0) {
+      return { status: "warning", icon: "~", reason: `${item.damaged} units damaged` };
+    }
+
+    // YELLOW ~ - Warning (Can confirm but with issues)
+    // Check if actual received is less than expected quantity
+    if (item.actualReceived < item.quantity) {
+      return { status: "warning", icon: "~", reason: `Only received ${item.actualReceived}/${item.quantity}` };
+    }
+
+    // YELLOW ~ - Warning (Can confirm but with issues)
+    // Check if received more than expected
+    if (item.actualReceived > item.quantity) {
+      return { status: "warning", icon: "~", reason: `Received ${item.actualReceived} more than expected ${item.quantity}` };
+    }
+
+    // GREEN ✓ - Valid (Perfect - no issues)
+    return { status: "valid", icon: "✓", reason: "Perfect receive" };
+  };
+
+  const validateAllItems = (): { valid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    items.forEach((item, idx) => {
+      // Check if batches are filled
+      if (item.verifyBatches.length === 0) {
+        errors.push(`Item ${idx + 1} (${item.variantName}): No batches added`);
+        return;
+      }
+
+      // Check each batch for required fields
+      item.verifyBatches.forEach((batch, batchIdx) => {
+        if (!batch.batchCode) {
+          errors.push(`Item ${idx + 1}, Batch ${batchIdx + 1}: Missing batch code`);
+        }
+        if (!batch.manufactureDate) {
+          errors.push(`Item ${idx + 1}, Batch ${batchIdx + 1}: Missing manufacture date`);
+        } else {
+          // Check if manufacture date is not in the future
+          const mfgDate = new Date(batch.manufactureDate);
+          mfgDate.setHours(0, 0, 0, 0);
+          if (mfgDate > today) {
+            errors.push(`Item ${idx + 1}, Batch ${batchIdx + 1}: Manufacture date cannot be in the future (selected: ${batch.manufactureDate})`);
+          }
+        }
+        if (!batch.expiryDate) {
+          errors.push(`Item ${idx + 1}, Batch ${batchIdx + 1}: Missing expiry date`);
+        }
+        if (batch.quantity <= 0) {
+          errors.push(`Item ${idx + 1}, Batch ${batchIdx + 1}: Quantity must be > 0`);
+        }
+      });
+    });
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
   };
 
   const handleConfirmArrival = async () => {
@@ -94,18 +283,32 @@ const ReceiveShipmentPage: React.FC = () => {
         return;
       }
 
+      // Validate all items before submission
+      const validation = validateAllItems();
+      if (!validation.valid) {
+        setError(`Validation errors:\n${validation.errors.join("\n")}`);
+        setIsLoading(false);
+        return;
+      }
+
       const importDetails = items.map((item) => ({
         importDetailId: item.id,
+        acceptedQuantity: item.actualReceived,
         rejectQuantity: item.damaged,
         note: staffComments || null,
-        batches: item.batches,
+        batches: item.verifyBatches,
       }));
 
       await receiveShipmentService.verifyTicket(ticketData.id, importDetails);
       
       setError("");
       alert("Shipment verified successfully!");
-      // Reset form or navigate to next step
+      
+      // Reset form after success
+      setLoadedPO(false);
+      setItems([]);
+      setStaffComments("");
+      setTicketData(null);
     } catch (err: any) {
       setError(err.message || "Failed to verify shipment");
     } finally {
@@ -144,8 +347,22 @@ const ReceiveShipmentPage: React.FC = () => {
 
         {/* PO Number Input */}
         <div className="mb-8 bg-white p-6 rounded-lg border border-gray-200">
-          <label className="block text-xs font-bold text-gray-600 mb-3 uppercase tracking-widest">Pending Import Tickets</label>
-          
+          <div className="flex items-center justify-between mb-4">
+            <label className="block text-xs font-bold text-gray-600 uppercase tracking-widest">Import Tickets</label>
+            <div className="flex gap-2">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-3 py-2 rounded border border-gray-200 bg-white text-gray-900 text-sm font-semibold focus:border-red-500 focus:outline-none"
+              >
+                <option value="">All Status</option>
+                <option value="Pending">Pending</option>
+                <option value="InProgress">In Progress</option>
+                <option value="Verified">Verified</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
           {error && (
             <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">
               {error}
@@ -155,7 +372,7 @@ const ReceiveShipmentPage: React.FC = () => {
           {loadingTickets ? (
             <div className="text-center py-4 text-gray-500">Loading tickets...</div>
           ) : tickets.length === 0 ? (
-            <div className="text-center py-4 text-gray-500">No pending tickets found</div>
+            <div className="text-center py-4 text-gray-500">No tickets found {selectedStatus ? `with status "${selectedStatus}"` : ""}</div>
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {tickets.map((ticket) => (
@@ -187,9 +404,25 @@ const ReceiveShipmentPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-red-600 font-bold">📦</span>
-                  <h2 className="text-lg font-bold text-gray-900">Arrival Confirmation - PO #882910</h2>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Arrival Confirmation - PO #882910</h2>
+                    <div className="text-xs text-gray-600 mt-1">
+                      Status: <span className="font-bold text-blue-600">{ticketData?.status}</span>
+                    </div>
+                  </div>
                 </div>
-                <a href="#" className="text-xs text-red-600 font-bold hover:underline">View Original PO ↗</a>
+                <div className="flex gap-2">
+                  {ticketData?.status === "Pending" && (
+                    <button
+                      onClick={handleUpdateTicketStatus}
+                      disabled={isLoading}
+                      className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200 rounded-lg font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ➜ Update to In Progress
+                    </button>
+                  )}
+                  <a href="#" className="text-xs text-red-600 font-bold hover:underline pt-2">View Original PO ↗</a>
+                </div>
               </div>
               <div className="flex gap-8 mt-3 text-xs">
                 <div>
@@ -213,18 +446,28 @@ const ReceiveShipmentPage: React.FC = () => {
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-600">Ordered Qty (As per PO)</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-red-600">Actual Received</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-red-600">Damaged/Rejected</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600">Batches</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, idx) => (
+                  {items.map((item, idx) => {
+                    const verificationStatus = getItemVerificationStatus(item);
+                    const statusColors = {
+                      valid: "text-green-600",
+                      warning: "text-amber-600",
+                      invalid: "text-red-600",
+                    };
+                    return (
                     <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition">
                       <td className="px-6 py-4">
-                        <input 
-                          type="checkbox"
-                          checked={item.verified}
-                          onChange={(e) => handleItemChange(idx, "verified", e.target.checked)}
-                          className="w-5 h-5 rounded border-gray-200 text-red-600 focus:ring-red-500 cursor-pointer"
-                        />
+                        <div className="flex flex-col items-center gap-1">
+                          <div className={`text-2xl font-bold ${statusColors[verificationStatus.status]}`}>
+                            {verificationStatus.icon}
+                          </div>
+                          <div className="text-xs text-gray-600 text-center max-w-[80px]">
+                            {verificationStatus.reason}
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="font-semibold text-gray-900">{item.variantName}</div>
@@ -234,27 +477,133 @@ const ReceiveShipmentPage: React.FC = () => {
                         {item.quantity} units
                       </td>
                       <td className="px-6 py-4">
-                        <input 
-                          type="number"
-                          value={item.actualReceived}
-                          onChange={(e) => handleItemChange(idx, "actualReceived", e.target.value)}
-                          className="w-24 px-3 py-2 rounded border border-gray-200 bg-red-50 text-gray-900 font-semibold focus:border-red-500 focus:outline-none text-center"
-                          min="0"
-                        />
+                        <div className="w-24 px-3 py-2 rounded border border-gray-200 bg-gray-100 text-gray-900 font-semibold text-center">
+                          {item.actualReceived}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 text-center">
+                          (Auto-calculated)
+                        </div>
                       </td>
                       <td className="px-6 py-4">
-                        <input 
-                          type="number"
-                          value={item.damaged}
-                          onChange={(e) => handleItemChange(idx, "damaged", e.target.value)}
-                          className="w-24 px-3 py-2 rounded border border-gray-200 bg-white text-gray-900 font-semibold focus:border-red-500 focus:outline-none text-center"
-                          min="0"
-                        />
+                        <div className="w-24 px-3 py-2 rounded border border-gray-200 bg-gray-100 text-gray-900 font-semibold text-center">
+                          {item.damaged}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1 text-center">
+                          (Auto-calculated)
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => openBatchModal(idx)}
+                          className="px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded font-semibold text-sm transition-colors"
+                        >
+                          📋 {item.verifyBatches.length} batch{item.verifyBatches.length !== 1 ? "es" : ""}
+                        </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Batch Modal */}
+        {showBatchModal && editingItemIdx >= 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-black text-gray-900">
+                  Edit Batch Details - {items[editingItemIdx].variantName}
+                </h2>
+                <button 
+                  onClick={closeBatchModal}
+                  className="text-2xl text-gray-600 hover:text-gray-900"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {items[editingItemIdx].verifyBatches.map((batch, batchIdx) => (
+                  <div key={batchIdx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold text-gray-900">Batch #{batchIdx + 1}</h3>
+                      <button
+                        onClick={() => deleteBatch(batchIdx)}
+                        className="px-3 py-1 bg-red-50 text-red-600 hover:bg-red-100 rounded font-bold text-sm transition-colors"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-2 uppercase">Batch Code</label>
+                        <input
+                          type="text"
+                          value={batch.batchCode}
+                          onChange={(e) => handleBatchChange(editingItemIdx, batchIdx, "batchCode", e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded bg-white text-gray-900 focus:border-red-500 focus:outline-none"
+                          placeholder="e.g., B20240115001"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-2 uppercase">Manufacture Date</label>
+                        <input
+                          type="date"
+                          value={batch.manufactureDate}
+                          onChange={(e) => handleBatchChange(editingItemIdx, batchIdx, "manufactureDate", e.target.value)}
+                          className={`w-full px-3 py-2 border rounded bg-white text-gray-900 focus:outline-none ${
+                            batch.manufactureDate && new Date(batch.manufactureDate) > new Date()
+                              ? "border-red-500 focus:border-red-500"
+                              : "border-gray-200 focus:border-red-500"
+                          }`}
+                          max={new Date().toISOString().split('T')[0]}
+                        />
+                        {batch.manufactureDate && new Date(batch.manufactureDate) > new Date() && (
+                          <div className="text-xs text-red-600 mt-1">⚠️ Cannot be in the future</div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-2 uppercase">Expiry Date</label>
+                        <input
+                          type="date"
+                          value={batch.expiryDate}
+                          onChange={(e) => handleBatchChange(editingItemIdx, batchIdx, "expiryDate", e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded bg-white text-gray-900 focus:border-red-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-600 mb-2 uppercase">Quantity</label>
+                        <input
+                          type="number"
+                          value={batch.quantity}
+                          onChange={(e) => handleBatchChange(editingItemIdx, batchIdx, "quantity", e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded bg-white text-gray-900 focus:border-red-500 focus:outline-none"
+                          min="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={addNewBatch}
+                className="mt-6 w-full px-4 py-3 bg-green-50 text-green-600 hover:bg-green-100 border-2 border-dashed border-green-300 rounded-lg font-bold transition-colors"
+              >
+                ✚ Add New Batch
+              </button>
+
+              <div className="flex justify-end gap-4 mt-6 pt-6 border-t border-gray-200">
+                <button 
+                  onClick={closeBatchModal}
+                  className="px-6 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded font-bold transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -299,6 +648,26 @@ const ReceiveShipmentPage: React.FC = () => {
           </div>
         )}
       </main>
+
+      {error && (
+        <div className="fixed top-20 left-0 right-0 mx-auto max-w-2xl bg-red-50 border-l-4 border-red-600 p-4 rounded shadow-lg">
+          <div className="flex gap-3">
+            <div className="text-2xl">⚠️</div>
+            <div className="flex-1">
+              <h3 className="font-bold text-red-900 mb-2">Validation Error</h3>
+              <div className="text-sm text-red-800 whitespace-pre-line">
+                {error}
+              </div>
+            </div>
+            <button
+              onClick={() => setError("")}
+              className="text-red-600 hover:text-red-900 text-xl"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
         <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4 px-6">
           <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
