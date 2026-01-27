@@ -104,6 +104,19 @@ export interface VerifyTicketRequest {
   importDetails: ImportDetailVerify[];
 }
 
+export interface UpdateImportDetail {
+  id: string | null;
+  variantId: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface UpdateTicketRequest {
+  supplierId: number;
+  importDate: string;
+  importDetails: UpdateImportDetail[];
+}
+
 export interface VerifyTicketResponse {
   payload: null;
   success: boolean;
@@ -216,6 +229,62 @@ class ReceiveShipmentService {
         error.response?.data?.message ||
           error.message ||
           "Failed to update ticket status"
+      );
+    }
+  }
+
+  async deleteTicket(ticketId: string): Promise<VerifyTicketResponse> {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+      }
+
+      const response = await axiosInstance.delete<VerifyTicketResponse>(
+        `${this.ENDPOINT}/${ticketId}`
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to delete ticket");
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Delete ticket error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to delete ticket"
+      );
+    }
+  }
+
+  async updateTicket(
+    ticketId: string,
+    request: UpdateTicketRequest
+  ): Promise<VerifyTicketResponse> {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+      }
+
+      const response = await axiosInstance.put<VerifyTicketResponse>(
+        `${this.ENDPOINT}/${ticketId}`,
+        request
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.message || "Failed to update ticket");
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Update ticket error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update ticket"
       );
     }
   }

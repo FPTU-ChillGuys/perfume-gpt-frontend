@@ -22,6 +22,7 @@ const ReceiveShipmentPage: React.FC = () => {
   const [showBatchModal, setShowBatchModal] = useState<boolean>(false);
   const [editingItemIdx, setEditingItemIdx] = useState<number>(-1);
   const [selectedStatus, setSelectedStatus] = useState<string>("Pending");
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
 
   // Load tickets on mount or when status changes
   useEffect(() => {
@@ -56,21 +57,26 @@ const ReceiveShipmentPage: React.FC = () => {
 
       setTicketData(ticketPayload);
 
-      // Convert API data to ConfirmationItem format
-      const confirmationItems: ConfirmationItem[] = ticketPayload.importDetails.map(
-        (detail) => ({
+      const confirmationItems: ConfirmationItem[] = ticketPayload.importDetails.map((detail) => {
+        // Calculate totalBatchQty from batches
+        const totalBatchQty = detail.batches.reduce((sum, batch) => sum + batch.importQuantity, 0);
+        
+        // Calculate shortage (damaged) = ordered - received
+        const shortage = Math.max(0, detail.quantity - totalBatchQty);
+
+        return {
           ...detail,
-          verified: false,
-          actualReceived: 0,
-          damaged: 0,
+          verified: ticketPayload.status === "Verified",
+          actualReceived: totalBatchQty,
+          damaged: shortage,
           verifyBatches: detail.batches.map((batch) => ({
             batchCode: batch.batchCode,
             manufactureDate: batch.manufactureDate,
             expiryDate: batch.expiryDate,
             quantity: batch.importQuantity,
           })),
-        })
-      );
+        };
+      });
 
       setItems(confirmationItems);
       setLoadedPO(true);
@@ -106,6 +112,112 @@ const ReceiveShipmentPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDeleteTicket = async (ticketId: string) => {
+    if (!confirm("Are you sure you want to delete this ticket? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      setError("");
+      setIsLoading(true);
+
+      await receiveShipmentService.deleteTicket(ticketId);
+
+      // Remove from list
+      setTickets(tickets.filter(t => t.id !== ticketId));
+      
+      // Clear form if deleted ticket was selected
+      if (ticketData?.id === ticketId) {
+        setLoadedPO(false);
+        setItems([]);
+        setStaffComments("");
+        setTicketData(null);
+      }
+
+      setIsLoading(false);
+      alert("Ticket deleted successfully!");
+    } catch (err: any) {
+      // Check if it's a 401 error
+      if (err.response?.status === 401 || err.message?.includes("401")) {
+        setError("Your session has expired. Please login again.");
+        // Don't set isLoading to false, let it redirect
+        return;
+      }
+      setError(err.message || "Failed to delete ticket");
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateTicket = async () => {
+    try {
+      setError("");
+      setIsLoading(true);
+
+      if (!ticketData) {
+        setError("Please load a ticket first");
+        setIsLoading(false);
+        return;
+      }
+
+      const updateDetails = items.map((item) => ({
+        id: item.id,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+      }));
+
+      await receiveShipmentService.updateTicket(ticketData.id, {
+        supplierId: ticketData.supplierId,
+        importDate: ticketData.importDate,
+        importDetails: updateDetails,
+      });
+
+      setIsEditMode(false);
+      alert("Ticket updated successfully!");
+      
+      // Reload ticket data
+      const response = await receiveShipmentService.getImportTicketDetail(ticketData.id);
+      setTicketData(response.payload);
+      setIsLoading(false);
+    } catch (err: any) {
+      if (err.response?.status === 401 || err.message?.includes("401")) {
+        setError("Your session has expired. Please login again.");
+        return;
+      }
+      setError(err.message || "Failed to update ticket");
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditTicketField = (field: "supplierId" | "importDate", value: string) => {
+    if (!ticketData) return;
+    if (field === "supplierId") {
+      setTicketData({ ...ticketData, supplierId: Number(value) });
+      return;
+    }
+
+    setTicketData({ ...ticketData, importDate: value });
+  };
+
+  const handleEditItemField = (idx: number, field: "quantity" | "unitPrice", value: string) => {
+    const newItems = [...items];
+    const item = newItems[idx];
+
+    if (field === "quantity") {
+      item.quantity = Number(value);
+      const totalBatchQty = item.verifyBatches.reduce((sum, b) => sum + b.quantity, 0);
+      const shortage = Math.max(0, item.quantity - totalBatchQty);
+      item.damaged = shortage;
+      item.actualReceived = totalBatchQty;
+    }
+
+    if (field === "unitPrice") {
+      item.unitPrice = Number(value);
+    }
+
+    setItems(newItems);
   };
 
   const handleBatchChange = (itemIdx: number, batchIdx: number, field: string, value: string) => {
@@ -299,7 +411,22 @@ const ReceiveShipmentPage: React.FC = () => {
         batches: item.verifyBatches,
       }));
 
-      await receiveShipmentService.verifyTicket(ticketData.id, importDetails);
+// ✅ STEP 1: UPDATE quantity trước
+const updateDetails = items.map((item) => ({
+  id: item.id,
+  variantId: item.variantId,
+  quantity: item.actualReceived,
+  unitPrice: item.unitPrice,
+}));
+
+await receiveShipmentService.updateTicket(ticketData.id, {
+  supplierId: ticketData.supplierId,
+  importDate: ticketData.importDate,
+  importDetails: updateDetails,
+});
+
+// ✅ STEP 2: VERIFY (đổi status)
+await receiveShipmentService.verifyTicket(ticketData.id, importDetails);
       
       setError("");
       alert("Shipment verified successfully!");
@@ -317,7 +444,9 @@ const ReceiveShipmentPage: React.FC = () => {
   };
 
   const totalSkus = items.length;
-  const verifiedCount = items.filter(item => item.verified).length;
+const verifiedCount = items.filter(
+  (item) => getItemVerificationStatus(item).status !== "invalid"
+).length;
   const totalUnitsExpected = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
@@ -376,21 +505,33 @@ const ReceiveShipmentPage: React.FC = () => {
           ) : (
             <div className="space-y-2 max-h-80 overflow-y-auto">
               {tickets.map((ticket) => (
-                <button
+                <div
                   key={ticket.id}
-                  onClick={() => handleSelectTicket(ticket.id)}
-                  disabled={isLoading}
-                  className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-3 rounded-lg border transition-colors ${
                     ticketData?.id === ticket.id
-                      ? "bg-red-50 border-red-300 text-red-900"
-                      : "bg-white border-gray-200 text-gray-900 hover:bg-gray-50"
-                  } disabled:opacity-50`}
+                      ? "bg-red-50 border-red-300"
+                      : "bg-white border-gray-200"
+                  }`}
                 >
-                  <div className="font-semibold">{ticket.supplierName}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    ID: {ticket.id} | Date: {new Date(ticket.importDate).toLocaleDateString()} | Items: {ticket.totalItems}
-                  </div>
-                </button>
+                  <button
+                    onClick={() => handleSelectTicket(ticket.id)}
+                    disabled={isLoading}
+                    className="flex-1 text-left"
+                  >
+                    <div className="font-semibold text-gray-900">{ticket.supplierName}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      ID: {ticket.id} | Date: {new Date(ticket.importDate).toLocaleDateString()} | Items: {ticket.totalItems}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTicket(ticket.id)}
+                    disabled={isLoading}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                    title="Delete ticket"
+                  >
+                    🗑️
+                  </button>
+                </div>
               ))}
             </div>
           )}
@@ -427,11 +568,34 @@ const ReceiveShipmentPage: React.FC = () => {
               <div className="flex gap-8 mt-3 text-xs">
                 <div>
                   <span className="text-gray-600">SUPPLIER: </span>
-                  <span className="font-bold text-gray-900">ESSENCE LOGISTICS INC.</span>
+                  {!isEditMode && (
+                    <span className="font-bold text-gray-900">{ticketData?.supplierName || "-"}</span>
+                  )}
+                  {isEditMode && (
+                    <input
+                      type="number"
+                      value={ticketData?.supplierId ?? ""}
+                      onChange={(e) => handleEditTicketField("supplierId", e.target.value)}
+                      className="ml-2 w-24 px-2 py-1 border border-gray-200 rounded bg-white text-gray-900 focus:border-red-500 focus:outline-none"
+                      min="1"
+                    />
+                  )}
                 </div>
                 <div>
                   <span className="text-gray-600">DATE: </span>
-                  <span className="font-bold text-gray-900">OCT 24, 2023</span>
+                  {!isEditMode && (
+                    <span className="font-bold text-gray-900">
+                      {ticketData?.importDate ? new Date(ticketData.importDate).toLocaleDateString() : "-"}
+                    </span>
+                  )}
+                  {isEditMode && (
+                    <input
+                      type="date"
+                      value={ticketData?.importDate ? ticketData.importDate.split("T")[0] : ""}
+                      onChange={(e) => handleEditTicketField("importDate", e.target.value)}
+                      className="ml-2 px-2 py-1 border border-gray-200 rounded bg-white text-gray-900 focus:border-red-500 focus:outline-none"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -444,6 +608,7 @@ const ReceiveShipmentPage: React.FC = () => {
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-600">Verified</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-600">Product SKU / Item</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-600">Ordered Qty (As per PO)</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-600">Unit Price</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-red-600">Actual Received</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-red-600">Damaged/Rejected</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-gray-600">Batches</th>
@@ -474,7 +639,28 @@ const ReceiveShipmentPage: React.FC = () => {
                         <div className="text-xs text-gray-500">SKU {item.variantSku}</div>
                       </td>
                       <td className="px-6 py-4 text-center font-semibold text-gray-900">
-                        {item.quantity} units
+                        {!isEditMode && `${item.quantity} units`}
+                        {isEditMode && (
+                          <input
+                            type="number"
+                            value={item.quantity}
+                            onChange={(e) => handleEditItemField(idx, "quantity", e.target.value)}
+                            className="w-24 px-3 py-2 rounded border border-gray-200 bg-white text-gray-900 font-semibold focus:border-red-500 focus:outline-none text-center"
+                            min="0"
+                          />
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center font-semibold text-gray-900">
+                        {!isEditMode && item.unitPrice}
+                        {isEditMode && (
+                          <input
+                            type="number"
+                            value={item.unitPrice}
+                            onChange={(e) => handleEditItemField(idx, "unitPrice", e.target.value)}
+                            className="w-24 px-3 py-2 rounded border border-gray-200 bg-white text-gray-900 font-semibold focus:border-red-500 focus:outline-none text-center"
+                            min="0"
+                          />
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="w-24 px-3 py-2 rounded border border-gray-200 bg-gray-100 text-gray-900 font-semibold text-center">
@@ -673,16 +859,47 @@ const ReceiveShipmentPage: React.FC = () => {
           <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <p className="text-sm font-bold text-gray-500">Active Inspector: Dang Khoa (Warehouse-B)</p>
             <div className="flex gap-4 w-full sm:w-auto">
-              <button className="flex-1 sm:flex-none px-10 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors">
-                SAVE DRAFT
-              </button>
-              <button 
-                onClick={handleConfirmArrival}
-                disabled={isLoading || !loadedPO}
-                className="flex-1 sm:flex-none px-8 py-3 bg-red-600 text-white font-black rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? "Processing..." : "✓ CONFIRM ARRIVAL"}
-              </button>
+              {!isEditMode && (
+                <>
+                  <button className="flex-1 sm:flex-none px-10 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors">
+                    SAVE DRAFT
+                  </button>
+                  {ticketData?.status === "Pending" && (
+                    <button
+                      onClick={() => setIsEditMode(true)}
+                      disabled={isLoading || !loadedPO}
+                      className="flex-1 sm:flex-none px-8 py-3 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      ✎ EDIT
+                    </button>
+                  )}
+                  <button 
+                    onClick={handleConfirmArrival}
+                    disabled={isLoading || !loadedPO}
+                    className="flex-1 sm:flex-none px-8 py-3 bg-red-600 text-white font-black rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? "Processing..." : "✓ CONFIRM ARRIVAL"}
+                  </button>
+                </>
+              )}
+              {isEditMode && (
+                <>
+                  <button
+                    onClick={() => setIsEditMode(false)}
+                    disabled={isLoading}
+                    className="flex-1 sm:flex-none px-8 py-3 bg-gray-100 text-gray-700 font-bold rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ✕ CANCEL
+                  </button>
+                  <button
+                    onClick={handleUpdateTicket}
+                    disabled={isLoading || !loadedPO}
+                    className="flex-1 sm:flex-none px-8 py-3 bg-green-600 text-white font-black rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? "Processing..." : "✓ UPDATE TICKET"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </footer>
