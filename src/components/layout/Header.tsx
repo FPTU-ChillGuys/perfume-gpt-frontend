@@ -204,7 +204,7 @@ export const Header = () => {
                       <ListItemIcon>
                         <DashboardIcon fontSize="small" />
                       </ListItemIcon>
-                      <Typography variant="body2">Dashboard</Typography>
+                      <Typography variant="body2">Trang chủ</Typography>
                     </MenuItem>
                   )}
                   <MenuItem onClick={handleLogout} sx={{ py: 1.5 }}>

@@ -44,37 +44,49 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   {
-    text: "Dashboard",
+    text: "Trang chủ",
     icon: <DashboardIcon />,
     path: "/admin/dashboard",
     roles: ["admin"],
   },
   {
-    text: "Dashboard",
+    text: "Trang chủ",
     icon: <DashboardIcon />,
     path: "/staff/dashboard",
     roles: ["staff"],
   },
   {
-    text: "User Management",
+    text: "Quản lý người dùng",
     icon: <PeopleIcon />,
     path: "/admin/users",
     roles: ["admin"],
   },
   {
-    text: "Shipments",
+    text: "Quản lý vận chuyển",
     icon: <ShipmentIcon />,
     path: "/admin/shipments",
-    roles: ["admin", "staff"],
+    roles: ["admin"],
   },
   {
-    text: "Inventory",
+    text: "Quản lý vận chuyển",
+    icon: <ShipmentIcon />,
+    path: "/staff/shipments",
+    roles: ["staff"],
+  },
+  {
+    text: "Quản lý kho",
     icon: <InventoryIcon />,
     path: "/admin/inventory",
-    roles: ["admin", "staff"],
+    roles: ["admin"],
   },
   {
-    text: "Reports",
+    text: "Quản lý kho",
+    icon: <InventoryIcon />,
+    path: "/staff/inventory",
+    roles: ["staff"],
+  },
+  {
+    text: "Báo cáo",
     icon: <ReportsIcon />,
     path: "/admin/reports",
     roles: ["admin"],
@@ -295,7 +307,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               <ListItemIcon>
                 <DashboardIcon fontSize="small" />
               </ListItemIcon>
-              <Typography variant="body2">Go to Website</Typography>
+              <Typography variant="body2">Website</Typography>
             </MenuItem>
             <MenuItem onClick={handleLogout} sx={{ py: 1.5 }}>
               <ListItemIcon>
