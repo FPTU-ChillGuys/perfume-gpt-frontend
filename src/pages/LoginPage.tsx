@@ -176,6 +176,7 @@ export const LoginPage = () => {
                   color="error"
                   underline="hover"
                   sx={{ fontSize: "0.875rem" }}
+                  tabIndex={-1}
                 >
                   Quên mật khẩu?
                 </Link>
