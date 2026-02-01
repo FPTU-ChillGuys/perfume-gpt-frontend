@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  receiveShipmentService,
+  receiveImportStockService,
   type ImportTicketDetailResponse,
   type ImportTicketItem,
   type ImportDetailData,
   type BatchVerifyData,
-} from "../services/receiveShipmentService";
+} from "../services/receiveImportStockService";
 
 interface ConfirmationItem extends ImportDetailData {
   verified: boolean;
@@ -15,7 +15,7 @@ interface ConfirmationItem extends ImportDetailData {
   verifyBatches: BatchVerifyData[];
 }
 
-const ReceiveShipmentPage: React.FC = () => {
+const ReceiveImportStock: React.FC = () => {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<ImportTicketItem[]>([]);
   const [ticketData, setTicketData] = useState<
@@ -37,7 +37,7 @@ const ReceiveShipmentPage: React.FC = () => {
     const loadTickets = async () => {
       try {
         setLoadingTickets(true);
-        const response = await receiveShipmentService.getImportTickets(
+        const response = await receiveImportStockService.getImportTickets(
           undefined,
           selectedStatus || undefined,
           1,
@@ -61,7 +61,7 @@ const ReceiveShipmentPage: React.FC = () => {
 
       // Fetch ticket detail from API
       const response =
-        await receiveShipmentService.getImportTicketDetail(ticketId);
+        await receiveImportStockService.getImportTicketDetail(ticketId);
       const ticketPayload = response.payload;
 
       setTicketData(ticketPayload);
@@ -110,7 +110,7 @@ const ReceiveShipmentPage: React.FC = () => {
         return;
       }
 
-      await receiveShipmentService.updateTicketStatus(
+      await receiveImportStockService.updateTicketStatus(
         ticketData.id,
         "InProgress",
       );
@@ -143,7 +143,7 @@ const ReceiveShipmentPage: React.FC = () => {
       setError("");
       setIsLoading(true);
 
-      await receiveShipmentService.deleteTicket(ticketId);
+      await receiveImportStockService.deleteTicket(ticketId);
 
       // Remove from list
       setTickets(tickets.filter((t) => t.id !== ticketId));
@@ -188,7 +188,7 @@ const ReceiveShipmentPage: React.FC = () => {
         unitPrice: item.unitPrice,
       }));
 
-      await receiveShipmentService.updateTicket(ticketData.id, {
+      await receiveImportStockService.updateTicket(ticketData.id, {
         supplierId: ticketData.supplierId,
         importDate: ticketData.importDate,
         importDetails: updateDetails,
@@ -198,7 +198,7 @@ const ReceiveShipmentPage: React.FC = () => {
       alert("Ticket updated successfully!");
 
       // Reload ticket data
-      const response = await receiveShipmentService.getImportTicketDetail(
+      const response = await receiveImportStockService.getImportTicketDetail(
         ticketData.id,
       );
       setTicketData(response.payload);
@@ -493,14 +493,17 @@ const ReceiveShipmentPage: React.FC = () => {
         unitPrice: item.unitPrice,
       }));
 
-      await receiveShipmentService.updateTicket(ticketData.id, {
+      await receiveImportStockService.updateTicket(ticketData.id, {
         supplierId: ticketData.supplierId,
         importDate: ticketData.importDate,
         importDetails: updateDetails,
       });
 
       // ✅ STEP 2: VERIFY (đổi status)
-      await receiveShipmentService.verifyTicket(ticketData.id, importDetails);
+      await receiveImportStockService.verifyTicket(
+        ticketData.id,
+        importDetails,
+      );
 
       setError("");
       alert("Shipment verified successfully!");
@@ -1135,4 +1138,4 @@ const ReceiveShipmentPage: React.FC = () => {
   );
 };
 
-export default ReceiveShipmentPage;
+export default ReceiveImportStock;

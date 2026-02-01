@@ -57,9 +57,9 @@ export interface ImportDetailData {
   batches: BatchData[];
 }
 
-export interface ConfirmationBatchItem extends BatchVerifyData {
-  // Additional fields for UI
-}
+// export interface ConfirmationBatchItem extends BatchVerifyData {
+//   // Additional fields for UI
+// }
 
 export interface ConfirmationImportDetail {
   id: string;
@@ -125,7 +125,7 @@ export interface VerifyTicketResponse {
   errorType: string;
 }
 
-class ReceiveShipmentService {
+class ReceiveImportStockService {
   private readonly ENDPOINT = "/api/importtickets";
 
   async getImportTickets(
@@ -133,7 +133,7 @@ class ReceiveShipmentService {
     status?: string,
     pageNumber: number = 1,
     pageSize: number = 10,
-    isDescending: boolean = true
+    isDescending: boolean = true,
   ): Promise<ImportTicketsResponse> {
     try {
       const params = new URLSearchParams();
@@ -147,7 +147,9 @@ class ReceiveShipmentService {
       const response = await axiosInstance.get<ImportTicketsResponse>(url);
 
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to fetch import tickets");
+        throw new Error(
+          response.data.message || "Failed to fetch import tickets",
+        );
       }
 
       return response.data;
@@ -156,19 +158,23 @@ class ReceiveShipmentService {
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to fetch import tickets"
+          "Failed to fetch import tickets",
       );
     }
   }
 
-  async getImportTicketDetail(ticketId: string): Promise<ImportTicketDetailResponse> {
+  async getImportTicketDetail(
+    ticketId: string,
+  ): Promise<ImportTicketDetailResponse> {
     try {
       const response = await axiosInstance.get<ImportTicketDetailResponse>(
-        `${this.ENDPOINT}/${ticketId}`
+        `${this.ENDPOINT}/${ticketId}`,
       );
 
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to fetch ticket details");
+        throw new Error(
+          response.data.message || "Failed to fetch ticket details",
+        );
       }
 
       return response.data;
@@ -177,14 +183,14 @@ class ReceiveShipmentService {
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to fetch ticket details"
+          "Failed to fetch ticket details",
       );
     }
   }
 
   async verifyTicket(
     ticketId: string,
-    importDetails: ImportDetailVerify[]
+    importDetails: ImportDetailVerify[],
   ): Promise<VerifyTicketResponse> {
     try {
       const payload: VerifyTicketRequest = {
@@ -193,7 +199,7 @@ class ReceiveShipmentService {
 
       const response = await axiosInstance.post<VerifyTicketResponse>(
         `${this.ENDPOINT}/verify/${ticketId}`,
-        payload
+        payload,
       );
 
       if (!response.data.success) {
@@ -206,20 +212,25 @@ class ReceiveShipmentService {
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to verify ticket"
+          "Failed to verify ticket",
       );
     }
   }
 
-  async updateTicketStatus(ticketId: string, status: string): Promise<VerifyTicketResponse> {
+  async updateTicketStatus(
+    ticketId: string,
+    status: string,
+  ): Promise<VerifyTicketResponse> {
     try {
       const response = await axiosInstance.put<VerifyTicketResponse>(
         `${this.ENDPOINT}/status/${ticketId}`,
-        { status }
+        { status },
       );
 
       if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to update ticket status");
+        throw new Error(
+          response.data.message || "Failed to update ticket status",
+        );
       }
 
       return response.data;
@@ -228,7 +239,7 @@ class ReceiveShipmentService {
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to update ticket status"
+          "Failed to update ticket status",
       );
     }
   }
@@ -241,7 +252,7 @@ class ReceiveShipmentService {
       }
 
       const response = await axiosInstance.delete<VerifyTicketResponse>(
-        `${this.ENDPOINT}/${ticketId}`
+        `${this.ENDPOINT}/${ticketId}`,
       );
 
       if (!response.data.success) {
@@ -254,14 +265,14 @@ class ReceiveShipmentService {
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to delete ticket"
+          "Failed to delete ticket",
       );
     }
   }
 
   async updateTicket(
     ticketId: string,
-    request: UpdateTicketRequest
+    request: UpdateTicketRequest,
   ): Promise<VerifyTicketResponse> {
     try {
       const token = localStorage.getItem("accessToken");
@@ -271,7 +282,7 @@ class ReceiveShipmentService {
 
       const response = await axiosInstance.put<VerifyTicketResponse>(
         `${this.ENDPOINT}/${ticketId}`,
-        request
+        request,
       );
 
       if (!response.data.success) {
@@ -284,10 +295,10 @@ class ReceiveShipmentService {
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to update ticket"
+          "Failed to update ticket",
       );
     }
   }
 }
 
-export const receiveShipmentService = new ReceiveShipmentService();
+export const receiveImportStockService = new ReceiveImportStockService();

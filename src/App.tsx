@@ -12,9 +12,9 @@ import { RegisterPage } from "./pages/RegisterPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
-import ReceiveShipmentPage from "./pages/ReceiveShipmentPage";
 import ImportStock from "./pages/ImportStock";
 import "./App.css";
+import ReceiveImportStock from "./pages/ReceiveImportStock";
 
 function App() {
   return (
@@ -27,11 +27,6 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
-              <Route path="/import-stock" element={<ImportStock />} />
-              <Route
-                path="/receive-shipment"
-                element={<ReceiveShipmentPage />}
-              />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
               {/* Admin Routes */}
@@ -43,6 +38,14 @@ function App() {
                   </RoleBasedRoute>
                 }
               />
+              <Route
+                path="/admin/import-stock"
+                element={
+                  <RoleBasedRoute allowedRoles={["admin"]}>
+                    <ImportStock />
+                  </RoleBasedRoute>
+                }
+              />
 
               {/* Staff Routes */}
               <Route
@@ -50,6 +53,15 @@ function App() {
                 element={
                   <RoleBasedRoute allowedRoles={["staff"]}>
                     <StaffDashboard />
+                  </RoleBasedRoute>
+                }
+              />
+
+              <Route
+                path="/staff/receive-import-stock"
+                element={
+                  <RoleBasedRoute allowedRoles={["staff"]}>
+                    <ReceiveImportStock />
                   </RoleBasedRoute>
                 }
               />

@@ -67,7 +67,7 @@ const menuItems: MenuItem[] = [
   {
     text: "Nhập hàng",
     icon: <AddBoxIcon />,
-    path: "/import-stock",
+    path: "/admin/import-stock",
     roles: ["admin"],
   },
   {
@@ -79,7 +79,7 @@ const menuItems: MenuItem[] = [
   {
     text: "Đợt nhập hàng",
     icon: <ShipmentIcon />,
-    path: "#",
+    path: "/staff/receive-import-stock",
     roles: ["staff"],
   },
   {
