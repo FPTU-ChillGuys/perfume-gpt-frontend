@@ -41,7 +41,7 @@ export interface ImportTicketsResponse {
   errorType: string;
 }
 
-class ShipmentService {
+class ImportStockService {
   private readonly SHIPMENT_ENDPOINT = "/api/importtickets";
 
   async createImportTicket(
@@ -160,4 +160,4 @@ class ShipmentService {
   }
 }
 
-export const shipmentService = new ShipmentService();
+export const importStockService = new ImportStockService();

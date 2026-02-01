@@ -24,8 +24,8 @@ import {
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
 import { FilterList, Refresh } from "@mui/icons-material";
-import { shipmentService } from "../../services/shipmentService";
-import type { ImportTicket } from "../../services/shipmentService";
+import { importStockService } from "../../services/importStockService";
+import type { ImportTicket } from "../../services/importStockService";
 
 export const ImportHistoryTab: React.FC = () => {
   const [tickets, setTickets] = useState<ImportTicket[]>([]);
@@ -44,7 +44,7 @@ export const ImportHistoryTab: React.FC = () => {
       setError("");
 
       // Filter tickets based on date range locally (since API doesn't support date filters)
-      const response = await shipmentService.getImportTickets(
+      const response = await importStockService.getImportTickets(
         page + 1,
         rowsPerPage,
         statusFilter || undefined,

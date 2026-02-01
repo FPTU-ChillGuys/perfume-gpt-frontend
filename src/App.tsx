@@ -12,8 +12,8 @@ import { RegisterPage } from "./pages/RegisterPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import StaffDashboard from "./pages/StaffDashboard";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
-import ShipmentOrderPage from "./pages/ShipmentOrderPage";
 import ReceiveShipmentPage from "./pages/ReceiveShipmentPage";
+import ImportStock from "./pages/ImportStock";
 import "./App.css";
 
 function App() {
@@ -24,32 +24,35 @@ function App() {
         <ToastProvider>
           <AuthProvider>
             <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/shipment-order" element={<ShipmentOrderPage />} />
-            <Route path="/receive-shipment" element={<ReceiveShipmentPage />} />
-            <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              <Route path="/" element={<HomePage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/import-stock" element={<ImportStock />} />
+              <Route
+                path="/receive-shipment"
+                element={<ReceiveShipmentPage />}
+              />
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-            {/* Admin Routes */}
-            <Route
-              path="/admin/dashboard"
-              element={
-                <RoleBasedRoute allowedRoles={["admin"]}>
-                  <AdminDashboard />
-                </RoleBasedRoute>
-              }
-            />
+              {/* Admin Routes */}
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <RoleBasedRoute allowedRoles={["admin"]}>
+                    <AdminDashboard />
+                  </RoleBasedRoute>
+                }
+              />
 
-            {/* Staff Routes */}
-            <Route
-              path="/staff/dashboard"
-              element={
-                <RoleBasedRoute allowedRoles={["staff"]}>
-                  <StaffDashboard />
-                </RoleBasedRoute>
-              }
-            />
+              {/* Staff Routes */}
+              <Route
+                path="/staff/dashboard"
+                element={
+                  <RoleBasedRoute allowedRoles={["staff"]}>
+                    <StaffDashboard />
+                  </RoleBasedRoute>
+                }
+              />
             </Routes>
           </AuthProvider>
         </ToastProvider>

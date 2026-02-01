@@ -2,9 +2,9 @@ import React, { useState } from "react";
 import { Box, Tabs, Tab } from "@mui/material";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { ImportHistoryTab } from "../components/shipment/ImportHistoryTab";
-import { CreateShipmentTab } from "../components/shipment/CreateShipmentTab";
+import { CreateImportStockTab } from "../components/shipment/CreateImportStockTab";
 
-const ShipmentOrderPage: React.FC = () => {
+const ImportStock: React.FC = () => {
   const [activeTab, setActiveTab] = useState(0);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
@@ -25,11 +25,11 @@ const ShipmentOrderPage: React.FC = () => {
         {/* Tab Content */}
         <Box>
           {activeTab === 0 && <ImportHistoryTab />}
-          {activeTab === 1 && <CreateShipmentTab />}
+          {activeTab === 1 && <CreateImportStockTab />}
         </Box>
       </Box>
     </AdminLayout>
   );
 };
 
-export default ShipmentOrderPage;
+export default ImportStock;

@@ -62,39 +62,6 @@ const AdminDashboard = () => {
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
-              Shipment Management
-            </Typography>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
-                gap: 2,
-                mt: 2,
-              }}
-            >
-              <Button
-                variant="contained"
-                fullWidth
-                size="large"
-                onClick={() => navigate("/shipment-order")}
-                sx={{ py: 2 }}
-              >
-                Create Import Order
-              </Button>
-              <Button
-                variant="contained"
-                fullWidth
-                size="large"
-                onClick={() => navigate("/receive-shipment")}
-                sx={{ py: 2 }}
-              >
-                Receive & Verify Shipment
-              </Button>
-            </Box>
-          </Paper>
-
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
               Other Functions
             </Typography>
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap", mt: 2 }}>
@@ -105,19 +72,6 @@ const AdminDashboard = () => {
             </Box>
           </Paper>
         </Stack>
-        <Button
-          sx={{
-            position: "fixed",
-            bottom: 24,
-            right: 24,
-            zIndex: 1000,
-          }}
-          variant="contained"
-          size="large"
-          onClick={() => navigate("/shipment-order")}
-        >
-          Shipment Order
-        </Button>
       </Container>
     </AdminLayout>
   );

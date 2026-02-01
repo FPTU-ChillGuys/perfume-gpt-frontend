@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Drawer,
@@ -15,6 +15,7 @@ import {
   Avatar,
   Menu,
   MenuItem,
+  Badge,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -32,6 +33,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { importStockService } from "../services/importStockService";
 
 const drawerWidth = 280;
 const drawerCollapsedWidth = 70;
@@ -65,8 +67,8 @@ const menuItems: MenuItem[] = [
   {
     text: "Nhập hàng",
     icon: <AddBoxIcon />,
-    path: "/shipment-order",
-    roles: ["admin", "staff"],
+    path: "/import-stock",
+    roles: ["admin"],
   },
   {
     text: "Quản lý vận chuyển",
@@ -75,9 +77,9 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
-    text: "Quản lý vận chuyển",
+    text: "Đợt nhập hàng",
     icon: <ShipmentIcon />,
-    path: "/staff/shipments",
+    path: "#",
     roles: ["staff"],
   },
   {
@@ -107,6 +109,30 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // Fetch pending import tickets count for staff
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      if (user?.role === "staff") {
+        try {
+          const response = await importStockService.getImportTickets(
+            1,
+            1,
+            "Pending",
+          );
+          setPendingCount(response.payload.totalCount);
+        } catch (error) {
+          console.error("Failed to fetch pending tickets:", error);
+        }
+      }
+    };
+
+    fetchPendingCount();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchPendingCount, 30000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -193,7 +219,16 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 }}
               >
                 <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
-                  {item.icon}
+                  {item.text === "Đợt nhập hàng" &&
+                  user?.role === "staff" &&
+                  pendingCount > 0 &&
+                  collapsed ? (
+                    <Badge badgeContent={pendingCount} color="error" max={99}>
+                      {item.icon}
+                    </Badge>
+                  ) : (
+                    item.icon
+                  )}
                 </ListItemIcon>
                 {!collapsed && (
                   <ListItemText
@@ -204,6 +239,25 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     }}
                   />
                 )}
+                {!collapsed &&
+                  item.text === "Đợt nhập hàng" &&
+                  user?.role === "staff" &&
+                  pendingCount > 0 && (
+                    <Box
+                      sx={{
+                        ml: 1,
+                        px: 1,
+                        py: 0.25,
+                        bgcolor: "error.main",
+                        color: "white",
+                        borderRadius: 1,
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                      }}
+                    >
+                      +{pendingCount}
+                    </Box>
+                  )}
               </ListItemButton>
             </ListItem>
           );

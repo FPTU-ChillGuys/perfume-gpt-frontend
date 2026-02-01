@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { shipmentService } from "../../services/shipmentService";
+import { importStockService } from "../../services/importStockService";
 import { productService } from "../../services/productService";
 import type { Supplier, ProductVariant } from "../../services/productService";
 import {
@@ -12,15 +12,15 @@ import {
 } from "@mui/icons-material";
 import { Snackbar, Alert } from "@mui/material";
 
-interface ShipmentItem {
+interface ImportStockItem {
   variantId: string;
   quantity: number;
   price: number;
 }
 
-export const CreateShipmentTab: React.FC = () => {
+export const CreateImportStockTab: React.FC = () => {
   const navigate = useNavigate();
-  const [items, setItems] = useState<ShipmentItem[]>([]);
+  const [items, setItems] = useState<ImportStockItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number>(1);
@@ -87,7 +87,7 @@ export const CreateShipmentTab: React.FC = () => {
 
   const handleItemChange = (
     idx: number,
-    field: keyof ShipmentItem,
+    field: keyof ImportStockItem,
     value: string | number,
   ) => {
     const newItems = [...items];
@@ -124,11 +124,11 @@ export const CreateShipmentTab: React.FC = () => {
   };
 
   const totalUnits = items.reduce(
-    (sum: number, item: ShipmentItem) => sum + item.quantity,
+    (sum: number, item: ImportStockItem) => sum + item.quantity,
     0,
   );
   const grandTotal = items.reduce(
-    (sum: number, item: ShipmentItem) => sum + item.quantity * item.price,
+    (sum: number, item: ImportStockItem) => sum + item.quantity * item.price,
     0,
   );
 
@@ -159,7 +159,7 @@ export const CreateShipmentTab: React.FC = () => {
       const importDate = new Date().toISOString().split("T")[0];
 
       // Call API
-      await shipmentService.createImportTicket(
+      await importStockService.createImportTicket(
         selectedSupplierId,
         importDate,
         importDetails,
