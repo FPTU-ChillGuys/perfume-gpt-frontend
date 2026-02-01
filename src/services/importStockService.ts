@@ -41,8 +41,72 @@ export interface ImportTicketsResponse {
   errorType: string;
 }
 
+export interface Batch {
+  id: string;
+  batchCode: string;
+  manufactureDate: string;
+  expiryDate: string;
+  importQuantity: number;
+  remainingQuantity: number;
+  createdAt: string;
+}
+
+export interface ImportDetailData {
+  id: string;
+  variantId: string;
+  variantName: string;
+  variantSku: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  rejectQuantity: number;
+  note: string | null;
+  batches: Batch[];
+}
+
+export interface ImportTicketDetail {
+  id: string;
+  createdById: string;
+  createdByName: string;
+  verifiedById: string | null;
+  verifiedByName: string | null;
+  supplierId: number;
+  supplierName: string;
+  importDate: string;
+  totalCost: number;
+  status: "Pending" | "InProgress" | "Completed" | "Canceled" | "Rejected";
+  createdAt: string;
+  importDetails: ImportDetailData[];
+}
+
+export interface ImportTicketDetailResponse {
+  payload: ImportTicketDetail;
+  success: boolean;
+  message: string;
+  errors: string[];
+  errorType: string;
+}
+
+export interface VerifyBatch {
+  batchCode: string;
+  manufactureDate: string;
+  expiryDate: string;
+  quantity: number;
+}
+
+export interface VerifyImportDetail {
+  importDetailId: string;
+  rejectQuantity: number;
+  note: string | null;
+  batches: VerifyBatch[];
+}
+
+export interface VerifyTicketRequest {
+  importDetails: VerifyImportDetail[];
+}
+
 class ImportStockService {
-  private readonly SHIPMENT_ENDPOINT = "/api/importtickets";
+  private readonly IMPORT_ENDPOINT = "/api/importtickets";
 
   async createImportTicket(
     supplierId: number,
@@ -50,7 +114,6 @@ class ImportStockService {
     importDetails: ImportDetail[],
   ): Promise<ImportTicketResponse> {
     try {
-      // Validate inputs
       if (
         !supplierId ||
         !importDate ||
@@ -62,7 +125,6 @@ class ImportStockService {
         );
       }
 
-      // Ensure all items have valid data
       const validatedDetails = importDetails.filter(
         (item) => item.variantId && item.quantity > 0 && item.unitPrice >= 0,
       );
@@ -73,7 +135,6 @@ class ImportStockService {
         );
       }
 
-      // Create payload - try sending as query params + body
       const payload = {
         supplierId: supplierId,
         importDate: importDate,
@@ -84,18 +145,9 @@ class ImportStockService {
         })),
       };
 
-      // Try with transformRequest to see exact data being sent
       const response = await axiosInstance.post<ImportTicketResponse>(
-        this.SHIPMENT_ENDPOINT,
+        this.IMPORT_ENDPOINT,
         payload,
-        {
-          transformRequest: [
-            (data, headers) => {
-              const stringified = JSON.stringify(data);
-              return stringified;
-            },
-          ],
-        },
       );
 
       if (!response.data?.success) {
@@ -107,17 +159,11 @@ class ImportStockService {
       return response.data;
     } catch (error: any) {
       console.error("Import ticket error:", error);
-      console.error("Error response data:", error.response?.data);
-      console.error("Error status:", error.response?.status);
-      console.error("Error config data:", error.config?.data);
-
-      // More detailed error message
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.errors?.join(", ") ||
         error.message ||
         "Failed to create import ticket";
-
       throw new Error(errorMessage);
     }
   }
@@ -138,7 +184,7 @@ class ImportStockService {
       }
 
       const response = await axiosInstance.get<ImportTicketsResponse>(
-        this.SHIPMENT_ENDPOINT,
+        this.IMPORT_ENDPOINT,
         { params },
       );
 
@@ -155,6 +201,85 @@ class ImportStockService {
         error.response?.data?.message ||
         error.message ||
         "Failed to fetch import tickets";
+      throw new Error(errorMessage);
+    }
+  }
+
+  async getImportTicketDetail(
+    ticketId: string,
+  ): Promise<ImportTicketDetailResponse> {
+    try {
+      const response = await axiosInstance.get<ImportTicketDetailResponse>(
+        `${this.IMPORT_ENDPOINT}/${ticketId}`,
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to fetch ticket detail",
+        );
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Get ticket detail error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to fetch ticket detail";
+      throw new Error(errorMessage);
+    }
+  }
+
+  async updateTicketStatus(
+    ticketId: string,
+    status: "Pending" | "InProgress" | "Completed" | "Canceled" | "Rejected",
+  ): Promise<ImportTicketResponse> {
+    try {
+      const response = await axiosInstance.put<ImportTicketResponse>(
+        `${this.IMPORT_ENDPOINT}/${ticketId}/status`,
+        { status },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to update ticket status",
+        );
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Update ticket status error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to update ticket status";
+      throw new Error(errorMessage);
+    }
+  }
+
+  async verifyTicket(
+    ticketId: string,
+    verifyData: VerifyTicketRequest,
+  ): Promise<ImportTicketResponse> {
+    try {
+      const response = await axiosInstance.post<ImportTicketResponse>(
+        `${this.IMPORT_ENDPOINT}/${ticketId}/verify`,
+        verifyData,
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to verify ticket",
+        );
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Verify ticket error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to verify ticket";
       throw new Error(errorMessage);
     }
   }
