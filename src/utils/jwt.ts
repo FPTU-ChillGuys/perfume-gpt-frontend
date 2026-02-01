@@ -14,7 +14,15 @@ export const decodeToken = (token: string): DecodedToken | null => {
 export const isTokenExpired = (token: string): boolean => {
   try {
     const decoded = decodeToken(token);
-    if (!decoded || !decoded.exp) return true;
+
+    if (!decoded) {
+      return true;
+    }
+
+    // If token doesn't have exp field, treat it as never expiring
+    if (!decoded.exp) {
+      return false;
+    }
 
     // Get current time in seconds
     const currentTime = Math.floor(Date.now() / 1000);
@@ -25,8 +33,8 @@ export const isTokenExpired = (token: string): boolean => {
         ? Math.floor(decoded.exp / 1000) // Convert milliseconds to seconds
         : decoded.exp; // Already in seconds
 
-    // Add 10 second buffer to account for clock differences
-    return expTime < currentTime - 10;
+    // Token is expired if expTime is less than current time
+    return expTime <= currentTime;
   } catch (error) {
     return true;
   }

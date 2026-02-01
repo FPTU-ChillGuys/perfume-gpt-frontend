@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Container,
@@ -24,12 +24,42 @@ import { useAuth } from "../hooks/useAuth";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && user) {
+      switch (user.role) {
+        case "admin":
+          navigate("/admin/dashboard", { replace: true });
+          break;
+        case "staff":
+          navigate("/staff/dashboard", { replace: true });
+          break;
+        default:
+          navigate("/", { replace: true });
+      }
+    }
+  }, [authLoading, isAuthenticated, user, navigate]);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Show loading while checking auth status
+  if (authLoading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="100vh"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

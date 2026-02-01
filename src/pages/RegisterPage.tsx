@@ -36,7 +36,6 @@ export const RegisterPage = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implement registration logic
-    console.log("Register:", formData);
   };
 
   return (

@@ -57,7 +57,9 @@ class AuthService {
     const token = localStorage.getItem("accessToken");
     const userStr = localStorage.getItem("user");
 
-    if (!token || !userStr) return null;
+    if (!token || !userStr) {
+      return null;
+    }
 
     // Check if token is expired
     if (isTokenExpired(token)) {

@@ -3,6 +3,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { theme } from "./theme/theme";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ToastProvider } from "./contexts/ToastProvider";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
 import { HomePage } from "./pages/HomePage";
@@ -20,8 +21,9 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
+        <ToastProvider>
+          <AuthProvider>
+            <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -48,8 +50,9 @@ function App() {
                 </RoleBasedRoute>
               }
             />
-          </Routes>
-        </AuthProvider>
+            </Routes>
+          </AuthProvider>
+        </ToastProvider>
       </BrowserRouter>
     </ThemeProvider>
   );

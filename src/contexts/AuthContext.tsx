@@ -3,11 +3,13 @@ import type { User, LoginRequest } from "../types/auth";
 import { authService } from "../services/authService";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "./AuthContextType";
+import { useToast } from "../hooks/useToast";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { showToast } = useToast();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -22,6 +24,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (credentials: LoginRequest) => {
     const userData = await authService.login(credentials);
     setUser(userData);
+    
+    showToast("Đăng nhập thành công!", "success");
 
     // Redirect based on role
     switch (userData.role) {
@@ -42,6 +46,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     authService.logout();
     setUser(null);
+    showToast("Đăng xuất thành công!", "success");
     navigate("/");
   };
 

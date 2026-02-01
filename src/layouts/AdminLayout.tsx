@@ -28,6 +28,7 @@ import {
   ChevronRight as ChevronRightIcon,
   ArrowDropDown as ArrowDropDownIcon,
   ArrowDropUp as ArrowDropUpIcon,
+  AddBox as AddBoxIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -58,13 +59,19 @@ const menuItems: MenuItem[] = [
   {
     text: "Quản lý người dùng",
     icon: <PeopleIcon />,
-    path: "/admin/users",
+    path: "#",
     roles: ["admin"],
+  },
+  {
+    text: "Nhập hàng",
+    icon: <AddBoxIcon />,
+    path: "/shipment-order",
+    roles: ["admin", "staff"],
   },
   {
     text: "Quản lý vận chuyển",
     icon: <ShipmentIcon />,
-    path: "/admin/shipments",
+    path: "#",
     roles: ["admin"],
   },
   {
@@ -76,19 +83,19 @@ const menuItems: MenuItem[] = [
   {
     text: "Quản lý kho",
     icon: <InventoryIcon />,
-    path: "/admin/inventory",
+    path: "#",
     roles: ["admin"],
   },
   {
     text: "Quản lý kho",
     icon: <InventoryIcon />,
-    path: "/staff/inventory",
+    path: "#",
     roles: ["staff"],
   },
   {
     text: "Báo cáo",
     icon: <ReportsIcon />,
-    path: "/admin/reports",
+    path: "#",
     roles: ["admin"],
   },
 ];
