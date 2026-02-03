@@ -142,7 +142,46 @@ const ReceiveImportStock: React.FC = () => {
         selectedTicket.id,
         "InProgress",
       );
+
+      // Update selected ticket status
       setSelectedTicket({ ...selectedTicket, status: "InProgress" });
+      
+      // Switch filter to InProgress tab
+      setStatusFilter("InProgress");
+
+      // Reload tickets to reflect status change in the list
+      const pendingPromise = importStockService.getImportTickets(
+        currentPage,
+        pageSize,
+        "Pending",
+      );
+      const inProgressPromise = importStockService.getImportTickets(
+        currentPage,
+        pageSize,
+        "InProgress",
+      );
+
+      const [pendingResponse, inProgressResponse] = await Promise.all([
+        pendingPromise,
+        inProgressPromise,
+      ]);
+
+      const allTickets = [
+        ...pendingResponse.payload.items,
+        ...inProgressResponse.payload.items,
+      ].sort(
+        (a, b) =>
+          new Date(b.importDate).getTime() - new Date(a.importDate).getTime(),
+      );
+
+      setTickets(allTickets);
+      setTotalPages(
+        Math.max(
+          pendingResponse.payload.totalPages,
+          inProgressResponse.payload.totalPages,
+        ),
+      );
+
       showToast("Đã bắt đầu kiểm tra đơn hàng", "success");
     } catch (error: any) {
       showToast(error.message || "Không thể cập nhật trạng thái", "error");
@@ -322,6 +361,9 @@ const ReceiveImportStock: React.FC = () => {
   const verifiedCount = products.filter((p) => p.batches.length > 0).length;
 
   const damagedCount = products.reduce((sum, p) => {
+    // Only calculate damaged if product has batches (has been checked)
+    if (p.batches.length === 0) return sum;
+
     const totalBatch = p.batches.reduce((s, b) => s + Number(b.quantity), 0);
     return sum + Math.max(0, p.quantity - totalBatch);
   }, 0);
@@ -340,7 +382,11 @@ const ReceiveImportStock: React.FC = () => {
               </h2>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setStatusFilter("All")}
+                  onClick={() => {
+                    setStatusFilter("All");
+                    setSelectedTicket(null);
+                    setProducts([]);
+                  }}
                   className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                     statusFilter === "All"
                       ? "bg-red-600 text-white"
@@ -350,7 +396,11 @@ const ReceiveImportStock: React.FC = () => {
                   Tất cả
                 </button>
                 <button
-                  onClick={() => setStatusFilter("Pending")}
+                  onClick={() => {
+                    setStatusFilter("Pending");
+                    setSelectedTicket(null);
+                    setProducts([]);
+                  }}
                   className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                     statusFilter === "Pending"
                       ? "bg-yellow-500 text-white"
@@ -360,7 +410,11 @@ const ReceiveImportStock: React.FC = () => {
                   Chờ xử lý
                 </button>
                 <button
-                  onClick={() => setStatusFilter("InProgress")}
+                  onClick={() => {
+                    setStatusFilter("InProgress");
+                    setSelectedTicket(null);
+                    setProducts([]);
+                  }}
                   className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
                     statusFilter === "InProgress"
                       ? "bg-blue-500 text-white"
@@ -379,6 +433,35 @@ const ReceiveImportStock: React.FC = () => {
             ) : tickets.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 Không có đơn hàng nào đang chờ
+              </div>
+            ) : tickets.filter((ticket) =>
+                statusFilter === "All" ? true : ticket.status === statusFilter,
+              ).length === 0 ? (
+              <div className="text-center py-12">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                  />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900">
+                  Không có đợt nhập hàng
+                </h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  {statusFilter === "Pending"
+                    ? "Không có đợt nào đang chờ xử lý"
+                    : statusFilter === "InProgress"
+                      ? "Không có đợt nào đang kiểm tra"
+                      : "Không có đợt nhập hàng nào"}
+                </p>
               </div>
             ) : (
               <>
@@ -543,10 +626,10 @@ const ReceiveImportStock: React.FC = () => {
                           (sum, b) => sum + Number(b.quantity),
                           0,
                         );
-                        const damagedQty = Math.max(
-                          0,
-                          product.quantity - totalBatchQty,
-                        );
+                        // Only calculate damaged if product has batches
+                        const damagedQty = product.batches.length > 0
+                          ? Math.max(0, product.quantity - totalBatchQty)
+                          : 0;
 
                         return (
                           <div key={product.id}>

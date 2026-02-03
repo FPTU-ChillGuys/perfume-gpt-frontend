@@ -17,10 +17,11 @@ interface ImportTicketResponse {
 export interface ImportTicket {
   id: string;
   createdByName: string;
+  verifiedByName: string | null;
   supplierName: string;
   importDate: string;
   totalCost: number;
-  status: "Pending" | "InProgress" | "Completed" | "Canceled" | "Rejected";
+  status: "Pending" | "InProgress" | "Completed" | "Canceled";
   totalItems: number;
   createdAt: string;
 }
@@ -268,9 +269,7 @@ class ImportStockService {
       );
 
       if (!response.data?.success) {
-        throw new Error(
-          response.data?.message || "Failed to verify ticket",
-        );
+        throw new Error(response.data?.message || "Failed to verify ticket");
       }
 
       return response.data;

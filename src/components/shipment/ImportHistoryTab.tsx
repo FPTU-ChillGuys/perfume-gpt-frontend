@@ -271,12 +271,13 @@ export const ImportHistoryTab: React.FC = () => {
               <TableCell align="center">Số mặt hàng</TableCell>
               <TableCell align="center">Trạng thái</TableCell>
               <TableCell>Ngày tạo</TableCell>
+              <TableCell>Người xác nhận</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {tickets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary" variant="body1">
                     Không có dữ liệu
                   </Typography>
@@ -354,6 +355,11 @@ export const ImportHistoryTab: React.FC = () => {
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
                       {formatDate(ticket.createdAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {ticket.verifiedByName || "-"}
                     </Typography>
                   </TableCell>
                 </TableRow>
