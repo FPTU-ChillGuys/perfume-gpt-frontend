@@ -173,6 +173,7 @@ class ImportStockService {
     pageNumber: number = 1,
     pageSize: number = 10,
     status?: string,
+    verifiedById?: string,
   ): Promise<ImportTicketsResponse> {
     try {
       const params: any = {
@@ -182,6 +183,10 @@ class ImportStockService {
 
       if (status) {
         params.status = status;
+      }
+
+      if (verifiedById) {
+        params.VerifiedById = verifiedById;
       }
 
       const response = await axiosInstance.get<ImportTicketsResponse>(

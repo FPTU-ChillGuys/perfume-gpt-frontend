@@ -145,7 +145,7 @@ const ReceiveImportStock: React.FC = () => {
 
       // Update selected ticket status
       setSelectedTicket({ ...selectedTicket, status: "InProgress" });
-      
+
       // Switch filter to InProgress tab
       setStatusFilter("InProgress");
 
@@ -627,9 +627,10 @@ const ReceiveImportStock: React.FC = () => {
                           0,
                         );
                         // Only calculate damaged if product has batches
-                        const damagedQty = product.batches.length > 0
-                          ? Math.max(0, product.quantity - totalBatchQty)
-                          : 0;
+                        const damagedQty =
+                          product.batches.length > 0
+                            ? Math.max(0, product.quantity - totalBatchQty)
+                            : 0;
 
                         return (
                           <div key={product.id}>
