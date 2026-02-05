@@ -1,3 +1,5 @@
+import type { paths, components } from "@/types/api/v1";
+
 export type UserRole = "admin" | "staff" | "user";
 
 export interface LoginRequest {
