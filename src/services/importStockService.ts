@@ -19,7 +19,9 @@ export interface ImportTicket {
   createdByName: string;
   verifiedByName: string | null;
   supplierName: string;
-  importDate: string;
+  importDate?: string | null;
+  expectedArrivalDate?: string | null;
+  actualImportDate?: string | null;
   totalCost: number;
   status: "Pending" | "InProgress" | "Completed" | "Canceled";
   totalItems: number;
@@ -73,7 +75,9 @@ export interface ImportTicketDetail {
   verifiedByName: string | null;
   supplierId: number;
   supplierName: string;
-  importDate: string;
+  importDate?: string | null;
+  expectedArrivalDate?: string | null;
+  actualImportDate?: string | null;
   totalCost: number;
   status: "Pending" | "InProgress" | "Completed" | "Canceled" | "Rejected";
   createdAt: string;
@@ -113,16 +117,18 @@ class ImportStockService {
     supplierId: number,
     importDate: string,
     importDetails: ImportDetail[],
+    expectedArrivalDate: string,
   ): Promise<ImportTicketResponse> {
     try {
       if (
         !supplierId ||
         !importDate ||
+        !expectedArrivalDate ||
         !importDetails ||
         importDetails.length === 0
       ) {
         throw new Error(
-          "Invalid request: supplierId, importDate, and importDetails are required",
+          "Invalid request: supplierId, importDate, expectedArrivalDate, and importDetails are required",
         );
       }
 
@@ -136,9 +142,23 @@ class ImportStockService {
         );
       }
 
+      const importTime = Date.parse(importDate);
+      const expectedTime = Date.parse(expectedArrivalDate);
+
+      if (
+        !Number.isNaN(importTime) &&
+        !Number.isNaN(expectedTime) &&
+        expectedTime < importTime
+      ) {
+        throw new Error(
+          "Expected arrival date cannot be earlier than the import date",
+        );
+      }
+
       const payload = {
         supplierId: supplierId,
         importDate: importDate,
+        expectedArrivalDate: expectedArrivalDate,
         importDetails: validatedDetails.map((item) => ({
           variantId: item.variantId,
           quantity: item.quantity,

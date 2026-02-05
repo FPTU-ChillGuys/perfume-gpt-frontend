@@ -18,12 +18,17 @@ interface ImportStockItem {
   price: number;
 }
 
+const getTodayIsoDate = () => new Date().toISOString().split("T")[0];
+
 export const CreateImportStockTab: React.FC = () => {
   const navigate = useNavigate();
   const [items, setItems] = useState<ImportStockItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number>(1);
+  const [expectedArrivalDate, setExpectedArrivalDate] = useState<string>(() =>
+    getTodayIsoDate(),
+  );
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState<boolean>(true);
   const [loadingVariants, setLoadingVariants] = useState<boolean>(false);
@@ -141,6 +146,14 @@ export const CreateImportStockTab: React.FC = () => {
         return;
       }
 
+      if (!expectedArrivalDate) {
+        showToast(
+          "Vui lòng chọn ngày dự kiến nhận hàng",
+          "warning",
+        );
+        return;
+      }
+
       // Validate all items have variantId
       const invalidItems = items.filter((item) => !item.variantId);
       if (invalidItems.length > 0) {
@@ -156,19 +169,29 @@ export const CreateImportStockTab: React.FC = () => {
       }));
 
       // Create today's date in ISO format
-      const importDate = new Date().toISOString().split("T")[0];
+      const importDate = getTodayIsoDate();
+
+      if (new Date(expectedArrivalDate) < new Date(importDate)) {
+        showToast(
+          "Ngày dự kiến nhận không thể trước ngày tạo đơn",
+          "warning",
+        );
+        return;
+      }
 
       // Call API
       await importStockService.createImportTicket(
         selectedSupplierId,
         importDate,
         importDetails,
+        expectedArrivalDate,
       );
 
       showToast("Tạo đơn nhập hàng thành công!", "success");
 
       // Reset form after successful creation
       setItems([{ variantId: "", quantity: 0, price: 0 }]);
+      setExpectedArrivalDate(getTodayIsoDate());
     } catch (err: any) {
       showToast(err.message || "Không thể tạo đơn nhập hàng", "error");
       console.error("Shipment creation error:", err);
@@ -180,27 +203,45 @@ export const CreateImportStockTab: React.FC = () => {
   return (
     <>
       {/* Supplier Selection */}
-      <div className="mb-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-        <label className="block text-sm font-semibold text-gray-700 mb-3">
-          Nhà Cung Cấp
-        </label>
-        <select
-          value={selectedSupplierId}
-          onChange={(e) => setSelectedSupplierId(Number(e.target.value))}
-          disabled={loadingSuppliers}
-          className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 font-medium focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:outline-none disabled:opacity-50 disabled:bg-gray-50 transition-all"
-        >
-          {loadingSuppliers ? (
-            <option>Đang tải nhà cung cấp...</option>
-          ) : (
-            suppliers.map((supplier) => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}{" "}
-                {supplier.contactEmail && `(${supplier.contactEmail})`}
-              </option>
-            ))
-          )}
-        </select>
+      <div className="mb-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Nhà Cung Cấp
+          </label>
+          <select
+            value={selectedSupplierId}
+            onChange={(e) => setSelectedSupplierId(Number(e.target.value))}
+            disabled={loadingSuppliers}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 font-medium focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:outline-none disabled:opacity-50 disabled:bg-gray-50 transition-all"
+          >
+            {loadingSuppliers ? (
+              <option>Đang tải nhà cung cấp...</option>
+            ) : (
+              suppliers.map((supplier) => (
+                <option key={supplier.id} value={supplier.id}>
+                  {supplier.name}{" "}
+                  {supplier.contactEmail && `(${supplier.contactEmail})`}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-3">
+            Ngày dự kiến nhận hàng
+          </label>
+          <input
+            type="date"
+            value={expectedArrivalDate}
+            min={getTodayIsoDate()}
+            onChange={(e) => setExpectedArrivalDate(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-900 font-medium focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:outline-none transition-all"
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            Vui lòng chọn ngày kho dự kiến sẽ nhận hàng.
+          </p>
+        </div>
       </div>
 
       {/* Main Content Grid */}

@@ -63,6 +63,25 @@ export const ImportHistoryTab: React.FC = () => {
     loadStaff();
   }, []);
 
+  const getTicketDateValue = (ticket: ImportTicket): number | null => {
+    const datePriority = [
+      ticket.actualImportDate,
+      ticket.expectedArrivalDate,
+      ticket.importDate,
+      ticket.createdAt,
+    ];
+
+    for (const date of datePriority) {
+      if (!date) continue;
+      const timestamp = new Date(date).getTime();
+      if (!Number.isNaN(timestamp)) {
+        return timestamp;
+      }
+    }
+
+    return null;
+  };
+
   const loadTickets = useCallback(async () => {
     try {
       setLoading(true);
@@ -81,17 +100,25 @@ export const ImportHistoryTab: React.FC = () => {
       // Apply date filters
       if (fromDate) {
         const fromDateTime = new Date(fromDate).getTime();
-        filteredItems = filteredItems.filter(
-          (ticket) => new Date(ticket.importDate).getTime() >= fromDateTime,
-        );
+        filteredItems = filteredItems.filter((ticket) => {
+          const ticketTime = getTicketDateValue(ticket);
+          return ticketTime !== null && ticketTime >= fromDateTime;
+        });
       }
 
       if (toDate) {
         const toDateTime = new Date(toDate).getTime();
-        filteredItems = filteredItems.filter(
-          (ticket) => new Date(ticket.importDate).getTime() <= toDateTime,
-        );
+        filteredItems = filteredItems.filter((ticket) => {
+          const ticketTime = getTicketDateValue(ticket);
+          return ticketTime !== null && ticketTime <= toDateTime;
+        });
       }
+
+      filteredItems = filteredItems.slice().sort((a, b) => {
+        const bTime = getTicketDateValue(b) ?? new Date(b.createdAt).getTime();
+        const aTime = getTicketDateValue(a) ?? new Date(a.createdAt).getTime();
+        return bTime - aTime;
+      });
 
       setTickets(filteredItems);
       setTotalCount(response.payload.totalCount);
@@ -192,13 +219,36 @@ export const ImportHistoryTab: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("vi-VN", {
+  const formatDate = (
+    dateString?: string | null,
+    options?: { includeTime?: boolean },
+  ) => {
+    const includeTime = options?.includeTime ?? true;
+
+    if (!dateString) {
+      return "-";
+    }
+
+    const parsedDate = new Date(dateString);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "-";
+    }
+
+    if (includeTime) {
+      return parsedDate.toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+
+    return parsedDate.toLocaleDateString("vi-VN", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -345,11 +395,11 @@ export const ImportHistoryTab: React.FC = () => {
               <TableCell>Mã phiếu</TableCell>
               <TableCell>Nhà cung cấp</TableCell>
               <TableCell>Người tạo</TableCell>
-              <TableCell>Ngày nhập</TableCell>
+              <TableCell>Ngày dự kiến</TableCell>
+              <TableCell>Ngày thực tế</TableCell>
               <TableCell align="right">Tổng tiền</TableCell>
               <TableCell align="center">Số mặt hàng</TableCell>
               <TableCell align="center">Trạng thái</TableCell>
-              <TableCell>Ngày tạo</TableCell>
               <TableCell>Người xác nhận</TableCell>
             </TableRow>
           </TableHead>
@@ -399,7 +449,15 @@ export const ImportHistoryTab: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {formatDate(ticket.importDate)}
+                      {formatDate(ticket.expectedArrivalDate, { includeTime: false })}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      color={ticket.actualImportDate ? "text.primary" : "warning.main"}
+                    >
+                      {formatDate(ticket.actualImportDate)}
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
@@ -431,11 +489,6 @@ export const ImportHistoryTab: React.FC = () => {
                         borderColor: `${getStatusColor(ticket.status)}.dark`,
                       }}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatDate(ticket.createdAt)}
-                    </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" color="text.secondary">
@@ -493,9 +546,20 @@ export const ImportHistoryTab: React.FC = () => {
                 <Typography variant="h6" fontWeight={600}>
                   Chi tiết phiếu nhập - {selectedTicket.id.substring(0, 8)}...
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {selectedTicket.supplierName} | {formatDate(selectedTicket.importDate)}
-                </Typography>
+                <Stack spacing={0.5} sx={{ mt: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedTicket.supplierName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Ngày dự kiến: {formatDate(selectedTicket.expectedArrivalDate, { includeTime: false })}
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color={selectedTicket.actualImportDate ? "text.secondary" : "warning.main"}
+                  >
+                    Ngày thực tế: {formatDate(selectedTicket.actualImportDate)}
+                  </Typography>
+                </Stack>
               </Box>
               <IconButton onClick={handleCloseDetail}>
                 <Close />
@@ -510,8 +574,8 @@ export const ImportHistoryTab: React.FC = () => {
                 <>
                   {/* Summary Info */}
                   <Box sx={{ mb: 3, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
-                    <Stack direction="row" spacing={4}>
-                      <Box>
+                    <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap", rowGap: 2 }}>
+                      <Box sx={{ minWidth: 160 }}>
                         <Typography variant="caption" color="text.secondary">
                           Người tạo
                         </Typography>
@@ -519,7 +583,7 @@ export const ImportHistoryTab: React.FC = () => {
                           {selectedTicket.createdByName}
                         </Typography>
                       </Box>
-                      <Box>
+                      <Box sx={{ minWidth: 160 }}>
                         <Typography variant="caption" color="text.secondary">
                           Người xác nhận
                         </Typography>
@@ -527,7 +591,7 @@ export const ImportHistoryTab: React.FC = () => {
                           {selectedTicket.verifiedByName || "-"}
                         </Typography>
                       </Box>
-                      <Box>
+                      <Box sx={{ minWidth: 160 }}>
                         <Typography variant="caption" color="text.secondary">
                           Tổng tiền
                         </Typography>
@@ -535,7 +599,7 @@ export const ImportHistoryTab: React.FC = () => {
                           {formatCurrency(selectedTicket.totalCost)}
                         </Typography>
                       </Box>
-                      <Box>
+                      <Box sx={{ minWidth: 160 }}>
                         <Typography variant="caption" color="text.secondary">
                           Trạng thái
                         </Typography>
@@ -546,6 +610,26 @@ export const ImportHistoryTab: React.FC = () => {
                             size="small"
                           />
                         </Box>
+                      </Box>
+                      <Box sx={{ minWidth: 160 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Ngày dự kiến
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {formatDate(selectedTicket.expectedArrivalDate, { includeTime: false })}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ minWidth: 160 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          Ngày thực tế
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color={selectedTicket.actualImportDate ? "success.main" : "warning.main"}
+                        >
+                          {formatDate(selectedTicket.actualImportDate)}
+                        </Typography>
                       </Box>
                     </Stack>
                   </Box>

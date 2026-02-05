@@ -255,6 +255,13 @@ const ReceiveImportStock: React.FC = () => {
     if (!selectedTicket) return;
 
     // Validate
+    const verifyDetails = [] as {
+      importDetailId: string;
+      rejectQuantity: number;
+      note: string | null;
+      batches: VerifyBatch[];
+    }[];
+
     for (const product of products) {
       if (product.batches.length === 0) {
         showToast(
@@ -278,31 +285,40 @@ const ReceiveImportStock: React.FC = () => {
           return;
         }
       }
+
+      const totalBatchQuantity = product.batches.reduce(
+        (sum, b) => sum + Number(b.quantity),
+        0,
+      );
+
+      if (totalBatchQuantity > product.quantity) {
+        showToast(
+          `Tổng số lượng batch của "${product.variantName}" (${totalBatchQuantity}) vượt quá số lượng trong phiếu (${product.quantity})`,
+          "warning",
+        );
+        return;
+      }
+
+      const rejectQuantity = Math.max(0, product.quantity - totalBatchQuantity);
+
+      verifyDetails.push({
+        importDetailId: product.id,
+        rejectQuantity,
+        note: staffNote || null,
+        batches: product.batches.map((b) => ({
+          batchCode: b.batchCode,
+          manufactureDate: b.manufactureDate,
+          expiryDate: b.expiryDate,
+          quantity: Number(b.quantity),
+        })),
+      });
     }
 
     try {
       setIsLoading(true);
 
       const verifyData = {
-        importDetails: products.map((p) => {
-          const totalBatchQuantity = p.batches.reduce(
-            (sum, b) => sum + Number(b.quantity),
-            0,
-          );
-          const rejectQuantity = Math.max(0, p.quantity - totalBatchQuantity);
-
-          return {
-            importDetailId: p.id,
-            rejectQuantity,
-            note: staffNote || null,
-            batches: p.batches.map((b) => ({
-              batchCode: b.batchCode,
-              manufactureDate: b.manufactureDate,
-              expiryDate: b.expiryDate,
-              quantity: Number(b.quantity),
-            })),
-          };
-        }),
+        importDetails: verifyDetails,
       };
 
       await importStockService.verifyTicket(selectedTicket.id, verifyData);
@@ -626,6 +642,7 @@ const ReceiveImportStock: React.FC = () => {
                           (sum, b) => sum + Number(b.quantity),
                           0,
                         );
+                        const isOverReceived = totalBatchQty > product.quantity;
                         // Only calculate damaged if product has batches
                         const damagedQty =
                           product.batches.length > 0
@@ -677,15 +694,22 @@ const ReceiveImportStock: React.FC = () => {
                               <div className="col-span-2 flex items-center justify-center">
                                 <span
                                   className={`font-bold ${
-                                    totalBatchQty > 0
-                                      ? totalBatchQty === product.quantity
-                                        ? "text-green-600"
-                                        : "text-yellow-600"
-                                      : "text-gray-400"
+                                    isOverReceived
+                                      ? "text-red-600"
+                                      : totalBatchQty > 0
+                                        ? totalBatchQty === product.quantity
+                                          ? "text-green-600"
+                                          : "text-yellow-600"
+                                        : "text-gray-400"
                                   }`}
                                 >
                                   {totalBatchQty}
                                 </span>
+                                {isOverReceived && (
+                                  <span className="text-xs font-semibold text-red-600 ml-2">
+                                    Vượt ({totalBatchQty}/{product.quantity})
+                                  </span>
+                                )}
                               </div>
                               <div className="col-span-2 flex items-center justify-center">
                                 <span
