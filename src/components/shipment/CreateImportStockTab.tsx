@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
 import { importStockService } from "../../services/importStockService";
 import { productService } from "../../services/productService";
 import type { Supplier, ProductVariant } from "../../services/productService";
@@ -9,6 +8,8 @@ import {
   Delete,
   ReceiptLong,
   Info,
+  CloudUpload,
+  FileDownload,
 } from "@mui/icons-material";
 import { Snackbar, Alert } from "@mui/material";
 
@@ -21,7 +22,6 @@ interface ImportStockItem {
 const getTodayIsoDate = () => new Date().toISOString().split("T")[0];
 
 export const CreateImportStockTab: React.FC = () => {
-  const navigate = useNavigate();
   const [items, setItems] = useState<ImportStockItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -37,6 +37,9 @@ export const CreateImportStockTab: React.FC = () => {
     message: string;
     severity: "success" | "error" | "warning" | "info";
   }>({ open: false, message: "", severity: "info" });
+  const [uploadingExcel, setUploadingExcel] = useState<boolean>(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showToast = (
     message: string,
@@ -89,6 +92,72 @@ export const CreateImportStockTab: React.FC = () => {
 
     loadVariants();
   }, [selectedSupplierId]);
+
+  const triggerExcelPicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleExcelFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (!/\.(xlsx|xls)$/i.test(file.name)) {
+      showToast("Vui lòng chọn file Excel đúng định dạng", "warning");
+      event.target.value = "";
+      return;
+    }
+
+    if (!selectedSupplierId) {
+      showToast("Vui lòng chọn nhà cung cấp trước", "warning");
+      event.target.value = "";
+      return;
+    }
+
+    if (!expectedArrivalDate) {
+      showToast("Vui lòng chọn ngày dự kiến nhận", "warning");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setUploadingExcel(true);
+      await importStockService.uploadImportTicketsExcel(
+        file,
+        selectedSupplierId,
+        expectedArrivalDate,
+      );
+      showToast("Đã nhập đơn hàng từ Excel", "success");
+    } catch (err: any) {
+      showToast(err.message || "Không thể nhập đơn từ Excel", "error");
+    } finally {
+      setUploadingExcel(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      setDownloadingTemplate(true);
+      const blob = await importStockService.downloadImportTemplate();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "import-ticket-template.xlsx";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast("Đã tải mẫu Excel", "success");
+    } catch (err: any) {
+      showToast(err.message || "Không thể tải mẫu Excel", "error");
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
 
   const handleItemChange = (
     idx: number,
@@ -202,6 +271,13 @@ export const CreateImportStockTab: React.FC = () => {
 
   return (
     <>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleExcelFileChange}
+        accept=".xlsx,.xls"
+        className="hidden"
+      />
       {/* Supplier Selection */}
       <div className="mb-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm space-y-4">
         <div>
@@ -240,6 +316,40 @@ export const CreateImportStockTab: React.FC = () => {
           />
           <p className="text-xs text-gray-500 mt-2">
             Vui lòng chọn ngày kho dự kiến sẽ nhận hàng.
+          </p>
+        </div>
+
+        <div className="pt-4 border-t border-dashed border-gray-200">
+          <p className="block text-sm font-semibold text-gray-700 mb-3">
+            Nhập nhanh bằng Excel
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              disabled={downloadingTemplate}
+              className="w-full sm:w-auto px-4 py-3 rounded-lg border border-gray-300 bg-white text-gray-700 font-semibold flex items-center justify-center gap-2 hover:bg-gray-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <FileDownload fontSize="small" />
+              <span>
+                {downloadingTemplate ? "Đang tải..." : "Tải form Excel"}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={triggerExcelPicker}
+              disabled={uploadingExcel}
+              className="w-full sm:w-auto px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-red-600 font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <CloudUpload fontSize="small" />
+              <span>
+                {uploadingExcel ? "Đang nhập..." : "Nhập từ Excel"}
+              </span>
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Sử dụng mẫu Excel để lập danh sách sản phẩm, sau đó tải lên để
+            tạo đơn nhanh chóng.
           </p>
         </div>
       </div>

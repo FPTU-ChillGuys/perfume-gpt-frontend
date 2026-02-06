@@ -307,6 +307,67 @@ class ImportStockService {
       throw new Error(errorMessage);
     }
   }
+
+  async uploadImportTicketsExcel(
+    file: File,
+    supplierId: number,
+    expectedArrivalDate?: string,
+  ): Promise<ImportTicketResponse> {
+    try {
+      const formData = new FormData();
+      formData.append("ExcelFile", file);
+      formData.append("SupplierId", supplierId.toString());
+      if (expectedArrivalDate) {
+        formData.append("ExpectedArrivalDate", expectedArrivalDate);
+      }
+
+      const response = await axiosInstance.post<ImportTicketResponse>(
+        `${this.IMPORT_ENDPOINT}/upload-excel`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Import Excel upload failed",
+        );
+      }
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Upload import Excel error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.errors?.join(", ") ||
+        error.message ||
+        "Failed to upload import Excel file";
+      throw new Error(errorMessage);
+    }
+  }
+
+  async downloadImportTemplate(): Promise<Blob> {
+    try {
+      const response = await axiosInstance.get(
+        `${this.IMPORT_ENDPOINT}/download-template`,
+        {
+          responseType: "blob",
+        },
+      );
+
+      return response.data;
+    } catch (error: any) {
+      console.error("Download import template error:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to download import template";
+      throw new Error(errorMessage);
+    }
+  }
 }
 
 export const importStockService = new ImportStockService();
