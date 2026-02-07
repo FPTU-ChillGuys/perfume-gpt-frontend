@@ -2,20 +2,9 @@ import type { paths, components } from "@/types/api/v1";
 
 export type UserRole = "admin" | "staff" | "user";
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
+export type LoginRequest = components["schemas"]["LoginRequest"];
 
-export interface LoginResponse {
-  payload: {
-    accessToken: string;
-  };
-  success: boolean;
-  message: string;
-  errors: any;
-  errorType: string;
-}
+export type LoginResponse = paths["/api/auths/login"]["post"]["responses"]["200"]["content"]["application/json"];
 
 export interface DecodedToken {
   sub: string;
