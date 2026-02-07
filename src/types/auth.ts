@@ -1,10 +1,10 @@
-import type { paths, components } from "@/types/api/v1";
+import type { components } from "@/types/api/v1";
 
-export type UserRole = "admin" | "staff" | "user";
+export type UserRole = components["schemas"]["UserRole"];
 
 export type LoginRequest = components["schemas"]["LoginRequest"];
 
-export type LoginResponse = paths["/api/auths/login"]["post"]["responses"]["200"]["content"]["application/json"];
+export type LoginResponse = components["schemas"]["BaseResponseOfTokenResponse"];
 
 export interface DecodedToken {
   sub: string;

@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
   importStockService,
-  type ImportTicket,
-  type ImportTicketDetail,
-  type VerifyBatch,
 } from "../services/importStockService";
 import { Snackbar, Alert } from "@mui/material";
 import { Close, Check, Delete } from "@mui/icons-material";
+import type {
+  ImportTicket,
+  ImportTicketDetail,
+  VerifyBatch,
+} from "@/types/import-ticket";
 
 interface BatchInput extends VerifyBatch {
   tempId: string;
@@ -79,19 +81,19 @@ const ReceiveImportStock: React.FC = () => {
 
         // Combine and sort by date
         const allTickets = [
-          ...pendingResponse.payload.items,
-          ...inProgressResponse.payload.items,
+          ...pendingResponse.payload!.items,
+          ...inProgressResponse.payload!.items,
         ].sort(
           (a, b) =>
-            new Date(b.importDate).getTime() - new Date(a.importDate).getTime(),
+            new Date(b.actualImportDate!).getTime() - new Date(a.actualImportDate!).getTime(),
         );
 
         setTickets(allTickets);
         // Use the total pages from pending for pagination (or calculate combined)
         setTotalPages(
           Math.max(
-            pendingResponse.payload.totalPages,
-            inProgressResponse.payload.totalPages,
+            pendingResponse.payload!.totalPages,
+            inProgressResponse.payload!.totalPages,
           ),
         );
       } catch (error: any) {
@@ -108,16 +110,25 @@ const ReceiveImportStock: React.FC = () => {
     try {
       setIsLoading(true);
       const response = await importStockService.getImportTicketDetail(ticketId);
-      setSelectedTicket(response.payload);
+      setSelectedTicket(response.payload!);
 
       // Initialize products with batches
       const productsWithBatches: ProductWithBatches[] =
-        response.payload.importDetails.map((detail) => ({
-          ...detail,
-          batches: detail.batches.map((batch, idx) => ({
-            batchCode: batch.batchCode,
-            manufactureDate: batch.manufactureDate.split("T")[0],
-            expiryDate: batch.expiryDate.split("T")[0],
+        response.payload!.importDetails!.map((detail) => ({
+          ...detail!,
+          id: detail.id!,
+          variantId: detail.variantId!,
+          variantName: detail.variantName!,
+          variantSku: detail.variantSku!,
+          unitPrice: Number(detail.unitPrice!),
+          totalPrice: Number(detail.totalPrice!),
+          quantity: Number(detail.quantity!),
+          rejectQuantity: 0,
+          note: null,
+          batches: detail.batches!.map((batch, idx) => ({
+            batchCode: batch.batchCode!,
+            manufactureDate: batch.manufactureDate!.split("T")[0],
+            expiryDate: batch.expiryDate!.split("T")[0],
             quantity: batch.importQuantity,
             tempId: `${detail.id}-${idx}`,
           })),
@@ -139,7 +150,7 @@ const ReceiveImportStock: React.FC = () => {
     try {
       setIsLoading(true);
       await importStockService.updateTicketStatus(
-        selectedTicket.id,
+        selectedTicket.id!,
         "InProgress",
       );
 
@@ -167,18 +178,18 @@ const ReceiveImportStock: React.FC = () => {
       ]);
 
       const allTickets = [
-        ...pendingResponse.payload.items,
-        ...inProgressResponse.payload.items,
+        ...pendingResponse.payload!.items,
+        ...inProgressResponse.payload!.items,
       ].sort(
         (a, b) =>
-          new Date(b.importDate).getTime() - new Date(a.importDate).getTime(),
+          new Date(b.actualImportDate!).getTime() - new Date(a.actualImportDate!).getTime(),
       );
 
       setTickets(allTickets);
       setTotalPages(
         Math.max(
-          pendingResponse.payload.totalPages,
-          inProgressResponse.payload.totalPages,
+          pendingResponse.payload!.totalPages!,
+          inProgressResponse.payload!.totalPages!,
         ),
       );
 
@@ -276,7 +287,7 @@ const ReceiveImportStock: React.FC = () => {
           !batch.batchCode ||
           !batch.manufactureDate ||
           !batch.expiryDate ||
-          batch.quantity < 0
+          batch.quantity! < 0
         ) {
           showToast(
             `Vui lòng điền đầy đủ thông tin batch cho "${product.variantName}"`,
@@ -321,7 +332,7 @@ const ReceiveImportStock: React.FC = () => {
         importDetails: verifyDetails,
       };
 
-      await importStockService.verifyTicket(selectedTicket.id, verifyData);
+      await importStockService.verifyTicket(selectedTicket.id!, verifyData);
       showToast("Xác nhận đơn hàng thành công!", "success");
 
       // Reset
@@ -349,18 +360,18 @@ const ReceiveImportStock: React.FC = () => {
         ]);
 
         const allTickets = [
-          ...pendingResponse.payload.items,
-          ...inProgressResponse.payload.items,
+          ...pendingResponse.payload!.items,
+          ...inProgressResponse.payload!.items,
         ].sort(
           (a, b) =>
-            new Date(b.importDate).getTime() - new Date(a.importDate).getTime(),
+            new Date(b.actualImportDate!).getTime() - new Date(a.actualImportDate!).getTime(),
         );
 
         setTickets(allTickets);
         setTotalPages(
           Math.max(
-            pendingResponse.payload.totalPages,
-            inProgressResponse.payload.totalPages,
+            pendingResponse.payload!.totalPages!,
+            inProgressResponse.payload!.totalPages!,
           ),
         );
       } catch (err: any) {
@@ -491,7 +502,7 @@ const ReceiveImportStock: React.FC = () => {
                     .map((ticket) => (
                       <div
                         key={ticket.id}
-                        onClick={() => handleSelectTicket(ticket.id)}
+                        onClick={() => handleSelectTicket(ticket.id!)}
                         className={`p-4 rounded-lg border-2 transition-all cursor-pointer ${
                           selectedTicket?.id === ticket.id
                             ? "border-red-500 bg-red-50"
@@ -504,8 +515,8 @@ const ReceiveImportStock: React.FC = () => {
                               {ticket.supplierName}
                             </h3>
                             <p className="text-sm text-gray-600 mt-1">
-                              ID: {ticket.id.substring(0, 8)}... | Ngày:{" "}
-                              {new Date(ticket.importDate).toLocaleDateString(
+                              ID: {ticket.id!.substring(0, 8)}... | Ngày:{" "}
+                              {new Date(ticket.actualImportDate!).toLocaleDateString(
                                 "vi-VN",
                               )}{" "}
                               | Số sản phẩm: {ticket.totalItems}
@@ -528,7 +539,7 @@ const ReceiveImportStock: React.FC = () => {
                                   : "Hoàn thành"}
                             </span>
                             <p className="text-sm font-bold text-gray-900 mt-2">
-                              {ticket.totalCost.toLocaleString("vi-VN")} ₫
+                              {ticket.totalCost!.toLocaleString("vi-VN")} ₫
                             </p>
                           </div>
                         </div>
@@ -574,7 +585,7 @@ const ReceiveImportStock: React.FC = () => {
                 <div>
                   <h2 className="text-xl font-bold text-gray-900">
                     Xác nhận nhập hàng - PO #
-                    {selectedTicket.id.substring(0, 8).toUpperCase()}
+                    {selectedTicket.id!.substring(0, 8).toUpperCase()}
                   </h2>
                   <div className="flex items-center gap-4 mt-2 text-sm">
                     <span className="font-semibold text-gray-600">
@@ -585,7 +596,7 @@ const ReceiveImportStock: React.FC = () => {
                     </span>
                     <span className="text-gray-400">|</span>
                     <span className="text-gray-600">
-                      {new Date(selectedTicket.importDate).toLocaleDateString(
+                      {new Date(selectedTicket.actualImportDate!).toLocaleDateString(
                         "vi-VN",
                       )}
                     </span>

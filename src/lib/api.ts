@@ -22,7 +22,7 @@ const middleware: Middleware = {
   },
 };
 
-export const fetchClient = createFetchClient<paths>({
+export const apiInstance = createFetchClient<paths>({
   baseUrl: import.meta.env.VITE_API_BASE_URL,
 });
-fetchClient.use(middleware);
+apiInstance.use(middleware);
