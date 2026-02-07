@@ -31,8 +31,9 @@ import {
 import type { SelectChangeEvent } from "@mui/material";
 import { FilterList, Refresh, Close, ExpandMore, ExpandLess } from "@mui/icons-material";
 import { importStockService } from "../../services/importStockService";
-import type { ImportTicket, ImportTicketDetail } from "../../services/importStockService";
-import { userService, type StaffUser } from "../../services/userService";
+import type { ImportTicket, ImportTicketDetail } from "@/types/import-ticket";
+import { userService } from "../../services/userService";
+import { type StaffUser } from "@/types/staff-user";
 
 export const ImportHistoryTab: React.FC = () => {
   const [tickets, setTickets] = useState<ImportTicket[]>([]);
@@ -55,7 +56,7 @@ export const ImportHistoryTab: React.FC = () => {
     const loadStaff = async () => {
       try {
         const response = await userService.getStaffLookup();
-        setStaffList(response.payload);
+        setStaffList(response.payload!);
       } catch (err: any) {
         console.error("Failed to load staff list:", err);
       }
@@ -67,7 +68,7 @@ export const ImportHistoryTab: React.FC = () => {
     const datePriority = [
       ticket.actualImportDate,
       ticket.expectedArrivalDate,
-      ticket.importDate,
+      ticket.actualImportDate,
       ticket.createdAt,
     ];
 
@@ -95,7 +96,7 @@ export const ImportHistoryTab: React.FC = () => {
         staffFilter || undefined,
       );
 
-      let filteredItems = response.payload.items;
+      let filteredItems = response.payload!.items;
 
       // Apply date filters
       if (fromDate) {
@@ -115,13 +116,13 @@ export const ImportHistoryTab: React.FC = () => {
       }
 
       filteredItems = filteredItems.slice().sort((a, b) => {
-        const bTime = getTicketDateValue(b) ?? new Date(b.createdAt).getTime();
-        const aTime = getTicketDateValue(a) ?? new Date(a.createdAt).getTime();
+        const bTime = getTicketDateValue(b) ?? new Date(b.createdAt!).getTime();
+        const aTime = getTicketDateValue(a) ?? new Date(a.createdAt!).getTime();
         return bTime - aTime;
       });
 
       setTickets(filteredItems);
-      setTotalCount(response.payload.totalCount);
+      setTotalCount(response.payload!.totalCount);
     } catch (err: any) {
       setError(err.message || "Không thể tải lịch sử nhập hàng");
     } finally {
@@ -161,7 +162,7 @@ export const ImportHistoryTab: React.FC = () => {
     try {
       setDetailLoading(true);
       const response = await importStockService.getImportTicketDetail(ticketId);
-      setSelectedTicket(response.payload);
+      setSelectedTicket(response.payload!);
       setExpandedProducts(new Set());
     } catch (err: any) {
       setError(err.message || "Không thể tải chi tiết phiếu nhập");
@@ -477,8 +478,8 @@ export const ImportHistoryTab: React.FC = () => {
                   </TableCell>
                   <TableCell align="center">
                     <Chip
-                      label={getStatusText(ticket.status)}
-                      color={getStatusColor(ticket.status)}
+                      label={getStatusText(ticket.status!)}
+                      color={getStatusColor(ticket.status!)}
                       size="small"
                       variant="filled"
                       sx={{
@@ -486,7 +487,7 @@ export const ImportHistoryTab: React.FC = () => {
                         minWidth: 100,
                         borderWidth: 2,
                         borderStyle: "solid",
-                        borderColor: `${getStatusColor(ticket.status)}.dark`,
+                        borderColor: `${getStatusColor(ticket.status!)}.dark`,
                       }}
                     />
                   </TableCell>
@@ -544,7 +545,7 @@ export const ImportHistoryTab: React.FC = () => {
             <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Box>
                 <Typography variant="h6" fontWeight={600}>
-                  Chi tiết phiếu nhập - {selectedTicket.id.substring(0, 8)}...
+                  Chi tiết phiếu nhập - {selectedTicket.id!.substring(0, 8)}...
                 </Typography>
                 <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                   <Typography variant="body2" color="text.secondary">
@@ -596,7 +597,7 @@ export const ImportHistoryTab: React.FC = () => {
                           Tổng tiền
                         </Typography>
                         <Typography variant="body2" fontWeight={600} color="primary">
-                          {formatCurrency(selectedTicket.totalCost)}
+                          {formatCurrency(selectedTicket.totalCost!)}
                         </Typography>
                       </Box>
                       <Box sx={{ minWidth: 160 }}>
@@ -605,8 +606,8 @@ export const ImportHistoryTab: React.FC = () => {
                         </Typography>
                         <Box sx={{ mt: 0.5 }}>
                           <Chip
-                            label={getStatusText(selectedTicket.status)}
-                            color={getStatusColor(selectedTicket.status)}
+                            label={getStatusText(selectedTicket.status!)}
+                            color={getStatusColor(selectedTicket.status!)}
                             size="small"
                           />
                         </Box>
@@ -649,10 +650,10 @@ export const ImportHistoryTab: React.FC = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {selectedTicket.importDetails.map((product) => {
-                          const isExpanded = expandedProducts.has(product.id);
-                          const totalReceived = product.batches.reduce(
-                            (sum, b) => sum + b.importQuantity,
+                        {selectedTicket.importDetails!.map((product) => {
+                          const isExpanded = expandedProducts.has(product.id!);
+                          const totalReceived = product.batches!.reduce(
+                            (sum, b) => sum + b.importQuantity!,
                             0,
                           );
 
@@ -662,7 +663,7 @@ export const ImportHistoryTab: React.FC = () => {
                               <TableRow
                                 hover
                                 sx={{ cursor: "pointer" }}
-                                onClick={() => toggleProductExpand(product.id)}
+                                onClick={() => toggleProductExpand(product.id!)}
                               >
                                 <TableCell>
                                   <IconButton size="small">
@@ -691,17 +692,17 @@ export const ImportHistoryTab: React.FC = () => {
                                   <Typography
                                     variant="body2"
                                     fontWeight={600}
-                                    color={product.rejectQuantity > 0 ? "error.main" : "text.secondary"}
+                                    color={product.rejectQuantity! > 0 ? "error.main" : "text.secondary"}
                                   >
                                     {product.rejectQuantity}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
-                                  {formatCurrency(product.unitPrice)}
+                                  {formatCurrency(product.unitPrice!)}
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body2" fontWeight={600}>
-                                    {formatCurrency(product.totalPrice)}
+                                    {formatCurrency(product.totalPrice!)}
                                   </Typography>
                                 </TableCell>
                               </TableRow>
@@ -714,7 +715,7 @@ export const ImportHistoryTab: React.FC = () => {
                                       <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
                                         Danh sách Batch
                                       </Typography>
-                                      {product.batches.length === 0 ? (
+                                      {product.batches!.length === 0 ? (
                                         <Typography variant="body2" color="text.secondary">
                                           Chưa có batch nào
                                         </Typography>
@@ -730,7 +731,7 @@ export const ImportHistoryTab: React.FC = () => {
                                             </TableRow>
                                           </TableHead>
                                           <TableBody>
-                                            {product.batches.map((batch) => (
+                                            {product.batches!.map((batch) => (
                                               <TableRow key={batch.id}>
                                                 <TableCell>
                                                   <Typography
@@ -742,10 +743,10 @@ export const ImportHistoryTab: React.FC = () => {
                                                   </Typography>
                                                 </TableCell>
                                                 <TableCell>
-                                                  {new Date(batch.manufactureDate).toLocaleDateString("vi-VN")}
+                                                  {new Date(batch.manufactureDate!).toLocaleDateString("vi-VN")}
                                                 </TableCell>
                                                 <TableCell>
-                                                  {new Date(batch.expiryDate).toLocaleDateString("vi-VN")}
+                                                  {new Date(batch.expiryDate!).toLocaleDateString("vi-VN")}
                                                 </TableCell>
                                                 <TableCell align="center">
                                                   <Chip
@@ -759,7 +760,7 @@ export const ImportHistoryTab: React.FC = () => {
                                                   <Chip
                                                     label={batch.remainingQuantity}
                                                     size="small"
-                                                    color={batch.remainingQuantity > 0 ? "success" : "default"}
+                                                    color={batch.remainingQuantity! > 0 ? "success" : "default"}
                                                   />
                                                 </TableCell>
                                               </TableRow>

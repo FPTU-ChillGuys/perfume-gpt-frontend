@@ -1,114 +1,5 @@
-import axiosInstance from "../lib/axios";
-
-interface ImportDetail {
-  variantId: string;
-  quantity: number;
-  unitPrice: number;
-}
-
-interface ImportTicketResponse {
-  payload: null;
-  success: boolean;
-  message: string;
-  errors: string[];
-  errorType: string;
-}
-
-export interface ImportTicket {
-  id: string;
-  createdByName: string;
-  verifiedByName: string | null;
-  supplierName: string;
-  importDate?: string | null;
-  expectedArrivalDate?: string | null;
-  actualImportDate?: string | null;
-  totalCost: number;
-  status: "Pending" | "InProgress" | "Completed" | "Canceled";
-  totalItems: number;
-  createdAt: string;
-}
-
-export interface ImportTicketsResponse {
-  payload: {
-    items: ImportTicket[];
-    pageNumber: number;
-    pageSize: number;
-    totalCount: number;
-    totalPages: number;
-    hasPreviousPage: boolean;
-    hasNextPage: boolean;
-  };
-  success: boolean;
-  message: string;
-  errors: string[];
-  errorType: string;
-}
-
-export interface Batch {
-  id: string;
-  batchCode: string;
-  manufactureDate: string;
-  expiryDate: string;
-  importQuantity: number;
-  remainingQuantity: number;
-  createdAt: string;
-}
-
-export interface ImportDetailData {
-  id: string;
-  variantId: string;
-  variantName: string;
-  variantSku: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  rejectQuantity: number;
-  note: string | null;
-  batches: Batch[];
-}
-
-export interface ImportTicketDetail {
-  id: string;
-  createdById: string;
-  createdByName: string;
-  verifiedById: string | null;
-  verifiedByName: string | null;
-  supplierId: number;
-  supplierName: string;
-  importDate?: string | null;
-  expectedArrivalDate?: string | null;
-  actualImportDate?: string | null;
-  totalCost: number;
-  status: "Pending" | "InProgress" | "Completed" | "Canceled" | "Rejected";
-  createdAt: string;
-  importDetails: ImportDetailData[];
-}
-
-export interface ImportTicketDetailResponse {
-  payload: ImportTicketDetail;
-  success: boolean;
-  message: string;
-  errors: string[];
-  errorType: string;
-}
-
-export interface VerifyBatch {
-  batchCode: string;
-  manufactureDate: string;
-  expiryDate: string;
-  quantity: number;
-}
-
-export interface VerifyImportDetail {
-  importDetailId: string;
-  rejectQuantity: number;
-  note: string | null;
-  batches: VerifyBatch[];
-}
-
-export interface VerifyTicketRequest {
-  importDetails: VerifyImportDetail[];
-}
+import { apiInstance } from "@/lib/api";
+import type { ImportDetail, ImportTicketResponse, ImportTicketsResponse, ImportTicketStatus, VerifyTicketRequest } from "@/types/import-ticket";
 
 class ImportStockService {
   private readonly IMPORT_ENDPOINT = "/api/importtickets";
@@ -118,7 +9,7 @@ class ImportStockService {
     importDate: string,
     importDetails: ImportDetail[],
     expectedArrivalDate: string,
-  ): Promise<ImportTicketResponse> {
+  ): Promise<string> {
     try {
       if (
         !supplierId ||
@@ -166,10 +57,11 @@ class ImportStockService {
         })),
       };
 
-      const response = await axiosInstance.post<ImportTicketResponse>(
-        this.IMPORT_ENDPOINT,
-        payload,
-      );
+      //const response = await axiosInstance.post<ImportTicketResponse>(this.IMPORT_ENDPOINT,payload,);
+      const response = await apiInstance.POST(this.IMPORT_ENDPOINT, {
+        body: payload,
+      });
+
 
       if (!response.data?.success) {
         throw new Error(
@@ -177,7 +69,7 @@ class ImportStockService {
         );
       }
 
-      return response.data;
+      return response.data.payload!;
     } catch (error: any) {
       console.error("Import ticket error:", error);
       const errorMessage =
@@ -209,18 +101,20 @@ class ImportStockService {
         params.VerifiedById = verifiedById;
       }
 
-      const response = await axiosInstance.get<ImportTicketsResponse>(
-        this.IMPORT_ENDPOINT,
-        { params },
-      );
+      const response = await apiInstance.GET("/api/importtickets", {
+        params: {
+          query: params,
+        }
+      });
 
-      if (!response.data?.success) {
+
+      if (!response.data!.success) {
         throw new Error(
           response.data?.message || "Failed to fetch import tickets",
         );
       }
 
-      return response.data;
+      return response.data!;
     } catch (error: any) {
       console.error("Get import tickets error:", error);
       const errorMessage =
@@ -233,11 +127,16 @@ class ImportStockService {
 
   async getImportTicketDetail(
     ticketId: string,
-  ): Promise<ImportTicketDetailResponse> {
+  ): Promise<ImportTicketResponse> {
     try {
-      const response = await axiosInstance.get<ImportTicketDetailResponse>(
-        `${this.IMPORT_ENDPOINT}/${ticketId}`,
-      );
+      //const response = await axiosInstance.get<ImportTicketResponse>(`${this.IMPORT_ENDPOINT}/${ticketId}`,);
+      const response = await apiInstance.GET(`/api/importtickets/{id}`, {
+        params: {
+          path: {
+            id: ticketId,
+          },
+        }
+      });
 
       if (!response.data?.success) {
         throw new Error(
@@ -258,13 +157,21 @@ class ImportStockService {
 
   async updateTicketStatus(
     ticketId: string,
-    status: "Pending" | "InProgress" | "Completed" | "Canceled" | "Rejected",
-  ): Promise<ImportTicketResponse> {
+    status: ImportTicketStatus,
+  ): Promise<string> {
     try {
-      const response = await axiosInstance.put<ImportTicketResponse>(
-        `${this.IMPORT_ENDPOINT}/${ticketId}/status`,
-        { status },
-      );
+      //const response = await axiosInstance.put<ImportTicketResponse>(`${this.IMPORT_ENDPOINT}/${ticketId}/status`,{ status },);
+      const response = await apiInstance.PUT(`/api/importtickets/{id}/status`, {
+        params: {
+          path: {
+            id: ticketId,
+          },
+        },
+        body: {
+          status: status,
+        },
+      });
+
 
       if (!response.data?.success) {
         throw new Error(
@@ -272,7 +179,7 @@ class ImportStockService {
         );
       }
 
-      return response.data;
+      return response.data.payload!;
     } catch (error: any) {
       console.error("Update ticket status error:", error);
       const errorMessage =
@@ -286,18 +193,23 @@ class ImportStockService {
   async verifyTicket(
     ticketId: string,
     verifyData: VerifyTicketRequest,
-  ): Promise<ImportTicketResponse> {
+  ): Promise<string> {
     try {
-      const response = await axiosInstance.post<ImportTicketResponse>(
-        `${this.IMPORT_ENDPOINT}/${ticketId}/verify`,
-        verifyData,
-      );
+      //const response = await axiosInstance.post<ImportTicketResponse>(`${this.IMPORT_ENDPOINT}/${ticketId}/verify`,verifyData,);
+      const response = await apiInstance.POST(`/api/importtickets/{ticketId}/verify`, {
+        params: {
+          path: {
+            ticketId: ticketId,
+          },
+        },
+        body: verifyData,
+      })
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to verify ticket");
       }
 
-      return response.data;
+      return response.data.payload!;
     } catch (error: any) {
       console.error("Verify ticket error:", error);
       const errorMessage =

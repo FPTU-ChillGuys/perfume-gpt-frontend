@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { importStockService } from "../../services/importStockService";
 import { productService } from "../../services/productService";
-import type { Supplier, ProductVariant } from "../../services/productService";
+import type { Supplier, ProductVariant } from "@/types/product";
 import {
   Inventory2,
   Add,
@@ -27,7 +27,7 @@ export const CreateImportStockTab: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number>(1);
   const [expectedArrivalDate, setExpectedArrivalDate] = useState<string>(() =>
-    getTodayIsoDate(),
+    getTodayIsoDate()!,
   );
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState<boolean>(true);
@@ -57,7 +57,7 @@ export const CreateImportStockTab: React.FC = () => {
         const supplierList = await productService.getSuppliers();
         setSuppliers(supplierList);
         if (supplierList.length > 0) {
-          setSelectedSupplierId(supplierList[0].id);
+          setSelectedSupplierId(supplierList[0]!.id!);
         }
       } catch (err: any) {
         showToast(
@@ -98,15 +98,15 @@ export const CreateImportStockTab: React.FC = () => {
     const newItems = [...items];
     switch (field) {
       case "variantId":
-        newItems[idx].variantId = String(value);
+        newItems[idx]!.variantId = String(value);
         break;
       case "quantity":
-        newItems[idx].quantity = Number(value);
+        newItems[idx]!.quantity = Number(value);
         break;
       case "price": {
         // Remove any non-digit characters for internal storage
         const numericValue = String(value).replace(/\D/g, "");
-        newItems[idx].price = Number(numericValue);
+        newItems[idx]!.price = Number(numericValue);
         break;
       }
       default:
@@ -171,7 +171,7 @@ export const CreateImportStockTab: React.FC = () => {
       // Create today's date in ISO format
       const importDate = getTodayIsoDate();
 
-      if (new Date(expectedArrivalDate) < new Date(importDate)) {
+      if (new Date(expectedArrivalDate) < new Date(importDate!)) {
         showToast(
           "Ngày dự kiến nhận không thể trước ngày tạo đơn",
           "warning",
@@ -182,7 +182,7 @@ export const CreateImportStockTab: React.FC = () => {
       // Call API
       await importStockService.createImportTicket(
         selectedSupplierId,
-        importDate,
+        importDate!,
         importDetails,
         expectedArrivalDate,
       );
@@ -191,7 +191,7 @@ export const CreateImportStockTab: React.FC = () => {
 
       // Reset form after successful creation
       setItems([{ variantId: "", quantity: 0, price: 0 }]);
-      setExpectedArrivalDate(getTodayIsoDate());
+      setExpectedArrivalDate(getTodayIsoDate()!);
     } catch (err: any) {
       showToast(err.message || "Không thể tạo đơn nhập hàng", "error");
       console.error("Shipment creation error:", err);
@@ -352,7 +352,7 @@ export const CreateImportStockTab: React.FC = () => {
                               handleItemChange(
                                 idx,
                                 "price",
-                                selectedVariant.basePrice,
+                                selectedVariant.basePrice!,
                               );
                             }
                           }}
@@ -366,7 +366,7 @@ export const CreateImportStockTab: React.FC = () => {
                           </option>
                           {variants.map((variant) => (
                             <option key={variant.id} value={variant.id}>
-                              {variant.displayName} - {variant.sku} (
+                              {variant.productName} - {variant.sku} (
                               {variant.volumeMl}ml)
                             </option>
                           ))}

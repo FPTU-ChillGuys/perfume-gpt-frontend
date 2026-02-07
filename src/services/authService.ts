@@ -1,5 +1,5 @@
-import axiosInstance from "../lib/axios";
-import type { LoginRequest, LoginResponse, User } from "../types/auth";
+import { apiInstance } from "@/lib/api";
+import type { LoginRequest, User } from "../types/auth";
 import { getUserFromToken, isTokenExpired } from "../utils/jwt";
 
 class AuthService {
@@ -7,16 +7,17 @@ class AuthService {
 
   async login(credentials: LoginRequest): Promise<User> {
     try {
-      const response = await axiosInstance.post<LoginResponse>(
-        `${this.AUTH_ENDPOINT}/login`,
-        credentials,
-      );
+      //const response = await axiosInstance.post<LoginResponse>(`${this.AUTH_ENDPOINT}/login`,credentials,);
+      const response = await apiInstance.POST(`${this.AUTH_ENDPOINT}/login`, {
+        body: credentials,
+      });
 
-      if (!response.data.success) {
-        throw new Error(response.data.message || "Login failed");
+
+      if (!response.data!.success) {
+        throw new Error(response.data!.message || "Login failed");
       }
 
-      const { accessToken } = response.data.payload;
+      const accessToken = response.data!.payload!.accessToken!;
 
       // Extract user info from token
       const user = getUserFromToken(accessToken);

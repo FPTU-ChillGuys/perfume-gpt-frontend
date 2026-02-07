@@ -121,7 +121,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             1,
             "Pending",
           );
-          setPendingCount(response.payload.totalCount);
+          setPendingCount(response.payload!.totalCount);
         } catch (error) {
           console.error("Failed to fetch pending tickets:", error);
         }
