@@ -4,6 +4,7 @@ import type { DecodedToken, User } from "../types/auth";
 export const decodeToken = (token: string): DecodedToken | null => {
   try {
     const decoded = jwtDecode<DecodedToken>(token);
+    console.log(jwtDecode<object>(token));
     return decoded;
   } catch (error) {
     console.error("Error decoding token:", error);

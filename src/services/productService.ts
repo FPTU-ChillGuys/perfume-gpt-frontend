@@ -1,37 +1,5 @@
-import axiosInstance from "../lib/axios";
-
-export interface Supplier {
-  id: number;
-  name: string;
-  phone: string | null;
-  contactEmail: string | null;
-}
-
-export interface SuppliersResponse {
-  payload: Supplier[];
-  success: boolean;
-  message: string;
-  errors: string[];
-  errorType: string;
-}
-
-export interface ProductVariant {
-  id: string;
-  sku: string;
-  displayName: string;
-  volumeMl: number;
-  concentrationName: string;
-  basePrice: number;
-  imageUrl: string | null;
-}
-
-export interface ProductVariantsResponse {
-  payload: ProductVariant[];
-  success: boolean;
-  message: string;
-  errors: string[];
-  errorType: string;
-}
+import { apiInstance } from "@/lib/api";
+import type { Supplier, ProductVariant } from "@/types/product";
 
 class ProductService {
   private readonly SUPPLIERS_ENDPOINT = "/api/suppliers/lookup";
@@ -39,15 +7,13 @@ class ProductService {
 
   async getSuppliers(): Promise<Supplier[]> {
     try {
-      const response = await axiosInstance.get<SuppliersResponse>(
-        this.SUPPLIERS_ENDPOINT,
-      );
+      const response = await apiInstance.GET(this.SUPPLIERS_ENDPOINT);
 
-      if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to fetch suppliers");
+      if (!response.data!.success) {
+        throw new Error(response.data!.message || "Failed to fetch suppliers");
       }
 
-      return response.data.payload;
+      return response.data!.payload!;
     } catch (error: any) {
       console.error("Error fetching suppliers:", error);
       throw new Error(
@@ -60,18 +26,20 @@ class ProductService {
 
   async getProductVariants(productId?: string): Promise<ProductVariant[]> {
     try {
-      let url = this.VARIANTS_ENDPOINT;
-      if (productId) {
-        url += `?productId=${productId}`;
+      const response = await apiInstance.GET(this.VARIANTS_ENDPOINT, {
+        params: {
+          query: {
+            productId: productId,
+          },
+        },
+      });
+
+
+      if (!response.data!.success) {
+        throw new Error(response.data!.message || "Failed to fetch variants");
       }
 
-      const response = await axiosInstance.get<ProductVariantsResponse>(url);
-
-      if (!response.data.success) {
-        throw new Error(response.data.message || "Failed to fetch variants");
-      }
-
-      return response.data.payload;
+      return response.data!.payload!;
     } catch (error: any) {
       console.error("Error fetching variants:", error);
       throw new Error(

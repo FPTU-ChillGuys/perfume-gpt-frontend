@@ -1,19 +1,10 @@
-export type UserRole = "admin" | "staff" | "user";
+import type { components } from "@/types/api/v1";
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
+export type UserRole = components["schemas"]["UserRole"];
 
-export interface LoginResponse {
-  payload: {
-    accessToken: string;
-  };
-  success: boolean;
-  message: string;
-  errors: any;
-  errorType: string;
-}
+export type LoginRequest = components["schemas"]["LoginRequest"];
+
+export type LoginResponse = components["schemas"]["BaseResponseOfTokenResponse"];
 
 export interface DecodedToken {
   sub: string;

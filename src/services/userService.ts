@@ -1,28 +1,12 @@
-import axiosInstance from "../lib/axios";
-
-export interface StaffUser {
-  id: string;
-  userName: string;
-  fullName: string;
-  email: string;
-}
-
-export interface StaffLookupResponse {
-  payload: StaffUser[];
-  success: boolean;
-  message: string;
-  errors: string[];
-  errorType: string;
-}
+import { apiInstance } from "@/lib/api";
+import type { StaffLookupResponse } from "../types/staff-user";
 
 class UserService {
-  private USERS_ENDPOINT = "/api/users";
 
   async getStaffLookup(): Promise<StaffLookupResponse> {
     try {
-      const response = await axiosInstance.get<StaffLookupResponse>(
-        `${this.USERS_ENDPOINT}/staff-lookup`,
-      );
+      //const response = await axiosInstance.get<StaffLookupResponse>(`${this.USERS_ENDPOINT}/staff-lookup`,);
+      const response = await apiInstance.GET(`/api/users/staff-lookup`);
 
       if (!response.data?.success) {
         throw new Error(
