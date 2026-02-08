@@ -3,7 +3,8 @@ import createFetchClient, { type Middleware } from "openapi-fetch";
 
 const middleware: Middleware = {
   async onRequest({ request }) {
-    const accessToken = localStorage.getItem("token");
+    const accessToken = localStorage.getItem("accessToken");
+    console.log(accessToken);
     // (optional) add logic here to refresh token when it expires
 
     // add Authorization header to every request
@@ -13,7 +14,7 @@ const middleware: Middleware = {
   onResponse({ response }) {
     if (response?.status === 401) {
       // Handle unauthorized
-      localStorage.removeItem("token");
+      localStorage.removeItem("accessToken");
       window.location.href = "/login";
     }
   },
