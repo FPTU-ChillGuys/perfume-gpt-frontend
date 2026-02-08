@@ -224,7 +224,7 @@ class ImportStockService {
     file: File,
     supplierId: number,
     expectedArrivalDate?: string,
-  ): Promise<ImportTicketResponse> {
+  ): Promise<string> {
     try {
       const formData = new FormData();
       formData.append("ExcelFile", file);
@@ -233,7 +233,8 @@ class ImportStockService {
         formData.append("ExpectedArrivalDate", expectedArrivalDate);
       }
 
-      const response = await axiosInstance.post<ImportTicketResponse>(
+      /*
+      const response = await axiosInstance.post<string>(
         `${this.IMPORT_ENDPOINT}/upload-excel`,
         formData,
         {
@@ -242,6 +243,21 @@ class ImportStockService {
           },
         },
       );
+      */
+      const response = await apiInstance.POST(`/api/importtickets/upload-excel`, {
+        body: {
+          ExcelFile: "",
+          SupplierId: supplierId,
+          ExpectedArrivalDate: expectedArrivalDate,
+        },
+        bodySerializer() {
+          return formData;
+        },
+        // headers: {
+        //   "Content-Type": "multipart/form-data",
+        // }
+      });
+
 
       if (!response.data?.success) {
         throw new Error(
@@ -249,7 +265,7 @@ class ImportStockService {
         );
       }
 
-      return response.data;
+      return response.data.payload!;
     } catch (error: any) {
       console.error("Upload import Excel error:", error);
       const errorMessage =
@@ -263,12 +279,14 @@ class ImportStockService {
 
   async downloadImportTemplate(): Promise<Blob> {
     try {
-      const response = await axiosInstance.get(
-        `${this.IMPORT_ENDPOINT}/download-template`,
-        {
-          responseType: "blob",
-        },
-      );
+      //const response = await axiosInstance.get(`${this.IMPORT_ENDPOINT}/download-template`,{responseType: "blob",},);
+      const response = await apiInstance.GET(`/api/importtickets/download-template`, {
+        parseAs: "blob",
+      });
+
+      if (!response.data) {
+        throw new Error("Failed to download import template");
+      }
 
       return response.data;
     } catch (error: any) {
