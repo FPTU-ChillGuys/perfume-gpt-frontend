@@ -15,6 +15,10 @@ import UnauthorizedPage from "./pages/UnauthorizedPage";
 import ImportStock from "./pages/ImportStock";
 import "./App.css";
 import ReceiveImportStock from "./pages/ReceiveImportStock";
+import { CartPage } from "./pages/CartPage";
+import { CheckoutShippingPage } from "./pages/checkout/CheckoutShippingPage";
+import { CheckoutPackagingPage } from "./pages/checkout/CheckoutPackagingPage";
+import { CheckoutPaymentPage } from "./pages/checkout/CheckoutPaymentPage";
 
 function App() {
   return (
@@ -28,6 +32,10 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              <Route path="/cart" element={<CartPage />} />
+              <Route path="/checkout/shipping" element={<CheckoutShippingPage />} />
+              <Route path="/checkout/packaging" element={<CheckoutPackagingPage />} />
+              <Route path="/checkout/payment" element={<CheckoutPaymentPage />} />
 
               {/* Admin Routes */}
               <Route

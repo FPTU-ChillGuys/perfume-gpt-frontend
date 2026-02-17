@@ -1,21 +1,34 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { ProductCard } from "../product/ProductCard";
+import { ProductCard, type ProductCardProps } from "../product/ProductCard";
 
 interface ProductSectionProps {
   title: string;
-  products: Array<{
-    id: string;
-    brand: string;
-    name: string;
-    originalPrice?: number;
-    salePrice: number;
-    imageUrl?: string;
-    isNew?: boolean;
-    discount?: number;
-  }>;
+  products: ProductCardProps[];
+  isLoading?: boolean;
+  emptyMessage?: string;
 }
 
-export const ProductSection = ({ title, products }: ProductSectionProps) => {
+const SKELETON_ITEMS = 6;
+
+const renderSkeletonItems = () =>
+  Array.from({ length: SKELETON_ITEMS }).map((_, index) => (
+    <div
+      key={`skeleton-${index}`}
+      className="h-full rounded-lg border border-gray-100 bg-white p-4 animate-pulse"
+    >
+      <div className="aspect-square w-full rounded-md bg-gray-100" />
+      <div className="mt-4 h-4 rounded bg-gray-100" />
+      <div className="mt-2 h-4 rounded bg-gray-100" />
+      <div className="mt-4 h-5 w-1/2 rounded bg-gray-100" />
+    </div>
+  ));
+
+export const ProductSection = ({
+  title,
+  products,
+  isLoading = false,
+  emptyMessage = "Hiện chưa có sản phẩm để hiển thị.",
+}: ProductSectionProps) => {
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
@@ -42,9 +55,17 @@ export const ProductSection = ({ title, products }: ProductSectionProps) => {
 
           {/* Products */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {products.map((product) => (
-              <ProductCard key={product.id} {...product} />
-            ))}
+            {isLoading
+              ? renderSkeletonItems()
+              : products.length > 0
+                ? products.map((product) => (
+                    <ProductCard key={product.id} {...product} />
+                  ))
+                : (
+                    <div className="col-span-full rounded-lg border border-dashed border-gray-200 py-12 text-center text-gray-500">
+                      {emptyMessage}
+                    </div>
+                  )}
           </div>
         </div>
       </div>

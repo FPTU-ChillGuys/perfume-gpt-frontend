@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { Heart } from "lucide-react";
+import { cartService } from "@/services/cartService";
+import { useToast } from "@/hooks/useToast";
 
-interface ProductCardProps {
+export interface ProductCardProps {
   id: string;
   brand: string;
   name: string;
@@ -9,6 +12,7 @@ interface ProductCardProps {
   imageUrl?: string;
   isNew?: boolean;
   discount?: number;
+  variantId?: string;
 }
 
 export const ProductCard = ({
@@ -19,9 +23,35 @@ export const ProductCard = ({
   imageUrl,
   isNew,
   discount,
+  variantId,
 }: ProductCardProps) => {
+  const { showToast } = useToast();
+  const [isAdding, setIsAdding] = useState(false);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
+  };
+
+  const handleAddToCart = async () => {
+    if (!variantId) {
+      showToast("Sản phẩm chưa sẵn sàng để mua", "warning");
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      await cartService.addItem(variantId, 1);
+      showToast("Đã thêm sản phẩm vào giỏ hàng", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể thêm sản phẩm vào giỏ hàng",
+        "error",
+      );
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   return (
@@ -79,6 +109,16 @@ export const ProductCard = ({
             {formatPrice(salePrice)}
           </span>
         </div>
+        {variantId && (
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            className="mt-4 w-full rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 transition hover:border-red-200 hover:text-red-600 disabled:opacity-60"
+          >
+            {isAdding ? "Đang thêm..." : "Thêm vào giỏ"}
+          </button>
+        )}
       </div>
     </div>
   );

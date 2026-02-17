@@ -24,7 +24,7 @@ import {
   Dashboard as DashboardIcon,
   Logout as LogoutIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link as RouterLink } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useState } from "react";
 
@@ -120,9 +120,33 @@ export const Header = () => {
             <IconButton color="default">
               <FavoriteBorder />
             </IconButton>
-            <IconButton color="default">
-              <ShoppingCartOutlined />
-            </IconButton>
+            <Box
+              component={RouterLink}
+              to="/cart"
+              aria-label="Giỏ hàng"
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "text.secondary",
+                transition: "all 0.2s ease",
+                textDecoration: "none",
+                "&:hover": {
+                  color: "primary.main",
+                  bgcolor: "action.hover",
+                },
+                "&:focus-visible": {
+                  outline: "2px solid",
+                  outlineColor: "primary.main",
+                  outlineOffset: 2,
+                },
+              }}
+            >
+              <ShoppingCartOutlined fontSize="medium" />
+            </Box>
 
             {isAuthenticated && user ? (
               <>

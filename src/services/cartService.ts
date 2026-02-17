@@ -1,0 +1,157 @@
+import { apiInstance } from "@/lib/api";
+import type { CartItem, CartTotals } from "@/types/cart";
+
+interface VoucherQuery {
+  voucherId?: string;
+}
+
+const DEFAULT_TOTALS: CartTotals = {
+  subtotal: 0,
+  shippingFee: 0,
+  discount: 0,
+  totalPrice: 0,
+};
+
+class CartService {
+  private readonly ITEMS_ENDPOINT = "/api/cart/items";
+  private readonly TOTAL_ENDPOINT = "/api/cart/total";
+  private readonly CLEAR_ENDPOINT = "/api/cart/clear";
+  private readonly ADD_TO_CART_ENDPOINT = "/api/cart/items/add-to-cart";
+
+  async getItems(): Promise<CartItem[]> {
+    try {
+      const response = await apiInstance.GET(this.ITEMS_ENDPOINT);
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to fetch cart items");
+      }
+
+      return response.data.payload?.items ?? [];
+    } catch (error: any) {
+      console.error("Error fetching cart items:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to fetch cart items",
+      );
+    }
+  }
+
+  async getTotals(voucherId?: string): Promise<CartTotals> {
+    try {
+      const response = await apiInstance.GET(this.TOTAL_ENDPOINT, {
+        params: {
+          query: this.parseVoucher(voucherId),
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to fetch cart totals");
+      }
+
+      const payload = response.data.payload;
+      if (!payload) {
+        return DEFAULT_TOTALS;
+      }
+
+      return {
+        subtotal: Number(payload.subtotal ?? 0),
+        shippingFee: Number(payload.shippingFee ?? 0),
+        discount: Number(payload.discount ?? 0),
+        totalPrice: Number(payload.totalPrice ?? 0),
+      };
+    } catch (error: any) {
+      console.error("Error fetching cart totals:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to fetch cart totals",
+      );
+    }
+  }
+
+  async addItem(variantId: string, quantity: number) {
+    try {
+      const response = await apiInstance.POST(this.ADD_TO_CART_ENDPOINT, {
+        body: { variantId, quantity },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to add item to cart");
+      }
+    } catch (error: any) {
+      console.error("Error adding to cart:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to add item to cart",
+      );
+    }
+  }
+
+  async updateCartItem(cartItemId: string, quantity: number) {
+    try {
+      const response = await apiInstance.PUT(
+        `/api/cart/items/{id}/update-cart-item`,
+        {
+          params: {
+            path: {
+              id: cartItemId,
+            },
+          },
+          body: { quantity },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update cart item");
+      }
+    } catch (error: any) {
+      console.error("Error updating cart item:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to update cart item",
+      );
+    }
+  }
+
+  async removeCartItem(cartItemId: string) {
+    try {
+      const response = await apiInstance.DELETE(
+        `/api/cart/items/{id}/remove-from-cart`,
+        {
+          params: {
+            path: {
+              id: cartItemId,
+            },
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to remove cart item");
+      }
+    } catch (error: any) {
+      console.error("Error removing cart item:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to remove cart item",
+      );
+    }
+  }
+
+  async clearCart() {
+    try {
+      const response = await apiInstance.DELETE(this.CLEAR_ENDPOINT);
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to clear cart");
+      }
+    } catch (error: any) {
+      console.error("Error clearing cart:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to clear cart",
+      );
+    }
+  }
+
+  private parseVoucher(voucherId?: string): VoucherQuery | undefined {
+    if (!voucherId) {
+      return undefined;
+    }
+
+    return { voucherId };
+  }
+}
+
+export const cartService = new CartService();

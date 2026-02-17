@@ -1,108 +1,135 @@
+import { useEffect, useState } from "react";
 import { MainLayout } from "../layouts/MainLayout";
 import { HeroSection } from "../components/home/HeroSection";
 import { BrandSection } from "../components/home/BrandSection";
 import { FeatureSection } from "../components/home/FeatureSection";
 import { ProductSection } from "../components/home/ProductSection";
+import { productService } from "../services/productService";
+import type {
+  ProductListItem,
+  VariantPagedItem,
+} from "../types/product";
+import type { ProductCardProps } from "../components/product/ProductCard";
 
-// Mock data - sẽ fetch từ API sau
-const newArrivals = [
-  {
-    id: "1",
-    brand: "VALENTINO",
-    name: "Uomo Born In Roma Green Stravaganza Eau De Toilette",
-    originalPrice: 2800000,
-    salePrice: 2100000,
-    isNew: true,
-    discount: 25,
-  },
-  {
-    id: "2",
-    brand: "VALENTINO",
-    name: "Valentino Donna Born In Roma Eau De Parfum",
-    salePrice: 2850000,
-    isNew: true,
-  },
-  {
-    id: "3",
-    brand: "PRADA",
-    name: "Prada Paradoxe Eau De Parfum",
-    salePrice: 4250000,
-    isNew: true,
-  },
-  {
-    id: "4",
-    brand: "PRADA",
-    name: "Prada L'Homme Eau De Toilette",
-    salePrice: 2950000,
-    isNew: true,
-  },
-  {
-    id: "5",
-    brand: "GUCCI",
-    name: "GUCCI Guilty Pour Homme Eau De Parfum",
-    originalPrice: 3600000,
-    salePrice: 2850000,
-    isNew: true,
-    discount: 21,
-  },
-  {
-    id: "6",
-    brand: "VALENTINO",
-    name: "Valentino Donna Born In Roma Coral Fantasy",
-    salePrice: 3200000,
-  },
-];
+const PRODUCTS_PER_SECTION = 6;
 
-const bestsellers = [
-  {
-    id: "7",
-    brand: "VERSACE",
-    name: "Dylan Turquoise Eau De Toilette",
-    originalPrice: 3500000,
-    salePrice: 2800000,
-  },
-  {
-    id: "8",
-    brand: "VERSACE",
-    name: "Bright Crystal Eau De Toilette",
-    originalPrice: 3400000,
-    salePrice: 2700000,
-  },
-  {
-    id: "9",
-    brand: "VERSACE",
-    name: "Dylan Blue Eau De Toilette",
-    originalPrice: 3800000,
-    salePrice: 3100000,
-  },
-  {
-    id: "10",
-    brand: "CAROLINA HERRERA",
-    name: "Good Girl Eau De Parfum",
-    salePrice: 4200000,
-  },
-  {
-    id: "11",
-    brand: "JEAN PAUL GAULTIER",
-    name: "La Belle Eau De Parfum",
-    salePrice: 3900000,
-  },
-  {
-    id: "12",
-    brand: "GUCCI",
-    name: "Gucci Bloom Eau De Parfum",
-    salePrice: 3600000,
-  },
-];
+const buildVariantMap = (variants: VariantPagedItem[]) => {
+  const map = new Map<string, VariantPagedItem>();
+
+  variants.forEach((variant) => {
+    if (variant.productId && !map.has(variant.productId)) {
+      map.set(variant.productId, variant);
+    }
+  });
+
+  return map;
+};
+
+const mapProductToCard = (
+  product: ProductListItem & { id: string },
+  variant?: VariantPagedItem,
+): ProductCardProps => {
+  const fallbackPrice = Number(variant?.basePrice ?? 0);
+  return {
+    id: product.id,
+    brand: product.brandName ?? "Đang cập nhật",
+    name: product.name ?? "Đang cập nhật",
+    salePrice: Number.isFinite(fallbackPrice) ? fallbackPrice : 0,
+    imageUrl: product.primaryImage?.url ?? variant?.primaryImage?.url ?? undefined,
+    variantId: variant?.id,
+  };
+};
 
 export const HomePage = () => {
+  const [newArrivals, setNewArrivals] = useState<ProductCardProps[]>([]);
+  const [bestsellers, setBestsellers] = useState<ProductCardProps[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchHomeProducts = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const [productPage, variantPage] = await Promise.all([
+          productService.getProducts({
+            PageNumber: 1,
+            PageSize: PRODUCTS_PER_SECTION * 2,
+            IsDescending: true,
+          }),
+          productService.getProductVariantsPaged({
+            PageNumber: 1,
+            PageSize: PRODUCTS_PER_SECTION * 4,
+            IsDescending: true,
+          }),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        const variantMap = buildVariantMap(variantPage.items);
+
+        const normalizedProducts = productPage.items
+          .filter((product): product is ProductListItem & { id: string } => Boolean(product.id))
+          .map((product) => mapProductToCard(product, variantMap.get(product.id)));
+
+        setNewArrivals(
+          normalizedProducts
+            .slice(0, PRODUCTS_PER_SECTION)
+            .map((product) => ({ ...product, isNew: true })),
+        );
+        setBestsellers(
+          normalizedProducts.slice(PRODUCTS_PER_SECTION, PRODUCTS_PER_SECTION * 2),
+        );
+      } catch (fetchError) {
+        if (!isMounted) {
+          return;
+        }
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Không thể tải sản phẩm. Vui lòng thử lại.",
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    void fetchHomeProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <MainLayout>
       <HeroSection />
       <BrandSection />
       <FeatureSection />
-      <ProductSection title="New Arrivals" products={newArrivals} />
-      <ProductSection title="Bestsellers" products={bestsellers} />
+      {error && (
+        <div className="container mx-auto px-4">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        </div>
+      )}
+      <ProductSection
+        title="New Arrivals"
+        products={newArrivals}
+        isLoading={isLoading}
+      />
+      <ProductSection
+        title="Bestsellers"
+        products={bestsellers}
+        isLoading={isLoading}
+      />
     </MainLayout>
   );
 };
