@@ -30,6 +30,7 @@ import {
   ArrowDropDown as ArrowDropDownIcon,
   ArrowDropUp as ArrowDropUpIcon,
   AddBox as AddBoxIcon,
+  Category as CategoryIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -65,6 +66,12 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
+    text: "Quản lý sản phẩm",
+    icon: <CategoryIcon />,
+    path: "/admin/products",
+    roles: ["admin"],
+  },
+  {
     text: "Nhập hàng",
     icon: <AddBoxIcon />,
     path: "/admin/import-stock",
@@ -76,8 +83,12 @@ const menuItems: MenuItem[] = [
     path: "#",
     roles: ["admin"],
   },
-  {
-    text: "Đợt nhập hàng",
+  {    text: "Quản lý sản phẩm",
+    icon: <CategoryIcon />,
+    path: "/staff/products",
+    roles: ["staff"],
+  },
+  {    text: "Đợt nhập hàng",
     icon: <ShipmentIcon />,
     path: "/staff/receive-import-stock",
     roles: ["staff"],

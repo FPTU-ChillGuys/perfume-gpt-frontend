@@ -15,16 +15,16 @@ import {
 import {
   Visibility,
   VisibilityOff,
-  Google,
   Facebook,
   ArrowBack,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { GoogleLogin } from "@react-oauth/google";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, googleLogin, user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -46,6 +46,25 @@ export const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const handleGoogleLoginSuccess = async (credentialResponse: any) => {
+    setIsLoading(true);
+    setError("");
+    try {
+      // credentialResponse.credential contains the idToken
+      await googleLogin(credentialResponse.credential);
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      const errorMessage = err?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.";
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleLoginError = () => {
+    setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
+  };
 
   // Show loading while checking auth status
   if (authLoading) {
@@ -272,22 +291,16 @@ export const LoginPage = () => {
 
           {/* Social Login */}
           <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<Google />}
-              sx={{
-                py: 0.8,
-                borderColor: "divider",
-                color: "text.primary",
-                "&:hover": {
-                  borderColor: "divider",
-                  bgcolor: "action.hover",
-                },
-              }}
-            >
-              Google
-            </Button>
+            <Box sx={{ flex: 1 }}>
+              <GoogleLogin
+                onSuccess={handleGoogleLoginSuccess}
+                onError={handleGoogleLoginError}
+                theme="outline"
+                size="large"
+                width="100%"
+                text="continue_with"
+              />
+            </Box>
             <Button
               variant="outlined"
               fullWidth

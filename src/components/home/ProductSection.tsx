@@ -44,7 +44,7 @@ export const ProductSection = ({
         </div>
 
         {/* Products Grid */}
-        <div className="relative px-12">
+        <div className="relative">
           {/* Navigation Buttons */}
           <button className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition">
             <ChevronLeft size={20} />
@@ -54,7 +54,7 @@ export const ProductSection = ({
           </button>
 
           {/* Products */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 px-14">
             {isLoading
               ? renderSkeletonItems()
               : products.length > 0

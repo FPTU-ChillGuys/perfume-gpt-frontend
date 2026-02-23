@@ -6,6 +6,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
 }
 

@@ -49,6 +49,44 @@ class AuthService {
     }
   }
 
+  async googleLogin(idToken: string): Promise<User> {
+    try {
+      const response = await apiInstance.POST(
+        `${this.AUTH_ENDPOINT}/google-login`,
+        {
+          body: { idToken },
+        },
+      );
+
+      if (!response.data!.success) {
+        throw new Error(
+          response.data!.message || "Google login failed",
+        );
+      }
+
+      const accessToken = response.data!.payload!.accessToken!;
+
+      // Extract user info from token
+      const user = getUserFromToken(accessToken);
+      if (!user) {
+        throw new Error("Invalid token format");
+      }
+
+      // Store token and user info
+      localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      return user;
+    } catch (error: any) {
+      console.error("Google login error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Đăng nhập Google thất bại. Vui lòng thử lại sau.",
+      );
+    }
+  }
+
   logout(): void {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("user");

@@ -43,6 +43,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const googleLogin = async (idToken: string) => {
+    const userData = await authService.googleLogin(idToken);
+    setUser(userData);
+    
+    showToast("Đăng nhập Google thành công!", "success");
+
+    // Redirect based on role
+    switch (userData.role) {
+      case "admin":
+        navigate("/admin/dashboard");
+        break;
+      case "staff":
+        navigate("/staff/dashboard");
+        break;
+      case "user":
+        navigate("/");
+        break;
+      default:
+        navigate("/");
+    }
+  };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -57,6 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!user,
         isLoading,
         login,
+        googleLogin,
         logout,
       }}
     >
