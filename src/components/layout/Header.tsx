@@ -57,6 +57,17 @@ export const Header = () => {
     handleMenuClose();
   };
 
+  const handleProfile = () => {
+    if (user?.role === "admin") {
+      navigate("/admin/profile");
+    } else if (user?.role === "staff") {
+      navigate("/staff/profile");
+    } else {
+      navigate("/profile");
+    }
+    handleMenuClose();
+  };
+
   const handleLogout = () => {
     logout();
     handleMenuClose();
@@ -194,7 +205,18 @@ export const Header = () => {
                     },
                   }}
                 >
-                  <Box sx={{ px: 2, py: 1.5 }}>
+                  <MenuItem
+                    onClick={handleProfile}
+                    sx={{
+                      px: 2,
+                      py: 1.5,
+                      flexDirection: "column",
+                      alignItems: "flex-start",
+                      "&:hover": {
+                        bgcolor: "action.hover",
+                      },
+                    }}
+                  >
                     <Typography variant="subtitle2" fontWeight={600}>
                       {user.name}
                     </Typography>
@@ -221,7 +243,7 @@ export const Header = () => {
                     >
                       {user.role}
                     </Typography>
-                  </Box>
+                  </MenuItem>
                   <Divider />
                   {(user.role === "admin" || user.role === "staff") && (
                     <MenuItem onClick={handleDashboard} sx={{ py: 1.5 }}>

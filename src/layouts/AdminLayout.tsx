@@ -340,7 +340,21 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               },
             }}
           >
-            <Box sx={{ px: 2, py: 1.5 }}>
+            <MenuItem
+              onClick={() => {
+                handleMenuClose();
+                navigate(user?.role === "admin" ? "/admin/profile" : "/staff/profile");
+              }}
+              sx={{ 
+                px: 2, 
+                py: 1.5,
+                flexDirection: "column",
+                alignItems: "flex-start",
+                "&:hover": {
+                  bgcolor: "action.hover",
+                }
+              }}
+            >
               <Typography variant="subtitle2" fontWeight={600}>
                 {user?.name}
               </Typography>
@@ -367,7 +381,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               >
                 {user?.role}
               </Typography>
-            </Box>
+            </MenuItem>
             <Divider />
             <MenuItem
               onClick={() => {
