@@ -4,30 +4,60 @@ import {
   Container,
   Paper,
   Typography,
-  TextField,
-  Button,
   CircularProgress,
-  Alert,
   Avatar,
-  Divider,
-  Stack,
+  Tabs,
+  Tab,
+  Chip,
 } from "@mui/material";
 import {
   Person as PersonIcon,
-  Edit as EditIcon,
-  Save as SaveIcon,
-  Cancel as CancelIcon,
+  LocationOn as LocationIcon,
+  ShoppingBag as ShoppingBagIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
 import { profileService } from "../services/profileService";
+import { addressService } from "../services/addressService";
+import { orderService } from "../services/orderService";
 import type { UserProfile, UpdateProfileRequest } from "../types/profile";
+import type { AddressResponse } from "../types/address";
+import type { OrderListItem } from "../types/order";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { MainLayout } from "../layouts/MainLayout";
+import ProfileInfo from "../components/profile/ProfileInfo";
+import AddressList from "../components/profile/AddressList";
+import OrderHistory from "../components/profile/OrderHistory";
+
+interface TabPanelProps {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`profile-tabpanel-${index}`}
+      aria-labelledby={`profile-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
+}
 
 const ProfilePage = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [addresses, setAddresses] = useState<AddressResponse[]>([]);
+  const [orders, setOrders] = useState<OrderListItem[]>([]);
+  const [activeTab, setActiveTab] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,6 +80,15 @@ const ProfilePage = () => {
     loadProfile();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === 1 && addresses.length === 0) {
+      loadAddresses();
+    } else if (activeTab === 2 && orders.length === 0) {
+      loadOrders();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   const loadProfile = async () => {
     setIsLoading(true);
     setError("");
@@ -67,6 +106,33 @@ const ProfilePage = () => {
       setError(err.message || "Không thể tải thông tin profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAddresses = async () => {
+    setIsLoadingAddresses(true);
+    try {
+      const data = await addressService.getAddresses();
+      setAddresses(data);
+    } catch (err: any) {
+      console.error("Error loading addresses:", err);
+    } finally {
+      setIsLoadingAddresses(false);
+    }
+  };
+
+  const loadOrders = async () => {
+    setIsLoadingOrders(true);
+    try {
+      const { items } = await orderService.getMyOrders({
+        PageSize: 20,
+        PageNumber: 1,
+      });
+      setOrders(items);
+    } catch (err: any) {
+      console.error("Error loading orders:", err);
+    } finally {
+      setIsLoadingOrders(false);
     }
   };
 
@@ -131,22 +197,17 @@ const ProfilePage = () => {
 
   return (
     <Layout>
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Paper elevation={3}>
           {/* Header */}
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            mb={3}
-          >
+          <Box sx={{ p: 3, borderBottom: 1, borderColor: "divider" }}>
             <Box display="flex" alignItems="center" gap={2}>
               <Avatar
                 sx={{
-                  width: 80,
-                  height: 80,
+                  width: 64,
+                  height: 64,
                   bgcolor: "primary.main",
-                  fontSize: "2rem",
+                  fontSize: "1.5rem",
                 }}
               >
                 {profile?.profilePictureUrl ? (
@@ -165,163 +226,73 @@ const ProfilePage = () => {
               </Avatar>
               <Box>
                 <Typography variant="h5" fontWeight="bold">
-                  Thông tin cá nhân
+                  {profile?.name || user?.email}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {user?.email}
                 </Typography>
+                <Chip
+                  label={user?.role === "user" ? "Người dùng" : user?.role}
+                  size="small"
+                  color="primary"
+                  sx={{ mt: 0.5 }}
+                />
               </Box>
             </Box>
-            {!isEditing && (
-              <Button
-                variant="contained"
-                startIcon={<EditIcon />}
-                onClick={handleEdit}
-              >
-                Chỉnh sửa
-              </Button>
-            )}
           </Box>
 
-          <Divider sx={{ mb: 3 }} />
-
-          {/* Alerts */}
-          {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {error}
-            </Alert>
-          )}
-          {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {success}
-            </Alert>
-          )}
-
-          {/* Basic Info (Read-only) */}
-          <Stack spacing={2} mb={3}>
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="Họ và tên"
-                value={profile?.name || ""}
-                fullWidth
-                disabled
-                variant="outlined"
-              />
-              <TextField
-                label="Email"
-                value={profile?.email || ""}
-                fullWidth
-                disabled
-                variant="outlined"
-              />
-            </Stack>
-            {profile?.phoneNumber && (
-              <TextField
-                label="Số điện thoại"
-                value={profile.phoneNumber}
-                fullWidth
-                disabled
-                variant="outlined"
-                sx={{ maxWidth: { sm: "calc(50% - 8px)" } }}
-              />
-            )}
-          </Stack>
-
-          <Divider sx={{ my: 3 }} />
-
-          <Typography variant="h6" fontWeight="bold" mb={2}>
-            Sở thích nước hoa
-          </Typography>
-
-          {/* Editable Preferences */}
-          <Stack spacing={2}>
-            <TextField
-              label="Mùi hương yêu thích"
-              value={formData.scentPreference || ""}
-              onChange={(e) => handleChange("scentPreference", e.target.value)}
-              fullWidth
-              disabled={!isEditing}
-              placeholder="VD: Hương gỗ ấm áp, hương hoa nhẹ nhàng..."
-              multiline
-              rows={2}
+          {/* Tabs */}
+          <Tabs
+            value={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+            sx={{ borderBottom: 1, borderColor: "divider", px: 3 }}
+          >
+            <Tab
+              icon={<PersonIcon />}
+              label="Thông tin cá nhân"
+              iconPosition="start"
             />
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-              <TextField
-                label="Ngân sách tối thiểu (VNĐ)"
-                type="number"
-                value={formData.minBudget || ""}
-                onChange={(e) =>
-                  handleChange(
-                    "minBudget",
-                    e.target.value ? Number(e.target.value) : undefined,
-                  )
-                }
-                fullWidth
-                disabled={!isEditing}
-                placeholder="VD: 500000"
-              />
-              <TextField
-                label="Ngân sách tối đa (VNĐ)"
-                type="number"
-                value={formData.maxBudget || ""}
-                onChange={(e) =>
-                  handleChange(
-                    "maxBudget",
-                    e.target.value ? Number(e.target.value) : undefined,
-                  )
-                }
-                fullWidth
-                disabled={!isEditing}
-                placeholder="VD: 2000000"
-              />
-            </Stack>
-            <TextField
-              label="Phong cách ưa thích"
-              value={formData.preferredStyle || ""}
-              onChange={(e) => handleChange("preferredStyle", e.target.value)}
-              fullWidth
-              disabled={!isEditing}
-              placeholder="VD: Sang trọng, trẻ trung, cổ điển..."
-              multiline
-              rows={2}
+            <Tab icon={<LocationIcon />} label="Địa chỉ" iconPosition="start" />
+            <Tab
+              icon={<ShoppingBagIcon />}
+              label="Lịch sử mua hàng"
+              iconPosition="start"
             />
-            <TextField
-              label="Note hương yêu thích"
-              value={formData.favoriteNotes || ""}
-              onChange={(e) => handleChange("favoriteNotes", e.target.value)}
-              fullWidth
-              disabled={!isEditing}
-              placeholder="VD: Xạ hương, gỗ tuyết tùng, hoa hồng..."
-              multiline
-              rows={2}
-            />
-          </Stack>
+          </Tabs>
 
-          {/* Action Buttons */}
-          {isEditing && (
-            <Box display="flex" gap={2} justifyContent="flex-end" mt={3}>
-              <Button
-                variant="outlined"
-                startIcon={<CancelIcon />}
-                onClick={handleCancel}
-                disabled={isSaving}
-              >
-                Hủy
-              </Button>
-              <Button
-                variant="contained"
-                startIcon={<SaveIcon />}
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  "Lưu"
-                )}
-              </Button>
-            </Box>
-          )}
+          <Box sx={{ px: 3, pb: 3 }}>
+            {/* Tab 0: Profile Info */}
+            <TabPanel value={activeTab} index={0}>
+              <ProfileInfo
+                profile={profile}
+                formData={formData}
+                isEditing={isEditing}
+                isSaving={isSaving}
+                error={error}
+                success={success}
+                onEdit={handleEdit}
+                onCancel={handleCancel}
+                onSave={handleSave}
+                onChange={handleChange}
+                onClearError={() => setError("")}
+                onClearSuccess={() => setSuccess("")}
+              />
+            </TabPanel>
+
+            {/* Tab 1: Addresses */}
+            <TabPanel value={activeTab} index={1}>
+              <AddressList
+                addresses={addresses}
+                isLoading={isLoadingAddresses}
+                onRefresh={loadAddresses}
+              />
+            </TabPanel>
+
+            {/* Tab 2: Order History */}
+            <TabPanel value={activeTab} index={2}>
+              <OrderHistory orders={orders} isLoading={isLoadingOrders} />
+            </TabPanel>
+          </Box>
         </Paper>
       </Container>
     </Layout>
