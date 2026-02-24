@@ -18,18 +18,69 @@ class CartService {
   private readonly CLEAR_ENDPOINT = "/api/cart/clear";
   private readonly ADD_TO_CART_ENDPOINT = "/api/cart/items/add-to-cart";
 
+  async getCartWithTotals(voucherId?: string): Promise<{
+    items: CartItem[];
+    totals: CartTotals;
+  }> {
+    try {
+      const items = await this.getItems();
+
+      // Tính totals từ items
+      const subtotal = items.reduce((sum, item) => {
+        return sum + (Number(item.subTotal) || 0);
+      }, 0);
+
+      // Nếu có voucher, call API để get discount
+      let discount = 0;
+      if (voucherId) {
+        try {
+          const totalsFromApi = await this.getTotals(voucherId);
+          discount = totalsFromApi.discount;
+        } catch (error) {
+          console.error("Error fetching discount:", error);
+        }
+      }
+
+      // Logic shipping fee đơn giản: free nếu > 500k, còn lại 30k
+      const shippingFee = subtotal > 500000 ? 0 : 30000;
+      const totalPrice = subtotal + shippingFee - discount;
+
+      return {
+        items,
+        totals: {
+          subtotal,
+          shippingFee,
+          discount,
+          totalPrice,
+        },
+      };
+    } catch (error: any) {
+      console.error("Error fetching cart:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch cart",
+      );
+    }
+  }
+
   async getItems(): Promise<CartItem[]> {
     try {
       const response = await apiInstance.GET(this.ITEMS_ENDPOINT);
+
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to fetch cart items");
       }
 
-      return response.data.payload?.items ?? [];
+      const items = response.data.payload?.items ?? [];
+
+      return items;
     } catch (error: any) {
       console.error("Error fetching cart items:", error);
       throw new Error(
-        error.response?.data?.message || error.message || "Failed to fetch cart items",
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch cart items",
       );
     }
   }
@@ -43,7 +94,9 @@ class CartService {
       });
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to fetch cart totals");
+        throw new Error(
+          response.data?.message || "Failed to fetch cart totals",
+        );
       }
 
       const payload = response.data.payload;
@@ -60,7 +113,9 @@ class CartService {
     } catch (error: any) {
       console.error("Error fetching cart totals:", error);
       throw new Error(
-        error.response?.data?.message || error.message || "Failed to fetch cart totals",
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch cart totals",
       );
     }
   }
@@ -77,7 +132,9 @@ class CartService {
     } catch (error: any) {
       console.error("Error adding to cart:", error);
       throw new Error(
-        error.response?.data?.message || error.message || "Failed to add item to cart",
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to add item to cart",
       );
     }
   }
@@ -102,7 +159,9 @@ class CartService {
     } catch (error: any) {
       console.error("Error updating cart item:", error);
       throw new Error(
-        error.response?.data?.message || error.message || "Failed to update cart item",
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update cart item",
       );
     }
   }
@@ -126,7 +185,9 @@ class CartService {
     } catch (error: any) {
       console.error("Error removing cart item:", error);
       throw new Error(
-        error.response?.data?.message || error.message || "Failed to remove cart item",
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to remove cart item",
       );
     }
   }
@@ -140,7 +201,9 @@ class CartService {
     } catch (error: any) {
       console.error("Error clearing cart:", error);
       throw new Error(
-        error.response?.data?.message || error.message || "Failed to clear cart",
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to clear cart",
       );
     }
   }
