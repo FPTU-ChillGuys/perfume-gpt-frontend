@@ -6,6 +6,7 @@ import type {
   PagedProductList,
   PagedVariantList,
   VariantPagedItem,
+  CreateProductRequest,
 } from "@/types/product";
 
 type PaginatedQuery = {
@@ -192,6 +193,27 @@ class ProductService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch new arrivals",
+      );
+    }
+  }
+
+  async createProduct(request: CreateProductRequest): Promise<string> {
+    try {
+      const response = await apiInstance.POST("/api/products", {
+        body: request,
+      });
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to create product");
+      }
+
+      return response.data.message || "Product created successfully";
+    } catch (error: any) {
+      console.error("Error creating product:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create product",
       );
     }
   }

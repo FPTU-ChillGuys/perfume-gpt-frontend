@@ -29,6 +29,7 @@ import {
 import { AdminLayout } from "../layouts/AdminLayout";
 import { productService } from "../services/productService";
 import type { ProductListItem } from "../types/product";
+import CreateProductDialog from "../components/product/CreateProductDialog";
 
 const ProductManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,6 +39,7 @@ const ProductManagement = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -73,8 +75,7 @@ const ProductManagement = () => {
   };
 
   const handleAddProduct = () => {
-    // TODO: Open add product dialog
-    console.log("Add product");
+    setDialogOpen(true);
   };
 
   const handleEditProduct = (productId: string) => {
@@ -281,6 +282,12 @@ const ProductManagement = () => {
           </Box>
         </Paper>
       </Container>
+
+      <CreateProductDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onSuccess={fetchProducts}
+      />
     </AdminLayout>
   );
 };
