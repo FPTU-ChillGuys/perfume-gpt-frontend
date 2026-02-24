@@ -76,12 +76,12 @@ export const ProductCard = ({
       </button>
 
       {/* Image */}
-      <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden">
+      <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden p-4">
         {imageUrl ? (
           <img
             src={imageUrl}
             alt={name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
           <div className="text-gray-400 text-center p-4">

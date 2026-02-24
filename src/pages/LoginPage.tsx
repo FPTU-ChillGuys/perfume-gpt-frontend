@@ -24,7 +24,13 @@ import { GoogleLogin } from "@react-oauth/google";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, googleLogin, user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const {
+    login,
+    googleLogin,
+    user,
+    isAuthenticated,
+    isLoading: authLoading,
+  } = useAuth();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -55,7 +61,8 @@ export const LoginPage = () => {
       await googleLogin(credentialResponse.credential);
     } catch (err: any) {
       console.error("Google login error:", err);
-      const errorMessage = err?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.";
+      const errorMessage =
+        err?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.";
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -90,7 +97,7 @@ export const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      await login({ email, password });
+      await login({ credential: email, password });
       // Navigation is handled by AuthContext based on role
     } catch (err: any) {
       console.error("Login error:", err);

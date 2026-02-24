@@ -57,7 +57,7 @@ function App() {
                 <Route
                   path="/profile"
                   element={
-                    <RoleBasedRoute allowedRoles={["User", "Admin", "Staff"]}>
+                    <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
                       <ProfilePage />
                     </RoleBasedRoute>
                   }
@@ -67,7 +67,7 @@ function App() {
                 <Route
                   path="/admin/dashboard"
                   element={
-                    <RoleBasedRoute allowedRoles={["Admin"]}>
+                    <RoleBasedRoute allowedRoles={["admin"]}>
                       <AdminDashboard />
                     </RoleBasedRoute>
                   }
@@ -75,7 +75,7 @@ function App() {
                 <Route
                   path="/admin/products"
                   element={
-                    <RoleBasedRoute allowedRoles={["Admin"]}>
+                    <RoleBasedRoute allowedRoles={["admin"]}>
                       <ProductManagement />
                     </RoleBasedRoute>
                   }
@@ -83,7 +83,7 @@ function App() {
                 <Route
                   path="/admin/import-stock"
                   element={
-                    <RoleBasedRoute allowedRoles={["Admin"]}>
+                    <RoleBasedRoute allowedRoles={["admin"]}>
                       <ImportStock />
                     </RoleBasedRoute>
                   }
@@ -91,7 +91,7 @@ function App() {
                 <Route
                   path="/admin/profile"
                   element={
-                    <RoleBasedRoute allowedRoles={["Admin"]}>
+                    <RoleBasedRoute allowedRoles={["admin"]}>
                       <ProfilePage />
                     </RoleBasedRoute>
                   }
@@ -101,7 +101,7 @@ function App() {
                 <Route
                   path="/staff/dashboard"
                   element={
-                    <RoleBasedRoute allowedRoles={["Staff"]}>
+                    <RoleBasedRoute allowedRoles={["staff"]}>
                       <StaffDashboard />
                     </RoleBasedRoute>
                   }
@@ -109,7 +109,7 @@ function App() {
                 <Route
                   path="/staff/products"
                   element={
-                    <RoleBasedRoute allowedRoles={["Staff"]}>
+                    <RoleBasedRoute allowedRoles={["staff"]}>
                       <ProductManagement />
                     </RoleBasedRoute>
                   }
@@ -118,7 +118,7 @@ function App() {
                 <Route
                   path="/staff/receive-import-stock"
                   element={
-                    <RoleBasedRoute allowedRoles={["Staff"]}>
+                    <RoleBasedRoute allowedRoles={["staff"]}>
                       <ReceiveImportStock />
                     </RoleBasedRoute>
                   }
@@ -126,7 +126,7 @@ function App() {
                 <Route
                   path="/staff/profile"
                   element={
-                    <RoleBasedRoute allowedRoles={["Staff"]}>
+                    <RoleBasedRoute allowedRoles={["staff"]}>
                       <ProfilePage />
                     </RoleBasedRoute>
                   }
