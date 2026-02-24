@@ -1826,6 +1826,43 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/brands/lookup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["BaseResponseOfListOfBrandLookupItem"];
+            "application/json": components["schemas"]["BaseResponseOfListOfBrandLookupItem"];
+            "text/json": components["schemas"]["BaseResponseOfListOfBrandLookupItem"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/cart/items": {
     parameters: {
       query?: never;
@@ -1895,7 +1932,9 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          voucherId?: string;
+          VoucherCode?: string;
+          DistrictId?: null | number;
+          WardCode?: string;
         };
         header?: never;
         path?: never;
@@ -2237,6 +2276,43 @@ export interface paths {
         };
       };
     };
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/categories/lookup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["BaseResponseOfListOfCategoriesLookupItem"];
+            "application/json": components["schemas"]["BaseResponseOfListOfCategoriesLookupItem"];
+            "text/json": components["schemas"]["BaseResponseOfListOfCategoriesLookupItem"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
     options?: never;
     head?: never;
     patch?: never;
@@ -4696,6 +4772,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          GenderValueId?: null | number;
           PageNumber?: number;
           PageSize?: number;
           SortBy?: string;
@@ -5351,6 +5428,7 @@ export interface paths {
       parameters: {
         query?: {
           searchText?: string;
+          GenderValueId?: null | number;
           PageNumber?: number;
           PageSize?: number;
           SortBy?: string;
@@ -5394,6 +5472,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          GenderValueId?: null | number;
           PageNumber?: number;
           PageSize?: number;
           SortBy?: string;
@@ -5448,6 +5527,7 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          GenderValueId?: null | number;
           PageNumber?: number;
           PageSize?: number;
           SortBy?: string;
@@ -8223,8 +8303,7 @@ export interface components {
       isDefault?: boolean;
     };
     ApplyVoucherRequest: {
-      /** Format: uuid */
-      voucherId?: string;
+      voucherCode?: string;
       /** Format: decimal */
       orderAmount?: number;
     };
@@ -8379,6 +8458,20 @@ export interface components {
     };
     BaseResponseOfListOfBatchDetailResponse: {
       payload?: null | components["schemas"]["BatchDetailResponse"][];
+      success?: boolean;
+      message?: string;
+      errors?: null | string[];
+      errorType?: components["schemas"]["ResponseErrorType"];
+    };
+    BaseResponseOfListOfBrandLookupItem: {
+      payload?: null | components["schemas"]["BrandLookupItem"][];
+      success?: boolean;
+      message?: string;
+      errors?: null | string[];
+      errorType?: components["schemas"]["ResponseErrorType"];
+    };
+    BaseResponseOfListOfCategoriesLookupItem: {
+      payload?: null | components["schemas"]["CategoriesLookupItem"][];
       success?: boolean;
       message?: string;
       errors?: null | string[];
@@ -8698,6 +8791,11 @@ export interface components {
       /** Format: date-time */
       createdAt?: string;
     };
+    BrandLookupItem: {
+      /** Format: int32 */
+      id?: number;
+      name?: string;
+    };
     BulkActionError: {
       /** Format: uuid */
       id?: string;
@@ -8785,6 +8883,11 @@ export interface components {
     };
     /** @enum {string} */
     CarrierName: "GHN" | "GHTK";
+    CategoriesLookupItem: {
+      /** Format: int32 */
+      id?: number;
+      name?: string;
+    };
     CreateAddressRequest: {
       receiverName?: string;
       phone?: string;
@@ -8852,8 +8955,7 @@ export interface components {
       quantity?: number;
     };
     CreateOrderRequest: {
-      /** Format: uuid */
-      voucherId?: null | string;
+      voucherCode?: null | string;
       isPickupInStore?: boolean;
       recipient?: null | components["schemas"]["RecipientInformation"];
       payment?: components["schemas"]["PaymentInformation"];
@@ -10031,7 +10133,7 @@ export interface components {
       code?: string;
       /** Format: decimal */
       discountValue?: number;
-      discountType?: string;
+      discountType?: components["schemas"]["DiscountType"];
       /** Format: int64 */
       requiredPoints?: number;
       /** Format: decimal */
