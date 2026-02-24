@@ -13,6 +13,7 @@ import {
   Divider,
   ListItemIcon,
   Avatar,
+  Badge,
 } from "@mui/material";
 import {
   Search,
@@ -24,9 +25,11 @@ import {
   Dashboard as DashboardIcon,
   Logout as LogoutIcon,
 } from "@mui/icons-material";
-import { useNavigate, Link as RouterLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import { useCart } from "../../hooks/useCart";
 import { useState } from "react";
+import { CartDropdown } from "../common/CartDropdown";
 
 const navItems = [
   { label: "Nước Hoa Nam", href: "#" },
@@ -38,7 +41,9 @@ const navItems = [
 export const Header = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+  const { cartCount } = useCart();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [cartAnchorEl, setCartAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -46,6 +51,19 @@ export const Header = () => {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleCartHover = (event: React.MouseEvent<HTMLElement>) => {
+    setCartAnchorEl(event.currentTarget);
+  };
+
+  const handleCartClose = () => {
+    setCartAnchorEl(null);
+  };
+
+  const handleCartClick = () => {
+    handleCartClose();
+    navigate("/cart");
   };
 
   const handleDashboard = () => {
@@ -132,8 +150,8 @@ export const Header = () => {
               <FavoriteBorder />
             </IconButton>
             <Box
-              component={RouterLink}
-              to="/cart"
+              onClick={handleCartClick}
+              onMouseEnter={handleCartHover}
               aria-label="Giỏ hàng"
               sx={{
                 width: 40,
@@ -144,7 +162,7 @@ export const Header = () => {
                 justifyContent: "center",
                 color: "text.secondary",
                 transition: "all 0.2s ease",
-                textDecoration: "none",
+                cursor: "pointer",
                 "&:hover": {
                   color: "primary.main",
                   bgcolor: "action.hover",
@@ -156,8 +174,15 @@ export const Header = () => {
                 },
               }}
             >
-              <ShoppingCartOutlined fontSize="medium" />
+              <Badge badgeContent={cartCount} color="error" max={99}>
+                <ShoppingCartOutlined fontSize="medium" />
+              </Badge>
             </Box>
+            <CartDropdown
+              anchorEl={cartAnchorEl}
+              open={Boolean(cartAnchorEl)}
+              onClose={handleCartClose}
+            />
 
             {isAuthenticated && user ? (
               <>

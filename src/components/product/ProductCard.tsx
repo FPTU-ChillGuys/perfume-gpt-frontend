@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Heart } from "lucide-react";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
+import { useCart } from "@/hooks/useCart";
 
 export interface ProductCardProps {
   id: string;
@@ -26,6 +27,7 @@ export const ProductCard = ({
   variantId,
 }: ProductCardProps) => {
   const { showToast } = useToast();
+  const { refreshCart } = useCart();
   const [isAdding, setIsAdding] = useState(false);
 
   const formatPrice = (price: number) => {
@@ -41,6 +43,7 @@ export const ProductCard = ({
     setIsAdding(true);
     try {
       await cartService.addItem(variantId, 1);
+      await refreshCart();
       showToast("Đã thêm sản phẩm vào giỏ hàng", "success");
     } catch (error) {
       showToast(

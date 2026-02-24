@@ -2,7 +2,9 @@ import { apiInstance } from "@/lib/api";
 import type { CartItem, CartTotals } from "@/types/cart";
 
 interface VoucherQuery {
-  voucherId?: string;
+  VoucherCode?: string;
+  DistrictId?: number | null;
+  WardCode?: string;
 }
 
 const DEFAULT_TOTALS: CartTotals = {
@@ -23,36 +25,13 @@ class CartService {
     totals: CartTotals;
   }> {
     try {
+      // Lấy items và totals từ API
       const items = await this.getItems();
-
-      // Tính totals từ items
-      const subtotal = items.reduce((sum, item) => {
-        return sum + (Number(item.subTotal) || 0);
-      }, 0);
-
-      // Nếu có voucher, call API để get discount
-      let discount = 0;
-      if (voucherId) {
-        try {
-          const totalsFromApi = await this.getTotals(voucherId);
-          discount = totalsFromApi.discount;
-        } catch (error) {
-          console.error("Error fetching discount:", error);
-        }
-      }
-
-      // Logic shipping fee đơn giản: free nếu > 500k, còn lại 30k
-      const shippingFee = subtotal > 500000 ? 0 : 30000;
-      const totalPrice = subtotal + shippingFee - discount;
+      const totals = await this.getTotals(voucherId);
 
       return {
         items,
-        totals: {
-          subtotal,
-          shippingFee,
-          discount,
-          totalPrice,
-        },
+        totals,
       };
     } catch (error: any) {
       console.error("Error fetching cart:", error);
@@ -82,6 +61,17 @@ class CartService {
           error.message ||
           "Failed to fetch cart items",
       );
+    }
+  }
+
+  async getCartItemCount(): Promise<number> {
+    try {
+      const items = await this.getItems();
+      // Tính tổng quantity của tất cả items
+      return items.reduce((total, item) => total + (item.quantity ?? 0), 0);
+    } catch (error: any) {
+      console.error("Error fetching cart item count:", error);
+      return 0;
     }
   }
 
@@ -213,7 +203,7 @@ class CartService {
       return undefined;
     }
 
-    return { voucherId };
+    return { VoucherCode: voucherId };
   }
 }
 

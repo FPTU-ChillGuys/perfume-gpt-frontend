@@ -6,6 +6,7 @@ import { cartService } from "@/services/cartService";
 import { voucherService } from "@/services/voucherService";
 import type { CartItem, CartTotals } from "@/types/cart";
 import { useToast } from "@/hooks/useToast";
+import { useCart } from "@/hooks/useCart";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -17,6 +18,7 @@ type AppliedVoucherState = {
 
 export const CartPage = () => {
   const { showToast } = useToast();
+  const { refreshCart } = useCart();
   const [items, setItems] = useState<CartItem[]>([]);
   const [totals, setTotals] = useState<CartTotals>({
     subtotal: 0,
@@ -101,6 +103,7 @@ export const CartPage = () => {
     try {
       await cartService.updateCartItem(cartItemId, nextQuantity);
       await loadCart();
+      await refreshCart();
       showToast("Đã cập nhật số lượng", "success");
     } catch (error) {
       showToast(
@@ -121,6 +124,7 @@ export const CartPage = () => {
     try {
       await cartService.removeCartItem(cartItemId);
       await loadCart();
+      await refreshCart();
       showToast("Đã xóa sản phẩm khỏi giỏ hàng", "success");
     } catch (error) {
       showToast(
@@ -145,6 +149,7 @@ export const CartPage = () => {
       setAppliedVoucher(null);
       setVoucherInput("");
       await loadCart();
+      await refreshCart();
       showToast("Đã xóa toàn bộ giỏ hàng", "success");
     } catch (error) {
       showToast(
@@ -251,7 +256,13 @@ export const CartPage = () => {
           </div>
 
           <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
-            <div className="space-y-8">
+            <div
+              className="space-y-8 max-h-[calc(100vh-250px)] overflow-y-auto pr-2"
+              style={{
+                scrollbarWidth: "thin",
+                scrollbarColor: "#d1d5db #f3f4f6",
+              }}
+            >
               {isLoading ? (
                 <div className="space-y-6">{renderSkeletonItems()}</div>
               ) : items.length === 0 ? (
@@ -364,27 +375,19 @@ export const CartPage = () => {
                   <p className="text-sm font-semibold text-gray-500">
                     Tạm tính
                   </p>
-                  <p className="text-lg font-semibold text-slate-900">
+                  <p className="text-base font-semibold text-gray-500">
                     {formatCurrency(totals.subtotal)}
                   </p>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-                  <span>Phí vận chuyển</span>
-                  <span className="font-semibold text-emerald-600">
-                    {totals.shippingFee === 0
-                      ? "Free"
-                      : formatCurrency(totals.shippingFee)}
-                  </span>
-                </div>
                 {totals.discount > 0 && (
-                  <div className="mt-2 flex items-center justify-between text-sm text-emerald-600">
+                  <div className="mt-4 flex items-center justify-between text-sm text-emerald-600">
                     <span>Giảm giá</span>
                     <span>-{formatCurrency(totals.discount)}</span>
                   </div>
                 )}
-                <div className="mt-4 flex items-center justify-between text-base font-semibold text-slate-900">
+                <div className="mt-4 flex items-center justify-between text-lg font-semibold text-slate-900">
                   <span>Tổng</span>
-                  <span>{formatCurrency(totals.totalPrice)}</span>
+                  <span>{formatCurrency(totals.subtotal)}</span>
                 </div>
 
                 <div className="mt-6 space-y-3">

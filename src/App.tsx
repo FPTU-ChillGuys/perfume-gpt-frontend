@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from "@react-oauth/google";
 import { theme } from "./theme/theme";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastProvider";
+import { CartProvider } from "./contexts/CartContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
 import { HomePage } from "./pages/HomePage";
@@ -34,104 +35,106 @@ function App() {
         <BrowserRouter>
           <ToastProvider>
             <AuthProvider>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/unauthorized" element={<UnauthorizedPage />} />
-                <Route path="/cart" element={<CartPage />} />
-                <Route
-                  path="/checkout/shipping"
-                  element={<CheckoutShippingPage />}
-                />
-                <Route
-                  path="/checkout/packaging"
-                  element={<CheckoutPackagingPage />}
-                />
-                <Route
-                  path="/checkout/payment"
-                  element={<CheckoutPaymentPage />}
-                />
+              <CartProvider>
+                <Routes>
+                  <Route path="/" element={<HomePage />} />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                  <Route path="/cart" element={<CartPage />} />
+                  <Route
+                    path="/checkout/shipping"
+                    element={<CheckoutShippingPage />}
+                  />
+                  <Route
+                    path="/checkout/packaging"
+                    element={<CheckoutPackagingPage />}
+                  />
+                  <Route
+                    path="/checkout/payment"
+                    element={<CheckoutPaymentPage />}
+                  />
 
-                {/* User Profile Route */}
-                <Route
-                  path="/profile"
-                  element={
-                    <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
-                      <ProfilePage />
-                    </RoleBasedRoute>
-                  }
-                />
+                  {/* User Profile Route */}
+                  <Route
+                    path="/profile"
+                    element={
+                      <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
+                        <ProfilePage />
+                      </RoleBasedRoute>
+                    }
+                  />
 
-                {/* Admin Routes */}
-                <Route
-                  path="/admin/dashboard"
-                  element={
-                    <RoleBasedRoute allowedRoles={["admin"]}>
-                      <AdminDashboard />
-                    </RoleBasedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/products"
-                  element={
-                    <RoleBasedRoute allowedRoles={["admin"]}>
-                      <ProductManagement />
-                    </RoleBasedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/import-stock"
-                  element={
-                    <RoleBasedRoute allowedRoles={["admin"]}>
-                      <ImportStock />
-                    </RoleBasedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/profile"
-                  element={
-                    <RoleBasedRoute allowedRoles={["admin"]}>
-                      <ProfilePage />
-                    </RoleBasedRoute>
-                  }
-                />
+                  {/* Admin Routes */}
+                  <Route
+                    path="/admin/dashboard"
+                    element={
+                      <RoleBasedRoute allowedRoles={["admin"]}>
+                        <AdminDashboard />
+                      </RoleBasedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/products"
+                    element={
+                      <RoleBasedRoute allowedRoles={["admin"]}>
+                        <ProductManagement />
+                      </RoleBasedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/import-stock"
+                    element={
+                      <RoleBasedRoute allowedRoles={["admin"]}>
+                        <ImportStock />
+                      </RoleBasedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/profile"
+                    element={
+                      <RoleBasedRoute allowedRoles={["admin"]}>
+                        <ProfilePage />
+                      </RoleBasedRoute>
+                    }
+                  />
 
-                {/* Staff Routes */}
-                <Route
-                  path="/staff/dashboard"
-                  element={
-                    <RoleBasedRoute allowedRoles={["staff"]}>
-                      <StaffDashboard />
-                    </RoleBasedRoute>
-                  }
-                />
-                <Route
-                  path="/staff/products"
-                  element={
-                    <RoleBasedRoute allowedRoles={["staff"]}>
-                      <ProductManagement />
-                    </RoleBasedRoute>
-                  }
-                />
+                  {/* Staff Routes */}
+                  <Route
+                    path="/staff/dashboard"
+                    element={
+                      <RoleBasedRoute allowedRoles={["staff"]}>
+                        <StaffDashboard />
+                      </RoleBasedRoute>
+                    }
+                  />
+                  <Route
+                    path="/staff/products"
+                    element={
+                      <RoleBasedRoute allowedRoles={["staff"]}>
+                        <ProductManagement />
+                      </RoleBasedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/staff/receive-import-stock"
-                  element={
-                    <RoleBasedRoute allowedRoles={["staff"]}>
-                      <ReceiveImportStock />
-                    </RoleBasedRoute>
-                  }
-                />
-                <Route
-                  path="/staff/profile"
-                  element={
-                    <RoleBasedRoute allowedRoles={["staff"]}>
-                      <ProfilePage />
-                    </RoleBasedRoute>
-                  }
-                />
-              </Routes>
+                  <Route
+                    path="/staff/receive-import-stock"
+                    element={
+                      <RoleBasedRoute allowedRoles={["staff"]}>
+                        <ReceiveImportStock />
+                      </RoleBasedRoute>
+                    }
+                  />
+                  <Route
+                    path="/staff/profile"
+                    element={
+                      <RoleBasedRoute allowedRoles={["staff"]}>
+                        <ProfilePage />
+                      </RoleBasedRoute>
+                    }
+                  />
+                </Routes>
+              </CartProvider>
             </AuthProvider>
           </ToastProvider>
         </BrowserRouter>
