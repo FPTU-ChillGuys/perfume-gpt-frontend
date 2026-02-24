@@ -63,7 +63,6 @@ class ProductService {
         },
       });
 
-
       if (!response.data!.success) {
         throw new Error(response.data!.message || "Failed to fetch variants");
       }
@@ -105,7 +104,9 @@ class ProductService {
     }
   }
 
-  async getProductVariantsPaged(query?: PaginatedQuery): Promise<PagedVariantList> {
+  async getProductVariantsPaged(
+    query?: PaginatedQuery,
+  ): Promise<PagedVariantList> {
     try {
       const response = await apiInstance.GET(this.PRODUCT_VARIANTS_ENDPOINT, {
         params: {
@@ -129,6 +130,68 @@ class ProductService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch product variants",
+      );
+    }
+  }
+
+  async getBestSellers(): Promise<PagedProductList> {
+    try {
+      const response = await apiInstance.GET("/api/products/best-sellers", {
+        params: {
+          query: {
+            PageNumber: 1,
+            PageSize: 10,
+            IsDescending: true,
+          },
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to fetch best sellers",
+        );
+      }
+
+      return (
+        response.data.payload || this.createEmptyPagedResult<ProductListItem>()
+      );
+    } catch (error: any) {
+      console.error("Error fetching best sellers:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch best sellers",
+      );
+    }
+  }
+
+  async getNewArrivals(): Promise<PagedProductList> {
+    try {
+      const response = await apiInstance.GET("/api/products/new-arrivals", {
+        params: {
+          query: {
+            PageNumber: 1,
+            PageSize: 10,
+            IsDescending: true,
+          },
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to fetch new arrivals",
+        );
+      }
+
+      return (
+        response.data.payload || this.createEmptyPagedResult<ProductListItem>()
+      );
+    } catch (error: any) {
+      console.error("Error fetching new arrivals:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch new arrivals",
       );
     }
   }

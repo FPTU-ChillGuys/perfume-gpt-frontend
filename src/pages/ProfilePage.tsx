@@ -35,7 +35,7 @@ const ProfilePage = () => {
 
   // Determine which layout to use based on user role
   const Layout =
-    user?.role === "admin" || user?.role === "staff" ? AdminLayout : MainLayout;
+    user?.role === "Admin" || user?.role === "Staff" ? AdminLayout : MainLayout;
 
   // Form state
   const [formData, setFormData] = useState<UpdateProfileRequest>({

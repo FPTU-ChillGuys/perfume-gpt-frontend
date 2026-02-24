@@ -614,6 +614,457 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/address/streets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Province?: string;
+                    District?: string;
+                    Ward_street?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                        "application/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                        "text/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                        "application/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                        "text/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                        "application/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                        "text/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attributes/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    isVariantLevel?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attributes/values/lookup/{attributeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    attributeId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attributes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateAttributeRequest"];
+                    "text/json": components["schemas"]["CreateAttributeRequest"];
+                    "application/*+json": components["schemas"]["CreateAttributeRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attributes/{attributeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    attributeId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateAttributeRequest"];
+                    "text/json": components["schemas"]["UpdateAttributeRequest"];
+                    "application/*+json": components["schemas"]["UpdateAttributeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    attributeId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attributes/values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateAttributeValueRequest"];
+                    "text/json": components["schemas"]["CreateAttributeValueRequest"];
+                    "application/*+json": components["schemas"]["CreateAttributeValueRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/attributes/values/{valueId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    valueId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateAttributeValueRequest"];
+                    "text/json": components["schemas"]["UpdateAttributeValueRequest"];
+                    "application/*+json": components["schemas"]["UpdateAttributeValueRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    valueId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/auths/login": {
         parameters: {
             query?: never;
@@ -1004,6 +1455,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auths/api-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/backgroundjobs/process-expired-reservations": {
         parameters: {
             query?: never;
@@ -1125,6 +1646,175 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    VariantId?: string;
+                    SearchTerm?: string;
+                    IsExpired?: boolean;
+                    IsExpiringSoon?: boolean;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/batches/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/batches/variant/{variantId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    variantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                    };
                 };
             };
         };
@@ -1941,9 +2631,9 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["UpdateFullImportTicketRequest"];
-                    "text/json": components["schemas"]["UpdateFullImportTicketRequest"];
-                    "application/*+json": components["schemas"]["UpdateFullImportTicketRequest"];
+                    "application/json": components["schemas"]["UpdateImportRequest"];
+                    "text/json": components["schemas"]["UpdateImportRequest"];
+                    "application/*+json": components["schemas"]["UpdateImportRequest"];
                 };
             };
             responses: {
@@ -2075,9 +2765,9 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["UpdateImportTicketRequest"];
-                    "text/json": components["schemas"]["UpdateImportTicketRequest"];
-                    "application/*+json": components["schemas"]["UpdateImportTicketRequest"];
+                    "application/json": components["schemas"]["UpdateImportStatusRequest"];
+                    "text/json": components["schemas"]["UpdateImportStatusRequest"];
+                    "application/*+json": components["schemas"]["UpdateImportStatusRequest"];
                 };
             };
             responses: {
@@ -2284,9 +2974,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
                     };
                 };
                 /** @description Internal Server Error */
@@ -2295,9 +2985,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
                     };
                 };
             };
@@ -2334,9 +3024,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfBatchResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfBatchResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
                     };
                 };
                 /** @description Internal Server Error */
@@ -2345,9 +3035,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfBatchResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfBatchResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
                     };
                 };
             };
@@ -2384,9 +3074,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBatchResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBatchResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBatchResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
                     };
                 };
                 /** @description Not Found */
@@ -2395,9 +3085,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBatchResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBatchResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBatchResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
                     };
                 };
                 /** @description Internal Server Error */
@@ -2406,9 +3096,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBatchResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBatchResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBatchResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
                     };
                 };
             };
@@ -2463,6 +3153,216 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loyaltypoints/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfLoyaltyPointResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfLoyaltyPointResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfLoyaltyPointResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfLoyaltyPointResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfLoyaltyPointResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfLoyaltyPointResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loyaltypoints/{userId}/plus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PointsRequest"];
+                    "text/json": components["schemas"]["PointsRequest"];
+                    "application/*+json": components["schemas"]["PointsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
+                        "application/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
+                        "application/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loyaltypoints/{userId}/redeem": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PointsRequest"];
+                    "text/json": components["schemas"]["PointsRequest"];
+                    "application/*+json": components["schemas"]["PointsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
+                        "application/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
+                        "application/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loyaltypoints/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
+                        "application/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
+                        "application/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -3162,6 +4062,95 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders/{orderId}/address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RecipientInformation"];
+                    "text/json": components["schemas"]["RecipientInformation"];
+                    "application/*+json": components["schemas"]["RecipientInformation"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders/{orderId}/fulfill": {
         parameters: {
             query?: never;
@@ -3586,6 +4575,106 @@ export interface paths {
                 };
             };
         };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/{productId}/information": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductInforResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductInforResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductInforResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductInforResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductInforResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductInforResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/{productId}/fast-look": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductFastLookResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductFastLookResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductFastLookResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductFastLookResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductFastLookResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductFastLookResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -4291,6 +5380,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/products/best-sellers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/products/new-arrivals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/productvariants": {
         parameters: {
             query?: never;
@@ -4871,6 +6068,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profiles/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProfileResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProfileResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProfileResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/profiles": {
         parameters: {
             query?: never;
@@ -4983,56 +6239,6 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfReviewResponse"];
                         "application/json": components["schemas"]["BaseResponseOfListOfReviewResponse"];
                         "text/json": components["schemas"]["BaseResponseOfListOfReviewResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/reviews/can-review/{orderDetailId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    orderDetailId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
             };
@@ -5438,57 +6644,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/reviews/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    pageNumber?: number;
-                    pageSize?: number;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6236,6 +7391,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/staff-lookup": {
         parameters: {
             query?: never;
@@ -6272,6 +7475,197 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfStaffLookupItem"];
                         "application/json": components["schemas"]["BaseResponseOfListOfStaffLookupItem"];
                         "text/json": components["schemas"]["BaseResponseOfListOfStaffLookupItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfMediaResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/x-www-form-urlencoded": {
+                        Avatar?: components["schemas"]["IFormFile"];
+                        AltText?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
             };
@@ -6801,82 +8195,13 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/vouchers/validate/{voucherId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    voucherId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AddressLevel4Response: {
+            data?: string[];
+        };
         AddressResponse: {
             /** Format: uuid */
             id?: string;
@@ -6909,7 +8234,26 @@ export interface components {
             finalAmount?: number;
             discountType?: string;
         };
+        AttributeLookupItem: {
+            /** Format: int32 */
+            id?: number;
+            name?: string;
+            description?: string;
+            isVariantLevel?: boolean;
+        };
+        AttributeValueLookupItem: {
+            /** Format: int32 */
+            id?: number;
+            value?: string;
+        };
         BaseResponse: {
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfAddressLevel4Response: {
+            payload?: null | components["schemas"]["AddressLevel4Response"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -6929,8 +8273,8 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
-        BaseResponseOfBatchResponse: {
-            payload?: null | components["schemas"]["BatchResponse"];
+        BaseResponseOfBatchDetailResponse: {
+            payload?: null | components["schemas"]["BatchDetailResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -7013,8 +8357,22 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
-        BaseResponseOfListOfBatchResponse: {
-            payload?: null | components["schemas"]["BatchResponse"][];
+        BaseResponseOfListOfAttributeLookupItem: {
+            payload?: null | components["schemas"]["AttributeLookupItem"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfListOfAttributeValueLookupItem: {
+            payload?: null | components["schemas"]["AttributeValueLookupItem"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfListOfBatchDetailResponse: {
+            payload?: null | components["schemas"]["BatchDetailResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -7083,6 +8441,13 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfLoyaltyPointResponse: {
+            payload?: null | components["schemas"]["LoyaltyPointResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfMediaResponse: {
             payload?: null | components["schemas"]["MediaResponse"];
             success?: boolean;
@@ -7097,8 +8462,8 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
-        BaseResponseOfPagedResultOfBatchResponse: {
-            payload?: null | components["schemas"]["PagedResultOfBatchResponse"];
+        BaseResponseOfPagedResultOfBatchDetailResponse: {
+            payload?: null | components["schemas"]["PagedResultOfBatchDetailResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -7181,6 +8546,20 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfProductFastLookResponse: {
+            payload?: null | components["schemas"]["ProductFastLookResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfProductInforResponse: {
+            payload?: null | components["schemas"]["ProductInforResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfProductResponse: {
             payload?: null | components["schemas"]["ProductResponse"];
             success?: boolean;
@@ -7190,6 +8569,13 @@ export interface components {
         };
         BaseResponseOfProductVariantResponse: {
             payload?: null | components["schemas"]["ProductVariantResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfProfileResponse: {
+            payload?: null | components["schemas"]["ProfileResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -7244,12 +8630,44 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfUserCredentialsResponse: {
+            payload?: null | components["schemas"]["UserCredentialsResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfVoucherResponse: {
             payload?: null | components["schemas"]["VoucherResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BatchDetailResponse: {
+            /** Format: uuid */
+            variantId?: string;
+            variantSku?: string;
+            productName?: string;
+            /** Format: int32 */
+            volumeMl?: number;
+            concentrationName?: string;
+            isExpired?: boolean;
+            /** Format: int32 */
+            daysUntilExpiry?: number;
+            /** Format: uuid */
+            id?: string;
+            batchCode?: string;
+            /** Format: date-time */
+            manufactureDate?: string;
+            /** Format: date-time */
+            expiryDate?: string;
+            /** Format: int32 */
+            importQuantity?: number;
+            /** Format: int32 */
+            remainingQuantity?: number;
+            /** Format: date-time */
+            createdAt?: string;
         };
         BatchResponse: {
             /** Format: uuid */
@@ -7366,6 +8784,16 @@ export interface components {
             /** Format: int32 */
             provinceId?: number;
         };
+        CreateAttributeRequest: {
+            name?: string;
+            description?: null | string;
+            isVariantLevel?: boolean;
+        };
+        CreateAttributeValueRequest: {
+            /** Format: int32 */
+            attributeId?: number;
+            value?: string;
+        };
         CreateBatchRequest: {
             batchCode?: string;
             /** Format: date-time */
@@ -7422,14 +8850,9 @@ export interface components {
             brandId?: number;
             /** Format: int32 */
             categoryId?: number;
-            /** Format: int32 */
-            familyId?: number;
-            gender?: components["schemas"]["Gender"];
             description?: null | string;
-            topNotes?: null | string;
-            middleNotes?: null | string;
-            baseNotes?: null | string;
             temporaryMediaIds?: null | string[];
+            attributes?: null | components["schemas"]["ProductAttributeDto"][];
         };
         CreateReviewRequest: {
             /** Format: uuid */
@@ -7458,7 +8881,6 @@ export interface components {
         CreateVariantRequest: {
             /** Format: uuid */
             productId?: string;
-            temporaryMediaIds?: null | string[];
             sku?: string;
             /** Format: int32 */
             volumeMl?: number;
@@ -7468,8 +8890,8 @@ export interface components {
             /** Format: decimal */
             basePrice?: number;
             status?: components["schemas"]["VariantStatus"];
-            mediaIdsToDelete?: null | string[];
-            temporaryMediaIdsToAdd?: null | string[];
+            attributes?: null | components["schemas"]["ProductAttributeDto"][];
+            temporaryMediaIds?: null | string[];
         };
         CreateVoucherRequest: {
             code?: string;
@@ -7536,8 +8958,6 @@ export interface components {
         FulfillOrderRequest: {
             items?: components["schemas"]["FulfillOrderItemRequest"][];
         };
-        /** @enum {string} */
-        Gender: "Male" | "Female" | "Unisex";
         GetCartItemResponse: {
             /** Format: uuid */
             cartItemId?: string;
@@ -7547,6 +8967,7 @@ export interface components {
             imageUrl?: string;
             /** Format: int32 */
             volumeMl?: number;
+            type?: components["schemas"]["VariantType"];
             /** Format: decimal */
             variantPrice?: number;
             /** Format: int32 */
@@ -7594,16 +9015,16 @@ export interface components {
         ImportStatus: "Pending" | "InProgress" | "Completed" | "Canceled";
         ImportTicketListItem: {
             /** Format: uuid */
-            id: string;
+            id?: string;
             createdByName?: string;
             verifiedByName?: null | string;
             supplierName?: string;
             /** Format: date-time */
-            expectedArrivalDate: string;
+            expectedArrivalDate?: string;
             /** Format: date-time */
-            actualImportDate: string;
+            actualImportDate?: string;
             /** Format: decimal */
-            totalCost: number;
+            totalCost?: number;
             status?: components["schemas"]["ImportStatus"];
             /** Format: int32 */
             totalItems?: number;
@@ -7644,8 +9065,16 @@ export interface components {
             expiringSoonCount?: number;
         };
         LoginRequest: {
-            email?: string;
+            credential?: string;
             password?: string;
+        };
+        LoyaltyPointResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int32 */
+            points?: number;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         MediaResponse: {
             /** Format: uuid */
@@ -7740,11 +9169,11 @@ export interface components {
             orderDetails?: components["schemas"]["OrderDetailResponse"][];
         };
         /** @enum {string} */
-        OrderStatus: "Pending" | "Processing" | "Shipped" | "Delivered" | "Canceled" | "Returned";
+        OrderStatus: "Pending" | "Processing" | "Delivering" | "Delivered" | "Canceled" | "Returned";
         /** @enum {string} */
         OrderType: "Online" | "Offline" | "Shoppe";
-        PagedResultOfBatchResponse: {
-            items: components["schemas"]["BatchResponse"][];
+        PagedResultOfBatchDetailResponse: {
+            items: components["schemas"]["BatchDetailResponse"][];
             /** Format: int32 */
             pageNumber: number;
             /** Format: int32 */
@@ -7752,7 +9181,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7765,7 +9194,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7778,7 +9207,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7791,7 +9220,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7804,7 +9233,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7817,7 +9246,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7830,7 +9259,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7843,7 +9272,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7856,7 +9285,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7869,7 +9298,7 @@ export interface components {
             /** Format: int32 */
             totalCount: number;
             /** Format: int32 */
-            totalPages: number;
+            totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
@@ -7908,6 +9337,10 @@ export interface components {
             orderCode?: string;
             items?: components["schemas"]["PickListItemResponse"][];
         };
+        PointsRequest: {
+            /** Format: int32 */
+            points?: number;
+        };
         PreviewOrderResponse: {
             items?: components["schemas"]["OrderDetailListItems"][];
             /** Format: decimal */
@@ -7927,12 +9360,55 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        ProductAttributeDto: {
+            /** Format: int32 */
+            attributeId?: number;
+            /** Format: int32 */
+            valueId?: number;
+        };
+        ProductAttributeResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: int32 */
+            attributeId?: number;
+            /** Format: int32 */
+            valueId?: number;
+            attribute?: string;
+            description?: string;
+            value?: string;
+        };
+        ProductFastLookResponse: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            description?: null | string;
+            brandName?: string;
+            variants?: components["schemas"]["VariantFastLookResponse"][];
+            attribute?: null | components["schemas"]["ProductAttributeResponse"];
+            /** Format: int32 */
+            rating?: number;
+            /** Format: int32 */
+            reviewCount?: number;
+        };
         ProductImageUploadItem: {
             imageFile?: components["schemas"]["IFormFile"];
             altText?: null | string;
             /** Format: int32 */
             displayOrder?: number;
             isPrimary?: boolean;
+        };
+        ProductInforResponse: {
+            productCode?: string;
+            brandName?: string;
+            origin?: string;
+            /** Format: int32 */
+            releaseYear?: number;
+            scentGroup?: string;
+            style?: string;
+            topNotes?: string;
+            middleNotes?: string;
+            baseNotes?: string;
+            description?: string;
         };
         ProductListItem: {
             /** Format: uuid */
@@ -7944,15 +9420,9 @@ export interface components {
             /** Format: int32 */
             categoryId?: number;
             categoryName?: string;
-            /** Format: int32 */
-            familyId?: number;
-            familyName?: string;
-            gender?: components["schemas"]["Gender"];
             description?: null | string;
-            topNotes?: null | string;
-            middleNotes?: null | string;
-            baseNotes?: null | string;
             primaryImage?: null | components["schemas"]["MediaResponse"];
+            attributes?: null | components["schemas"]["ProductAttributeResponse"][];
         };
         ProductLookupItem: {
             /** Format: uuid */
@@ -7971,16 +9441,10 @@ export interface components {
             /** Format: int32 */
             categoryId?: number;
             categoryName?: string;
-            /** Format: int32 */
-            familyId?: number;
-            familyName?: string;
-            gender?: components["schemas"]["Gender"];
             description?: null | string;
-            topNotes?: null | string;
-            middleNotes?: null | string;
-            baseNotes?: null | string;
             media?: components["schemas"]["MediaResponse"][];
             variants?: components["schemas"]["ProductVariantResponse"][];
+            attributes?: components["schemas"]["ProductAttributeResponse"][];
         };
         ProductVariantResponse: {
             /** Format: uuid */
@@ -7999,6 +9463,24 @@ export interface components {
             /** Format: decimal */
             basePrice?: number;
             status?: components["schemas"]["VariantStatus"];
+            attributes?: null | components["schemas"]["ProductAttributeResponse"][];
+        };
+        ProfileResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            userId?: string;
+            scentPreference?: null | string;
+            /** Format: decimal */
+            minBudget?: null | number;
+            /** Format: decimal */
+            maxBudget?: null | number;
+            preferredStyle?: null | string;
+            favoriteNotes?: null | string;
+            /** Format: date-time */
+            updatedAt?: null | string;
+            /** Format: date-time */
+            createdAt?: string;
         };
         ProvinceResponse: {
             /** Format: int32 */
@@ -8032,6 +9514,8 @@ export interface components {
             fullAddress?: string;
         };
         RecipientInformation: {
+            /** Format: uuid */
+            addressId?: null | string;
             fullName?: string;
             phone?: string;
             /** Format: int32 */
@@ -8049,8 +9533,8 @@ export interface components {
             voucherId?: string;
         };
         RegisterRequest: {
-            userName?: string;
             fullName?: string;
+            phoneNumber?: string;
             email?: string;
             password?: string;
             clientUri?: string;
@@ -8113,6 +9597,8 @@ export interface components {
             imageCount?: number;
             /** Format: date-time */
             createdAt?: string;
+            /** Format: date-time */
+            moderatedAt?: string;
         };
         ReviewResponse: {
             /** Format: uuid */
@@ -8241,6 +9727,8 @@ export interface components {
             /** Format: int32 */
             totalQuantity?: number;
             /** Format: int32 */
+            availableQuantity?: number;
+            /** Format: int32 */
             lowStockThreshold?: number;
             isLowStock?: boolean;
         };
@@ -8311,16 +9799,17 @@ export interface components {
             /** Format: int32 */
             provinceId?: number;
         };
+        UpdateAttributeRequest: {
+            name?: null | string;
+            description?: null | string;
+            isVariantLevel?: null | boolean;
+        };
+        UpdateAttributeValueRequest: {
+            value?: null | string;
+        };
         UpdateCartItemRequest: {
             /** Format: int32 */
             quantity?: number;
-        };
-        UpdateFullImportTicketRequest: {
-            /** Format: int32 */
-            supplierId?: number;
-            /** Format: date-time */
-            expectedArrivalDate?: string;
-            importDetails?: components["schemas"]["UpdateImportDetailRequest"][];
         };
         UpdateImportDetailRequest: {
             /** Format: uuid */
@@ -8332,7 +9821,14 @@ export interface components {
             /** Format: decimal */
             unitPrice?: number;
         };
-        UpdateImportTicketRequest: {
+        UpdateImportRequest: {
+            /** Format: int32 */
+            supplierId?: number;
+            /** Format: date-time */
+            expectedArrivalDate?: string;
+            importDetails?: components["schemas"]["UpdateImportDetailRequest"][];
+        };
+        UpdateImportStatusRequest: {
             status?: components["schemas"]["ImportStatus"];
         };
         UpdateOrderStatusRequest: {
@@ -8345,15 +9841,10 @@ export interface components {
             brandId?: number;
             /** Format: int32 */
             categoryId?: number;
-            /** Format: int32 */
-            familyId?: number;
-            gender?: components["schemas"]["Gender"];
             description?: null | string;
-            topNotes?: null | string;
-            middleNotes?: null | string;
-            baseNotes?: null | string;
             temporaryMediaIdsToAdd?: null | string[];
             mediaIdsToDelete?: null | string[];
+            attributes?: null | components["schemas"]["ProductAttributeDto"][];
         };
         UpdateProfileRequest: {
             scentPreference?: null | string;
@@ -8386,6 +9877,7 @@ export interface components {
             status?: components["schemas"]["VariantStatus"];
             mediaIdsToDelete?: null | string[];
             temporaryMediaIdsToAdd?: null | string[];
+            attributes?: null | components["schemas"]["ProductAttributeDto"][];
         };
         UpdateVoucherRequest: {
             code?: null | string;
@@ -8400,8 +9892,15 @@ export interface components {
             expiryDate?: null | string;
         };
         UsageStatus: number;
+        UserCredentialsResponse: {
+            /** Format: uuid */
+            id?: string;
+            fullName?: string;
+            phoneNumber?: string;
+            email?: string;
+        };
         /** @enum {string} */
-        UserRole: "admin" | "user" | "staff";
+        UserRole: "Admin" | "User" | "Staff";
         UserVoucherResponse: {
             /** Format: uuid */
             id?: string;
@@ -8420,6 +9919,14 @@ export interface components {
             isExpired?: boolean;
             /** Format: date-time */
             redeemedAt?: string;
+        };
+        VariantFastLookResponse: {
+            /** Format: uuid */
+            id?: string;
+            displayName?: string;
+            /** Format: decimal */
+            price?: number;
+            media?: null | components["schemas"]["MediaResponse"];
         };
         VariantImageUploadItem: {
             imageFile?: components["schemas"]["IFormFile"];
@@ -8456,6 +9963,7 @@ export interface components {
             /** Format: decimal */
             basePrice?: number;
             status?: components["schemas"]["VariantStatus"];
+            attributes?: null | components["schemas"]["ProductAttributeResponse"][];
         };
         /** @enum {string} */
         VariantStatus: "Active" | "Inactive" | "Discontinued" | "out_of_stock";

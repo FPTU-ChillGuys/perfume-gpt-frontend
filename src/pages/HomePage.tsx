@@ -8,8 +8,6 @@ import { productService } from "../services/productService";
 import type { ProductListItem, VariantPagedItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
 
-const PRODUCTS_PER_SECTION = 6;
-
 const buildVariantMap = (variants: VariantPagedItem[]) => {
   const map = new Map<string, VariantPagedItem>();
 
@@ -26,12 +24,12 @@ const mapProductToCard = (
   product: ProductListItem & { id: string },
   variant?: VariantPagedItem,
 ): ProductCardProps => {
-  const fallbackPrice = Number(variant?.basePrice ?? 0);
+  const price = Number(variant?.basePrice ?? 0);
   return {
     id: product.id,
     brand: product.brandName ?? "Đang cập nhật",
     name: product.name ?? "Đang cập nhật",
-    salePrice: Number.isFinite(fallbackPrice) ? fallbackPrice : 0,
+    salePrice: Number.isFinite(price) ? price : 0,
     imageUrl:
       product.primaryImage?.url ?? variant?.primaryImage?.url ?? undefined,
     variantId: variant?.id,
@@ -52,18 +50,16 @@ export const HomePage = () => {
       setError(null);
 
       try {
-        const [productPage, variantPage] = await Promise.all([
-          productService.getProducts({
-            PageNumber: 1,
-            PageSize: PRODUCTS_PER_SECTION * 2,
-            IsDescending: true,
-          }),
-          productService.getProductVariantsPaged({
-            PageNumber: 1,
-            PageSize: PRODUCTS_PER_SECTION * 4,
-            IsDescending: true,
-          }),
-        ]);
+        const [newArrivalsPage, bestsellersPage, variantPage] =
+          await Promise.all([
+            productService.getNewArrivals(),
+            productService.getBestSellers(),
+            productService.getProductVariantsPaged({
+              PageNumber: 1,
+              PageSize: 100, // Fetch enough variants to cover both sections
+              IsDescending: true,
+            }),
+          ]);
 
         if (!isMounted) {
           return;
@@ -71,7 +67,16 @@ export const HomePage = () => {
 
         const variantMap = buildVariantMap(variantPage.items);
 
-        const normalizedProducts = productPage.items
+        const normalizedNewArrivals = newArrivalsPage.items
+          .filter((product): product is ProductListItem & { id: string } =>
+            Boolean(product.id),
+          )
+          .map((product) => ({
+            ...mapProductToCard(product, variantMap.get(product.id)),
+            isNew: true,
+          }));
+
+        const normalizedBestsellers = bestsellersPage.items
           .filter((product): product is ProductListItem & { id: string } =>
             Boolean(product.id),
           )
@@ -79,17 +84,8 @@ export const HomePage = () => {
             mapProductToCard(product, variantMap.get(product.id)),
           );
 
-        setNewArrivals(
-          normalizedProducts
-            .slice(0, PRODUCTS_PER_SECTION)
-            .map((product) => ({ ...product, isNew: true })),
-        );
-        setBestsellers(
-          normalizedProducts.slice(
-            PRODUCTS_PER_SECTION,
-            PRODUCTS_PER_SECTION * 2,
-          ),
-        );
+        setNewArrivals(normalizedNewArrivals);
+        setBestsellers(normalizedBestsellers);
       } catch (fetchError) {
         if (!isMounted) {
           return;
