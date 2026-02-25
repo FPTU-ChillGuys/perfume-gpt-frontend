@@ -18,6 +18,12 @@ import {
 import { useState } from "react";
 import type { OrderListItem } from "@/types/order";
 import { MyOrderDetailModal } from "@/components/order/MyOrderDetailModal";
+import {
+  orderStatusLabels,
+  orderStatusColors,
+  paymentStatusLabels,
+  paymentStatusColors,
+} from "@/utils/orderStatus";
 
 interface OrderHistoryProps {
   orders: OrderListItem[];
@@ -113,23 +119,25 @@ const OrderHistory = ({
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={order.status}
-                      size="small"
-                      color={
-                        order.status === "Delivered"
-                          ? "success"
-                          : order.status === "Canceled"
-                            ? "error"
-                            : "warning"
+                      label={
+                        order.status
+                          ? orderStatusLabels[order.status]
+                          : order.status
                       }
+                      size="small"
+                      color={orderStatusColors[order.status || "Pending"]}
                     />
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={order.paymentStatus}
+                      label={
+                        order.paymentStatus
+                          ? paymentStatusLabels[order.paymentStatus]
+                          : order.paymentStatus
+                      }
                       size="small"
                       color={
-                        order.paymentStatus === "Paid" ? "success" : "default"
+                        paymentStatusColors[order.paymentStatus || "Unpaid"]
                       }
                     />
                   </TableCell>

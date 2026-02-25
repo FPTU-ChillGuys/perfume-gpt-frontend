@@ -20,61 +20,15 @@ import {
 } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import { orderService } from "@/services/orderService";
-import type {
-  OrderResponse,
-  OrderStatus,
-  PaymentStatus,
-  OrderType,
-  CarrierName,
-} from "@/types/order";
-
-const orderStatusColor: Record<
-  OrderStatus,
-  "default" | "warning" | "info" | "success" | "error"
-> = {
-  Pending: "warning",
-  Processing: "info",
-  Delivering: "info",
-  Delivered: "success",
-  Canceled: "error",
-  Returned: "error",
-};
-
-const paymentStatusColor: Record<
-  PaymentStatus,
-  "default" | "warning" | "success"
-> = {
-  Unpaid: "warning",
-  Paid: "success",
-  Refunded: "default",
-};
-
-const orderTypeColor: Record<OrderType, "default" | "primary" | "secondary"> = {
-  Online: "primary",
-  Offline: "secondary",
-  Shoppe: "default",
-};
-
-const orderStatusLabel: Record<OrderStatus, string> = {
-  Pending: "Chờ xử lý",
-  Processing: "Đang xử lý",
-  Delivering: "Đang giao hàng",
-  Delivered: "Đã giao hàng",
-  Canceled: "Đã hủy",
-  Returned: "Đã trả hàng",
-};
-
-const paymentStatusLabel: Record<PaymentStatus, string> = {
-  Unpaid: "Chưa thanh toán",
-  Paid: "Đã thanh toán",
-  Refunded: "Đã hoàn tiền",
-};
-
-const orderTypeLabel: Record<OrderType, string> = {
-  Online: "Trực tuyến",
-  Offline: "Tại cửa hàng",
-  Shoppe: "Shopee",
-};
+import type { OrderResponse, CarrierName } from "@/types/order";
+import {
+  orderStatusLabels,
+  orderStatusColors,
+  paymentStatusLabels,
+  paymentStatusColors,
+  orderTypeLabels,
+  orderTypeColors,
+} from "@/utils/orderStatus";
 
 const carrierNameLabel: Record<CarrierName, string> = {
   GHN: "Giao Hàng Nhanh",
@@ -193,8 +147,8 @@ export const OrderDetailModal = ({
                     <Box mt={0.5}>
                       {order.type && (
                         <Chip
-                          label={orderTypeLabel[order.type]}
-                          color={orderTypeColor[order.type]}
+                          label={orderTypeLabels[order.type]}
+                          color={orderTypeColors[order.type]}
                           size="small"
                         />
                       )}
@@ -226,8 +180,8 @@ export const OrderDetailModal = ({
                     <Box mt={0.5}>
                       {order.status && (
                         <Chip
-                          label={orderStatusLabel[order.status]}
-                          color={orderStatusColor[order.status]}
+                          label={orderStatusLabels[order.status]}
+                          color={orderStatusColors[order.status]}
                           size="small"
                         />
                       )}
@@ -240,8 +194,8 @@ export const OrderDetailModal = ({
                     <Box mt={0.5}>
                       {order.paymentStatus && (
                         <Chip
-                          label={paymentStatusLabel[order.paymentStatus]}
-                          color={paymentStatusColor[order.paymentStatus]}
+                          label={paymentStatusLabels[order.paymentStatus]}
+                          color={paymentStatusColors[order.paymentStatus]}
                           size="small"
                         />
                       )}

@@ -156,6 +156,37 @@ class OrderService {
       );
     }
   }
+
+  async updateOrderStatus(
+    orderId: string,
+    status: OrderStatus,
+    note?: string,
+  ): Promise<void> {
+    try {
+      const response = await apiInstance.PUT("/api/orders/{orderId}/status", {
+        params: {
+          path: { orderId },
+        },
+        body: {
+          status,
+          note: note || null,
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to update order status",
+        );
+      }
+    } catch (error: any) {
+      console.error("Error updating order status:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update order status",
+      );
+    }
+  }
 }
 
 export const orderService = new OrderService();

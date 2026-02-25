@@ -25,9 +25,11 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   Visibility as VisibilityIcon,
+  Edit as EditIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
+import { useToast } from "@/hooks/useToast";
 import type {
   OrderListItem,
   OrderStatus,
@@ -35,6 +37,14 @@ import type {
   PaymentStatus,
 } from "@/types/order";
 import { OrderDetailModal } from "@/components/order/OrderDetailModal";
+import { UpdateOrderStatusDialog } from "@/components/order/UpdateOrderStatusDialog";
+import {
+  orderStatusLabels,
+  orderStatusColors,
+  paymentStatusLabels,
+  paymentStatusColors,
+  orderTypeLabels,
+} from "@/utils/orderStatus";
 
 const formatCurrency = (value?: number) => {
   if (!value) return "0đ";
@@ -46,28 +56,8 @@ const formatDate = (dateStr?: string) => {
   return new Date(dateStr).toLocaleString("vi-VN");
 };
 
-const orderStatusColors: Record<
-  string,
-  "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success"
-> = {
-  Pending: "warning",
-  Processing: "info",
-  Delivering: "primary",
-  Delivered: "success",
-  Canceled: "error",
-  Returned: "default",
-};
-
-const paymentStatusColors: Record<
-  string,
-  "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success"
-> = {
-  Unpaid: "error",
-  Paid: "success",
-  Refunded: "warning",
-};
-
 export const OrderManagementPage = () => {
+  const { showToast } = useToast();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -84,6 +74,10 @@ export const OrderManagementPage = () => {
   const [toDate, setToDate] = useState("");
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [updateStatusDialogOpen, setUpdateStatusDialogOpen] = useState(false);
+  const [orderToUpdate, setOrderToUpdate] = useState<OrderListItem | null>(
+    null,
+  );
 
   useEffect(() => {
     loadOrders();
@@ -119,6 +113,7 @@ export const OrderManagementPage = () => {
       setTotalCount(response.totalCount);
     } catch (error) {
       console.error("Failed to load orders:", error);
+      showToast("Không thể tải danh sách đơn hàng. Vui lòng thử lại.", "error");
     } finally {
       setLoading(false);
     }
@@ -159,6 +154,41 @@ export const OrderManagementPage = () => {
   const handleCloseModal = () => {
     setDetailModalOpen(false);
     setSelectedOrderId(null);
+  };
+
+  const handleOpenUpdateStatus = (order: OrderListItem) => {
+    setOrderToUpdate(order);
+    setUpdateStatusDialogOpen(true);
+  };
+
+  const handleCloseUpdateStatus = () => {
+    setUpdateStatusDialogOpen(false);
+    setOrderToUpdate(null);
+  };
+
+  const handleConfirmUpdateStatus = async (
+    status: OrderStatus,
+    note?: string,
+  ) => {
+    if (!orderToUpdate?.id) return;
+
+    try {
+      await orderService.updateOrderStatus(orderToUpdate.id, status, note);
+      // Dialog will close itself, then show toast after a small delay
+      setTimeout(() => {
+        showToast("Cập nhật trạng thái đơn hàng thành công", "success");
+      }, 100);
+      await loadOrders();
+    } catch (error) {
+      console.error("Failed to update order status:", error);
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật trạng thái đơn hàng",
+        "error",
+      );
+      throw error;
+    }
   };
 
   return (
@@ -336,24 +366,34 @@ export const OrderManagementPage = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={order.type}
+                        label={
+                          order.type ? orderTypeLabels[order.type] : order.type
+                        }
                         size="small"
                         variant="outlined"
                       />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={order.status}
+                        label={
+                          order.status
+                            ? orderStatusLabels[order.status]
+                            : order.status
+                        }
                         size="small"
-                        color={orderStatusColors[order.status || "default"]}
+                        color={orderStatusColors[order.status || "Pending"]}
                       />
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={order.paymentStatus}
+                        label={
+                          order.paymentStatus
+                            ? paymentStatusLabels[order.paymentStatus]
+                            : order.paymentStatus
+                        }
                         size="small"
                         color={
-                          paymentStatusColors[order.paymentStatus || "default"]
+                          paymentStatusColors[order.paymentStatus || "Unpaid"]
                         }
                       />
                     </TableCell>
@@ -371,14 +411,25 @@ export const OrderManagementPage = () => {
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
-                      <Tooltip title="Xem chi tiết">
-                        <IconButton
-                          size="small"
-                          onClick={() => handleViewDetail(order.id || "")}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      <Box display="flex" gap={0.5} justifyContent="center">
+                        <Tooltip title="Xem chi tiết">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleViewDetail(order.id || "")}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Cập nhật trạng thái">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOpenUpdateStatus(order)}
+                            color="primary"
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))
@@ -408,6 +459,17 @@ export const OrderManagementPage = () => {
         orderId={selectedOrderId}
         onClose={handleCloseModal}
       />
+
+      {/* Update Order Status Dialog */}
+      {orderToUpdate && (
+        <UpdateOrderStatusDialog
+          open={updateStatusDialogOpen}
+          currentStatus={orderToUpdate.status || "Pending"}
+          orderId={orderToUpdate.id || ""}
+          onClose={handleCloseUpdateStatus}
+          onConfirm={handleConfirmUpdateStatus}
+        />
+      )}
     </AdminLayout>
   );
 };
