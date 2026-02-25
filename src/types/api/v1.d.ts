@@ -5447,9 +5447,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-            "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-            "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+            "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItemWithVariants"];
+            "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItemWithVariants"];
+            "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItemWithVariants"];
           };
         };
       };
@@ -8593,6 +8593,15 @@ export interface components {
       errors?: null | string[];
       errorType?: components["schemas"]["ResponseErrorType"];
     };
+    BaseResponseOfPagedResultOfProductListItemWithVariants: {
+      payload?:
+        | null
+        | components["schemas"]["PagedResultOfProductListItemWithVariants"];
+      success?: boolean;
+      message?: string;
+      errors?: null | string[];
+      errorType?: components["schemas"]["ResponseErrorType"];
+    };
     BaseResponseOfPagedResultOfReviewListItem: {
       payload?: null | components["schemas"]["PagedResultOfReviewListItem"];
       success?: boolean;
@@ -9346,6 +9355,19 @@ export interface components {
       hasPreviousPage?: boolean;
       hasNextPage?: boolean;
     };
+    PagedResultOfProductListItemWithVariants: {
+      items: components["schemas"]["ProductListItemWithVariants"][];
+      /** Format: int32 */
+      pageNumber: number;
+      /** Format: int32 */
+      pageSize: number;
+      /** Format: int32 */
+      totalCount: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasPreviousPage?: boolean;
+      hasNextPage?: boolean;
+    };
     PagedResultOfReviewListItem: {
       items: components["schemas"]["ReviewListItem"][];
       /** Format: int32 */
@@ -9533,6 +9555,21 @@ export interface components {
       description?: string;
     };
     ProductListItem: {
+      /** Format: uuid */
+      id?: string;
+      name?: null | string;
+      /** Format: int32 */
+      brandId?: number;
+      brandName?: string;
+      /** Format: int32 */
+      categoryId?: number;
+      categoryName?: string;
+      description?: null | string;
+      primaryImage?: null | components["schemas"]["MediaResponse"];
+      attributes?: null | components["schemas"]["ProductAttributeResponse"][];
+    };
+    ProductListItemWithVariants: {
+      variants?: components["schemas"]["VariantSummaryItem"][];
       /** Format: uuid */
       id?: string;
       name?: null | string;
@@ -10104,6 +10141,18 @@ export interface components {
     };
     /** @enum {string} */
     VariantStatus: "Active" | "Inactive" | "Discontinued" | "out_of_stock";
+    VariantSummaryItem: {
+      /** Format: uuid */
+      id?: string;
+      displayName?: string;
+      /** Format: int32 */
+      volumeMl?: number;
+      concentrationName?: string;
+      /** Format: decimal */
+      basePrice?: number;
+      type?: components["schemas"]["VariantType"];
+      status?: components["schemas"]["VariantStatus"];
+    };
     /** @enum {string} */
     VariantType: "FullBox" | "Tester" | "Mini";
     VerifyImportDetailRequest: {

@@ -20,9 +20,12 @@ import ProfilePage from "./pages/ProfilePage";
 import "./App.css";
 import ReceiveImportStock from "./pages/ReceiveImportStock";
 import { CartPage } from "./pages/CartPage";
+import { CheckoutPage } from "./pages/CheckoutPage";
 import { CheckoutShippingPage } from "./pages/checkout/CheckoutShippingPage";
 import { CheckoutPackagingPage } from "./pages/checkout/CheckoutPackagingPage";
 import { CheckoutPaymentPage } from "./pages/checkout/CheckoutPaymentPage";
+import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
+import { PaymentFailurePage } from "./pages/PaymentFailurePage";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -42,6 +45,7 @@ function App() {
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/unauthorized" element={<UnauthorizedPage />} />
                   <Route path="/cart" element={<CartPage />} />
+                  <Route path="/checkout" element={<CheckoutPage />} />
                   <Route
                     path="/checkout/shipping"
                     element={<CheckoutShippingPage />}
@@ -53,6 +57,14 @@ function App() {
                   <Route
                     path="/checkout/payment"
                     element={<CheckoutPaymentPage />}
+                  />
+                  <Route
+                    path="/payment/success"
+                    element={<PaymentSuccessPage />}
+                  />
+                  <Route
+                    path="/payment/failure"
+                    element={<PaymentFailurePage />}
                   />
 
                   {/* User Profile Route */}

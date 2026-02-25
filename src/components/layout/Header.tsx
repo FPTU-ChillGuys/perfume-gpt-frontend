@@ -28,7 +28,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CartDropdown } from "../common/CartDropdown";
 
 const navItems = [
@@ -44,6 +44,16 @@ export const Header = () => {
   const { cartCount } = useCart();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [cartAnchorEl, setCartAnchorEl] = useState<null | HTMLElement>(null);
+  const [hoverTimerRef, setHoverTimerRef] = useState<number | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef) {
+        clearTimeout(hoverTimerRef);
+      }
+    };
+  }, [hoverTimerRef]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -54,15 +64,49 @@ export const Header = () => {
   };
 
   const handleCartHover = (event: React.MouseEvent<HTMLElement>) => {
-    setCartAnchorEl(event.currentTarget);
+    // Clear any existing timer
+    if (hoverTimerRef) {
+      clearTimeout(hoverTimerRef);
+    }
+
+    // Capture the element reference before setTimeout
+    const element = event.currentTarget;
+
+    // Start a timer to show dropdown after 200ms
+    const timer = window.setTimeout(() => {
+      setCartAnchorEl(element);
+    }, 200);
+
+    setHoverTimerRef(timer);
+  };
+
+  const handleCartLeave = () => {
+    // Clear timer if user leaves before dropdown shows
+    if (hoverTimerRef) {
+      clearTimeout(hoverTimerRef);
+      setHoverTimerRef(null);
+    }
   };
 
   const handleCartClose = () => {
     setCartAnchorEl(null);
+    if (hoverTimerRef) {
+      clearTimeout(hoverTimerRef);
+      setHoverTimerRef(null);
+    }
   };
 
   const handleCartClick = () => {
-    handleCartClose();
+    // Clear hover timer to prevent dropdown from showing
+    if (hoverTimerRef) {
+      clearTimeout(hoverTimerRef);
+      setHoverTimerRef(null);
+    }
+
+    // Close dropdown if open
+    setCartAnchorEl(null);
+
+    // Navigate to cart
     navigate("/cart");
   };
 
@@ -149,35 +193,23 @@ export const Header = () => {
             <IconButton color="default">
               <FavoriteBorder />
             </IconButton>
-            <Box
+            <IconButton
               onClick={handleCartClick}
               onMouseEnter={handleCartHover}
+              onMouseLeave={handleCartLeave}
               aria-label="Giỏ hàng"
+              color="default"
               sx={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "text.secondary",
                 transition: "all 0.2s ease",
-                cursor: "pointer",
                 "&:hover": {
                   color: "primary.main",
-                  bgcolor: "action.hover",
-                },
-                "&:focus-visible": {
-                  outline: "2px solid",
-                  outlineColor: "primary.main",
-                  outlineOffset: 2,
                 },
               }}
             >
               <Badge badgeContent={cartCount} color="error" max={99}>
                 <ShoppingCartOutlined fontSize="medium" />
               </Badge>
-            </Box>
+            </IconButton>
             <CartDropdown
               anchorEl={cartAnchorEl}
               open={Boolean(cartAnchorEl)}

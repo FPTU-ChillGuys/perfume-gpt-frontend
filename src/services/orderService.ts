@@ -5,6 +5,7 @@ import type {
   OrderType,
   PaymentStatus,
 } from "@/types/order";
+import type { CreateOrderRequest, CheckoutResponse } from "@/types/checkout";
 
 interface GetMyOrdersParams {
   Status?: OrderStatus;
@@ -42,6 +43,30 @@ class OrderService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch orders",
+      );
+    }
+  }
+
+  async checkout(request: CreateOrderRequest): Promise<CheckoutResponse> {
+    try {
+      const response = await apiInstance.POST("/api/orders/checkout", {
+        body: request,
+      });
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Checkout failed");
+      }
+
+      // If payment is VnPay or Momo, response.data.payload will be the payment URL
+      // If payment is CashOnDelivery or CashInStore, payload might be orderId
+      return {
+        url: response.data.payload ?? undefined,
+        orderId: response.data.payload ?? undefined,
+      };
+    } catch (error: any) {
+      console.error("Error during checkout:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Checkout failed",
       );
     }
   }

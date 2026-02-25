@@ -431,7 +431,7 @@ export const CartPage = () => {
                 </div>
 
                 <Link
-                  to="/checkout/shipping"
+                  to="/checkout"
                   className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-red-600 px-6 py-3.5 text-center text-base font-semibold text-white transition hover:bg-red-700 shadow-sm"
                 >
                   Thanh toán
