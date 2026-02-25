@@ -7,3 +7,10 @@ export type OrderStatus = components["schemas"]["OrderStatus"];
 export type OrderType = components["schemas"]["OrderType"];
 export type PaymentStatus = components["schemas"]["PaymentStatus"];
 export type ShippingStatus = components["schemas"]["ShippingStatus"];
+
+// Order Detail Types
+export type OrderResponse = components["schemas"]["OrderResponse"];
+export type ShippingInfoResponse = components["schemas"]["ShippingInfoResponse"];
+export type RecipientInfoResponse = components["schemas"]["RecipientInfoResponse"];
+export type OrderDetailResponse = components["schemas"]["OrderDetailResponse"];
+export type CarrierName = components["schemas"]["CarrierName"];

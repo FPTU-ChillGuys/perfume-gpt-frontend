@@ -5,6 +5,7 @@ import type {
   OrderType,
   PaymentStatus,
   PagedOrderList,
+  OrderResponse,
 } from "@/types/order";
 import type { CreateOrderRequest, CheckoutResponse } from "@/types/checkout";
 
@@ -97,6 +98,31 @@ class OrderService {
       console.error("Error during checkout:", error);
       throw new Error(
         error.response?.data?.message || error.message || "Checkout failed",
+      );
+    }
+  }
+
+  async getOrderById(orderId: string): Promise<OrderResponse> {
+    try {
+      const response = await apiInstance.GET("/api/orders/{orderId}", {
+        params: {
+          path: { orderId },
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Failed to fetch order details",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error fetching order details:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch order details",
       );
     }
   }

@@ -34,7 +34,7 @@ import type {
   OrderType,
   PaymentStatus,
 } from "@/types/order";
-import { useNavigate } from "react-router-dom";
+import { OrderDetailModal } from "@/components/order/OrderDetailModal";
 
 const formatCurrency = (value?: number) => {
   if (!value) return "0đ";
@@ -68,7 +68,6 @@ const paymentStatusColors: Record<
 };
 
 export const OrderManagementPage = () => {
-  const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -83,6 +82,8 @@ export const OrderManagementPage = () => {
   const [type, setType] = useState<OrderType | "">("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -151,7 +152,13 @@ export const OrderManagementPage = () => {
   };
 
   const handleViewDetail = (orderId: string) => {
-    navigate(`/admin/orders/${orderId}`);
+    setSelectedOrderId(orderId);
+    setDetailModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setDetailModalOpen(false);
+    setSelectedOrderId(null);
   };
 
   return (
@@ -394,6 +401,13 @@ export const OrderManagementPage = () => {
           />
         </TableContainer>
       </Box>
+
+      {/* Order Detail Modal */}
+      <OrderDetailModal
+        open={detailModalOpen}
+        orderId={selectedOrderId}
+        onClose={handleCloseModal}
+      />
     </AdminLayout>
   );
 };
