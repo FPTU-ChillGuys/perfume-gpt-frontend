@@ -261,8 +261,8 @@ export const CheckoutPage = () => {
     try {
       setIsLoading(true);
 
-      // Load voucher từ localStorage nếu có
-      const savedVoucherStr = localStorage.getItem("appliedVoucher");
+      // Load voucher từ sessionStorage nếu có
+      const savedVoucherStr = sessionStorage.getItem("appliedVoucher");
       let savedVoucher: ApplyVoucherResponse | null = null;
       if (savedVoucherStr) {
         try {
@@ -271,7 +271,7 @@ export const CheckoutPage = () => {
           setVoucherCode(savedVoucher?.voucherCode || "");
         } catch (error) {
           console.error("Failed to parse saved voucher:", error);
-          localStorage.removeItem("appliedVoucher");
+          sessionStorage.removeItem("appliedVoucher");
         }
       }
 
@@ -285,8 +285,14 @@ export const CheckoutPage = () => {
       setItems(cartData.items);
       setTotals(cartData.totals);
 
+      // Nếu giỏ hàng trống, xóa voucher để tránh voucher cũ được áp dụng cho giỏ hàng mới
+      if (cartData.items.length === 0) {
+        setAppliedVoucher(null);
+        setVoucherCode("");
+        sessionStorage.removeItem("appliedVoucher");
+      }
       // Nếu có voucher đã lưu, call API apply để tính lại discount
-      if (savedVoucher && cartData.totals.subtotal > 0) {
+      else if (savedVoucher && cartData.totals.subtotal > 0) {
         try {
           const voucherResult = await voucherService.applyVoucher({
             voucherCode: savedVoucher.voucherCode,
@@ -305,7 +311,7 @@ export const CheckoutPage = () => {
           console.error("Voucher is no longer valid:", voucherError);
           setAppliedVoucher(null);
           setVoucherCode("");
-          localStorage.removeItem("appliedVoucher");
+          sessionStorage.removeItem("appliedVoucher");
           showToast("Mã giảm giá không còn hiệu lực", "warning");
         }
       }
@@ -397,8 +403,8 @@ export const CheckoutPage = () => {
       setAppliedVoucher(voucherResult);
       setVoucherCode(voucherResult.voucherCode);
 
-      // Lưu voucher vào localStorage để dùng khi đặt hàng
-      localStorage.setItem("appliedVoucher", JSON.stringify(voucherResult));
+      // Lưu voucher vào sessionStorage để dùng khi đặt hàng
+      sessionStorage.setItem("appliedVoucher", JSON.stringify(voucherResult));
 
       // Update totals với địa chỉ và voucher
       await updateTotalsWithAddress();
@@ -423,8 +429,8 @@ export const CheckoutPage = () => {
       setAppliedVoucher(null);
       setVoucherCode("");
 
-      // Xóa voucher khỏi localStorage
-      localStorage.removeItem("appliedVoucher");
+      // Xóa voucher khỏi sessionStorage
+      sessionStorage.removeItem("appliedVoucher");
 
       // Update totals không có voucher code
       await updateTotalsWithAddress();

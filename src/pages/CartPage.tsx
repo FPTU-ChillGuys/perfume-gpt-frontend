@@ -63,8 +63,16 @@ export const CartPage = () => {
         setItems(fetchedItems);
         setTotals(fetchedTotals);
 
+        // Nếu giỏ hàng trống, xóa voucher để tránh voucher cũ được áp dụng cho giỏ hàng mới
+        if (fetchedItems.length === 0) {
+          if (appliedVoucher) {
+            setAppliedVoucher(null);
+            setVoucherInput("");
+          }
+          sessionStorage.removeItem("appliedVoucher");
+        }
         // Nếu có voucher đang áp dụng, call lại API apply để tính lại discount
-        if (appliedVoucher && fetchedTotals.subtotal > 0) {
+        else if (appliedVoucher && fetchedTotals.subtotal > 0) {
           try {
             const voucherResult = await voucherService.applyVoucher({
               voucherCode: appliedVoucher.voucherCode,
@@ -82,6 +90,7 @@ export const CartPage = () => {
             console.error("Voucher is no longer valid:", voucherError);
             setAppliedVoucher(null);
             setVoucherInput("");
+            sessionStorage.removeItem("appliedVoucher");
             showToast("Mã giảm giá không còn hiệu lực", "warning");
           }
         }
@@ -107,8 +116,8 @@ export const CartPage = () => {
 
   // Initial load - chỉ chạy một lần khi component mount
   useEffect(() => {
-    // Restore voucher từ localStorage nếu có
-    const savedVoucherStr = localStorage.getItem("appliedVoucher");
+    // Restore voucher từ sessionStorage nếu có
+    const savedVoucherStr = sessionStorage.getItem("appliedVoucher");
     if (savedVoucherStr) {
       try {
         const savedVoucher: ApplyVoucherResponse = JSON.parse(savedVoucherStr);
@@ -116,7 +125,7 @@ export const CartPage = () => {
         setVoucherInput(savedVoucher.voucherCode);
       } catch (error) {
         console.error("Failed to parse saved voucher:", error);
-        localStorage.removeItem("appliedVoucher");
+        sessionStorage.removeItem("appliedVoucher");
       }
     }
     void loadCart(true);
@@ -191,6 +200,7 @@ export const CartPage = () => {
       await cartService.clearCart();
       setAppliedVoucher(null);
       setVoucherInput("");
+      sessionStorage.removeItem("appliedVoucher");
       await loadCart();
       await refreshCart();
       showToast("Đã xóa toàn bộ giỏ hàng", "success");
@@ -213,8 +223,8 @@ export const CartPage = () => {
       setAppliedVoucher(null);
       setVoucherInput("");
 
-      // Xóa voucher khỏi localStorage
-      localStorage.removeItem("appliedVoucher");
+      // Xóa voucher khỏi sessionStorage
+      sessionStorage.removeItem("appliedVoucher");
 
       // Chỉ call API get total không có voucher code
       const { items: fetchedItems, totals: fetchedTotals } =
@@ -263,8 +273,8 @@ export const CartPage = () => {
       setAppliedVoucher(voucherResult);
       setVoucherInput(voucherResult.voucherCode);
 
-      // Lưu voucher vào localStorage để dùng ở CheckoutPage
-      localStorage.setItem("appliedVoucher", JSON.stringify(voucherResult));
+      // Lưu voucher vào sessionStorage để dùng ở CheckoutPage
+      sessionStorage.setItem("appliedVoucher", JSON.stringify(voucherResult));
 
       // Update totals với discount từ voucher
       setTotals((prev) => ({
