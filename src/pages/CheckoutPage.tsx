@@ -21,7 +21,12 @@ import {
   Autocomplete,
   Stack,
 } from "@mui/material";
-import { LocalShipping, Store, CheckCircle } from "@mui/icons-material";
+import {
+  LocalShipping,
+  Store,
+  CheckCircle,
+  ArrowBack,
+} from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import { addressService } from "@/services/addressService";
@@ -399,9 +404,19 @@ export const CheckoutPage = () => {
   return (
     <MainLayout>
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography variant="h4" fontWeight="bold" mb={4}>
-          Thanh toán
-        </Typography>
+        <Box display="flex" alignItems="center" gap={2} mb={4}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate("/cart")}
+            variant="outlined"
+            sx={{ minWidth: "auto" }}
+          >
+            Quay lại
+          </Button>
+          <Typography variant="h4" fontWeight="bold">
+            Thanh toán
+          </Typography>
+        </Box>
 
         <Box
           display="grid"

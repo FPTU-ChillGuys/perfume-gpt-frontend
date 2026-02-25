@@ -184,9 +184,27 @@ export const PaymentFailurePage = () => {
             )}
 
             {orderInfo && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
-                <Typography color="text.secondary">Nội dung:</Typography>
-                <Typography fontWeight={600}>{orderInfo}</Typography>
+              <Box display="flex" mb={1.5} gap={2}>
+                <Typography
+                  color="text.secondary"
+                  sx={{
+                    flexShrink: 0,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Nội dung:
+                </Typography>
+                <Typography
+                  fontWeight={600}
+                  sx={{
+                    wordBreak: "break-word",
+                    whiteSpace: "normal",
+                    textAlign: "right",
+                    flex: 1,
+                  }}
+                >
+                  {decodeURIComponent(orderInfo)}
+                </Typography>
               </Box>
             )}
           </Box>
