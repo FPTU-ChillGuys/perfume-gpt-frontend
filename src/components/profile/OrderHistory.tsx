@@ -3,6 +3,7 @@ import {
   Box,
   Chip,
   CircularProgress,
+  Pagination,
   Table,
   TableBody,
   TableCell,
@@ -10,15 +11,31 @@ import {
   TableHead,
   TableRow,
   Typography,
+  Select,
+  MenuItem,
+  FormControl,
 } from "@mui/material";
 import type { OrderListItem } from "@/types/order";
 
 interface OrderHistoryProps {
   orders: OrderListItem[];
   isLoading: boolean;
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }
 
-const OrderHistory = ({ orders, isLoading }: OrderHistoryProps) => {
+const OrderHistory = ({
+  orders,
+  isLoading,
+  page,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
+}: OrderHistoryProps) => {
   return (
     <>
       <Box
@@ -97,6 +114,43 @@ const OrderHistory = ({ orders, isLoading }: OrderHistoryProps) => {
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {!isLoading && orders.length > 0 && (
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mt={3}
+        >
+          <Box display="flex" alignItems="center" gap={2}>
+            <Typography variant="body2" color="text.secondary">
+              Số dòng mỗi trang:
+            </Typography>
+            <FormControl size="small">
+              <Select
+                value={pageSize}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              >
+                <MenuItem value={5}>5</MenuItem>
+                <MenuItem value={10}>10</MenuItem>
+                <MenuItem value={20}>20</MenuItem>
+                <MenuItem value={50}>50</MenuItem>
+              </Select>
+            </FormControl>
+            <Typography variant="body2" color="text.secondary">
+              Tổng: {totalCount} đơn hàng
+            </Typography>
+          </Box>
+          <Pagination
+            count={Math.ceil(totalCount / pageSize)}
+            page={page}
+            onChange={(_, newPage) => onPageChange(newPage)}
+            color="primary"
+            showFirstButton
+            showLastButton
+          />
+        </Box>
       )}
     </>
   );

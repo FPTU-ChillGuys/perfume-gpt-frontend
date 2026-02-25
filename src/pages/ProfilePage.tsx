@@ -54,6 +54,9 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [addresses, setAddresses] = useState<AddressResponse[]>([]);
   const [orders, setOrders] = useState<OrderListItem[]>([]);
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderPageSize, setOrderPageSize] = useState(10);
+  const [orderTotalCount, setOrderTotalCount] = useState(0);
   const [activeTab, setActiveTab] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
@@ -84,7 +87,7 @@ const ProfilePage = () => {
     if (activeTab === 1 && addresses.length === 0) {
       loadAddresses();
     } else if (activeTab === 2 && orders.length === 0) {
-      loadOrders();
+      loadOrders(1, orderPageSize);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -121,19 +124,33 @@ const ProfilePage = () => {
     }
   };
 
-  const loadOrders = async () => {
+  const loadOrders = async (page = orderPage, pageSize = orderPageSize) => {
     setIsLoadingOrders(true);
     try {
-      const { items } = await orderService.getMyOrders({
-        PageSize: 20,
-        PageNumber: 1,
+      const { items, totalCount } = await orderService.getMyOrders({
+        PageSize: pageSize,
+        PageNumber: page,
+        SortBy: "CreatedAt",
+        SortOrder: "desc",
       });
       setOrders(items);
+      setOrderTotalCount(totalCount);
     } catch (err: any) {
       console.error("Error loading orders:", err);
     } finally {
       setIsLoadingOrders(false);
     }
+  };
+
+  const handleOrderPageChange = (newPage: number) => {
+    setOrderPage(newPage);
+    loadOrders(newPage, orderPageSize);
+  };
+
+  const handleOrderPageSizeChange = (newPageSize: number) => {
+    setOrderPageSize(newPageSize);
+    setOrderPage(1);
+    loadOrders(1, newPageSize);
   };
 
   const handleEdit = () => {
@@ -290,7 +307,15 @@ const ProfilePage = () => {
 
             {/* Tab 2: Order History */}
             <TabPanel value={activeTab} index={2}>
-              <OrderHistory orders={orders} isLoading={isLoadingOrders} />
+              <OrderHistory
+                orders={orders}
+                isLoading={isLoadingOrders}
+                page={orderPage}
+                pageSize={orderPageSize}
+                totalCount={orderTotalCount}
+                onPageChange={handleOrderPageChange}
+                onPageSizeChange={handleOrderPageSizeChange}
+              />
             </TabPanel>
           </Box>
         </Paper>

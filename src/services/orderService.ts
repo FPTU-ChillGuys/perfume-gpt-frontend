@@ -18,6 +18,8 @@ interface GetMyOrdersParams {
   SearchTerm?: string;
   PageNumber?: number;
   PageSize?: number;
+  SortBy?: string;
+  SortOrder?: string;
 }
 
 interface GetAllOrdersParams extends GetMyOrdersParams {
