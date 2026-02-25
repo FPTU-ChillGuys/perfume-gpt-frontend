@@ -128,6 +128,34 @@ class OrderService {
       );
     }
   }
+
+  async getMyOrderById(orderId: string): Promise<OrderResponse> {
+    try {
+      const response = await apiInstance.GET(
+        "/api/orders/my-orders/{orderId}",
+        {
+          params: {
+            path: { orderId },
+          },
+        },
+      );
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Failed to fetch order details",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error fetching my order details:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch order details",
+      );
+    }
+  }
 }
 
 export const orderService = new OrderService();

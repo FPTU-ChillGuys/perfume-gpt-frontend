@@ -15,7 +15,9 @@ import {
   MenuItem,
   FormControl,
 } from "@mui/material";
+import { useState } from "react";
 import type { OrderListItem } from "@/types/order";
+import { MyOrderDetailModal } from "@/components/order/MyOrderDetailModal";
 
 interface OrderHistoryProps {
   orders: OrderListItem[];
@@ -36,6 +38,19 @@ const OrderHistory = ({
   onPageChange,
   onPageSizeChange,
 }: OrderHistoryProps) => {
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleRowClick = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedOrderId(null);
+  };
+
   return (
     <>
       <Box
@@ -72,7 +87,16 @@ const OrderHistory = ({
             </TableHead>
             <TableBody>
               {orders.map((order) => (
-                <TableRow key={order.id}>
+                <TableRow
+                  key={order.id}
+                  onClick={() => handleRowClick(order.id || "")}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": {
+                      bgcolor: "action.hover",
+                    },
+                  }}
+                >
                   <TableCell>
                     <Typography variant="body2" fontFamily="monospace">
                       {order.id?.slice(0, 8)}...
@@ -152,6 +176,13 @@ const OrderHistory = ({
           />
         </Box>
       )}
+
+      {/* Order Detail Modal */}
+      <MyOrderDetailModal
+        open={isModalOpen}
+        orderId={selectedOrderId}
+        onClose={handleCloseModal}
+      />
     </>
   );
 };

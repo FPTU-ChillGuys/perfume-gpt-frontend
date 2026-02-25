@@ -3626,6 +3626,67 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/orders/my-orders/{orderId}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          orderId: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
+            "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+            "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
+            "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+            "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
+            "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+            "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/orders/user/{userId}": {
     parameters: {
       query?: never;
@@ -4399,8 +4460,8 @@ export interface paths {
       };
       requestBody?: never;
       responses: {
-        /** @description OK */
-        200: {
+        /** @description Found */
+        302: {
           headers: {
             [name: string]: unknown;
           };
@@ -4408,17 +4469,6 @@ export interface paths {
         };
         /** @description Bad Request */
         400: {
-          headers: {
-            [name: string]: unknown;
-          };
-          content: {
-            "text/plain": components["schemas"]["ProblemDetails"];
-            "application/json": components["schemas"]["ProblemDetails"];
-            "text/json": components["schemas"]["ProblemDetails"];
-          };
-        };
-        /** @description Not Found */
-        404: {
           headers: {
             [name: string]: unknown;
           };
@@ -8753,6 +8803,13 @@ export interface components {
       errors?: null | string[];
       errorType?: components["schemas"]["ResponseErrorType"];
     };
+    BaseResponseOfUserOrderResponse: {
+      payload?: null | components["schemas"]["UserOrderResponse"];
+      success?: boolean;
+      message?: string;
+      errors?: null | string[];
+      errorType?: components["schemas"]["ResponseErrorType"];
+    };
     BaseResponseOfVoucherResponse: {
       payload?: null | components["schemas"]["VoucherResponse"];
       success?: boolean;
@@ -10072,6 +10129,27 @@ export interface components {
       fullName?: string;
       phoneNumber?: string;
       email?: string;
+    };
+    UserOrderResponse: {
+      /** Format: uuid */
+      id?: string;
+      type?: components["schemas"]["OrderType"];
+      status?: components["schemas"]["OrderStatus"];
+      paymentStatus?: components["schemas"]["PaymentStatus"];
+      /** Format: decimal */
+      totalAmount?: number;
+      voucherCode?: null | string;
+      /** Format: date-time */
+      paymentExpiresAt?: null | string;
+      /** Format: date-time */
+      paidAt?: null | string;
+      /** Format: date-time */
+      createdAt?: string;
+      /** Format: date-time */
+      updatedAt?: null | string;
+      shippingInfo?: null | components["schemas"]["ShippingInfoResponse"];
+      recipientInfo?: null | components["schemas"]["RecipientInfoResponse"];
+      orderDetails?: components["schemas"]["OrderDetailResponse"][];
     };
     /** @enum {string} */
     UserRole: "admin" | "user" | "staff";
