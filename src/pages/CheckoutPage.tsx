@@ -31,6 +31,7 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import { addressService } from "@/services/addressService";
 import { cartService } from "@/services/cartService";
+import { voucherService } from "@/services/voucherService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import type {
@@ -40,7 +41,7 @@ import type {
   WardResponse,
 } from "@/types/address";
 import type { PaymentMethod, CreateOrderRequest } from "@/types/checkout";
-import type { CartItem, CartTotals } from "@/types/cart";
+import type { CartItem, CartTotals, ApplyVoucherResponse } from "@/types/cart";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -77,6 +78,8 @@ export const CheckoutPage = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [useNewAddress, setUseNewAddress] = useState(false);
   const [voucherCode, setVoucherCode] = useState("");
+  const [appliedVoucher, setAppliedVoucher] =
+    useState<ApplyVoucherResponse | null>(null);
 
   // New address form
   const [newAddress, setNewAddress] = useState({
@@ -116,12 +119,29 @@ export const CheckoutPage = () => {
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingWards, setIsLoadingWards] = useState(false);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
 
   useEffect(() => {
     loadData();
     loadProvinces();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Update totals khi địa chỉ hoặc các thông tin liên quan thay đổi
+  useEffect(() => {
+    // Chỉ update nếu không đang loading ban đầu và có items trong cart
+    if (!isLoading && items.length > 0) {
+      updateTotalsWithAddress();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isPickupInStore,
+    selectedAddressId,
+    useNewAddress,
+    newAddress.districtId,
+    newAddress.wardCode,
+    voucherCode,
+  ]);
 
   const loadProvinces = async () => {
     setIsLoadingProvinces(true);
@@ -240,6 +260,21 @@ export const CheckoutPage = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
+
+      // Load voucher từ localStorage nếu có
+      const savedVoucherStr = localStorage.getItem("appliedVoucher");
+      let savedVoucher: ApplyVoucherResponse | null = null;
+      if (savedVoucherStr) {
+        try {
+          savedVoucher = JSON.parse(savedVoucherStr);
+          setAppliedVoucher(savedVoucher);
+          setVoucherCode(savedVoucher?.voucherCode || "");
+        } catch (error) {
+          console.error("Failed to parse saved voucher:", error);
+          localStorage.removeItem("appliedVoucher");
+        }
+      }
+
       // Load addresses and cart
       const [addressList, cartData] = await Promise.all([
         addressService.getAddresses().catch(() => [] as AddressResponse[]),
@@ -250,6 +285,31 @@ export const CheckoutPage = () => {
       setItems(cartData.items);
       setTotals(cartData.totals);
 
+      // Nếu có voucher đã lưu, call API apply để tính lại discount
+      if (savedVoucher && cartData.totals.subtotal > 0) {
+        try {
+          const voucherResult = await voucherService.applyVoucher({
+            voucherCode: savedVoucher.voucherCode,
+            orderAmount: cartData.totals.subtotal,
+          });
+          setAppliedVoucher(voucherResult);
+          setVoucherCode(voucherResult.voucherCode);
+          // Update totals với discount từ voucher
+          setTotals((prev) => ({
+            ...prev,
+            discount: voucherResult.discountAmount,
+            totalPrice: voucherResult.finalAmount,
+          }));
+        } catch (voucherError) {
+          // Nếu voucher không còn valid, xóa voucher
+          console.error("Voucher is no longer valid:", voucherError);
+          setAppliedVoucher(null);
+          setVoucherCode("");
+          localStorage.removeItem("appliedVoucher");
+          showToast("Mã giảm giá không còn hiệu lực", "warning");
+        }
+      }
+
       // Set default address if exists
       const defaultAddr = addressList.find((addr) => addr.isDefault);
       if (defaultAddr?.id) {
@@ -259,6 +319,124 @@ export const CheckoutPage = () => {
       showToast("Không thể tải dữ liệu. Vui lòng thử lại.", "error");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Update totals khi địa chỉ hoặc voucher thay đổi
+  const updateTotalsWithAddress = async () => {
+    try {
+      // Nếu là pickup in store, không cần địa chỉ
+      if (isPickupInStore) {
+        const totalsData = await cartService.getTotals(
+          voucherCode || undefined,
+        );
+        setTotals(totalsData);
+        return;
+      }
+
+      // Lấy districtId và wardCode từ địa chỉ hiện tại
+      let districtId: number | undefined;
+      let wardCode: string | undefined;
+
+      if (useNewAddress) {
+        // Dùng địa chỉ mới đang nhập
+        districtId = newAddress.districtId;
+        wardCode = newAddress.wardCode;
+      } else if (selectedAddressId) {
+        // Dùng địa chỉ đã chọn
+        const selectedAddr = addresses.find(
+          (addr) => addr.id === selectedAddressId,
+        );
+        if (selectedAddr) {
+          districtId = selectedAddr.districtId;
+          wardCode = selectedAddr.wardCode;
+        }
+      }
+
+      // Chỉ call API nếu có đủ thông tin địa chỉ
+      if (districtId && wardCode) {
+        const totalsData = await cartService.getTotals(
+          voucherCode || undefined,
+          districtId,
+          wardCode,
+        );
+        setTotals(totalsData);
+      }
+    } catch (error) {
+      console.error("Error updating totals with address:", error);
+      // Không hiển thị toast để tránh spam khi user đang nhập
+    }
+  };
+
+  const applyVoucher = async () => {
+    const normalizedVoucher = voucherCode.trim();
+
+    if (!normalizedVoucher) {
+      showToast("Vui lòng nhập mã giảm giá", "warning");
+      return;
+    }
+
+    if (
+      appliedVoucher &&
+      appliedVoucher.voucherCode.toLowerCase() ===
+        normalizedVoucher.toLowerCase()
+    ) {
+      showToast("Mã giảm giá đã được áp dụng", "info");
+      return;
+    }
+
+    setIsApplyingVoucher(true);
+    try {
+      // Call API apply voucher để validate
+      const voucherResult = await voucherService.applyVoucher({
+        voucherCode: normalizedVoucher,
+        orderAmount: totals.subtotal,
+      });
+
+      // Lưu thông tin voucher đã apply
+      setAppliedVoucher(voucherResult);
+      setVoucherCode(voucherResult.voucherCode);
+
+      // Lưu voucher vào localStorage để dùng khi đặt hàng
+      localStorage.setItem("appliedVoucher", JSON.stringify(voucherResult));
+
+      // Update totals với địa chỉ và voucher
+      await updateTotalsWithAddress();
+
+      showToast(voucherResult.message || "Đã áp dụng mã giảm giá", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể áp dụng mã giảm giá",
+        "error",
+      );
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const removeVoucher = async () => {
+    setIsApplyingVoucher(true);
+    try {
+      // Reset voucher state
+      setAppliedVoucher(null);
+      setVoucherCode("");
+
+      // Xóa voucher khỏi localStorage
+      localStorage.removeItem("appliedVoucher");
+
+      // Update totals không có voucher code
+      await updateTotalsWithAddress();
+
+      showToast("Đã bỏ mã giảm giá", "info");
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể bỏ mã giảm giá",
+        "error",
+      );
+    } finally {
+      setIsApplyingVoucher(false);
     }
   };
 
@@ -756,14 +934,69 @@ export const CheckoutPage = () => {
               <Divider sx={{ my: 2 }} />
 
               {/* Voucher */}
-              <Box display="flex" gap={1} mb={2}>
-                <TextField
-                  size="small"
-                  placeholder="Mã giảm giá"
-                  value={voucherCode}
-                  onChange={(e) => setVoucherCode(e.target.value)}
-                  fullWidth
-                />
+              <Box mb={2}>
+                <Box display="flex" gap={1} alignItems="stretch">
+                  <TextField
+                    size="small"
+                    placeholder="Mã giảm giá"
+                    value={voucherCode}
+                    onChange={(e) => setVoucherCode(e.target.value)}
+                    disabled={!!appliedVoucher || isApplyingVoucher}
+                    fullWidth
+                  />
+                  {!appliedVoucher && (
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={applyVoucher}
+                      disabled={isApplyingVoucher || !voucherCode.trim()}
+                      sx={{
+                        minWidth: 110,
+                        whiteSpace: "nowrap",
+                        px: 2,
+                      }}
+                    >
+                      {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
+                    </Button>
+                  )}
+                </Box>
+                {appliedVoucher && (
+                  <Box
+                    sx={{
+                      mt: 1,
+                      p: 1.5,
+                      bgcolor: "success.lighter",
+                      borderRadius: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography
+                        variant="body2"
+                        color="success.main"
+                        fontWeight={600}
+                      >
+                        ✓ {appliedVoucher.voucherCode}
+                      </Typography>
+                      {totals.discount > 0 && (
+                        <Typography variant="caption" color="success.main">
+                          -{formatCurrency(totals.discount)}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={removeVoucher}
+                      disabled={isApplyingVoucher}
+                      sx={{ minWidth: 50, fontSize: "0.75rem" }}
+                    >
+                      Xóa
+                    </Button>
+                  </Box>
+                )}
               </Box>
 
               <Divider sx={{ my: 2 }} />
@@ -775,14 +1008,23 @@ export const CheckoutPage = () => {
                   {formatCurrency(totals.subtotal)}
                 </Typography>
               </Box>
+              {totals.shippingFee > 0 && (
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography>Phí vận chuyển</Typography>
+                  <Typography fontWeight={600}>
+                    {formatCurrency(totals.shippingFee)}
+                  </Typography>
+                </Box>
+              )}
               {totals.discount > 0 && (
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography>Giảm giá</Typography>
-                  <Typography color="success.main">
+                  <Typography color="success.main" fontWeight={600}>
                     -{formatCurrency(totals.discount)}
                   </Typography>
                 </Box>
               )}
+              <Divider sx={{ my: 1.5 }} />
               <Box display="flex" justifyContent="space-between" mb={2}>
                 <Typography variant="h6" fontWeight={600}>
                   Tổng cộng

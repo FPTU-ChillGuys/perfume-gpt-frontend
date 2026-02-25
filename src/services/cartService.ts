@@ -20,14 +20,18 @@ class CartService {
   private readonly CLEAR_ENDPOINT = "/api/cart/clear";
   private readonly ADD_TO_CART_ENDPOINT = "/api/cart/items/add-to-cart";
 
-  async getCartWithTotals(voucherId?: string): Promise<{
+  async getCartWithTotals(
+    voucherId?: string,
+    districtId?: number,
+    wardCode?: string,
+  ): Promise<{
     items: CartItem[];
     totals: CartTotals;
   }> {
     try {
       // Lấy items và totals từ API
       const items = await this.getItems();
-      const totals = await this.getTotals(voucherId);
+      const totals = await this.getTotals(voucherId, districtId, wardCode);
 
       return {
         items,
@@ -75,12 +79,15 @@ class CartService {
     }
   }
 
-  async getTotals(voucherId?: string): Promise<CartTotals> {
+  async getTotals(
+    voucherId?: string,
+    districtId?: number,
+    wardCode?: string,
+  ): Promise<CartTotals> {
     try {
+      const query = this.buildQuery(voucherId, districtId, wardCode);
       const response = await apiInstance.GET(this.TOTAL_ENDPOINT, {
-        params: {
-          query: this.parseVoucher(voucherId),
-        },
+        params: query ? { query } : undefined,
       });
 
       if (!response.data?.success) {
@@ -198,12 +205,26 @@ class CartService {
     }
   }
 
-  private parseVoucher(voucherId?: string): VoucherQuery | undefined {
-    if (!voucherId) {
-      return undefined;
+  private buildQuery(
+    voucherId?: string,
+    districtId?: number,
+    wardCode?: string,
+  ): VoucherQuery | undefined {
+    const query: VoucherQuery = {};
+
+    if (voucherId) {
+      query.VoucherCode = voucherId;
     }
 
-    return { VoucherCode: voucherId };
+    if (districtId) {
+      query.DistrictId = districtId;
+    }
+
+    if (wardCode) {
+      query.WardCode = wardCode;
+    }
+
+    return Object.keys(query).length > 0 ? query : undefined;
   }
 }
 
