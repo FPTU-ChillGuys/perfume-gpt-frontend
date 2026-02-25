@@ -31,6 +31,7 @@ import {
   ArrowDropUp as ArrowDropUpIcon,
   AddBox as AddBoxIcon,
   Category as CategoryIcon,
+  ShoppingCart as ShoppingCartIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -78,27 +79,36 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
+    text: "Quản lý đơn hàng",
+    icon: <ShoppingCartIcon />,
+    path: "/admin/orders",
+    roles: ["admin"],
+  },
+  {
     text: "Quản lý vận chuyển",
     icon: <ShipmentIcon />,
     path: "#",
     roles: ["admin"],
   },
-  {    text: "Quản lý sản phẩm",
+  {
+    text: "Quản lý sản phẩm",
     icon: <CategoryIcon />,
     path: "/staff/products",
     roles: ["staff"],
   },
-  {    text: "Đợt nhập hàng",
+  {
+    text: "Đợt nhập hàng",
     icon: <ShipmentIcon />,
     path: "/staff/receive-import-stock",
     roles: ["staff"],
   },
   {
-    text: "Quản lý kho",
-    icon: <InventoryIcon />,
-    path: "#",
-    roles: ["admin"],
+    text: "Quản lý đơn hàng",
+    icon: <ShoppingCartIcon />,
+    path: "/staff/orders",
+    roles: ["staff"],
   },
+  { text: "Quản lý kho", icon: <InventoryIcon />, path: "#", roles: ["admin"] },
   {
     text: "Quản lý kho",
     icon: <InventoryIcon />,
@@ -343,16 +353,18 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <MenuItem
               onClick={() => {
                 handleMenuClose();
-                navigate(user?.role === "admin" ? "/admin/profile" : "/staff/profile");
+                navigate(
+                  user?.role === "admin" ? "/admin/profile" : "/staff/profile",
+                );
               }}
-              sx={{ 
-                px: 2, 
+              sx={{
+                px: 2,
                 py: 1.5,
                 flexDirection: "column",
                 alignItems: "flex-start",
                 "&:hover": {
                   bgcolor: "action.hover",
-                }
+                },
               }}
             >
               <Typography variant="subtitle2" fontWeight={600}>

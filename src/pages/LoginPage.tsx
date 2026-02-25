@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Box,
   Container,
@@ -24,47 +24,38 @@ import { GoogleLogin } from "@react-oauth/google";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const {
-    login,
-    googleLogin,
-    user,
-    isAuthenticated,
-    isLoading: authLoading,
-  } = useAuth();
+  const { login, googleLogin } = useAuth();
 
-  // Redirect if already logged in
-  useEffect(() => {
-    if (!authLoading && isAuthenticated && user) {
-      switch (user.role) {
-        case "admin":
-          navigate("/admin/dashboard", { replace: true });
-          break;
-        case "staff":
-          navigate("/staff/dashboard", { replace: true });
-          break;
-        default:
-          navigate("/", { replace: true });
-      }
-    }
-  }, [authLoading, isAuthenticated, user, navigate]);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // NOTE: Auto-redirect removed to allow logging in with different accounts
+  // Users can manually navigate away or login will overwrite existing session
+
   const handleGoogleLoginSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
     setError("");
     try {
       // credentialResponse.credential contains the idToken
-      await googleLogin(credentialResponse.credential);
+      const userData = (await googleLogin(
+        credentialResponse.credential,
+      )) as any;
+      // Redirect after successful login
+      if (userData?.role === "admin") {
+        window.location.href = "/admin/dashboard";
+      } else if (userData?.role === "staff") {
+        window.location.href = "/staff/dashboard";
+      } else {
+        window.location.href = "/";
+      }
     } catch (err: any) {
       console.error("Google login error:", err);
       const errorMessage =
         err?.message || "Đăng nhập Google thất bại. Vui lòng thử lại.";
       setError(errorMessage);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -72,20 +63,6 @@ export const LoginPage = () => {
   const handleGoogleLoginError = () => {
     setError("Đăng nhập Google thất bại. Vui lòng thử lại.");
   };
-
-  // Show loading while checking auth status
-  if (authLoading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="100vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -97,8 +74,15 @@ export const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      await login({ credential: email, password });
-      // Navigation is handled by AuthContext based on role
+      const userData = (await login({ credential: email, password })) as any;
+      // Redirect after successful login
+      if (userData?.role === "admin") {
+        window.location.href = "/admin/dashboard";
+      } else if (userData?.role === "staff") {
+        window.location.href = "/staff/dashboard";
+      } else {
+        window.location.href = "/";
+      }
     } catch (err: any) {
       console.error("Login error:", err);
       const errorMessage =
@@ -106,7 +90,6 @@ export const LoginPage = () => {
         err?.response?.data?.message ||
         "Đăng nhập thất bại. Vui lòng kiểm tra lại email và mật khẩu.";
       setError(errorMessage);
-    } finally {
       setIsLoading(false);
     }
   };

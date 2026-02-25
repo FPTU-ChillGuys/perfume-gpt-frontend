@@ -4,6 +4,7 @@ import type {
   OrderStatus,
   OrderType,
   PaymentStatus,
+  PagedOrderList,
 } from "@/types/order";
 import type { CreateOrderRequest, CheckoutResponse } from "@/types/checkout";
 
@@ -16,6 +17,12 @@ interface GetMyOrdersParams {
   SearchTerm?: string;
   PageNumber?: number;
   PageSize?: number;
+}
+
+interface GetAllOrdersParams extends GetMyOrdersParams {
+  SortBy?: string;
+  SortOrder?: string;
+  IsDescending?: boolean;
 }
 
 class OrderService {
@@ -39,6 +46,29 @@ class OrderService {
       };
     } catch (error: any) {
       console.error("Error fetching orders:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch orders",
+      );
+    }
+  }
+
+  async getAllOrders(params?: GetAllOrdersParams): Promise<PagedOrderList> {
+    try {
+      const response = await apiInstance.GET("/api/orders", {
+        params: {
+          query: params,
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(response.data?.message || "Failed to fetch orders");
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error fetching all orders:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||
