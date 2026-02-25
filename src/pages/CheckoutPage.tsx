@@ -478,9 +478,11 @@ export const CheckoutPage = () => {
         },
       };
 
-      // Add recipient info if delivery
+      // Add recipient info based on delivery method
       if (!isPickupInStore) {
+        // Giao hàng tận nơi
         if (useNewAddress) {
+          // Nhập địa chỉ mới -> truyền đầy đủ thông tin, addressId = null
           request.recipient = {
             addressId: null,
             fullName: newAddress.fullName,
@@ -494,29 +496,32 @@ export const CheckoutPage = () => {
             fullAddress: newAddress.street,
           };
         } else {
+          // Chọn địa chỉ có sẵn -> chỉ truyền addressId, các field khác để rỗng
+          // Backend sẽ lấy thông tin địa chỉ từ addressId
           request.recipient = {
             addressId: selectedAddressId,
             fullName: "",
             phone: "",
-            districtId: 1,
+            districtId: 0,
             districtName: "",
             wardCode: "",
             wardName: "",
-            provinceId: 1,
+            provinceId: 0,
             provinceName: "",
             fullAddress: "",
           };
         }
       } else {
+        // Nhận tại cửa hàng -> không cần thông tin địa chỉ giao hàng
         request.recipient = {
           addressId: null,
           fullName: "",
           phone: "",
-          districtId: 1,
+          districtId: 0,
           districtName: "",
           wardCode: "",
           wardName: "",
-          provinceId: 1,
+          provinceId: 0,
           provinceName: "",
           fullAddress: "",
         };
