@@ -7,34 +7,10 @@ import { ProductSection } from "../components/home/ProductSection";
 import { productService } from "../services/productService";
 import type { ProductListItem, VariantPagedItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
-
-const buildVariantMap = (variants: VariantPagedItem[]) => {
-  const map = new Map<string, VariantPagedItem>();
-
-  variants.forEach((variant) => {
-    if (variant.productId && !map.has(variant.productId)) {
-      map.set(variant.productId, variant);
-    }
-  });
-
-  return map;
-};
-
-const mapProductToCard = (
-  product: ProductListItem & { id: string },
-  variant?: VariantPagedItem,
-): ProductCardProps => {
-  const price = Number(variant?.basePrice ?? 0);
-  return {
-    id: product.id,
-    brand: product.brandName ?? "Đang cập nhật",
-    name: product.name ?? "Đang cập nhật",
-    salePrice: Number.isFinite(price) ? price : 0,
-    imageUrl:
-      product.primaryImage?.url ?? variant?.primaryImage?.url ?? undefined,
-    variantId: variant?.id,
-  };
-};
+import {
+  buildVariantMap,
+  mapProductToCard,
+} from "../utils/productCardMapper";
 
 export const HomePage = () => {
   const [newArrivals, setNewArrivals] = useState<ProductCardProps[]>([]);

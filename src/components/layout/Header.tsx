@@ -32,6 +32,7 @@ import { useState, useEffect } from "react";
 import { CartDropdown } from "../common/CartDropdown";
 
 const navItems = [
+  { label: "Tất cả sản phẩm", href: "/products" },
   { label: "Nước Hoa Nam", href: "#" },
   { label: "Nước Hoa Nữ", href: "#" },
   { label: "GiftSet", href: "#" },
@@ -133,6 +134,18 @@ export const Header = () => {
   const handleLogout = () => {
     logout();
     handleMenuClose();
+  };
+
+  const handleNavClick = (href: string) => {
+    if (href.startsWith("/")) {
+      navigate(href);
+      return;
+    }
+
+    if (href.startsWith("#")) {
+      const target = document.querySelector(href);
+      target?.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
@@ -345,8 +358,8 @@ export const Header = () => {
           {navItems.map((item) => (
             <Button
               key={item.label}
-              href={item.href}
               color="inherit"
+              onClick={() => handleNavClick(item.href)}
               sx={{
                 fontWeight: 500,
                 color: "text.primary",
