@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { MainLayout } from "../layouts/MainLayout";
 import { HeroSection } from "../components/home/HeroSection";
-import { BrandSection } from "../components/home/BrandSection";
+import { CollectionBannerSection } from "../components/home/CollectionBannerSection";
 import { FeatureSection } from "../components/home/FeatureSection";
 import { ProductSection } from "../components/home/ProductSection";
 import { productService } from "../services/productService";
@@ -112,7 +112,7 @@ export const HomePage = () => {
   return (
     <MainLayout>
       <HeroSection />
-      <BrandSection />
+      <CollectionBannerSection />
       <ProductSection
         title="New Arrivals"
         products={newArrivals}
