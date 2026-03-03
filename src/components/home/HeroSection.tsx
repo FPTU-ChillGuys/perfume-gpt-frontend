@@ -8,6 +8,8 @@ import {
   IconButton,
 } from "@mui/material";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { bannerService } from "@/services/bannerService";
+import type { Banner } from "@/types/banner";
 
 type HeroSlide = {
   id: string;
@@ -68,16 +70,88 @@ const heroSlides: readonly HeroSlide[] = [
   },
 ];
 
-const TOTAL_SLIDES = heroSlides.length;
+const FALLBACK_PRIMARY_CTA = { label: "Khám phá ngay", href: "/products" };
+const FALLBACK_SECONDARY_CTA = { label: "Xem bộ sưu tập", href: "/collections" };
+
+const ensureMinimumSlides = (candidate: HeroSlide[]): HeroSlide[] => {
+  if (candidate.length >= 3) {
+    return candidate;
+  }
+
+  const fallbackPool = heroSlides.filter(
+    (slide) => !candidate.some((item) => item.id === slide.id),
+  );
+  const extended = [...candidate];
+  const pool = fallbackPool.length > 0 ? fallbackPool : [...heroSlides];
+  let index = 0;
+
+  while (extended.length < 3) {
+    const fallbackSlide = pool[index % pool.length];
+    extended.push({ ...fallbackSlide, id: `${fallbackSlide.id}-fallback-${index}` });
+    index += 1;
+  }
+
+  return extended;
+};
+
+const mapBannerToSlide = (banner: Banner): HeroSlide => {
+  const normalizedTitle = (banner.name || "PerfumeGPT")
+    .split(/\n|\|/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  return {
+    id: banner.id,
+    label: banner.tagline || "Featured Release",
+    title: normalizedTitle.length ? normalizedTitle : [banner.name || "PerfumeGPT"],
+    description:
+      banner.description ||
+      "Khám phá hương thơm được tuyển chọn dành riêng cho bạn trong tuần này.",
+    notes: banner.notes && banner.notes.length > 0 ? banner.notes : ["Best Seller"],
+    primaryCta: {
+      label: banner.ctaLabel || FALLBACK_PRIMARY_CTA.label,
+      href: banner.ctaHref || FALLBACK_PRIMARY_CTA.href,
+    },
+    secondaryCta: FALLBACK_SECONDARY_CTA,
+    bottleImage: banner.mobileImageUrl || banner.heroImageUrl || heroSlides[0].bottleImage,
+    backgroundImage: banner.heroImageUrl || heroSlides[0].backgroundImage,
+  };
+};
 
 export const HeroSection = () => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [slides, setSlides] = useState<HeroSlide[]>([...heroSlides]);
+  const totalSlides = slides.length;
 
   useEffect(() => {
+    if (!totalSlides) {
+      return undefined;
+    }
     const timer = window.setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % TOTAL_SLIDES);
+      setActiveIndex((prev) => (prev + 1) % totalSlides);
     }, SLIDE_INTERVAL);
     return () => window.clearInterval(timer);
+  }, [totalSlides]);
+
+  useEffect(() => {
+    let mounted = true;
+    const loadBanners = async () => {
+      try {
+        const data = await bannerService.getBanners();
+        const published = data.filter((banner) => banner.status === "published");
+        const featured = published.filter((banner) => banner.isHomeFeatured);
+        const source = featured.length > 0 ? featured : published;
+        if (mounted && source.length > 0) {
+          setSlides(ensureMinimumSlides(source.map(mapBannerToSlide)));
+          setActiveIndex(0);
+        }
+      } catch (error) {
+        console.error("Failed to load hero banners", error);
+      }
+    };
+    loadBanners();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const goToSlide = (index: number) => {
@@ -85,14 +159,14 @@ export const HeroSection = () => {
   };
 
   const goNext = () => {
-    setActiveIndex((prev) => (prev + 1) % TOTAL_SLIDES);
+    setActiveIndex((prev) => (prev + 1) % totalSlides);
   };
 
   const goPrev = () => {
-    setActiveIndex((prev) => (prev - 1 + TOTAL_SLIDES) % TOTAL_SLIDES);
+    setActiveIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
   };
 
-  const activeSlide = heroSlides[activeIndex];
+  const activeSlide = slides[activeIndex % totalSlides];
 
   return (
     <Box
@@ -239,7 +313,7 @@ export const HeroSection = () => {
           }}
         >
           <Box sx={{ display: "flex", gap: 1 }}>
-            {heroSlides.map((slide, index) => (
+            {slides.map((slide, index) => (
               <Box
                 key={slide.id}
                 component="button"

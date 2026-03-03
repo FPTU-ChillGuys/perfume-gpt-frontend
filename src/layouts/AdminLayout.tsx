@@ -32,6 +32,7 @@ import {
   AddBox as AddBoxIcon,
   Category as CategoryIcon,
   ShoppingCart as ShoppingCartIcon,
+  Slideshow as SlideshowIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -70,6 +71,12 @@ const menuItems: MenuItem[] = [
     text: "Quản lý sản phẩm",
     icon: <CategoryIcon />,
     path: "/admin/products",
+    roles: ["admin"],
+  },
+  {
+    text: "Banner & nội dung",
+    icon: <SlideshowIcon />,
+    path: "/admin/content",
     roles: ["admin"],
   },
   {

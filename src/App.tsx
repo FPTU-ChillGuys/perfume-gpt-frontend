@@ -28,6 +28,7 @@ import { CheckoutPaymentPage } from "./pages/checkout/CheckoutPaymentPage";
 import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
 import { PaymentFailurePage } from "./pages/PaymentFailurePage";
 import { OrderManagementPage } from "./pages/OrderManagementPage";
+import { ContentManagementPage } from "./pages/ContentManagementPage";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -110,6 +111,14 @@ function App() {
                     element={
                       <RoleBasedRoute allowedRoles={["admin"]}>
                         <OrderManagementPage />
+                      </RoleBasedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/content"
+                    element={
+                      <RoleBasedRoute allowedRoles={["admin"]}>
+                        <ContentManagementPage />
                       </RoleBasedRoute>
                     }
                   />

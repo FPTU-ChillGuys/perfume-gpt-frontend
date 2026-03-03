@@ -21,3 +21,28 @@ export type ProductAttributeDto = components["schemas"]["ProductAttributeDto"];
 export type AttributeLookupItem = components["schemas"]["AttributeLookupItem"];
 export type AttributeValueLookupItem =
   components["schemas"]["AttributeValueLookupItem"];
+export type MediaResponse = components["schemas"]["MediaResponse"];
+export type TemporaryMediaResponse =
+  components["schemas"]["TemporaryMediaResponse"];
+export type UpdateProductRequest =
+  components["schemas"]["UpdateProductRequest"];
+
+export interface ProductImageUploadPayload {
+  file: File;
+  altText?: string;
+  displayOrder?: number;
+  isPrimary?: boolean;
+}
+
+export type ProductInformation =
+  components["schemas"]["ProductInforResponse"];
+export type ProductFastLook =
+  components["schemas"]["ProductFastLookResponse"];
+export type VariantFastLook =
+  components["schemas"]["VariantFastLookResponse"];
+export type ProductListItemWithVariants =
+  components["schemas"]["ProductListItemWithVariants"];
+export type PagedProductListWithVariants =
+  components["schemas"]["PagedResultOfProductListItemWithVariants"];
+export type ProductLookupItem =
+  components["schemas"]["ProductLookupItem"];
