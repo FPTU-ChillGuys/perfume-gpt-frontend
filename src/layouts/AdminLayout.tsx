@@ -33,6 +33,7 @@ import {
   Category as CategoryIcon,
   ShoppingCart as ShoppingCartIcon,
   Slideshow as SlideshowIcon,
+  SmartToy as BotIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -126,6 +127,12 @@ const menuItems: MenuItem[] = [
     text: "Báo cáo",
     icon: <ReportsIcon />,
     path: "#",
+    roles: ["admin"],
+  },
+  {
+    text: "Cấu hình AI",
+    icon: <BotIcon />,
+    path: "/admin/instructions",
     roles: ["admin"],
   },
 ];
@@ -248,9 +255,9 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               >
                 <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
                   {item.text === "Đợt nhập hàng" &&
-                  user?.role === "staff" &&
-                  pendingCount > 0 &&
-                  collapsed ? (
+                    user?.role === "staff" &&
+                    pendingCount > 0 &&
+                    collapsed ? (
                     <Badge badgeContent={pendingCount} color="error" max={99}>
                       {item.icon}
                     </Badge>
