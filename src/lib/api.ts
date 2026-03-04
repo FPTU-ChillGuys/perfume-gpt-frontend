@@ -26,3 +26,10 @@ export const apiInstance = createFetchClient<paths>({
   baseUrl: import.meta.env.VITE_API_BASE_URL,
 });
 apiInstance.use(middleware);
+
+// AI backend (separate server — paths not in the main OpenAPI schema)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const aiApiInstance = createFetchClient<Record<string, any>>({
+  baseUrl: import.meta.env.VITE_CHATBOT_BASE_URL,
+});
+aiApiInstance.use(middleware);

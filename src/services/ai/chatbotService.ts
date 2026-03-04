@@ -1,48 +1,44 @@
+import { aiApiInstance } from "@/lib/api";
 import type {
     ChatMessage,
     ConversationRequest,
     ConversationResponseData,
 } from "@/types/chatbot";
 
-const CHATBOT_BASE_URL =
-    import.meta.env.VITE_CHATBOT_BASE_URL || "http://localhost:3000";
-
 class ChatbotService {
-    private readonly endpoint = `${CHATBOT_BASE_URL}/conversation/chat/v8`;
+    private readonly CHAT_ENDPOINT = "/conversation/chat/v8";
 
     async sendMessage(
         conversationId: string,
         userId: string,
         messages: ChatMessage[]
     ): Promise<ConversationResponseData> {
-        const accessToken = localStorage.getItem("accessToken");
+        try {
+            const body: ConversationRequest = {
+                id: conversationId,
+                userId,
+                messages,
+            };
 
-        const body: ConversationRequest = {
-            id: conversationId,
-            userId,
-            messages,
-        };
+            const response = await aiApiInstance.POST(this.CHAT_ENDPOINT, {
+                body,
+            });
 
-        const response = await fetch(this.endpoint, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-            },
-            body: JSON.stringify(body),
-        });
+            if (!response.data?.success) {
+                throw new Error(
+                    response.data?.message || "Chatbot returned unsuccessful response"
+                );
+            }
 
-        if (!response.ok) {
-            throw new Error(`Chatbot API error: ${response.status}`);
+            return response.data.data as ConversationResponseData;
+        } catch (error: any) {
+            console.error("Chatbot error:", error);
+            throw new Error(
+                error.response?.data?.message ||
+                error.message ||
+                "Failed to connect to chatbot"
+            );
         }
-
-        const json = await response.json();
-
-        if (!json.success) {
-            throw new Error("Chatbot returned unsuccessful response");
-        }
-
-        return json.data as ConversationResponseData;
     }
 }
 
