@@ -11,3 +11,8 @@ export interface AiInstructionResponse {
     error: string | null;
     data: AiInstruction[];
 }
+
+export interface AiInstructionSingleResponse {
+    success: boolean;
+    error: string | null;
+}
