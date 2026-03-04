@@ -13,17 +13,30 @@ import {
   Alert,
   Autocomplete,
   CircularProgress,
-  FormControlLabel,
-  Switch,
-  Checkbox,
+  Card,
+  CardMedia,
+  Chip,
 } from "@mui/material";
-import { X, Plus, Trash2 } from "lucide-react";
+import {
+  X,
+  Plus,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  Upload,
+  ImageIcon,
+  RefreshCw,
+} from "lucide-react";
 import { attributeService } from "@/services/attributeService";
 import { productService } from "@/services/productService";
+import { brandService } from "@/services/brandService";
+import type { BrandLookupItem } from "@/services/brandService";
+import { categoryService } from "@/services/categoryService";
+import type { CategoryLookupItem } from "@/services/categoryService";
+import { useToast } from "@/hooks/useToast";
 import type {
   AttributeLookupItem,
   AttributeValueLookupItem,
-  MediaResponse,
   ProductImageUploadPayload,
   UpdateProductRequest,
 } from "@/types/product";
@@ -35,14 +48,16 @@ interface AttributeSelection {
   loadingValues: boolean;
 }
 
-interface ImageFormState {
-  file: File | null;
+interface UnifiedImage {
+  id?: string; // mediaId for existing images
+  temporaryMediaId?: string; // for newly uploaded images
+  url?: string; // for existing images from server
+  previewUrl?: string; // for newly uploaded images (object URL)
+  file?: File; // for newly uploaded images
   altText: string;
-  displayOrder: string;
+  displayOrder?: number;
   isPrimary: boolean;
-}
-
-interface EditableImage extends MediaResponse {
+  isExisting: boolean; // true for existing images from server
   markedForDeletion?: boolean;
 }
 
@@ -60,63 +75,86 @@ const createEmptyAttributeSelection = (): AttributeSelection => ({
   loadingValues: false,
 });
 
-const createEmptyImageForm = (): ImageFormState => ({
-  file: null,
-  altText: "",
-  displayOrder: "",
-  isPrimary: false,
-});
-
 export default function EditProductDialog({
   open,
   productId,
   onClose,
   onSuccess,
 }: EditProductDialogProps) {
+  const { showToast } = useToast();
   const [name, setName] = useState("");
-  const [brandId, setBrandId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [selectedBrand, setSelectedBrand] = useState<BrandLookupItem | null>(
+    null,
+  );
+  const [selectedCategory, setSelectedCategory] =
+    useState<CategoryLookupItem | null>(null);
   const [description, setDescription] = useState("");
-  const [existingImages, setExistingImages] = useState<EditableImage[]>([]);
-  const [newImageForms, setNewImageForms] = useState<ImageFormState[]>([
-    createEmptyImageForm(),
-  ]);
+  const [images, setImages] = useState<UnifiedImage[]>([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [attributeSelections, setAttributeSelections] = useState<
     AttributeSelection[]
   >([createEmptyAttributeSelection()]);
+
+  const [brands, setBrands] = useState<BrandLookupItem[]>([]);
+  const [categories, setCategories] = useState<CategoryLookupItem[]>([]);
   const [availableAttributes, setAvailableAttributes] = useState<
     AttributeLookupItem[]
   >([]);
+
+  const [loadingBrands, setLoadingBrands] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingAttributes, setLoadingAttributes] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [initializing, setInitializing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [settingPrimaryId, setSettingPrimaryId] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
-  const resetState = () => {
+  const resetState = useCallback(() => {
     setName("");
-    setBrandId("");
-    setCategoryId("");
+    setSelectedBrand(null);
+    setSelectedCategory(null);
     setDescription("");
-    setExistingImages([]);
-    setNewImageForms([createEmptyImageForm()]);
+
+    // Clean up image preview URLs using functional update to avoid dependency
+    setImages((prevImages) => {
+      prevImages.forEach((img) => {
+        if (img.previewUrl) {
+          URL.revokeObjectURL(img.previewUrl);
+        }
+      });
+      return [];
+    });
+    setCurrentImageIndex(0);
+
     setAttributeSelections([createEmptyAttributeSelection()]);
     setAvailableAttributes([]);
     setError(null);
-  };
+    setInitialized(false);
+  }, []);
 
   const initializeDialog = useCallback(async () => {
     if (!productId) {
       return;
     }
+
     setInitializing(true);
     setLoadingAttributes(true);
     setError(null);
+
     try {
-      const [attributeLookup, productDetail, images] = await Promise.all([
+      const [
+        attributeLookup,
+        productDetail,
+        productImages,
+        brandsList,
+        categoriesList,
+      ] = await Promise.all([
         attributeService.getAttributes(),
         productService.getProductDetail(productId),
         productService.getProductImages(productId),
+        brandService.getBrandsLookup(),
+        categoryService.getCategoriesLookup(),
       ]);
 
       if (!productDetail) {
@@ -124,28 +162,38 @@ export default function EditProductDialog({
       }
 
       setName(productDetail.name || "");
-      setBrandId(
-        typeof productDetail.brandId === "number"
-          ? productDetail.brandId.toString()
-          : "",
+      setBrands(brandsList);
+      setCategories(categoriesList);
+
+      // Find and set selected brand
+      const brand = brandsList.find((b) => b.id === productDetail.brandId);
+      setSelectedBrand(brand || null);
+
+      // Find and set selected category
+      const category = categoriesList.find(
+        (c) => c.id === productDetail.categoryId,
       );
-      setCategoryId(
-        typeof productDetail.categoryId === "number"
-          ? productDetail.categoryId.toString()
-          : "",
-      );
+      setSelectedCategory(category || null);
+
       setDescription(productDetail.description || "");
 
-      const sortedImages = (images || [])
+      // Convert existing images to unified format
+      const sortedImages = (productImages || [])
         .slice()
-        .sort(
-          (a, b) => (a.displayOrder || 0) - (b.displayOrder || 0),
-        )
-        .map((image) => ({
-          ...image,
-          markedForDeletion: false,
-        }));
-      setExistingImages(sortedImages);
+        .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+        .map(
+          (image): UnifiedImage => ({
+            id: image.id,
+            url: image.url,
+            altText: image.altText || "",
+            displayOrder: image.displayOrder,
+            isPrimary: image.isPrimary || false,
+            isExisting: true,
+            markedForDeletion: false,
+          }),
+        );
+      setImages(sortedImages);
+      setCurrentImageIndex(0);
 
       const productAttributes = productDetail.attributes || [];
       const fallbackAttributes: AttributeLookupItem[] = [];
@@ -219,26 +267,165 @@ export default function EditProductDialog({
         selections.length ? selections : [createEmptyAttributeSelection()],
       );
       setAvailableAttributes(normalizedAttributes);
-      setNewImageForms([createEmptyImageForm()]);
+      setInitialized(true);
     } catch (err: any) {
       console.error("Error loading product for edit:", err);
-      setError(err.message || "Không thể tải dữ liệu sản phẩm");
+      const errorMessage = err.message || "Không thể tải dữ liệu sản phẩm";
+      setError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setInitializing(false);
       setLoadingAttributes(false);
     }
-  }, [productId]);
+  }, [productId, showToast]);
 
   useEffect(() => {
-    if (open && productId) {
+    if (open && productId && !initialized) {
       initializeDialog();
     } else if (!open) {
       resetState();
     }
-  }, [open, productId, initializeDialog]);
+  }, [open, productId, initialized, initializeDialog, resetState]);
+
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      setError(null);
+
+      // Prepare payload for upload
+      const payload: ProductImageUploadPayload[] = [
+        {
+          file,
+          altText: file.name,
+          displayOrder: images.length,
+          isPrimary: images.length === 0, // First image is primary
+        },
+      ];
+
+      // Upload to temporary storage
+      const uploadedMedia = await productService.uploadProductImages(payload);
+
+      if (uploadedMedia.length === 0 || !uploadedMedia[0]?.id) {
+        throw new Error("Không nhận được ID ảnh từ server");
+      }
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+
+      // Add to images list
+      const newImage: UnifiedImage = {
+        temporaryMediaId: uploadedMedia[0].id,
+        file,
+        previewUrl,
+        altText: file.name,
+        displayOrder: images.length,
+        isPrimary: images.length === 0,
+        isExisting: false,
+      };
+
+      setImages((prev) => {
+        const updated = [...prev, newImage];
+        setCurrentImageIndex(updated.length - 1); // Navigate to newly uploaded image
+        return updated;
+      });
+      showToast("Đã tải ảnh lên thành công", "success");
+    } catch (err: any) {
+      console.error("Error uploading image:", err);
+      const errorMessage = err.message || "Không thể tải ảnh lên";
+      setError(errorMessage);
+      showToast(errorMessage, "error");
+    } finally {
+      setUploadingImage(false);
+      event.target.value = ""; // Reset input
+    }
+  };
+
+  const handleRemoveImage = (imageIndex: number) => {
+    const imageToRemove = images[imageIndex];
+    if (!imageToRemove) return;
+
+    if (imageToRemove.isExisting) {
+      // Toggle marked for deletion for existing images
+      if (imageToRemove.markedForDeletion) {
+        // Unmark
+        setImages((prev) =>
+          prev.map((img, idx) =>
+            idx === imageIndex ? { ...img, markedForDeletion: false } : img,
+          ),
+        );
+        showToast("Đã hoàn tác đánh dấu xóa", "info");
+      } else {
+        // Mark for deletion
+        setImages((prev) =>
+          prev.map((img, idx) =>
+            idx === imageIndex ? { ...img, markedForDeletion: true } : img,
+          ),
+        );
+        showToast("Đã đánh dấu ảnh để xóa", "info");
+      }
+    } else {
+      // Remove newly uploaded image immediately
+      if (imageToRemove.previewUrl) {
+        URL.revokeObjectURL(imageToRemove.previewUrl);
+      }
+      setImages((prev) => prev.filter((_, idx) => idx !== imageIndex));
+      showToast("Đã xóa ảnh", "info");
+
+      // Adjust current index after removal
+      if (currentImageIndex >= images.length - 1 && images.length > 1) {
+        setCurrentImageIndex(images.length - 2);
+      } else if (images.length === 1) {
+        setCurrentImageIndex(0);
+      }
+    }
+  };
+
+  const handleSetPrimaryImage = async (imageIndex: number) => {
+    const imageToSetPrimary = images[imageIndex];
+    if (!imageToSetPrimary) return;
+
+    // If it's an existing image, call API to set primary
+    if (imageToSetPrimary.isExisting && imageToSetPrimary.id) {
+      try {
+        await productService.setPrimaryProductImage(imageToSetPrimary.id);
+        showToast("Đã đặt làm hình chính", "success");
+      } catch (err: any) {
+        console.error("Error setting primary image:", err);
+        const errorMessage = err.message || "Không thể đặt hình chính";
+        setError(errorMessage);
+        showToast(errorMessage, "error");
+        return;
+      }
+    }
+
+    // Update local state
+    setImages((prev) =>
+      prev.map((img, idx) => ({
+        ...img,
+        isPrimary: idx === imageIndex,
+      })),
+    );
+  };
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : images.length - 1));
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => (prev < images.length - 1 ? prev + 1 : 0));
+  };
 
   const handleAddAttribute = () => {
-    setAttributeSelections((prev) => [...prev, createEmptyAttributeSelection()]);
+    setAttributeSelections((prev) => [
+      ...prev,
+      createEmptyAttributeSelection(),
+    ]);
   };
 
   const handleRemoveAttribute = (index: number) => {
@@ -317,103 +504,17 @@ export default function EditProductDialog({
     });
   };
 
-  const handleToggleImageDeletion = (mediaId?: string) => {
-    if (!mediaId) {
-      return;
-    }
-    setExistingImages((prev) =>
-      prev.map((image) =>
-        image.id === mediaId
-          ? { ...image, markedForDeletion: !image.markedForDeletion }
-          : image,
-      ),
-    );
-  };
-
-  const handleSetPrimaryImage = async (mediaId?: string) => {
-    if (!mediaId) {
-      return;
-    }
-    try {
-      setSettingPrimaryId(mediaId);
-      await productService.setPrimaryProductImage(mediaId);
-      setExistingImages((prev) =>
-        prev.map((image) => ({
-          ...image,
-          isPrimary: image.id === mediaId,
-        })),
-      );
-    } catch (err: any) {
-      console.error("Error setting primary image:", err);
-      setError(err.message || "Không thể đặt hình chính");
-    } finally {
-      setSettingPrimaryId(null);
-    }
-  };
-
-  const handleAddNewImageForm = () => {
-    setNewImageForms((prev) => [...prev, createEmptyImageForm()]);
-  };
-
-  const handleRemoveNewImageForm = (index: number) => {
-    setNewImageForms((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleNewImageFileChange = (
-    index: number,
-    event: ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0] || null;
-    setNewImageForms((prev) => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        file,
-      };
-      return updated;
-    });
-    event.target.value = "";
-  };
-
-  const handleNewImageFieldChange = (
-    index: number,
-    field: keyof Omit<ImageFormState, "file" | "isPrimary">,
-    value: string,
-  ) => {
-    setNewImageForms((prev) => {
-      const updated = [...prev];
-      updated[index] = {
-        ...updated[index],
-        [field]: value,
-      };
-      return updated;
-    });
-  };
-
-  const handleNewImagePrimaryToggle = (
-    index: number,
-    event: ChangeEvent<HTMLInputElement>,
-  ) => {
-    const { checked } = event.target;
-    setNewImageForms((prev) =>
-      prev.map((form, i) => ({
-        ...form,
-        isPrimary: checked ? i === index : i === index ? false : form.isPrimary,
-      })),
-    );
-  };
-
   const validateForm = () => {
     if (!name.trim()) {
       setError("Tên sản phẩm là bắt buộc");
       return false;
     }
-    if (!brandId || parseInt(brandId, 10) <= 0) {
-      setError("Brand ID là bắt buộc và phải lớn hơn 0");
+    if (!selectedBrand?.id) {
+      setError("Vui lòng chọn thương hiệu");
       return false;
     }
-    if (!categoryId || parseInt(categoryId, 10) <= 0) {
-      setError("Category ID là bắt buộc và phải lớn hơn 0");
+    if (!selectedCategory?.id) {
+      setError("Vui lòng chọn danh mục");
       return false;
     }
     if (!productId) {
@@ -432,44 +533,29 @@ export default function EditProductDialog({
       setSaving(true);
       setError(null);
 
-      const uploadableImages = newImageForms.filter((form) => form.file);
-      let temporaryMediaIdsToAdd: string[] = [];
+      // Get newly uploaded images (not existing ones)
+      const temporaryMediaIdsToAdd = images
+        .filter((img) => !img.isExisting && img.temporaryMediaId)
+        .map((img) => img.temporaryMediaId!)
+        .filter((id) => id && id.trim() !== ""); // Filter out empty strings
 
-      if (uploadableImages.length) {
-        const payload: ProductImageUploadPayload[] = uploadableImages.map(
-          (form, index) => {
-            const parsedOrder = parseInt(form.displayOrder, 10);
-            return {
-              file: form.file!,
-              altText: form.altText.trim() || undefined,
-              displayOrder: Number.isNaN(parsedOrder) ? index : parsedOrder,
-              isPrimary: form.isPrimary,
-            };
-          },
-        );
+      // Get existing images marked for deletion
+      const mediaIdsToDelete = images
+        .filter((img) => img.isExisting && img.markedForDeletion && img.id)
+        .map((img) => img.id!)
+        .filter((id) => id && id.trim() !== ""); // Filter out empty strings
 
-        const uploaded = await productService.uploadProductImages(payload);
-        const ids = uploaded
-          .map((media) => media.id)
-          .filter((id): id is string => Boolean(id));
-
-        if (ids.length !== uploadableImages.length) {
-          throw new Error("Không thể tải lên tất cả ảnh mới");
-        }
-
-        temporaryMediaIdsToAdd = ids;
-      }
-
-      const mediaIdsToDelete = existingImages
-        .filter((image) => image.markedForDeletion && image.id)
-        .map((image) => image.id!)
-        .filter((id) => !!id);
+      // Normalize description
+      const normalizedDescription = description.trim().replace(/\s+/g, " ");
 
       const payload: UpdateProductRequest = {
         name: name.trim(),
-        brandId: parseInt(brandId, 10),
-        categoryId: parseInt(categoryId, 10),
-        description: description.trim() || null,
+        brandId: selectedBrand!.id,
+        categoryId: selectedCategory!.id,
+        description: normalizedDescription || null,
+        temporaryMediaIdsToAdd:
+          temporaryMediaIdsToAdd.length > 0 ? temporaryMediaIdsToAdd : [],
+        mediaIdsToDelete: mediaIdsToDelete.length > 0 ? mediaIdsToDelete : [],
         attributes: attributeSelections
           .filter((sel) => sel.attribute?.id && sel.value?.id)
           .map((sel) => ({
@@ -478,21 +564,16 @@ export default function EditProductDialog({
           })),
       };
 
-      if (temporaryMediaIdsToAdd.length) {
-        payload.temporaryMediaIdsToAdd = temporaryMediaIdsToAdd;
-      }
-
-      if (mediaIdsToDelete.length) {
-        payload.mediaIdsToDelete = mediaIdsToDelete;
-      }
-
       await productService.updateProduct(productId, payload);
+      showToast("Đã cập nhật sản phẩm thành công", "success");
       onSuccess();
       resetState();
       onClose();
     } catch (err: any) {
       console.error("Error updating product:", err);
-      setError(err.message || "Có lỗi xảy ra khi cập nhật sản phẩm");
+      const errorMessage = err.message || "Có lỗi xảy ra khi cập nhật sản phẩm";
+      setError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setSaving(false);
     }
@@ -507,337 +588,559 @@ export default function EditProductDialog({
   };
 
   return (
-    <Dialog open={open} onClose={handleDialogClose} maxWidth="md" fullWidth>
-      <DialogTitle className="flex items-center justify-between">
-        <span>Chỉnh Sửa Sản Phẩm</span>
-        <IconButton
-          onClick={handleDialogClose}
-          disabled={saving || initializing}
-          size="small"
-        >
-          <X className="w-5 h-5" />
-        </IconButton>
+    <Dialog open={open} onClose={handleDialogClose} maxWidth="lg" fullWidth>
+      <DialogTitle>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6" fontWeight={600}>
+            Chỉnh Sửa Sản Phẩm
+          </Typography>
+          <IconButton
+            onClick={handleDialogClose}
+            disabled={saving || initializing}
+            size="small"
+          >
+            <X className="w-5 h-5" />
+          </IconButton>
+        </Box>
       </DialogTitle>
 
-      <DialogContent dividers>
+      <DialogContent dividers sx={{ p: 3 }}>
         {!productId ? (
           <Typography variant="body2">
             Vui lòng chọn sản phẩm để chỉnh sửa.
           </Typography>
         ) : initializing ? (
-          <Box className="flex items-center justify-center py-6 space-x-2">
+          <Box
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            py={6}
+          >
             <CircularProgress size={24} />
-            <Typography variant="body2">
+            <Typography variant="body2" ml={2}>
               Đang tải dữ liệu sản phẩm...
             </Typography>
           </Box>
         ) : (
-          <Box className="space-y-4">
+          <Box>
             {error && (
-              <Alert severity="error" onClose={() => setError(null)}>
+              <Alert
+                severity="error"
+                onClose={() => setError(null)}
+                sx={{ mb: 3 }}
+              >
                 {error}
               </Alert>
             )}
 
-            <TextField
-              label="Tên sản phẩm"
-              fullWidth
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={saving}
-            />
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", md: "row" },
+                gap: 3,
+              }}
+            >
+              {/* Left side - Images */}
+              <Box sx={{ flex: { xs: "1", md: "0 0 40%" } }}>
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={600} mb={2}>
+                    Ảnh sản phẩm
+                  </Typography>
 
-            <Box className="grid grid-cols-2 gap-4">
-              <TextField
-                label="Brand ID"
-                type="number"
-                fullWidth
-                required
-                value={brandId}
-                onChange={(e) => setBrandId(e.target.value)}
-                disabled={saving}
-                helperText="ID của thương hiệu"
-              />
-
-              <TextField
-                label="Category ID"
-                type="number"
-                fullWidth
-                required
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                disabled={saving}
-                helperText="ID của danh mục"
-              />
-            </Box>
-
-            <TextField
-              label="Mô tả"
-              fullWidth
-              multiline
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              disabled={saving}
-            />
-
-            <Box>
-              <Typography variant="subtitle2" className="mb-2">
-                Hình hiện tại
-              </Typography>
-              {existingImages.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  Chưa có hình cho sản phẩm này.
-                </Typography>
-              ) : (
-                existingImages.map((image) => (
-                  <Box
-                    key={image.id}
-                    className="flex flex-col md:flex-row gap-3 p-3 border rounded mb-3"
-                  >
-                    <Box
-                      component="img"
-                      src={image.url || ""}
-                      alt={image.altText || "Product image"}
-                      className="w-full md:w-32 h-32 object-cover rounded border"
-                    />
-                    <Box className="flex-1 space-y-1">
-                      <Typography variant="body2">
-                        Alt: {image.altText || "Không có"}
-                      </Typography>
-                      <Typography variant="body2">
-                        Thứ tự: {image.displayOrder ?? "-"}
-                      </Typography>
-                      {image.isPrimary && (
-                        <Typography variant="caption" color="primary">
-                          Hình chính
-                        </Typography>
-                      )}
-                    </Box>
-                    <Box className="flex flex-col gap-2">
-                      <FormControlLabel
-                        control={
-                          <Checkbox
-                            checked={Boolean(image.markedForDeletion)}
-                            onChange={() => handleToggleImageDeletion(image.id)}
-                            disabled={saving}
-                          />
-                        }
-                        label="Đánh dấu xoá"
-                      />
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => handleSetPrimaryImage(image.id)}
-                        disabled={
-                          saving ||
-                          !image.id ||
-                          image.isPrimary ||
-                          Boolean(image.markedForDeletion) ||
-                          settingPrimaryId === image.id
-                        }
-                      >
-                        {settingPrimaryId === image.id
-                          ? "Đang cập nhật..."
-                          : "Đặt làm hình chính"}
-                      </Button>
-                    </Box>
-                  </Box>
-                ))
-              )}
-            </Box>
-
-            <Box>
-              <Typography variant="subtitle2" className="mb-2">
-                Ảnh mới cần thêm
-              </Typography>
-              {newImageForms.map((form, index) => (
-                <Box key={index} className="mb-4 p-4 border rounded space-y-3">
-                  <Box className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      component="label"
-                      disabled={saving}
-                    >
-                      Chọn ảnh
-                      <input
-                        hidden
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) =>
-                          handleNewImageFileChange(index, event)
-                        }
-                      />
-                    </Button>
-                    <Typography variant="body2" color="text.secondary">
-                      {form.file ? form.file.name : "Chưa chọn ảnh"}
-                    </Typography>
-                  </Box>
-                  <TextField
-                    label="Alt text"
+                  {/* Upload button */}
+                  <Button
+                    variant="outlined"
+                    component="label"
                     fullWidth
-                    size="small"
-                    value={form.altText}
-                    onChange={(e) =>
-                      handleNewImageFieldChange(index, "altText", e.target.value)
+                    startIcon={
+                      uploadingImage ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )
                     }
+                    disabled={saving || uploadingImage}
+                    sx={{ mb: 2, py: 1.5 }}
+                  >
+                    {uploadingImage ? "Đang tải lên..." : "Thêm ảnh"}
+                    <input
+                      hidden
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={saving || uploadingImage}
+                    />
+                  </Button>
+
+                  {/* Image Carousel */}
+                  <Box>
+                    {images.length === 0 ? (
+                      <Box
+                        sx={{
+                          border: "2px dashed",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                          p: 4,
+                          textAlign: "center",
+                          minHeight: 300,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Box>
+                          <ImageIcon className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                          <Typography variant="body2" color="text.secondary">
+                            Chưa có ảnh nào
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ) : (
+                      <Box>
+                        {/* Main image display */}
+                        <Card sx={{ position: "relative", mb: 2 }}>
+                          <CardMedia
+                            component="img"
+                            height="300"
+                            image={
+                              images[currentImageIndex]?.url ||
+                              images[currentImageIndex]?.previewUrl
+                            }
+                            alt={images[currentImageIndex]?.altText}
+                            sx={{
+                              objectFit: "cover",
+                              opacity: images[currentImageIndex]
+                                ?.markedForDeletion
+                                ? 0.4
+                                : 1,
+                              filter: images[currentImageIndex]
+                                ?.markedForDeletion
+                                ? "grayscale(80%)"
+                                : "none",
+                            }}
+                          />
+
+                          {/* Navigation arrows */}
+                          {images.length > 1 && (
+                            <>
+                              <IconButton
+                                onClick={handlePrevImage}
+                                disabled={saving}
+                                sx={{
+                                  position: "absolute",
+                                  left: 8,
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  bgcolor: "rgba(255, 255, 255, 0.9)",
+                                  "&:hover": {
+                                    bgcolor: "rgba(255, 255, 255, 1)",
+                                  },
+                                }}
+                              >
+                                <ChevronLeft />
+                              </IconButton>
+                              <IconButton
+                                onClick={handleNextImage}
+                                disabled={saving}
+                                sx={{
+                                  position: "absolute",
+                                  right: 8,
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  bgcolor: "rgba(255, 255, 255, 0.9)",
+                                  "&:hover": {
+                                    bgcolor: "rgba(255, 255, 255, 1)",
+                                  },
+                                }}
+                              >
+                                <ChevronRight />
+                              </IconButton>
+                            </>
+                          )}
+
+                          {/* Image counter */}
+                          <Chip
+                            label={`${currentImageIndex + 1} / ${images.length}`}
+                            size="small"
+                            sx={{
+                              position: "absolute",
+                              top: 8,
+                              right: 8,
+                              bgcolor: "rgba(0, 0, 0, 0.6)",
+                              color: "white",
+                            }}
+                          />
+
+                          {/* Marked for deletion badge */}
+                          {images[currentImageIndex]?.markedForDeletion ? (
+                            <Chip
+                              label="Sẽ xóa"
+                              color="error"
+                              size="small"
+                              sx={{ position: "absolute", top: 8, left: 8 }}
+                            />
+                          ) : images[currentImageIndex]?.isPrimary ? (
+                            <Chip
+                              label="Hình chính"
+                              color="primary"
+                              size="small"
+                              sx={{ position: "absolute", top: 8, left: 8 }}
+                            />
+                          ) : null}
+                        </Card>
+
+                        {/* Image controls */}
+                        <Box
+                          sx={{
+                            p: 2,
+                            border: 1,
+                            borderColor: "divider",
+                            borderRadius: 1,
+                          }}
+                        >
+                          <Box
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="space-between"
+                            mb={1.5}
+                          >
+                            <Typography variant="body2" fontWeight={600}>
+                              Ảnh {currentImageIndex + 1}
+                              {images[currentImageIndex]?.isExisting
+                                ? " (Hiện tại)"
+                                : " (Mới)"}
+                            </Typography>
+                            <Box>
+                              {!images[currentImageIndex]?.isPrimary &&
+                                !images[currentImageIndex]
+                                  ?.markedForDeletion && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={<Upload className="w-3 h-3" />}
+                                    onClick={() =>
+                                      handleSetPrimaryImage(currentImageIndex)
+                                    }
+                                    disabled={saving}
+                                    sx={{ mr: 1 }}
+                                  >
+                                    Đặt làm chính
+                                  </Button>
+                                )}
+                              <Button
+                                size="small"
+                                variant={
+                                  images[currentImageIndex]?.markedForDeletion
+                                    ? "contained"
+                                    : "outlined"
+                                }
+                                color="error"
+                                startIcon={
+                                  images[currentImageIndex]
+                                    ?.markedForDeletion ? (
+                                    <RefreshCw className="w-3 h-3" />
+                                  ) : (
+                                    <Trash2 className="w-3 h-3" />
+                                  )
+                                }
+                                onClick={() =>
+                                  handleRemoveImage(currentImageIndex)
+                                }
+                                disabled={saving}
+                              >
+                                {images[currentImageIndex]?.markedForDeletion
+                                  ? "Hoàn tác"
+                                  : images[currentImageIndex]?.isExisting
+                                    ? "Đánh dấu xóa"
+                                    : "Xóa"}
+                              </Button>
+                            </Box>
+                          </Box>
+                        </Box>
+
+                        {/* Thumbnail navigation */}
+                        {images.length > 1 && (
+                          <Box
+                            sx={{
+                              mt: 2,
+                              display: "flex",
+                              gap: 1,
+                              overflowX: "auto",
+                              pb: 1,
+                            }}
+                          >
+                            {images.map((img, idx) => (
+                              <Box
+                                key={img.id || img.temporaryMediaId || idx}
+                                onClick={() => setCurrentImageIndex(idx)}
+                                sx={{
+                                  width: 60,
+                                  height: 60,
+                                  flexShrink: 0,
+                                  cursor: "pointer",
+                                  border: 2,
+                                  borderColor:
+                                    currentImageIndex === idx
+                                      ? "primary.main"
+                                      : "divider",
+                                  borderRadius: 1,
+                                  overflow: "hidden",
+                                  position: "relative",
+                                  opacity: img.markedForDeletion
+                                    ? 0.3
+                                    : currentImageIndex === idx
+                                      ? 1
+                                      : 0.6,
+                                  transition: "all 0.2s",
+                                  "&:hover": {
+                                    opacity: img.markedForDeletion ? 0.5 : 1,
+                                  },
+                                  filter: img.markedForDeletion
+                                    ? "grayscale(80%)"
+                                    : "none",
+                                }}
+                              >
+                                <Box
+                                  component="img"
+                                  src={img.url || img.previewUrl}
+                                  alt={img.altText}
+                                  sx={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                  }}
+                                />
+                                {img.isPrimary && (
+                                  <Box
+                                    sx={{
+                                      position: "absolute",
+                                      top: 2,
+                                      right: 2,
+                                      width: 8,
+                                      height: 8,
+                                      borderRadius: "50%",
+                                      bgcolor: "primary.main",
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Right side - Product info */}
+              <Box sx={{ flex: 1 }}>
+                <Box display="flex" flexDirection="column" gap={2.5}>
+                  <TextField
+                    label="Tên sản phẩm"
+                    fullWidth
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     disabled={saving}
                   />
-                  <Box className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <TextField
-                      label="Thứ tự hiển thị"
-                      type="number"
-                      size="small"
-                      value={form.displayOrder}
-                      onChange={(e) =>
-                        handleNewImageFieldChange(
-                          index,
-                          "displayOrder",
-                          e.target.value,
-                        )
-                      }
-                      disabled={saving}
-                    />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          size="small"
-                          checked={form.isPrimary}
-                          onChange={(event) =>
-                            handleNewImagePrimaryToggle(index, event)
-                          }
-                          disabled={saving}
-                        />
-                      }
-                      label="Hình chính"
-                    />
-                  </Box>
-                  <IconButton
-                    onClick={() => handleRemoveNewImageForm(index)}
-                    disabled={saving}
-                    size="small"
-                    color="error"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </IconButton>
-                </Box>
-              ))}
-              <Button
-                startIcon={<Plus className="w-4 h-4" />}
-                onClick={handleAddNewImageForm}
-                disabled={saving}
-                size="small"
-              >
-                Thêm ảnh mới
-              </Button>
-            </Box>
 
-            <Box>
-              <Typography variant="subtitle2" className="mb-2">
-                Attributes
-              </Typography>
-              {loadingAttributes ? (
-                <Box className="flex items-center justify-center py-4">
-                  <CircularProgress size={24} />
-                  <Typography className="ml-2">
-                    Đang tải attributes...
-                  </Typography>
-                </Box>
-              ) : (
-                <>
-                  {attributeSelections.map((selection, index) => (
-                    <Box key={index} className="mb-4 p-4 border rounded">
-                      <Box className="flex items-start gap-2">
-                        <Box className="flex-1 space-y-2">
-                          <Autocomplete
-                            options={availableAttributes}
-                            getOptionLabel={(option) =>
-                              `${option.name || "Attribute"}${option.description ? ` (${option.description})` : ""}`
-                            }
-                            value={selection.attribute}
-                            onChange={(_, newValue) =>
-                              handleAttributeChange(index, newValue)
-                            }
-                            disabled={saving}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                label="Attribute"
-                                size="small"
-                                required
-                              />
-                            )}
-                          />
-                          <Autocomplete
-                            options={selection.valueOptions}
-                            getOptionLabel={(option) => option.value || ""}
-                            value={selection.value}
-                            onChange={(_, newValue) =>
-                              handleValueChange(index, newValue)
-                            }
-                            disabled={
-                              saving ||
-                              !selection.attribute ||
-                              selection.loadingValues
-                            }
-                            loading={selection.loadingValues}
-                            renderInput={(params) => (
-                              <TextField
-                                {...params}
-                                label="Value"
-                                size="small"
-                                required
-                                InputProps={{
-                                  ...params.InputProps,
-                                  endAdornment: (
-                                    <>
-                                      {selection.loadingValues ? (
-                                        <CircularProgress size={20} />
-                                      ) : null}
-                                      {params.InputProps.endAdornment}
-                                    </>
-                                  ),
-                                }}
-                              />
-                            )}
-                          />
-                        </Box>
-                        <IconButton
-                          onClick={() => handleRemoveAttribute(index)}
-                          disabled={saving || attributeSelections.length === 1}
-                          size="small"
-                          color="error"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </IconButton>
+                  <Autocomplete
+                    options={brands}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={selectedBrand}
+                    onChange={(_, newValue) => setSelectedBrand(newValue)}
+                    disabled={saving || loadingBrands}
+                    loading={loadingBrands}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Thương hiệu"
+                        required
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingBrands ? (
+                                <CircularProgress size={20} />
+                              ) : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+
+                  <Autocomplete
+                    options={categories}
+                    getOptionLabel={(option) => option.name || ""}
+                    value={selectedCategory}
+                    onChange={(_, newValue) => setSelectedCategory(newValue)}
+                    disabled={saving || loadingCategories}
+                    loading={loadingCategories}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Danh mục"
+                        required
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {loadingCategories ? (
+                                <CircularProgress size={20} />
+                              ) : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
+                      />
+                    )}
+                  />
+
+                  <TextField
+                    label="Mô tả"
+                    fullWidth
+                    multiline
+                    rows={4}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    disabled={saving}
+                  />
+
+                  {/* Attributes section */}
+                  <Box>
+                    <Typography variant="subtitle2" fontWeight={600} mb={1.5}>
+                      Attributes
+                    </Typography>
+
+                    {loadingAttributes ? (
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="center"
+                        py={3}
+                      >
+                        <CircularProgress size={24} />
+                        <Typography ml={2} variant="body2">
+                          Đang tải attributes...
+                        </Typography>
                       </Box>
-                    </Box>
-                  ))}
-                  <Button
-                    startIcon={<Plus className="w-4 h-4" />}
-                    onClick={handleAddAttribute}
-                    disabled={saving || loadingAttributes}
-                    size="small"
-                  >
-                    Thêm Attribute
-                  </Button>
-                </>
-              )}
+                    ) : (
+                      <>
+                        {attributeSelections.map((selection, index) => (
+                          <Box
+                            key={index}
+                            mb={2}
+                            p={2}
+                            border={1}
+                            borderColor="divider"
+                            borderRadius={1}
+                          >
+                            <Box display="flex" gap={1.5}>
+                              <Box
+                                flex={1}
+                                display="flex"
+                                flexDirection="column"
+                                gap={1.5}
+                              >
+                                <Autocomplete
+                                  options={availableAttributes}
+                                  getOptionLabel={(option) =>
+                                    `${option.name}${option.description ? ` (${option.description})` : ""}`
+                                  }
+                                  value={selection.attribute}
+                                  onChange={(_, newValue) =>
+                                    handleAttributeChange(index, newValue)
+                                  }
+                                  disabled={saving}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      label="Attribute"
+                                      size="small"
+                                      required
+                                    />
+                                  )}
+                                />
+                                <Autocomplete
+                                  options={selection.valueOptions}
+                                  getOptionLabel={(option) =>
+                                    option.value || ""
+                                  }
+                                  value={selection.value}
+                                  onChange={(_, newValue) =>
+                                    handleValueChange(index, newValue)
+                                  }
+                                  disabled={
+                                    saving ||
+                                    !selection.attribute ||
+                                    selection.loadingValues
+                                  }
+                                  loading={selection.loadingValues}
+                                  renderInput={(params) => (
+                                    <TextField
+                                      {...params}
+                                      label="Value"
+                                      size="small"
+                                      required
+                                      InputProps={{
+                                        ...params.InputProps,
+                                        endAdornment: (
+                                          <>
+                                            {selection.loadingValues ? (
+                                              <CircularProgress size={20} />
+                                            ) : null}
+                                            {params.InputProps.endAdornment}
+                                          </>
+                                        ),
+                                      }}
+                                    />
+                                  )}
+                                />
+                              </Box>
+                              <IconButton
+                                onClick={() => handleRemoveAttribute(index)}
+                                disabled={
+                                  saving || attributeSelections.length === 1
+                                }
+                                size="small"
+                                color="error"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                        ))}
+                        <Button
+                          startIcon={<Plus className="w-4 h-4" />}
+                          onClick={handleAddAttribute}
+                          disabled={saving || loadingAttributes}
+                          size="small"
+                          variant="outlined"
+                        >
+                          Thêm Attribute
+                        </Button>
+                      </>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
             </Box>
           </Box>
         )}
       </DialogContent>
 
-      <DialogActions>
+      <DialogActions sx={{ px: 3, py: 2 }}>
         <Button onClick={handleDialogClose} disabled={saving || initializing}>
-          Huỷ
+          Hủy
         </Button>
         <Button
           onClick={handleSubmit}
           variant="contained"
           disabled={saving || initializing || !productId}
+          startIcon={saving ? <CircularProgress size={20} /> : null}
         >
           {saving ? "Đang lưu..." : "Lưu thay đổi"}
         </Button>

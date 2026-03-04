@@ -129,17 +129,12 @@ class ProductService {
     query: SemanticProductSearchQuery,
   ): Promise<PagedProductListWithVariants> {
     try {
-      const response = await apiInstance.GET(
-        "/api/products/search/semantic",
-        {
-          params: { query },
-        },
-      );
+      const response = await apiInstance.GET("/api/products/search/semantic", {
+        params: { query },
+      });
 
       if (!response.data?.success) {
-        throw new Error(
-          response.data?.message || "Failed to search products",
-        );
+        throw new Error(response.data?.message || "Failed to search products");
       }
 
       return (
@@ -232,7 +227,7 @@ class ProductService {
         params: {
           query: {
             PageNumber: 1,
-            PageSize: 10,
+            PageSize: 24,
             IsDescending: true,
           },
         },
@@ -263,7 +258,7 @@ class ProductService {
         params: {
           query: {
             PageNumber: 1,
-            PageSize: 10,
+            PageSize: 24,
             IsDescending: true,
           },
         },
@@ -357,12 +352,17 @@ class ProductService {
 
   async getProductImages(productId: string): Promise<MediaResponse[]> {
     try {
-      const response = await apiInstance.GET("/api/products/{productId}/images", {
-        params: { path: { productId } },
-      });
+      const response = await apiInstance.GET(
+        "/api/products/{productId}/images",
+        {
+          params: { path: { productId } },
+        },
+      );
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to fetch product images");
+        throw new Error(
+          response.data?.message || "Failed to fetch product images",
+        );
       }
 
       return response.data.payload || [];
@@ -386,7 +386,9 @@ class ProductService {
       );
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to set primary image");
+        throw new Error(
+          response.data?.message || "Failed to set primary image",
+        );
       }
 
       return response.data.message || "Primary image updated";
@@ -428,12 +430,15 @@ class ProductService {
         }
       });
 
-      const response = await apiInstance.POST("/api/products/images/temporary", {
-        body: { Images: [] },
-        bodySerializer() {
-          return formData;
+      const response = await apiInstance.POST(
+        "/api/products/images/temporary",
+        {
+          body: { Images: [] },
+          bodySerializer() {
+            return formData;
+          },
         },
-      });
+      );
 
       if (!response.data?.success) {
         throw new Error(
