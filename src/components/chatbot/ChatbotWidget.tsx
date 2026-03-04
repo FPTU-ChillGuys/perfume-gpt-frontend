@@ -22,6 +22,7 @@ import {
 } from "@mui/icons-material";
 
 import { chatbotService } from "@/services/ai/chatbotService";
+import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { authService } from "@/services/authService";
@@ -47,16 +48,26 @@ function formatPrice(price: number) {
 
 // ─── Product Card ────────────────────────────────────────────────────────────
 
-function ProductCard({ product, onAddToCart }: { product: ChatProduct; onAddToCart: (variantId: string, productName: string) => void }) {
+function ProductCard({ product, acceptanceId, onAddToCart }: { product: ChatProduct; acceptanceId?: string; onAddToCart: (variantId: string, productName: string) => void }) {
     const [selectedVariant, setSelectedVariant] = useState<ChatVariant | null>(
         (product.variants && product.variants.length > 0 ? product.variants[0] : null) ?? null
     );
     const [adding, setAdding] = useState(false);
+    const hasAcceptedRef = useRef(false);
 
     const handleAdd = async () => {
         if (!selectedVariant) return;
         setAdding(true);
         try {
+            // Trigger AI Acceptance update if we have an ID and haven't already accepted
+            if (acceptanceId && !hasAcceptedRef.current) {
+                try {
+                    await aiAcceptanceService.updateAcceptanceRecord(acceptanceId);
+                    hasAcceptedRef.current = true;
+                } catch (e) {
+                    console.error("Failed to update AI acceptance:", e);
+                }
+            }
             await onAddToCart(selectedVariant.id, product.name);
         } finally {
             setAdding(false);
@@ -264,7 +275,7 @@ function MessageBubble({
                         }}
                     >
                         {payload.products.map((product) => (
-                            <ProductCard key={product.id} product={product} onAddToCart={onAddToCart} />
+                            <ProductCard key={product.id} product={product} acceptanceId={msg.acceptanceId} onAddToCart={onAddToCart} />
                         ))}
                     </Box>
                 )}
@@ -353,8 +364,27 @@ export default function ChatbotWidget() {
                 userId.current,
                 updatedMessages
             );
-            // Replace entire messages array with server response (context preservation)
-            setMessages(data.messages);
+
+            // Check if backend returned products in assistant messages to create AI acceptance record
+            const newMessages = [...data.messages];
+            for (let i = newMessages.length - 1; i >= 0; i--) {
+                const msg = newMessages[i];
+                if (msg && msg.sender === "assistant") {
+                    const payload = parseAssistantPayload(msg.message);
+                    if (payload.products && payload.products.length > 0 && !msg.acceptanceId) {
+                        try {
+                            const acceptanceId = await aiAcceptanceService.createAcceptanceRecord(userId.current);
+                            newMessages[i] = { sender: msg.sender, message: msg.message, acceptanceId };
+                        } catch (e) {
+                            console.error("Failed to create AI acceptance record:", e);
+                        }
+                        break; // Usually there's only one latest product response
+                    }
+                }
+            }
+
+            // Replace entire messages array with server response (context preservation & acceptance IDs attached)
+            setMessages(newMessages);
         } catch (e) {
             showToast("Không thể kết nối chatbot. Vui lòng thử lại.", "error");
             // Rollback

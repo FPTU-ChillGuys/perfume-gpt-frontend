@@ -1,6 +1,20 @@
 export interface ChatMessage {
     sender: "user" | "assistant";
     message: string;
+    acceptanceId?: string; // Appended locally when AI generates products
+}
+
+export interface AiAcceptanceRecord {
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    userId: string;
+    isAccepted: boolean;
+}
+
+export interface AiAcceptanceResponse {
+    success: boolean;
+    data: AiAcceptanceRecord;
 }
 
 export interface ChatVariant {

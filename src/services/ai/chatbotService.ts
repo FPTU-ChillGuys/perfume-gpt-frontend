@@ -14,10 +14,12 @@ class ChatbotService {
         messages: ChatMessage[]
     ): Promise<ConversationResponseData> {
         try {
+            const cleanMessages = messages.map(({ sender, message }) => ({ sender, message }));
+
             const body: ConversationRequest = {
                 id: conversationId,
                 userId,
-                messages,
+                messages: cleanMessages,
             };
 
             const response = await aiApiInstance.POST(this.CHAT_ENDPOINT, {
