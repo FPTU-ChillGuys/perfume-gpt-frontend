@@ -29,6 +29,7 @@ import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
 import { PaymentFailurePage } from "./pages/PaymentFailurePage";
 import { OrderManagementPage } from "./pages/OrderManagementPage";
 import { ContentManagementPage } from "./pages/ContentManagementPage";
+import ChatbotWidget from "./components/chatbot/ChatbotWidget";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -174,6 +175,7 @@ function App() {
                     }
                   />
                 </Routes>
+                <ChatbotWidget />
               </CartProvider>
             </AuthProvider>
           </ToastProvider>

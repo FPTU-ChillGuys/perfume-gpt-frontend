@@ -37,8 +37,8 @@ export const ScrollToTop = () => {
         onClick={scrollToTop}
         sx={{
           position: "fixed",
-          bottom: 32,
-          right: 32,
+          bottom: 96,
+          right: 29,
           zIndex: 1000,
         }}
       >
