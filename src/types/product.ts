@@ -8,6 +8,7 @@ export type ProductVariantsResponse =
   components["schemas"]["BaseResponseOfListOfVariantLookupItem"];
 
 export type ProductListItem = components["schemas"]["ProductListItem"];
+export type ProductDetail = components["schemas"]["ProductResponse"];
 export type PagedProductList =
   components["schemas"]["PagedResultOfProductListItem"];
 export type VariantPagedItem = components["schemas"]["VariantPagedItem"];

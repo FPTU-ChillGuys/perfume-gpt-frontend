@@ -6,11 +6,6 @@ import {
   Chip,
   CircularProgress,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Divider,
   Drawer,
   Grid,
@@ -48,18 +43,33 @@ import type {
   ProductInformation,
   ProductListItem,
   ProductListItemWithVariants,
+  UpdateProductRequest,
 } from "@/types/product";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { bannerService } from "@/services/bannerService";
 import { productService } from "@/services/productService";
 import { BannerFormDialog } from "@/components/banner/BannerFormDialog";
 import { useToast } from "@/hooks/useToast";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 const FALLBACK_BANNER_IMAGE =
   "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80";
 const SEMANTIC_MIN_CHARS = 3;
 
 type MinimalProduct = ProductListItem | ProductListItemWithVariants;
+
+type ConfirmAction =
+  | { type: "deleteProduct"; product: ProductListItem }
+  | { type: "deleteBanner"; banner: Banner }
+  | { type: "deleteImage"; mediaId: string; product: ProductListItem };
+
+interface ConfirmState {
+  open: boolean;
+  title: string;
+  description?: string;
+  confirmText?: string;
+  action: ConfirmAction | null;
+}
 
 export const ContentManagementPage = () => {
   const { showToast } = useToast();
@@ -88,7 +98,40 @@ export const ContentManagementPage = () => {
   const [descriptionSaving, setDescriptionSaving] = useState(false);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [promotingProduct, setPromotingProduct] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<ProductListItem | null>(null);
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    open: false,
+    title: "",
+    action: null,
+  });
+  const [confirmLoading, setConfirmLoading] = useState(false);
+
+  const composeUpdatePayload = useCallback(
+    (
+      product: ProductListItem,
+      overrides?: Partial<UpdateProductRequest>,
+    ): UpdateProductRequest => {
+      if (!product.brandId || !product.categoryId) {
+        throw new Error("Sản phẩm thiếu thông tin brand hoặc category");
+      }
+
+      const attributePayload = product.attributes
+        ?.filter((attr) => attr.attributeId && attr.valueId)
+        .map((attr) => ({
+          attributeId: attr.attributeId!,
+          valueId: attr.valueId!,
+        })) || [];
+
+      return {
+        name: product.name || "",
+        brandId: product.brandId,
+        categoryId: product.categoryId,
+        description: product.description ?? null,
+        attributes: attributePayload,
+        ...overrides,
+      };
+    },
+    [],
+  );
   const [bestSellers, setBestSellers] = useState<ProductListItem[]>([]);
   const [bestSellersLoading, setBestSellersLoading] = useState(false);
   const [semanticResults, setSemanticResults] = useState<
@@ -165,18 +208,38 @@ export const ContentManagementPage = () => {
     }
   };
 
-  const handleBannerDelete = async (bannerId: string) => {
-    if (!bannerId) {
+  const openConfirmDialog = (
+    action: ConfirmAction,
+    options: { title: string; description?: string; confirmText?: string },
+  ) => {
+    setConfirmState({
+      open: true,
+      action,
+      title: options.title,
+      description: options.description,
+      confirmText: options.confirmText,
+    });
+  };
+
+  const closeConfirmDialog = (force = false) => {
+    if (confirmLoading && !force) {
       return;
     }
-    try {
-      await bannerService.deleteBanner(bannerId);
-      await loadBanners();
-      showToast("Đã xóa banner", "success");
-    } catch (error) {
-      console.error(error);
-      showToast("Không thể xóa banner", "error");
+    setConfirmState((prev) => ({ ...prev, open: false, action: null }));
+  };
+
+  const requestDeleteBanner = (banner: Banner) => {
+    if (!banner.id) {
+      return;
     }
+    openConfirmDialog(
+      { type: "deleteBanner", banner },
+      {
+        title: "Xóa banner",
+        description: `Bạn có chắc chắn muốn xóa banner "${banner.name}"?`,
+        confirmText: "Xóa",
+      },
+    );
   };
 
   const handleReorder = async (bannerId: string, direction: "up" | "down") => {
@@ -370,9 +433,11 @@ export const ContentManagementPage = () => {
     }
     try {
       setDescriptionSaving(true);
-      await productService.updateProduct(selectedProduct.id, {
-        description: descriptionDraft.trim(),
+      const normalizedDescription = descriptionDraft.trim() || null;
+      const payload = composeUpdatePayload(selectedProduct, {
+        description: normalizedDescription,
       });
+      await productService.updateProduct(selectedProduct.id, payload);
       setProducts((prev) =>
         prev.map((product) =>
           product.id === selectedProduct.id
@@ -386,9 +451,9 @@ export const ContentManagementPage = () => {
           : prev,
       );
       showToast("Đã lưu mô tả", "success");
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      showToast("Không thể lưu mô tả", "error");
+      showToast(error?.message || "Không thể lưu mô tả", "error");
     } finally {
       setDescriptionSaving(false);
     }
@@ -410,15 +475,16 @@ export const ContentManagementPage = () => {
         .map((item) => item.id)
         .filter((id): id is string => Boolean(id));
       if (tempIds.length) {
-        await productService.updateProduct(selectedProduct.id, {
+        const payload = composeUpdatePayload(selectedProduct, {
           temporaryMediaIdsToAdd: tempIds,
         });
+        await productService.updateProduct(selectedProduct.id, payload);
         showToast("Đã tải hình mới", "success");
         await refreshProductImages();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      showToast("Không thể tải hình", "error");
+      showToast(error?.message || "Không thể tải hình", "error");
     } finally {
       setUploadingImages(false);
     }
@@ -481,38 +547,103 @@ export const ContentManagementPage = () => {
     }
   };
 
-  const handleDeleteImage = async (mediaId: string | undefined) => {
+  const requestDeleteImage = (mediaId: string | undefined) => {
     if (!mediaId || !selectedProduct?.id) {
       return;
     }
-    try {
-      await productService.updateProduct(selectedProduct.id, {
-        mediaIdsToDelete: [mediaId],
-      });
-      showToast("Đã xóa hình", "success");
-      await refreshProductImages();
-    } catch (error) {
-      console.error(error);
-      showToast("Không thể xóa hình", "error");
-    }
+    openConfirmDialog(
+      { type: "deleteImage", mediaId, product: selectedProduct },
+      {
+        title: "Xóa hình ảnh",
+        description: "Bạn có chắc chắn muốn xóa hình ảnh này?",
+        confirmText: "Xóa",
+      },
+    );
   };
 
-  const handleDeleteProduct = async () => {
-    if (!deleteTarget?.id) {
+  const requestDeleteProduct = (product: ProductListItem) => {
+    if (!product.id) {
+      return;
+    }
+    openConfirmDialog(
+      { type: "deleteProduct", product },
+      {
+        title: "Xóa sản phẩm",
+        description:
+          `Bạn có chắc chắn muốn xóa sản phẩm "${product.name || ""}"? Thao tác này không thể hoàn tác.`,
+        confirmText: "Xóa",
+      },
+    );
+  };
+
+  const handleConfirmAction = async () => {
+    if (!confirmState.action) {
+      closeConfirmDialog(true);
       return;
     }
     try {
-      await productService.deleteProduct(deleteTarget.id);
-      showToast("Đã xóa sản phẩm", "success");
-      setDeleteTarget(null);
-      if (selectedProduct?.id === deleteTarget.id) {
-        setDrawerOpen(false);
-        setSelectedProduct(null);
+      setConfirmLoading(true);
+      switch (confirmState.action.type) {
+        case "deleteProduct": {
+          const productId = confirmState.action.product.id;
+          if (!productId) {
+            throw new Error("Không tìm thấy sản phẩm để xóa");
+          }
+          await productService.deleteProduct(productId);
+          showToast("Đã xóa sản phẩm", "success");
+          if (selectedProduct?.id === productId) {
+            setDrawerOpen(false);
+            setSelectedProduct(null);
+          }
+          await fetchProducts();
+          break;
+        }
+        case "deleteBanner": {
+          const bannerId = confirmState.action.banner.id;
+          if (!bannerId) {
+            throw new Error("Không tìm thấy banner để xóa");
+          }
+          await bannerService.deleteBanner(bannerId);
+          await loadBanners();
+          showToast("Đã xóa banner", "success");
+          break;
+        }
+        case "deleteImage": {
+          const { mediaId, product } = confirmState.action;
+          if (!product.id) {
+            throw new Error("Không tìm thấy sản phẩm chứa hình này");
+          }
+          const payload = composeUpdatePayload(product, {
+            mediaIdsToDelete: [mediaId],
+          });
+          await productService.updateProduct(product.id, payload);
+          showToast("Đã xóa hình", "success");
+          if (selectedProduct?.id === product.id) {
+            await refreshProductImages();
+          }
+          break;
+        }
+        default:
+          break;
       }
-      fetchProducts();
-    } catch (error) {
+      closeConfirmDialog();
+    } catch (error: any) {
       console.error(error);
-      showToast("Không thể xóa sản phẩm", "error");
+      const fallbackMessage = (() => {
+        switch (confirmState.action?.type) {
+          case "deleteProduct":
+            return "Không thể xóa sản phẩm";
+          case "deleteBanner":
+            return "Không thể xóa banner";
+          case "deleteImage":
+            return "Không thể xóa hình";
+          default:
+            return "Không thể thực hiện thao tác";
+        }
+      })();
+      showToast(error?.message || fallbackMessage, "error");
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -675,7 +806,7 @@ export const ContentManagementPage = () => {
                             <IconButton
                               size="small"
                               color="error"
-                              onClick={() => handleBannerDelete(banner.id)}
+                              onClick={() => requestDeleteBanner(banner)}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -826,7 +957,7 @@ export const ContentManagementPage = () => {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => setDeleteTarget(product)}
+                            onClick={() => requestDeleteProduct(product)}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -1196,7 +1327,7 @@ export const ContentManagementPage = () => {
                           size="small"
                           color="error"
                           sx={{ position: "absolute", top: 8, right: 8, bgcolor: "rgba(0,0,0,0.4)", color: "white" }}
-                          onClick={() => handleDeleteImage(image.id)}
+                          onClick={() => requestDeleteImage(image.id)}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -1216,20 +1347,15 @@ export const ContentManagementPage = () => {
         )}
       </Drawer>
 
-      <Dialog open={Boolean(deleteTarget)} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle>Xóa sản phẩm</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Bạn có chắc chắn muốn xóa sản phẩm "{deleteTarget?.name}"? Thao tác này không thể hoàn tác.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>Hủy</Button>
-          <Button color="error" onClick={handleDeleteProduct}>
-            Xóa
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmState.open}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmText={confirmState.confirmText}
+        loading={confirmLoading}
+        onClose={closeConfirmDialog}
+        onConfirm={handleConfirmAction}
+      />
     </AdminLayout>
   );
 };

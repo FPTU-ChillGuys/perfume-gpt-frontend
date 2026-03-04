@@ -3,6 +3,7 @@ import type {
   Supplier,
   ProductVariant,
   ProductListItem,
+  ProductDetail,
   ProductListItemWithVariants,
   PagedProductList,
   PagedProductListWithVariants,
@@ -15,6 +16,7 @@ import type {
   UpdateProductRequest,
   VariantPagedItem,
   MediaResponse,
+  CreateProductRequest,
 } from "@/types/product";
 
 type PaginatedQuery = {
@@ -169,6 +171,27 @@ class ProductService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch product lookup",
+      );
+    }
+  }
+
+  async getProductDetail(productId: string): Promise<ProductDetail | null> {
+    try {
+      const response = await apiInstance.GET("/api/products/{productId}", {
+        params: { path: { productId } },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to fetch product");
+      }
+
+      return response.data.payload || null;
+    } catch (error: any) {
+      console.error("Error fetching product detail:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch product detail",
       );
     }
   }
@@ -349,6 +372,30 @@ class ProductService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch product images",
+      );
+    }
+  }
+
+  async setPrimaryProductImage(mediaId: string): Promise<string> {
+    try {
+      const response = await apiInstance.PUT(
+        "/api/products/images/{mediaId}/set-primary",
+        {
+          params: { path: { mediaId } },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to set primary image");
+      }
+
+      return response.data.message || "Primary image updated";
+    } catch (error: any) {
+      console.error("Error setting primary image:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to set primary image",
       );
     }
   }

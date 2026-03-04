@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import type { ChangeEvent } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -12,12 +13,15 @@ import {
   Alert,
   Autocomplete,
   CircularProgress,
+  FormControlLabel,
+  Switch,
 } from "@mui/material";
 import { X, Plus, Trash2 } from "lucide-react";
 import type {
   CreateProductRequest,
   AttributeLookupItem,
   AttributeValueLookupItem,
+  ProductImageUploadPayload,
 } from "@/types/product";
 import { productService } from "@/services/productService";
 import { attributeService } from "@/services/attributeService";
@@ -29,11 +33,25 @@ interface AttributeSelection {
   loadingValues: boolean;
 }
 
+interface ImageFormState {
+  file: File | null;
+  altText: string;
+  displayOrder: string;
+  isPrimary: boolean;
+}
+
 interface CreateProductDialogProps {
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
+
+const createEmptyImageForm = (isPrimary = false): ImageFormState => ({
+  file: null,
+  altText: "",
+  displayOrder: "",
+  isPrimary,
+});
 
 export default function CreateProductDialog({
   open,
@@ -44,7 +62,9 @@ export default function CreateProductDialog({
   const [brandId, setBrandId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [description, setDescription] = useState("");
-  const [temporaryMediaIds, setTemporaryMediaIds] = useState<string[]>([""]);
+  const [imageForms, setImageForms] = useState<ImageFormState[]>([
+    createEmptyImageForm(true),
+  ]);
   const [attributeSelections, setAttributeSelections] = useState<
     AttributeSelection[]
   >([
@@ -81,18 +101,61 @@ export default function CreateProductDialog({
     }
   };
 
-  const handleAddMediaId = () => {
-    setTemporaryMediaIds([...temporaryMediaIds, ""]);
+  const handleAddImageForm = () => {
+    setImageForms((prev) => [...prev, createEmptyImageForm()]);
   };
 
-  const handleRemoveMediaId = (index: number) => {
-    setTemporaryMediaIds(temporaryMediaIds.filter((_, i) => i !== index));
+  const handleRemoveImageForm = (index: number) => {
+    setImageForms((prev) => {
+      if (prev.length === 1) {
+        return prev;
+      }
+      const updated = prev.filter((_, i) => i !== index);
+      if (updated.length && !updated.some((img) => img.isPrimary)) {
+        updated[0] = { ...updated[0], isPrimary: true };
+      }
+      return updated;
+    });
   };
 
-  const handleMediaIdChange = (index: number, value: string) => {
-    const newMediaIds = [...temporaryMediaIds];
-    newMediaIds[index] = value;
-    setTemporaryMediaIds(newMediaIds);
+  const handleImageFileChange = (
+    index: number,
+    event: ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0] || null;
+    setImageForms((prev) => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        file,
+      };
+      return updated;
+    });
+    event.target.value = "";
+  };
+
+  const handleImageFieldChange = (
+    index: number,
+    field: keyof Omit<ImageFormState, "file" | "isPrimary">,
+    value: string,
+  ) => {
+    setImageForms((prev) => {
+      const updated = [...prev];
+      updated[index] = {
+        ...updated[index],
+        [field]: value,
+      };
+      return updated;
+    });
+  };
+
+  const handlePrimaryChange = (index: number) => {
+    setImageForms((prev) =>
+      prev.map((form, i) => ({
+        ...form,
+        isPrimary: i === index,
+      })),
+    );
   };
 
   const handleAddAttribute = () => {
@@ -196,22 +259,54 @@ export default function CreateProductDialog({
       return;
     }
 
-    const request: CreateProductRequest = {
-      name: name.trim(),
-      brandId: parseInt(brandId),
-      categoryId: parseInt(categoryId),
-      description: description.trim() || null,
-      temporaryMediaIds: temporaryMediaIds.filter((id) => id.trim()),
-      attributes: attributeSelections
-        .filter((sel) => sel.attribute?.id && sel.value?.id)
-        .map((sel) => ({
-          attributeId: sel.attribute!.id,
-          valueId: sel.value!.id,
-        })),
-    };
-
     try {
       setLoading(true);
+      let temporaryMediaIds: string[] = [];
+      const uploadableImages = imageForms.filter((form) => form.file);
+
+      if (uploadableImages.length) {
+        const payload: ProductImageUploadPayload[] = uploadableImages.map((form, index) => {
+          const parsedOrder = parseInt(form.displayOrder, 10);
+          return {
+            file: form.file!,
+            altText: form.altText.trim() || undefined,
+            displayOrder: Number.isNaN(parsedOrder) ? index : parsedOrder,
+            isPrimary: form.isPrimary,
+          };
+        });
+
+        const uploaded = await productService.uploadProductImages(payload);
+        if (uploaded.length !== uploadableImages.length) {
+          throw new Error(
+            "Không thể tải lên tất cả ảnh. Vui lòng thử lại.",
+          );
+        }
+
+        temporaryMediaIds = uploaded
+          .map((media) => media.id)
+          .filter((id): id is string => Boolean(id));
+
+        if (temporaryMediaIds.length !== uploadableImages.length) {
+          throw new Error(
+            "Thiếu ID ảnh tạm thời từ phản hồi máy chủ.",
+          );
+        }
+      }
+
+      const request: CreateProductRequest = {
+        name: name.trim(),
+        brandId: parseInt(brandId),
+        categoryId: parseInt(categoryId),
+        description: description.trim() || null,
+        temporaryMediaIds,
+        attributes: attributeSelections
+          .filter((sel) => sel.attribute?.id && sel.value?.id)
+          .map((sel) => ({
+            attributeId: sel.attribute!.id,
+            valueId: sel.value!.id,
+          })),
+      };
+
       await productService.createProduct(request);
       handleReset();
       onSuccess();
@@ -228,7 +323,7 @@ export default function CreateProductDialog({
     setBrandId("");
     setCategoryId("");
     setDescription("");
-    setTemporaryMediaIds([""]);
+    setImageForms([createEmptyImageForm(true)]);
     setAttributeSelections([
       {
         attribute: null,
@@ -309,35 +404,90 @@ export default function CreateProductDialog({
 
           <Box>
             <Typography variant="subtitle2" className="mb-2">
-              Media IDs
+              Ảnh sản phẩm
             </Typography>
-            {temporaryMediaIds.map((mediaId, index) => (
-              <Box key={index} className="flex items-center gap-2 mb-2">
-                <TextField
-                  placeholder="Media ID"
-                  fullWidth
-                  value={mediaId}
-                  onChange={(e) => handleMediaIdChange(index, e.target.value)}
-                  disabled={loading}
-                  size="small"
-                />
-                <IconButton
-                  onClick={() => handleRemoveMediaId(index)}
-                  disabled={loading || temporaryMediaIds.length === 1}
-                  size="small"
-                  color="error"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </IconButton>
+            {imageForms.map((form, index) => (
+              <Box
+                key={index}
+                className="mb-4 p-4 border rounded"
+              >
+                <Box className="flex flex-col gap-3">
+                  <Box className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      component="label"
+                      disabled={loading}
+                    >
+                      Chọn ảnh
+                      <input
+                        hidden
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) =>
+                          handleImageFileChange(index, event)
+                        }
+                      />
+                    </Button>
+                    <Typography variant="body2" color="text.secondary">
+                      {form.file ? form.file.name : "Chưa chọn ảnh"}
+                    </Typography>
+                  </Box>
+                  <TextField
+                    label="Alt text"
+                    fullWidth
+                    size="small"
+                    value={form.altText}
+                    onChange={(e) =>
+                      handleImageFieldChange(index, "altText", e.target.value)
+                    }
+                    disabled={loading}
+                  />
+                  <Box className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <TextField
+                      label="Thứ tự hiển thị"
+                      type="number"
+                      size="small"
+                      value={form.displayOrder}
+                      onChange={(e) =>
+                        handleImageFieldChange(
+                          index,
+                          "displayOrder",
+                          e.target.value,
+                        )
+                      }
+                      disabled={loading}
+                    />
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          size="small"
+                          checked={form.isPrimary}
+                          onChange={() => handlePrimaryChange(index)}
+                          disabled={loading}
+                        />
+                      }
+                      label="Hình chính"
+                    />
+                  </Box>
+                  <IconButton
+                    onClick={() => handleRemoveImageForm(index)}
+                    disabled={loading || imageForms.length === 1}
+                    size="small"
+                    color="error"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </IconButton>
+                </Box>
               </Box>
             ))}
             <Button
               startIcon={<Plus className="w-4 h-4" />}
-              onClick={handleAddMediaId}
+              onClick={handleAddImageForm}
               disabled={loading}
               size="small"
             >
-              Thêm Media ID
+              Thêm ảnh
             </Button>
           </Box>
 

@@ -30,6 +30,8 @@ import { AdminLayout } from "../layouts/AdminLayout";
 import { productService } from "../services/productService";
 import type { ProductListItem } from "../types/product";
 import CreateProductDialog from "../components/product/CreateProductDialog";
+import EditProductDialog from "../components/product/EditProductDialog";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const ProductManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,6 +42,15 @@ const ProductManagement = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    productId: null as string | null,
+    title: "",
+    description: "",
+  });
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -79,13 +90,48 @@ const ProductManagement = () => {
   };
 
   const handleEditProduct = (productId: string) => {
-    // TODO: Open edit product dialog
-    console.log("Edit product:", productId);
+    setEditingProductId(productId);
+    setEditDialogOpen(true);
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    // TODO: Confirm and delete product
-    console.log("Delete product:", productId);
+  const requestDeleteProduct = (product: ProductListItem) => {
+    if (!product.id) {
+      return;
+    }
+    setConfirmDialog({
+      open: true,
+      productId: product.id ?? null,
+      title: "Xoá sản phẩm",
+      description:
+        `Bạn có chắc chắn muốn xoá "${product.name || "sản phẩm"}"? Hành động này không thể hoàn tác.`,
+    });
+  };
+
+  const handleCloseConfirmDialog = () => {
+    if (deletingProductId) {
+      return;
+    }
+    setConfirmDialog((prev) => ({ ...prev, open: false, productId: null }));
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDialog.productId) {
+      handleCloseConfirmDialog();
+      return;
+    }
+
+    try {
+      setDeletingProductId(confirmDialog.productId);
+      setError(null);
+      await productService.deleteProduct(confirmDialog.productId);
+      await fetchProducts();
+      handleCloseConfirmDialog();
+    } catch (err: any) {
+      console.error("Error deleting product:", err);
+      setError(err.message || "Không thể xoá sản phẩm");
+    } finally {
+      setDeletingProductId(null);
+    }
   };
 
   const filteredProducts = products.filter(
@@ -93,6 +139,11 @@ const ProductManagement = () => {
       product.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.brandName?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
+
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingProductId(null);
+  };
 
   return (
     <AdminLayout>
@@ -253,7 +304,8 @@ const ProductManagement = () => {
                               <IconButton
                                 size="small"
                                 color="error"
-                                onClick={() => handleDeleteProduct(product.id!)}
+                                onClick={() => requestDeleteProduct(product)}
+                                disabled={deletingProductId === product.id}
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
@@ -287,6 +339,21 @@ const ProductManagement = () => {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onSuccess={fetchProducts}
+      />
+      <EditProductDialog
+        open={editDialogOpen}
+        productId={editingProductId}
+        onClose={handleCloseEditDialog}
+        onSuccess={fetchProducts}
+      />
+      <ConfirmDialog
+        open={confirmDialog.open}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        confirmText="Xoá"
+        onClose={handleCloseConfirmDialog}
+        onConfirm={handleConfirmDelete}
+        loading={Boolean(deletingProductId)}
       />
     </AdminLayout>
   );
