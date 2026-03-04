@@ -9346,6 +9346,9 @@ export interface components {
       createdAt?: string;
       /** Format: date-time */
       updatedAt?: null | string;
+      paymentTransactions?:
+        | null
+        | components["schemas"]["PaymentInfoResponse"][];
       shippingInfo?: null | components["schemas"]["ShippingInfoResponse"];
       recipientInfo?: null | components["schemas"]["RecipientInfoResponse"];
       orderDetails?: components["schemas"]["OrderDetailResponse"][];
@@ -9502,6 +9505,15 @@ export interface components {
       totalPages?: number;
       hasPreviousPage?: boolean;
       hasNextPage?: boolean;
+    };
+    PaymentInfoResponse: {
+      /** Format: uuid */
+      id?: string;
+      status?: components["schemas"]["TransactionStatus"];
+      paymentMethod?: components["schemas"]["PaymentMethod"];
+      failureReason?: null | string;
+      /** Format: decimal */
+      totalAmount?: number;
     };
     PaymentInformation: {
       method?: components["schemas"]["PaymentMethod"];
@@ -10017,6 +10029,13 @@ export interface components {
     TokenResponse: {
       accessToken: string;
     };
+    /** @enum {string} */
+    TransactionStatus:
+      | "Pending"
+      | "Success"
+      | "Failed"
+      | "Cancelled"
+      | "Refunded";
     UpdateAddressRequest: {
       receiverName?: string;
       phone?: string;
@@ -10147,6 +10166,9 @@ export interface components {
       createdAt?: string;
       /** Format: date-time */
       updatedAt?: null | string;
+      paymentTransactions?:
+        | null
+        | components["schemas"]["PaymentInfoResponse"][];
       shippingInfo?: null | components["schemas"]["ShippingInfoResponse"];
       recipientInfo?: null | components["schemas"]["RecipientInfoResponse"];
       orderDetails?: components["schemas"]["OrderDetailResponse"][];

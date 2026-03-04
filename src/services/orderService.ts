@@ -7,7 +7,11 @@ import type {
   PagedOrderList,
   OrderResponse,
 } from "@/types/order";
-import type { CreateOrderRequest, CheckoutResponse } from "@/types/checkout";
+import type {
+  CreateOrderRequest,
+  CheckoutResponse,
+  PaymentMethod,
+} from "@/types/checkout";
 
 interface GetMyOrdersParams {
   Status?: OrderStatus;
@@ -184,6 +188,46 @@ class OrderService {
         error.response?.data?.message ||
           error.message ||
           "Failed to update order status",
+      );
+    }
+  }
+
+  async retryPayment(
+    paymentId: string,
+    method: PaymentMethod,
+  ): Promise<CheckoutResponse> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/payments/retry/{paymentId}",
+        {
+          params: {
+            path: {
+              paymentId,
+            },
+          },
+          body: {
+            method,
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to retry payment",
+        );
+      }
+
+      // Return URL for redirect payment or orderId for cash payment
+      return {
+        url: response.data.payload ?? undefined,
+        orderId: response.data.payload ?? undefined,
+      };
+    } catch (error: any) {
+      console.error("Error retrying payment:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to retry payment",
       );
     }
   }

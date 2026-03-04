@@ -9,9 +9,17 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  FormControl,
+  FormLabel,
 } from "@mui/material";
 import { Cancel } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
+import { orderService } from "@/services/orderService";
+import type { PaymentMethod } from "@/types/checkout";
+import { useToast } from "@/hooks/useToast";
 
 const formatCurrency = (value?: string | number) => {
   const numValue =
@@ -51,20 +59,43 @@ const getErrorMessage = (responseCode?: string | null) => {
   );
 };
 
+const PAYMENT_METHODS: {
+  value: PaymentMethod;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "CashOnDelivery",
+    label: "Thanh toán khi nhận hàng",
+    description: "Thanh toán bằng tiền mặt khi nhận hàng",
+  },
+  {
+    value: "CashInStore",
+    label: "Thanh toán tại cửa hàng",
+    description: "Thanh toán trực tiếp tại cửa hàng",
+  },
+  { value: "VnPay", label: "VnPay", description: "Thanh toán qua VnPay" },
+  { value: "Momo", label: "Momo", description: "Thanh toán qua Momo" },
+];
+
 export const PaymentFailurePage = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>("CashOnDelivery");
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Simulate loading state
+    setTimeout(() => {
       setIsLoading(false);
     }, 500);
-
-    return () => clearTimeout(timer);
   }, []);
 
   const orderId = searchParams.get("vnp_TxnRef") || searchParams.get("orderId");
+  const paymentId = searchParams.get("paymentId"); // Get paymentId from URL params
   const amount = searchParams.get("vnp_Amount");
   const bankCode = searchParams.get("vnp_BankCode");
   const payDate = searchParams.get("vnp_PayDate");
@@ -73,6 +104,40 @@ export const PaymentFailurePage = () => {
   const orderInfo = searchParams.get("vnp_OrderInfo");
 
   const errorMessage = getErrorMessage(responseCode);
+
+  const handleRetryPayment = async () => {
+    if (!paymentId) {
+      showToast("Không tìm thấy thông tin thanh toán", "error");
+      return;
+    }
+
+    try {
+      setIsRetrying(true);
+      const response = await orderService.retryPayment(
+        paymentId,
+        paymentMethod,
+      );
+
+      // Handle payment redirect
+      if (paymentMethod === "VnPay" || paymentMethod === "Momo") {
+        if (response.url) {
+          window.location.href = response.url;
+        } else {
+          showToast("Không thể chuyển đến trang thanh toán", "error");
+        }
+      } else {
+        showToast("Đơn hàng đã được xác nhận!", "success");
+        navigate("/");
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể thử lại thanh toán",
+        "error",
+      );
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -211,17 +276,79 @@ export const PaymentFailurePage = () => {
 
           <Divider sx={{ my: 3 }} />
 
+          {/* Payment Method Selection */}
+          {paymentId && (
+            <Box sx={{ textAlign: "left", maxWidth: 500, mx: "auto", mb: 3 }}>
+              <FormControl component="fieldset" fullWidth>
+                <FormLabel component="legend" sx={{ mb: 2, fontWeight: 600 }}>
+                  Chọn phương thức thanh toán mới
+                </FormLabel>
+                <RadioGroup
+                  value={paymentMethod}
+                  onChange={(e) =>
+                    setPaymentMethod(e.target.value as PaymentMethod)
+                  }
+                >
+                  {PAYMENT_METHODS.map((method) => (
+                    <FormControlLabel
+                      key={method.value}
+                      value={method.value}
+                      control={<Radio />}
+                      label={
+                        <Box>
+                          <Typography variant="body1" fontWeight={500}>
+                            {method.label}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {method.description}
+                          </Typography>
+                        </Box>
+                      }
+                      sx={{
+                        mb: 1,
+                        border: 1,
+                        borderColor: "divider",
+                        borderRadius: 1,
+                        px: 2,
+                        py: 1,
+                        mx: 0,
+                        "&:hover": {
+                          bgcolor: "action.hover",
+                        },
+                      }}
+                    />
+                  ))}
+                </RadioGroup>
+              </FormControl>
+            </Box>
+          )}
+
+          <Divider sx={{ my: 3 }} />
+
           {/* Action Buttons */}
           <Box display="flex" gap={2} justifyContent="center" flexWrap="wrap">
-            <Button
-              variant="contained"
-              color="error"
-              size="large"
-              onClick={() => navigate("/checkout")}
-              sx={{ minWidth: 180 }}
-            >
-              Thử lại
-            </Button>
+            {paymentId ? (
+              <Button
+                variant="contained"
+                color="error"
+                size="large"
+                onClick={handleRetryPayment}
+                disabled={isRetrying}
+                sx={{ minWidth: 180 }}
+              >
+                {isRetrying ? <CircularProgress size={24} /> : "Thử lại"}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                color="error"
+                size="large"
+                onClick={() => navigate("/checkout")}
+                sx={{ minWidth: 180 }}
+              >
+                Về trang thanh toán
+              </Button>
+            )}
             <Button
               variant="outlined"
               color="primary"
