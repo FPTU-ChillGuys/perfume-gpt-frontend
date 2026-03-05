@@ -32,6 +32,7 @@ import { ContentManagementPage } from "./pages/ContentManagementPage";
 import ChatbotWidget from "./components/chatbot/ChatbotWidget";
 import AIInstructionPage from "./pages/AIInstructionPage";
 import QuizManagementPage from "./pages/QuizManagementPage";
+import QuizPage from "./pages/QuizPage";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -50,6 +51,7 @@ function App() {
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/products" element={<ProductListPage />} />
+                  <Route path="/quiz" element={<QuizPage />} />
                   <Route path="/unauthorized" element={<UnauthorizedPage />} />
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
