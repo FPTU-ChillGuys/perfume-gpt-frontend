@@ -37,6 +37,7 @@ const navItems = [
   { label: "Nước Hoa Nữ", href: "#" },
   { label: "GiftSet", href: "#" },
   { label: "Thương Hiệu", href: "#" },
+  { label: "Quiz AI", href: "/quiz" },
 ];
 
 export const Header = () => {
