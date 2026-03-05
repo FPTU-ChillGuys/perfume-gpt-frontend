@@ -43,7 +43,7 @@ import { useToast } from "@/hooks/useToast";
 
 interface AttributeSelection {
   attribute: AttributeLookupItem | null | undefined;
-  value: AttributeValueLookupItem | null | undefined;
+  values: AttributeValueLookupItem[];
   valueOptions: AttributeValueLookupItem[];
   loadingValues: boolean;
 }
@@ -82,7 +82,7 @@ export default function CreateProductDialog({
   >([
     {
       attribute: null,
-      value: null,
+      values: [],
       valueOptions: [],
       loadingValues: false,
     },
@@ -276,7 +276,7 @@ export default function CreateProductDialog({
       ...attributeSelections,
       {
         attribute: null,
-        value: null,
+        values: [],
         valueOptions: [],
         loadingValues: false,
       },
@@ -294,7 +294,7 @@ export default function CreateProductDialog({
     const newSelections = [...attributeSelections];
     newSelections[index] = {
       attribute,
-      value: null,
+      values: [],
       valueOptions: [],
       loadingValues: !!attribute,
     };
@@ -309,7 +309,7 @@ export default function CreateProductDialog({
           if (current) {
             updated[index] = {
               attribute: current.attribute,
-              value: current.value,
+              values: current.values,
               loadingValues: false,
               valueOptions: values,
             };
@@ -324,7 +324,7 @@ export default function CreateProductDialog({
           if (current) {
             updated[index] = {
               attribute: current.attribute,
-              value: current.value,
+              values: current.values,
               valueOptions: current.valueOptions,
               loadingValues: false,
             };
@@ -337,7 +337,7 @@ export default function CreateProductDialog({
 
   const handleValueChange = (
     index: number,
-    value: AttributeValueLookupItem | null,
+    values: AttributeValueLookupItem[],
   ) => {
     setAttributeSelections((prev) => {
       const updated = [...prev];
@@ -345,7 +345,7 @@ export default function CreateProductDialog({
       if (current) {
         updated[index] = {
           attribute: current.attribute,
-          value,
+          values,
           valueOptions: current.valueOptions,
           loadingValues: current.loadingValues,
         };
@@ -390,11 +390,13 @@ export default function CreateProductDialog({
         description: normalizedDescription || null,
         temporaryMediaIds,
         attributes: attributeSelections
-          .filter((sel) => sel.attribute?.id && sel.value?.id)
-          .map((sel) => ({
-            attributeId: sel.attribute!.id,
-            valueId: sel.value!.id,
-          })),
+          .filter((sel) => sel.attribute?.id && sel.values.length > 0)
+          .flatMap((sel) =>
+            sel.values.map((value) => ({
+              attributeId: sel.attribute!.id,
+              valueId: value.id,
+            })),
+          ),
       };
 
       await productService.createProduct(request);
@@ -426,7 +428,7 @@ export default function CreateProductDialog({
     setAttributeSelections([
       {
         attribute: null,
-        value: null,
+        values: [],
         valueOptions: [],
         loadingValues: false,
       },
@@ -863,9 +865,10 @@ export default function CreateProductDialog({
                               )}
                             />
                             <Autocomplete
+                              multiple
                               options={selection.valueOptions}
                               getOptionLabel={(option) => option.value || ""}
-                              value={selection.value}
+                              value={selection.values}
                               onChange={(_, newValue) =>
                                 handleValueChange(index, newValue)
                               }
@@ -878,7 +881,8 @@ export default function CreateProductDialog({
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
-                                  label="Value"
+                                  label="Values"
+                                  placeholder="Select values"
                                   size="small"
                                   required
                                   InputProps={{

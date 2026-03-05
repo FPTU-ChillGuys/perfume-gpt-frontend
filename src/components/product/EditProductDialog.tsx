@@ -43,7 +43,7 @@ import type {
 
 interface AttributeSelection {
   attribute: AttributeLookupItem | null | undefined;
-  value: AttributeValueLookupItem | null | undefined;
+  values: AttributeValueLookupItem[]; // Changed to support multiple values
   valueOptions: AttributeValueLookupItem[];
   loadingValues: boolean;
 }
@@ -70,7 +70,7 @@ interface EditProductDialogProps {
 
 const createEmptyAttributeSelection = (): AttributeSelection => ({
   attribute: null,
-  value: null,
+  values: [], // Changed to empty array
   valueOptions: [],
   loadingValues: false,
 });
@@ -198,62 +198,103 @@ export default function EditProductDialog({
       const productAttributes = productDetail.attributes || [];
       const fallbackAttributes: AttributeLookupItem[] = [];
 
-      const selections = productAttributes.length
-        ? await Promise.all(
-            productAttributes.map(async (attr: any) => {
-              let attributeOption =
-                attributeLookup.find((item) => item.id === attr.attributeId) ||
-                null;
+      // Group attributes by attributeId
+      const groupedAttributes = productAttributes.reduce(
+        (acc: any, attr: any) => {
+          const attrId = attr.attributeId;
+          if (!acc[attrId]) {
+            acc[attrId] = [];
+          }
+          acc[attrId].push(attr);
+          return acc;
+        },
+        {},
+      );
 
-              if (!attributeOption && typeof attr.attributeId === "number") {
-                attributeOption = {
-                  id: attr.attributeId,
-                  name: attr.attribute || `Attribute ${attr.attributeId}`,
-                  description: attr.description || undefined,
-                };
-                if (
-                  !fallbackAttributes.some(
-                    (item) => item.id === attributeOption!.id,
-                  )
-                ) {
-                  fallbackAttributes.push(attributeOption);
-                }
-              }
+      const selections =
+        Object.keys(groupedAttributes).length > 0
+          ? await Promise.all(
+              Object.entries(groupedAttributes).map(
+                async ([_, attrs]: [string, any]) => {
+                  const firstAttr = attrs[0];
+                  let attributeOption =
+                    attributeLookup.find(
+                      (item) => item.id === firstAttr.attributeId,
+                    ) || null;
 
-              let valueOptions: AttributeValueLookupItem[] = [];
-              if (attributeOption?.id) {
-                try {
-                  valueOptions = await attributeService.getAttributeValues(
-                    attributeOption.id,
-                  );
-                } catch (valueError) {
-                  console.error("Error fetching attribute values:", valueError);
-                }
-              }
+                  if (
+                    !attributeOption &&
+                    typeof firstAttr.attributeId === "number"
+                  ) {
+                    attributeOption = {
+                      id: firstAttr.attributeId,
+                      name:
+                        firstAttr.attribute ||
+                        `Attribute ${firstAttr.attributeId}`,
+                      description: firstAttr.description || undefined,
+                    };
+                    if (
+                      !fallbackAttributes.some(
+                        (item) => item.id === attributeOption!.id,
+                      )
+                    ) {
+                      fallbackAttributes.push(attributeOption);
+                    }
+                  }
 
-              const fallbackValue =
-                typeof attr.valueId === "number"
-                  ? { id: attr.valueId, value: attr.value || "" }
-                  : null;
+                  let valueOptions: AttributeValueLookupItem[] = [];
+                  if (attributeOption?.id) {
+                    try {
+                      valueOptions = await attributeService.getAttributeValues(
+                        attributeOption.id,
+                      );
+                    } catch (valueError) {
+                      console.error(
+                        "Error fetching attribute values:",
+                        valueError,
+                      );
+                    }
+                  }
 
-              if (
-                fallbackValue &&
-                !valueOptions.some((option) => option.id === fallbackValue.id)
-              ) {
-                valueOptions = [...valueOptions, fallbackValue];
-              }
+                  // Collect all values for this attribute
+                  const selectedValues: AttributeValueLookupItem[] = [];
+                  attrs.forEach((attr: any) => {
+                    const fallbackValue =
+                      typeof attr.valueId === "number"
+                        ? { id: attr.valueId, value: attr.value || "" }
+                        : null;
 
-              return {
-                attribute: attributeOption,
-                value:
-                  valueOptions.find((option) => option.id === attr.valueId) ||
-                  fallbackValue,
-                valueOptions,
-                loadingValues: false,
-              };
-            }),
-          )
-        : [createEmptyAttributeSelection()];
+                    if (
+                      fallbackValue &&
+                      !valueOptions.some(
+                        (option) => option.id === fallbackValue.id,
+                      )
+                    ) {
+                      valueOptions = [...valueOptions, fallbackValue];
+                    }
+
+                    const value =
+                      valueOptions.find(
+                        (option) => option.id === attr.valueId,
+                      ) || fallbackValue;
+                    if (
+                      value &&
+                      !selectedValues.some((v) => v.id === value.id)
+                    ) {
+                      selectedValues.push(value);
+                    }
+                  });
+
+                  return {
+                    attribute: attributeOption,
+                    values: selectedValues, // Array of all values for this attribute
+                    valueOptions,
+                    loadingValues: false,
+                  };
+                },
+              ),
+            )
+          : [createEmptyAttributeSelection()];
 
       const normalizedAttributes = [
         ...attributeLookup,
@@ -443,7 +484,7 @@ export default function EditProductDialog({
       const updated = [...prev];
       updated[index] = {
         attribute,
-        value: null,
+        values: [], // Changed to empty array
         valueOptions: [],
         loadingValues: !!attribute,
       };
@@ -459,7 +500,7 @@ export default function EditProductDialog({
           if (current) {
             updated[index] = {
               attribute: current.attribute,
-              value: current.value,
+              values: current.values,
               valueOptions: values,
               loadingValues: false,
             };
@@ -474,7 +515,7 @@ export default function EditProductDialog({
           if (current) {
             updated[index] = {
               attribute: current.attribute,
-              value: current.value,
+              values: current.values,
               valueOptions: current.valueOptions,
               loadingValues: false,
             };
@@ -487,7 +528,7 @@ export default function EditProductDialog({
 
   const handleValueChange = (
     index: number,
-    value: AttributeValueLookupItem | null,
+    values: AttributeValueLookupItem[],
   ) => {
     setAttributeSelections((prev) => {
       const updated = [...prev];
@@ -495,7 +536,7 @@ export default function EditProductDialog({
       if (current) {
         updated[index] = {
           attribute: current.attribute,
-          value,
+          values, // Now accept array of values
           valueOptions: current.valueOptions,
           loadingValues: current.loadingValues,
         };
@@ -557,11 +598,13 @@ export default function EditProductDialog({
           temporaryMediaIdsToAdd.length > 0 ? temporaryMediaIdsToAdd : [],
         mediaIdsToDelete: mediaIdsToDelete.length > 0 ? mediaIdsToDelete : [],
         attributes: attributeSelections
-          .filter((sel) => sel.attribute?.id && sel.value?.id)
-          .map((sel) => ({
-            attributeId: sel.attribute!.id,
-            valueId: sel.value!.id,
-          })),
+          .filter((sel) => sel.attribute?.id && sel.values.length > 0)
+          .flatMap((sel) =>
+            sel.values.map((value) => ({
+              attributeId: sel.attribute!.id,
+              valueId: value.id,
+            })),
+          ),
       };
 
       await productService.updateProduct(productId, payload);
@@ -1065,11 +1108,12 @@ export default function EditProductDialog({
                                   )}
                                 />
                                 <Autocomplete
+                                  multiple
                                   options={selection.valueOptions}
                                   getOptionLabel={(option) =>
                                     option.value || ""
                                   }
-                                  value={selection.value}
+                                  value={selection.values}
                                   onChange={(_, newValue) =>
                                     handleValueChange(index, newValue)
                                   }
@@ -1082,9 +1126,10 @@ export default function EditProductDialog({
                                   renderInput={(params) => (
                                     <TextField
                                       {...params}
-                                      label="Value"
+                                      label="Values"
                                       size="small"
                                       required
+                                      placeholder="Chọn một hoặc nhiều giá trị"
                                       InputProps={{
                                         ...params.InputProps,
                                         endAdornment: (
