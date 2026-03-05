@@ -20,6 +20,7 @@ import {
     ShoppingCart as CartIcon,
     Storefront as StoreIcon,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 
 import { chatbotService } from "@/services/ai/chatbotService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
@@ -48,14 +49,25 @@ function formatPrice(price: number) {
 
 // ─── Product Card ────────────────────────────────────────────────────────────
 
-function ProductCard({ product, acceptanceId, onAddToCart }: { product: ChatProduct; acceptanceId?: string; onAddToCart: (variantId: string, productName: string) => void }) {
+function ProductCard({
+    product,
+    acceptanceId,
+    onAddToCart,
+    onNavigate,
+}: {
+    product: ChatProduct;
+    acceptanceId?: string;
+    onAddToCart: (variantId: string, productName: string) => void;
+    onNavigate: (productId: string, acceptanceId?: string) => void;
+}) {
     const [selectedVariant, setSelectedVariant] = useState<ChatVariant | null>(
         (product.variants && product.variants.length > 0 ? product.variants[0] : null) ?? null
     );
     const [adding, setAdding] = useState(false);
     const hasAcceptedRef = useRef(false);
 
-    const handleAdd = async () => {
+    const handleAdd = async (e: React.MouseEvent) => {
+        e.stopPropagation();
         if (!selectedVariant) return;
         setAdding(true);
         try {
@@ -74,9 +86,23 @@ function ProductCard({ product, acceptanceId, onAddToCart }: { product: ChatProd
         }
     };
 
+    const handleCardClick = async () => {
+        // AI acceptance can also be triggered by navigating to the product detail page
+        if (acceptanceId && !hasAcceptedRef.current) {
+            try {
+                await aiAcceptanceService.updateAcceptanceRecord(acceptanceId);
+                hasAcceptedRef.current = true;
+            } catch (e) {
+                console.error("Failed to update AI acceptance on navigation:", e);
+            }
+        }
+        onNavigate(product.id, acceptanceId);
+    };
+
     return (
         <Paper
             elevation={2}
+            onClick={handleCardClick}
             sx={{
                 minWidth: 200,
                 maxWidth: 220,
@@ -87,6 +113,7 @@ function ProductCard({ product, acceptanceId, onAddToCart }: { product: ChatProd
                 flexDirection: "column",
                 border: "1px solid",
                 borderColor: "divider",
+                cursor: "pointer",
                 transition: "box-shadow 0.2s, transform 0.2s",
                 "&:hover": {
                     boxShadow: 6,
@@ -140,7 +167,10 @@ function ProductCard({ product, acceptanceId, onAddToCart }: { product: ChatProd
                                     key={v.id}
                                     label={`${v.volumeMl}ml`}
                                     size="small"
-                                    onClick={() => setSelectedVariant(v)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedVariant(v);
+                                    }}
                                     variant={selectedVariant?.id === v.id ? "filled" : "outlined"}
                                     sx={{
                                         height: 20,
@@ -208,9 +238,11 @@ function ProductCard({ product, acceptanceId, onAddToCart }: { product: ChatProd
 function MessageBubble({
     msg,
     onAddToCart,
+    onNavigate,
 }: {
     msg: ChatMessage;
     onAddToCart: (variantId: string, productName: string) => void;
+    onNavigate: (productId: string, acceptanceId?: string) => void;
 }) {
     const isUser = msg.sender === "user";
 
@@ -275,7 +307,13 @@ function MessageBubble({
                         }}
                     >
                         {payload.products.map((product) => (
-                            <ProductCard key={product.id} product={product} acceptanceId={msg.acceptanceId} onAddToCart={onAddToCart} />
+                            <ProductCard
+                                key={product.id}
+                                product={product}
+                                acceptanceId={msg.acceptanceId}
+                                onAddToCart={onAddToCart}
+                                onNavigate={onNavigate}
+                            />
                         ))}
                     </Box>
                 )}
@@ -334,6 +372,7 @@ export default function ChatbotWidget() {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
+    const navigate = useNavigate();
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Stable IDs for the lifetime of the widget
@@ -412,6 +451,11 @@ export default function ChatbotWidget() {
         },
         [showToast]
     );
+
+    const handleNavigate = useCallback((productId: string) => {
+        setOpen(false); // Close chatbot when navigating
+        navigate(`/products/${productId}`);
+    }, [navigate]);
 
     return (
         <>
@@ -550,7 +594,7 @@ export default function ChatbotWidget() {
                         )}
 
                         {messages.map((msg, idx) => (
-                            <MessageBubble key={idx} msg={msg} onAddToCart={handleAddToCart} />
+                            <MessageBubble key={idx} msg={msg} onAddToCart={handleAddToCart} onNavigate={handleNavigate} />
                         ))}
 
                         {loading && <TypingIndicator />}

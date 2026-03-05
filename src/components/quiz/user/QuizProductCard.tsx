@@ -37,8 +37,18 @@ export default function QuizProductCard({ product, acceptanceId }: Props) {
     const [adding, setAdding] = useState(false);
     const hasAcceptedRef = useRef(false);
 
-    const goToProduct = () =>
-        navigate(`/products?search=${encodeURIComponent(product.name)}`);
+    const goToProduct = async () => {
+        // Trigger AI Acceptance if provided
+        if (acceptanceId && !hasAcceptedRef.current) {
+            try {
+                await aiAcceptanceService.updateAcceptanceRecord(acceptanceId);
+                hasAcceptedRef.current = true;
+            } catch (err) {
+                console.error("Failed to update AI acceptance on navigation:", err);
+            }
+        }
+        navigate(`/products/${product.id}`);
+    };
 
     const handleAddToCart = async (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -52,7 +62,7 @@ export default function QuizProductCard({ product, acceptanceId }: Props) {
                     await aiAcceptanceService.updateAcceptanceRecord(acceptanceId);
                     hasAcceptedRef.current = true;
                 } catch (err) {
-                    console.error("Failed to update AI acceptance:", err);
+                    console.error("Failed to update AI acceptance on add to cart:", err);
                 }
             }
 
