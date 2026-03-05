@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Heart } from "lucide-react";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import { useProductQuickView } from "@/contexts/ProductQuickViewContext";
 
 export interface ProductCardProps {
   id: string;
@@ -28,10 +30,19 @@ export const ProductCard = ({
 }: ProductCardProps) => {
   const { showToast } = useToast();
   const { refreshCart } = useCart();
+  const { openQuickView } = useProductQuickView();
+  const navigate = useNavigate();
   const [isAdding, setIsAdding] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
+  };
+
+  const handleNavigateDetail = () => {
+    if (!id) {
+      return;
+    }
+    navigate(`/products/${id}`);
   };
 
   const handleAddToCart = async () => {
@@ -78,8 +89,23 @@ export const ProductCard = ({
         <Heart size={18} className="text-gray-600" />
       </button>
 
+      {/* Quick View Button */}
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          openQuickView(id);
+        }}
+        className="absolute inset-x-6 top-1/2 z-20 translate-y-6 rounded-full bg-red-600 px-6 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100"
+      >
+        Xem nhanh
+      </button>
+
       {/* Image */}
-      <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden p-4">
+      <div
+        className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden p-4 cursor-pointer"
+        onClick={handleNavigateDetail}
+      >
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -96,10 +122,16 @@ export const ProductCard = ({
 
       {/* Info */}
       <div className="p-4">
-        <p className="text-xs text-gray-500 uppercase font-semibold mb-1">
+        <p
+          className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer"
+          onClick={handleNavigateDetail}
+        >
           {brand}
         </p>
-        <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
+        <h3
+          className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px] cursor-pointer"
+          onClick={handleNavigateDetail}
+        >
           {name}
         </h3>
         <div className="flex items-center gap-2">

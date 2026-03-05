@@ -6,6 +6,7 @@ import { theme } from "./theme/theme";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastProvider";
 import { CartProvider } from "./contexts/CartContext";
+import { ProductQuickViewProvider } from "./contexts/ProductQuickViewContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
 import { HomePage } from "./pages/HomePage";
@@ -29,6 +30,7 @@ import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
 import { PaymentFailurePage } from "./pages/PaymentFailurePage";
 import { OrderManagementPage } from "./pages/OrderManagementPage";
 import { ContentManagementPage } from "./pages/ContentManagementPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -42,11 +44,13 @@ function App() {
           <ToastProvider>
             <AuthProvider>
               <CartProvider>
-                <Routes>
+                <ProductQuickViewProvider>
+                  <Routes>
                   <Route path="/" element={<HomePage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/products" element={<ProductListPage />} />
+                  <Route path="/products/:productId" element={<ProductDetailPage />} />
                   <Route path="/unauthorized" element={<UnauthorizedPage />} />
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
@@ -173,7 +177,8 @@ function App() {
                       </RoleBasedRoute>
                     }
                   />
-                </Routes>
+                  </Routes>
+                </ProductQuickViewProvider>
               </CartProvider>
             </AuthProvider>
           </ToastProvider>

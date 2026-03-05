@@ -14,9 +14,11 @@ import type {
   ProductLookupItem,
   TemporaryMediaResponse,
   UpdateProductRequest,
+  UpdateVariantRequest,
   VariantPagedItem,
   MediaResponse,
   CreateProductRequest,
+  CreateVariantRequest,
 } from "@/types/product";
 
 type PaginatedQuery = {
@@ -304,6 +306,88 @@ class ProductService {
     }
   }
 
+  async createProductVariant(
+    payload: CreateVariantRequest & { barcode?: string },
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        this.PRODUCT_VARIANTS_ENDPOINT,
+        {
+          body: payload,
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to create variant");
+      }
+
+      return response.data.message || "Variant created successfully";
+    } catch (error: any) {
+      console.error("Error creating product variant:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to create product variant",
+      );
+    }
+  }
+
+  async updateProductVariant(
+    variantId: string,
+    payload: UpdateVariantRequest & {
+      barcode?: string;
+      mediaIdsToDelete?: string[] | null;
+      temporaryMediaIdsToAdd?: string[] | null;
+    },
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.PUT(
+        "/api/productvariants/{variantId}",
+        {
+          params: { path: { variantId } },
+          body: payload,
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update variant");
+      }
+
+      return response.data.message || "Variant updated successfully";
+    } catch (error: any) {
+      console.error("Error updating product variant:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update product variant",
+      );
+    }
+  }
+
+  async deleteProductVariant(variantId: string): Promise<string> {
+    try {
+      const response = await apiInstance.DELETE(
+        "/api/productvariants/{variantId}",
+        {
+          params: { path: { variantId } },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to delete variant");
+      }
+
+      return response.data.message || "Variant deleted successfully";
+    } catch (error: any) {
+      console.error("Error deleting product variant:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to delete product variant",
+      );
+    }
+  }
+
   async updateProduct(
     productId: string,
     payload: UpdateProductRequest,
@@ -453,6 +537,61 @@ class ProductService {
         error.response?.data?.message ||
           error.message ||
           "Failed to upload product images",
+      );
+    }
+  }
+
+  async uploadVariantImages(
+    images: ProductImageUploadPayload[],
+  ): Promise<TemporaryMediaResponse[]> {
+    if (!images.length) {
+      return [];
+    }
+
+    try {
+      const formData = new FormData();
+      images.forEach((image, index) => {
+        formData.append(`Images[${index}].ImageFile`, image.file);
+        if (image.altText) {
+          formData.append(`Images[${index}].AltText`, image.altText);
+        }
+        if (typeof image.displayOrder === "number") {
+          formData.append(
+            `Images[${index}].DisplayOrder`,
+            image.displayOrder.toString(),
+          );
+        }
+        if (typeof image.isPrimary === "boolean") {
+          formData.append(
+            `Images[${index}].IsPrimary`,
+            image.isPrimary ? "true" : "false",
+          );
+        }
+      });
+
+      const response = await apiInstance.POST(
+        "/api/productvariants/images/temporary",
+        {
+          body: { Images: [] },
+          bodySerializer() {
+            return formData;
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to upload variant images",
+        );
+      }
+
+      return response.data.payload?.data || [];
+    } catch (error: any) {
+      console.error("Error uploading variant images:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to upload variant images",
       );
     }
   }

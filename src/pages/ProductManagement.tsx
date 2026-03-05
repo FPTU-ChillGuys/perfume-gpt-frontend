@@ -25,12 +25,14 @@ import {
   Delete as DeleteIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
+  Category as CategoryIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { productService } from "../services/productService";
 import type { ProductListItem } from "../types/product";
 import CreateProductDialog from "../components/product/CreateProductDialog";
 import EditProductDialog from "../components/product/EditProductDialog";
+import ManageProductVariantsDialog from "../components/product/ManageProductVariantsDialog";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 
 const ProductManagement = () => {
@@ -45,6 +47,10 @@ const ProductManagement = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [variantDialogOpen, setVariantDialogOpen] = useState(false);
+  const [variantProduct, setVariantProduct] = useState<ProductListItem | null>(
+    null,
+  );
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     productId: null as string | null,
@@ -92,6 +98,11 @@ const ProductManagement = () => {
   const handleEditProduct = (productId: string) => {
     setEditingProductId(productId);
     setEditDialogOpen(true);
+  };
+
+  const handleManageVariants = (product: ProductListItem) => {
+    setVariantProduct(product);
+    setVariantDialogOpen(true);
   };
 
   const requestDeleteProduct = (product: ProductListItem) => {
@@ -143,6 +154,11 @@ const ProductManagement = () => {
   const handleCloseEditDialog = () => {
     setEditDialogOpen(false);
     setEditingProductId(null);
+  };
+
+  const handleCloseVariantDialog = () => {
+    setVariantDialogOpen(false);
+    setVariantProduct(null);
   };
 
   return (
@@ -303,6 +319,13 @@ const ProductManagement = () => {
                               </IconButton>
                               <IconButton
                                 size="small"
+                                color="secondary"
+                                onClick={() => handleManageVariants(product)}
+                              >
+                                <CategoryIcon fontSize="small" />
+                              </IconButton>
+                              <IconButton
+                                size="small"
                                 color="error"
                                 onClick={() => requestDeleteProduct(product)}
                                 disabled={deletingProductId === product.id}
@@ -345,6 +368,11 @@ const ProductManagement = () => {
         productId={editingProductId}
         onClose={handleCloseEditDialog}
         onSuccess={fetchProducts}
+      />
+      <ManageProductVariantsDialog
+        open={variantDialogOpen}
+        product={variantProduct}
+        onClose={handleCloseVariantDialog}
       />
       <ConfirmDialog
         open={confirmDialog.open}
