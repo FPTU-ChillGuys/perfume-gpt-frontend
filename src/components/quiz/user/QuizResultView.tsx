@@ -15,10 +15,11 @@ import QuizProductCard from "./QuizProductCard";
 
 interface Props {
     result: AssistantPayload;
+    acceptanceId?: string;
     onRestart: () => void;
 }
 
-export default function QuizResultView({ result, onRestart }: Props) {
+export default function QuizResultView({ result, acceptanceId, onRestart }: Props) {
     return (
         <Box>
             {/* Header */}
@@ -48,7 +49,7 @@ export default function QuizResultView({ result, onRestart }: Props) {
                     </Divider>
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                         {result.products.map((p) => (
-                            <QuizProductCard key={p.id} product={p} />
+                            <QuizProductCard key={p.id} product={p} acceptanceId={acceptanceId} />
                         ))}
                     </Box>
                 </>

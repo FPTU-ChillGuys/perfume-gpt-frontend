@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from "react";
+import { useState, useEffect, useContext, useCallback, useRef } from "react";
 import {
     Box,
     Button,
@@ -17,6 +17,7 @@ import {
 } from "@mui/icons-material";
 import { AuthContext } from "@/contexts/AuthContextType";
 import { quizService } from "@/services/ai/quizService";
+import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import type { QuizQuestion, QuizQuesAnsDetailRequest } from "@/types/quiz";
 import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
@@ -58,6 +59,7 @@ export default function QuizPage() {
     const [currentStep, setCurrentStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState<AssistantPayload | null>(null);
+    const [acceptanceId, setAcceptanceId] = useState<string | undefined>();
 
     // ── Fetch ─────────────────────────────────────────────────────
     const fetchQuestions = useCallback(async () => {
@@ -109,7 +111,19 @@ export default function QuizPage() {
         setSubmitting(true);
         try {
             const res = await quizService.submitQuizV2(userId, payload);
-            setResult(parseAiResponse(res.data));
+            const parsedRes = parseAiResponse(res.data);
+
+            // If we have recommended products, generate an AI acceptance record
+            if (parsedRes.products.length > 0) {
+                try {
+                    const id = await aiAcceptanceService.createAcceptanceRecord(userId);
+                    setAcceptanceId(id);
+                } catch (e) {
+                    console.error("Failed to create AI acceptance for Quiz:", e);
+                }
+            }
+
+            setResult(parsedRes);
         } catch (err) {
             console.error("Quiz submit error:", err);
             setResult({ message: "Đã xảy ra lỗi khi lấy gợi ý. Vui lòng thử lại.", products: [] });
@@ -122,6 +136,7 @@ export default function QuizPage() {
         setSelections(new Map());
         setCurrentStep(0);
         setResult(null);
+        setAcceptanceId(undefined);
     };
 
     // ── Loading ───────────────────────────────────────────────────
@@ -155,7 +170,7 @@ export default function QuizPage() {
             <>
                 <Header />
                 <Container maxWidth="md" sx={{ py: 6 }}>
-                    <QuizResultView result={result} onRestart={handleRestart} />
+                    <QuizResultView result={result} acceptanceId={acceptanceId} onRestart={handleRestart} />
                 </Container>
             </>
         );
