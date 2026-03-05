@@ -2318,6 +2318,43 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/concentrations/lookup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["BaseResponseOfListOfConcentrationLookupDto"];
+            "application/json": components["schemas"]["BaseResponseOfListOfConcentrationLookupDto"];
+            "text/json": components["schemas"]["BaseResponseOfListOfConcentrationLookupDto"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/importtickets": {
     parameters: {
       query?: never;
@@ -8527,6 +8564,13 @@ export interface components {
       errors?: null | string[];
       errorType?: components["schemas"]["ResponseErrorType"];
     };
+    BaseResponseOfListOfConcentrationLookupDto: {
+      payload?: null | components["schemas"]["ConcentrationLookupDto"][];
+      success?: boolean;
+      message?: string;
+      errors?: null | string[];
+      errorType?: components["schemas"]["ResponseErrorType"];
+    };
     BaseResponseOfListOfDistrictResponse: {
       payload?: null | components["schemas"]["DistrictResponse"][];
       success?: boolean;
@@ -8954,6 +8998,11 @@ export interface components {
       id?: number;
       name?: string;
     };
+    ConcentrationLookupDto: {
+      /** Format: int32 */
+      id?: number;
+      name?: string;
+    };
     CreateAddressRequest: {
       receiverName?: string;
       phone?: string;
@@ -9063,6 +9112,7 @@ export interface components {
     CreateVariantRequest: {
       /** Format: uuid */
       productId?: string;
+      barcode?: string;
       sku?: string;
       /** Format: int32 */
       volumeMl?: number;
@@ -9681,6 +9731,7 @@ export interface components {
       productId?: string;
       productName?: string;
       media?: components["schemas"]["MediaResponse"][];
+      barcode?: string;
       sku?: string;
       /** Format: int32 */
       volumeMl?: number;
@@ -10117,6 +10168,7 @@ export interface components {
     };
     UpdateVariantRequest: {
       sku?: string;
+      barcode?: string;
       /** Format: int32 */
       volumeMl?: number;
       /** Format: int32 */
@@ -10212,6 +10264,7 @@ export interface components {
     VariantLookupItem: {
       /** Format: uuid */
       id?: string;
+      barcode?: string;
       sku?: string;
       displayName?: string;
       /** Format: int32 */
@@ -10227,6 +10280,7 @@ export interface components {
       /** Format: uuid */
       productId?: string;
       primaryImage?: null | components["schemas"]["MediaResponse"];
+      barcode?: string;
       sku?: string;
       /** Format: int32 */
       volumeMl?: number;

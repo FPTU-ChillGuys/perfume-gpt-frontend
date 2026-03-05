@@ -4,7 +4,7 @@ import { Eye, Heart } from "lucide-react";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
-import { useProductQuickView } from "@/contexts/ProductQuickViewContext";
+import { useProductQuickView } from "@/hooks/useProductQuickView";
 
 export interface ProductCardProps {
   id: string;
