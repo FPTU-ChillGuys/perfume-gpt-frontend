@@ -22,8 +22,7 @@ import {
 } from "@mui/icons-material";
 import { useToast } from "@/hooks/useToast";
 import { quizService } from "@/services/ai/quizService";
-import { QuestionType } from "@/types/quiz";
-import type { QuizQuestion } from "@/types/quiz";
+import type { QuizQuestion, QuizQuestionRequest } from "@/types/quiz";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import QuizQuestionRow from "@/components/quiz/admin/QuizQuestionRow";
 import QuizAddDialog from "@/components/quiz/admin/QuizAddDialog";
@@ -39,22 +38,14 @@ export default function QuizManagementPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-    // ── Add dialog state ──────────────────────────────────────────
+    // ── Dialog open/loading state only (form state lives in dialogs) ─
     const [addOpen, setAddOpen] = useState(false);
-    const [newQuestion, setNewQuestion] = useState("");
-    const [newQuestionType, setNewQuestionType] = useState<QuestionType>(QuestionType.SINGLE);
-    const [newAnswers, setNewAnswers] = useState<string[]>(["", ""]);
     const [isCreating, setIsCreating] = useState(false);
 
-    // ── Edit dialog state ─────────────────────────────────────────
     const [editOpen, setEditOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<QuizQuestion | null>(null);
-    const [editQuestion, setEditQuestion] = useState("");
-    const [editQuestionType, setEditQuestionType] = useState<QuestionType>(QuestionType.SINGLE);
-    const [editAnswers, setEditAnswers] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
-    // ── Delete dialog state ───────────────────────────────────────
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deletingItem, setDeletingItem] = useState<QuizQuestion | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -96,49 +87,19 @@ export default function QuizManagementPage() {
         });
     }, []);
 
-    // ── Add handlers ──────────────────────────────────────────────
-    const handleOpenAdd = useCallback(() => {
-        setNewQuestion("");
-        setNewQuestionType(QuestionType.SINGLE);
-        setNewAnswers(["", ""]);
-        setAddOpen(true);
-    }, []);
-
-    const handleCloseAdd = useCallback(() => {
-        if (!isCreating) setAddOpen(false);
-    }, [isCreating]);
-
-    const handleNewAnswerChange = useCallback((index: number, value: string) => {
-        setNewAnswers((prev) => {
-            const next = [...prev];
-            next[index] = value;
-            return next;
-        });
-    }, []);
-
-    const handleAddNewAnswer = useCallback(() => setNewAnswers((prev) => [...prev, ""]), []);
-
-    const handleRemoveNewAnswer = useCallback((index: number) => {
-        setNewAnswers((prev) => prev.length <= 2 ? prev : prev.filter((_, i) => i !== index));
-    }, []);
-
-    const handleCreate = useCallback(async () => {
-        if (!newQuestion.trim()) {
+    // ── Add ───────────────────────────────────────────────────────
+    const handleCreate = useCallback(async (payload: QuizQuestionRequest) => {
+        if (!payload.question) {
             showToast("Nội dung câu hỏi không được để trống", "warning");
             return;
         }
-        const filled = newAnswers.filter((a) => a.trim());
-        if (filled.length < 2) {
+        if ((payload.answers?.length ?? 0) < 2) {
             showToast("Phải có ít nhất 2 câu trả lời", "warning");
             return;
         }
         setIsCreating(true);
         try {
-            await quizService.createQuestion({
-                question: newQuestion.trim(),
-                questionType: newQuestionType,
-                answers: filled.map((a) => ({ answer: a.trim() })),
-            });
+            await quizService.createQuestion(payload);
             showToast("Tạo câu hỏi thành công!", "success");
             setAddOpen(false);
             fetchQuestions();
@@ -148,14 +109,11 @@ export default function QuizManagementPage() {
         } finally {
             setIsCreating(false);
         }
-    }, [newQuestion, newQuestionType, newAnswers, showToast, fetchQuestions]);
+    }, [showToast, fetchQuestions]);
 
-    // ── Edit handlers ─────────────────────────────────────────────
+    // ── Edit ──────────────────────────────────────────────────────
     const handleOpenEdit = useCallback((item: QuizQuestion) => {
         setEditingItem(item);
-        setEditQuestion(item.question);
-        setEditQuestionType(item.questionType);
-        setEditAnswers(item.answers.map((a) => a.answer));
         setEditOpen(true);
     }, []);
 
@@ -166,38 +124,19 @@ export default function QuizManagementPage() {
         }
     }, [isSaving]);
 
-    const handleEditAnswerChange = useCallback((index: number, value: string) => {
-        setEditAnswers((prev) => {
-            const next = [...prev];
-            next[index] = value;
-            return next;
-        });
-    }, []);
-
-    const handleAddEditAnswer = useCallback(() => setEditAnswers((prev) => [...prev, ""]), []);
-
-    const handleRemoveEditAnswer = useCallback((index: number) => {
-        setEditAnswers((prev) => prev.length <= 2 ? prev : prev.filter((_, i) => i !== index));
-    }, []);
-
-    const handleSaveEdit = useCallback(async () => {
+    const handleSaveEdit = useCallback(async (payload: { question: string; questionType: any; answers: { answer: string }[] }) => {
         if (!editingItem) return;
-        if (!editQuestion.trim()) {
+        if (!payload.question) {
             showToast("Nội dung câu hỏi không được để trống", "warning");
             return;
         }
-        const filled = editAnswers.filter((a) => a.trim());
-        if (filled.length < 2) {
+        if (payload.answers.length < 2) {
             showToast("Phải có ít nhất 2 câu trả lời", "warning");
             return;
         }
         setIsSaving(true);
         try {
-            await quizService.updateQuestion(editingItem.id, {
-                question: editQuestion.trim(),
-                questionType: editQuestionType,
-                answers: filled.map((a) => ({ answer: a.trim() })),
-            });
+            await quizService.updateQuestion(editingItem.id, payload);
             showToast("Cập nhật câu hỏi thành công!", "success");
             fetchQuestions();
             handleCloseEdit();
@@ -207,9 +146,9 @@ export default function QuizManagementPage() {
         } finally {
             setIsSaving(false);
         }
-    }, [editingItem, editQuestion, editQuestionType, editAnswers, showToast, fetchQuestions, handleCloseEdit]);
+    }, [editingItem, showToast, fetchQuestions, handleCloseEdit]);
 
-    // ── Delete handlers ───────────────────────────────────────────
+    // ── Delete ────────────────────────────────────────────────────
     const handleOpenDelete = useCallback((item: QuizQuestion) => {
         setDeletingItem(item);
         setDeleteOpen(true);
@@ -265,7 +204,7 @@ export default function QuizManagementPage() {
                             <Button
                                 variant="contained"
                                 startIcon={<AddIcon />}
-                                onClick={handleOpenAdd}
+                                onClick={() => setAddOpen(true)}
                                 sx={{ borderRadius: 2, fontWeight: "bold", px: 3 }}
                             >
                                 Thêm câu hỏi
@@ -335,34 +274,18 @@ export default function QuizManagementPage() {
                 </Paper>
             </Container>
 
-            {/* Dialogs */}
             <QuizAddDialog
                 open={addOpen}
                 isCreating={isCreating}
-                question={newQuestion}
-                questionType={newQuestionType}
-                answers={newAnswers}
-                onClose={handleCloseAdd}
-                onQuestionChange={setNewQuestion}
-                onQuestionTypeChange={setNewQuestionType}
-                onAnswerChange={handleNewAnswerChange}
-                onAddAnswer={handleAddNewAnswer}
-                onRemoveAnswer={handleRemoveNewAnswer}
+                onClose={() => setAddOpen(false)}
                 onSubmit={handleCreate}
             />
 
             <QuizEditDialog
                 open={editOpen}
                 isSaving={isSaving}
-                question={editQuestion}
-                questionType={editQuestionType}
-                answers={editAnswers}
+                initialData={editingItem}
                 onClose={handleCloseEdit}
-                onQuestionChange={setEditQuestion}
-                onQuestionTypeChange={setEditQuestionType}
-                onAnswerChange={handleEditAnswerChange}
-                onAddAnswer={handleAddEditAnswer}
-                onRemoveAnswer={handleRemoveEditAnswer}
                 onSubmit={handleSaveEdit}
             />
 

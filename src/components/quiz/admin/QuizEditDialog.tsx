@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
     Alert,
     Box,
@@ -23,44 +24,64 @@ import {
     Save as SaveIcon,
 } from "@mui/icons-material";
 import { QuestionType } from "@/types/quiz";
+import type { QuizQuestion } from "@/types/quiz";
+
+interface SubmitPayload {
+    question: string;
+    questionType: QuestionType;
+    answers: { answer: string }[];
+}
 
 interface Props {
     open: boolean;
     isSaving: boolean;
-    question: string;
-    questionType: QuestionType;
-    answers: string[];
+    initialData: QuizQuestion | null; // seed state when dialog opens
     onClose: () => void;
-    onQuestionChange: (v: string) => void;
-    onQuestionTypeChange: (v: QuestionType) => void;
-    onAnswerChange: (index: number, value: string) => void;
-    onAddAnswer: () => void;
-    onRemoveAnswer: (index: number) => void;
-    onSubmit: () => void;
+    onSubmit: (payload: SubmitPayload) => void;
 }
 
-export default function QuizEditDialog({
-    open,
-    isSaving,
-    question,
-    questionType,
-    answers,
-    onClose,
-    onQuestionChange,
-    onQuestionTypeChange,
-    onAnswerChange,
-    onAddAnswer,
-    onRemoveAnswer,
-    onSubmit,
-}: Props) {
+export default function QuizEditDialog({ open, isSaving, initialData, onClose, onSubmit }: Props) {
+    // Local form state — keystrokes stay inside this component
+    const [question, setQuestion] = useState("");
+    const [questionType, setQuestionType] = useState<QuestionType>(QuestionType.SINGLE);
+    const [answers, setAnswers] = useState<string[]>([]);
+
+    // Seed local state whenever a new item is opened
+    useEffect(() => {
+        if (open && initialData) {
+            setQuestion(initialData.question);
+            setQuestionType(initialData.questionType);
+            setAnswers(initialData.answers.map((a) => a.answer));
+        }
+    }, [open, initialData]);
+
+    const handleAnswerChange = (index: number, value: string) => {
+        setAnswers((prev) => {
+            const next = [...prev];
+            next[index] = value;
+            return next;
+        });
+    };
+
+    const handleAddAnswer = () => setAnswers((prev) => [...prev, ""]);
+
+    const handleRemoveAnswer = (index: number) => {
+        setAnswers((prev) => prev.length <= 2 ? prev : prev.filter((_, i) => i !== index));
+    };
+
+    const handleSubmit = () => {
+        const filled = answers.filter((a) => a.trim());
+        onSubmit({
+            question: question.trim(),
+            questionType,
+            answers: filled.map((a) => ({ answer: a.trim() })),
+        });
+    };
+
+    const filledCount = answers.filter((a) => a.trim()).length;
+
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{ sx: { borderRadius: 3 } }}
-        >
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
             <DialogTitle
                 sx={{
                     display: "flex",
@@ -73,9 +94,7 @@ export default function QuizEditDialog({
             >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <EditIcon color="primary" />
-                    <Typography variant="h6" fontWeight="bold">
-                        Chỉnh sửa câu hỏi
-                    </Typography>
+                    <Typography variant="h6" fontWeight="bold">Chỉnh sửa câu hỏi</Typography>
                 </Box>
                 <IconButton onClick={onClose} disabled={isSaving} size="small">
                     <CloseIcon />
@@ -89,7 +108,7 @@ export default function QuizEditDialog({
                 <ToggleButtonGroup
                     value={questionType}
                     exclusive
-                    onChange={(_, v) => { if (v) onQuestionTypeChange(v); }}
+                    onChange={(_, v) => { if (v) setQuestionType(v); }}
                     size="small"
                     sx={{ mb: 2.5 }}
                     disabled={isSaving}
@@ -108,7 +127,7 @@ export default function QuizEditDialog({
                     variant="outlined"
                     placeholder="Nhập câu hỏi..."
                     value={question}
-                    onChange={(e) => onQuestionChange(e.target.value)}
+                    onChange={(e) => setQuestion(e.target.value)}
                     disabled={isSaving}
                     sx={{ mb: 3 }}
                 />
@@ -119,52 +138,37 @@ export default function QuizEditDialog({
                     <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
                         Danh sách câu trả lời * (tối thiểu 2)
                     </Typography>
-                    <Button size="small" startIcon={<AddAnswerIcon />} onClick={onAddAnswer} disabled={isSaving}>
+                    <Button size="small" startIcon={<AddAnswerIcon />} onClick={handleAddAnswer} disabled={isSaving}>
                         Thêm đáp án
                     </Button>
                 </Box>
 
                 {answers.map((ans, idx) => (
                     <Box key={idx} sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
-                        <Chip
-                            label={idx + 1}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            sx={{ minWidth: 32, fontWeight: "bold" }}
-                        />
+                        <Chip label={idx + 1} size="small" color="primary" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
                         <TextField
                             fullWidth
                             size="small"
                             placeholder={`Đáp án ${idx + 1}...`}
                             value={ans}
-                            onChange={(e) => onAnswerChange(idx, e.target.value)}
+                            onChange={(e) => handleAnswerChange(idx, e.target.value)}
                             disabled={isSaving}
                         />
-                        <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => onRemoveAnswer(idx)}
-                            disabled={answers.length <= 2 || isSaving}
-                        >
+                        <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(idx)} disabled={answers.length <= 2 || isSaving}>
                             <RemoveAnswerIcon />
                         </IconButton>
                     </Box>
                 ))}
 
-                {answers.filter((a) => a.trim()).length < 2 && (
-                    <Alert severity="warning" sx={{ mt: 1 }}>
-                        Cần ít nhất 2 đáp án hợp lệ
-                    </Alert>
+                {filledCount < 2 && (
+                    <Alert severity="warning" sx={{ mt: 1 }}>Cần ít nhất 2 đáp án hợp lệ</Alert>
                 )}
             </DialogContent>
 
             <DialogActions sx={{ p: 3, borderTop: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
-                <Button onClick={onClose} color="inherit" disabled={isSaving} sx={{ px: 3, borderRadius: 2 }}>
-                    Hủy
-                </Button>
+                <Button onClick={onClose} color="inherit" disabled={isSaving} sx={{ px: 3, borderRadius: 2 }}>Hủy</Button>
                 <Button
-                    onClick={onSubmit}
+                    onClick={handleSubmit}
                     variant="contained"
                     color="primary"
                     disabled={isSaving}
