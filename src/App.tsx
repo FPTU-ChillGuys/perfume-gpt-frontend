@@ -6,6 +6,7 @@ import { theme } from "./theme/theme";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastProvider";
 import { CartProvider } from "./contexts/CartContext";
+import { ProductQuickViewProvider } from "./contexts/ProductQuickViewContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
 import { HomePage } from "./pages/HomePage";
@@ -33,6 +34,7 @@ import ChatbotWidget from "./components/chatbot/ChatbotWidget";
 import AIInstructionPage from "./pages/AIInstructionPage";
 import QuizManagementPage from "./pages/QuizManagementPage";
 import QuizPage from "./pages/QuizPage";
+import ProductDetailPage from "./pages/ProductDetailPage";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -46,156 +48,159 @@ function App() {
           <ToastProvider>
             <AuthProvider>
               <CartProvider>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/products" element={<ProductListPage />} />
-                  <Route path="/quiz" element={<QuizPage />} />
-                  <Route path="/unauthorized" element={<UnauthorizedPage />} />
-                  <Route path="/cart" element={<CartPage />} />
-                  <Route path="/checkout" element={<CheckoutPage />} />
-                  <Route
-                    path="/checkout/shipping"
-                    element={<CheckoutShippingPage />}
-                  />
-                  <Route
-                    path="/checkout/packaging"
-                    element={<CheckoutPackagingPage />}
-                  />
-                  <Route
-                    path="/checkout/payment"
-                    element={<CheckoutPaymentPage />}
-                  />
-                  <Route
-                    path="/payment/success"
-                    element={<PaymentSuccessPage />}
-                  />
-                  <Route
-                    path="/payment/failure"
-                    element={<PaymentFailurePage />}
-                  />
+                <ProductQuickViewProvider>
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/products" element={<ProductListPage />} />
+                    <Route path="/quiz" element={<QuizPage />} />
+                    <Route path="/products/:productId" element={<ProductDetailPage />} />
+                    <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                    <Route path="/cart" element={<CartPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route
+                      path="/checkout/shipping"
+                      element={<CheckoutShippingPage />}
+                    />
+                    <Route
+                      path="/checkout/packaging"
+                      element={<CheckoutPackagingPage />}
+                    />
+                    <Route
+                      path="/checkout/payment"
+                      element={<CheckoutPaymentPage />}
+                    />
+                    <Route
+                      path="/payment/success"
+                      element={<PaymentSuccessPage />}
+                    />
+                    <Route
+                      path="/payment/failure"
+                      element={<PaymentFailurePage />}
+                    />
 
-                  {/* User Profile Route */}
-                  <Route
-                    path="/profile"
-                    element={
-                      <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
-                        <ProfilePage />
-                      </RoleBasedRoute>
-                    }
-                  />
+                    {/* User Profile Route */}
+                    <Route
+                      path="/profile"
+                      element={
+                        <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
+                          <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
 
-                  {/* Admin Routes */}
-                  <Route
-                    path="/admin/dashboard"
-                    element={
-                      <RoleBasedRoute allowedRoles={["admin"]}>
-                        <AdminDashboard />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/products"
-                    element={
-                      <RoleBasedRoute allowedRoles={["admin"]}>
-                        <ProductManagement />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/import-stock"
-                    element={
-                      <RoleBasedRoute allowedRoles={["admin"]}>
-                        <ImportStock />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/orders"
-                    element={
-                      <RoleBasedRoute allowedRoles={["admin"]}>
-                        <OrderManagementPage />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/content"
-                    element={
-                      <RoleBasedRoute allowedRoles={["admin"]}>
-                        <ContentManagementPage />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/instructions"
-                    element={
-                      <RoleBasedRoute allowedRoles={["admin"]}>
-                        <AIInstructionPage />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/quiz"
-                    element={
-                      <RoleBasedRoute allowedRoles={["admin"]}>
-                        <QuizManagementPage />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/profile"
-                    element={
-                      <RoleBasedRoute allowedRoles={["admin"]}>
-                        <ProfilePage />
-                      </RoleBasedRoute>
-                    }
-                  />
+                    {/* Admin Routes */}
+                    <Route
+                      path="/admin/dashboard"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <AdminDashboard />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/products"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <ProductManagement />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/import-stock"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <ImportStock />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/orders"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <OrderManagementPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/content"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <ContentManagementPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/instructions"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <AIInstructionPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/quiz"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <QuizManagementPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/profile"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
 
-                  {/* Staff Routes */}
-                  <Route
-                    path="/staff/dashboard"
-                    element={
-                      <RoleBasedRoute allowedRoles={["staff"]}>
-                        <StaffDashboard />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/staff/products"
-                    element={
-                      <RoleBasedRoute allowedRoles={["staff"]}>
-                        <ProductManagement />
-                      </RoleBasedRoute>
-                    }
-                  />
+                    {/* Staff Routes */}
+                    <Route
+                      path="/staff/dashboard"
+                      element={
+                        <RoleBasedRoute allowedRoles={["staff"]}>
+                          <StaffDashboard />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/staff/products"
+                      element={
+                        <RoleBasedRoute allowedRoles={["staff"]}>
+                          <ProductManagement />
+                        </RoleBasedRoute>
+                      }
+                    />
 
-                  <Route
-                    path="/staff/receive-import-stock"
-                    element={
-                      <RoleBasedRoute allowedRoles={["staff"]}>
-                        <ReceiveImportStock />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/staff/orders"
-                    element={
-                      <RoleBasedRoute allowedRoles={["staff"]}>
-                        <OrderManagementPage />
-                      </RoleBasedRoute>
-                    }
-                  />
-                  <Route
-                    path="/staff/profile"
-                    element={
-                      <RoleBasedRoute allowedRoles={["staff"]}>
-                        <ProfilePage />
-                      </RoleBasedRoute>
-                    }
-                  />
-                </Routes>
-                <ChatbotWidget />
+                    <Route
+                      path="/staff/receive-import-stock"
+                      element={
+                        <RoleBasedRoute allowedRoles={["staff"]}>
+                          <ReceiveImportStock />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/staff/orders"
+                      element={
+                        <RoleBasedRoute allowedRoles={["staff"]}>
+                          <OrderManagementPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/staff/profile"
+                      element={
+                        <RoleBasedRoute allowedRoles={["staff"]}>
+                          <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                  </Routes>
+                  <ChatbotWidget />
+                </ProductQuickViewProvider>
               </CartProvider>
             </AuthProvider>
           </ToastProvider>

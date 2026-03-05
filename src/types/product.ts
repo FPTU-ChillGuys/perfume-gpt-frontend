@@ -27,6 +27,8 @@ export type TemporaryMediaResponse =
   components["schemas"]["TemporaryMediaResponse"];
 export type UpdateProductRequest =
   components["schemas"]["UpdateProductRequest"];
+export type UpdateVariantRequest =
+  components["schemas"]["UpdateVariantRequest"];
 
 export interface ProductImageUploadPayload {
   file: File;
@@ -47,3 +49,7 @@ export type PagedProductListWithVariants =
   components["schemas"]["PagedResultOfProductListItemWithVariants"];
 export type ProductLookupItem =
   components["schemas"]["ProductLookupItem"];
+export type CreateVariantRequest =
+  components["schemas"]["CreateVariantRequest"];
+export type VariantStatus = components["schemas"]["VariantStatus"];
+export type VariantType = components["schemas"]["VariantType"];

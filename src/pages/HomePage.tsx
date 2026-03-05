@@ -5,12 +5,9 @@ import { CollectionBannerSection } from "../components/home/CollectionBannerSect
 import { FeatureSection } from "../components/home/FeatureSection";
 import { ProductSection } from "../components/home/ProductSection";
 import { productService } from "../services/productService";
-import type { ProductListItem, VariantPagedItem } from "../types/product";
+import type { ProductListItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
-import {
-  buildVariantMap,
-  mapProductToCard,
-} from "../utils/productCardMapper";
+import { buildVariantMap, mapProductToCard } from "../utils/productCardMapper";
 
 export const HomePage = () => {
   const [newArrivals, setNewArrivals] = useState<ProductCardProps[]>([]);
@@ -32,7 +29,7 @@ export const HomePage = () => {
             productService.getBestSellers(),
             productService.getProductVariantsPaged({
               PageNumber: 1,
-              PageSize: 100, // Fetch enough variants to cover both sections
+              PageSize: 48, // Fetch variants for both sections (24 products each)
               IsDescending: true,
             }),
           ]);

@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Heart } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Eye, Heart } from "lucide-react";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import { useProductQuickView } from "@/contexts/ProductQuickViewContext";
 
 export interface ProductCardProps {
   id: string;
@@ -17,6 +19,7 @@ export interface ProductCardProps {
 }
 
 export const ProductCard = ({
+  id,
   brand,
   name,
   originalPrice,
@@ -28,10 +31,19 @@ export const ProductCard = ({
 }: ProductCardProps) => {
   const { showToast } = useToast();
   const { refreshCart } = useCart();
+  const { openQuickView } = useProductQuickView();
+  const navigate = useNavigate();
   const [isAdding, setIsAdding] = useState(false);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
+  };
+
+  const handleNavigateDetail = () => {
+    if (!id) {
+      return;
+    }
+    navigate(`/products/${id}`);
   };
 
   const handleAddToCart = async () => {
@@ -73,13 +85,37 @@ export const ProductCard = ({
         )}
       </div>
 
-      {/* Favorite Button */}
-      <button className="absolute top-2 right-2 z-10 p-2 bg-white rounded-full shadow hover:bg-gray-100">
-        <Heart size={18} className="text-gray-600" />
-      </button>
+      {/* Favorite & Quick View Buttons */}
+      <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+        <button
+          type="button"
+          aria-label="Xem nhanh sản phẩm"
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            openQuickView(id);
+          }}
+          className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
+        >
+          <Eye size={18} className="text-gray-700" />
+        </button>
+        <button
+          type="button"
+          aria-label="Thêm vào yêu thích"
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
+        >
+          <Heart size={18} className="text-gray-600" />
+        </button>
+      </div>
 
       {/* Image */}
-      <div className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden p-4">
+      <div
+        className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden p-4 cursor-pointer"
+        onClick={handleNavigateDetail}
+      >
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -96,10 +132,16 @@ export const ProductCard = ({
 
       {/* Info */}
       <div className="p-4">
-        <p className="text-xs text-gray-500 uppercase font-semibold mb-1">
+        <p
+          className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer"
+          onClick={handleNavigateDetail}
+        >
           {brand}
         </p>
-        <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px]">
+        <h3
+          className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px] cursor-pointer"
+          onClick={handleNavigateDetail}
+        >
           {name}
         </h3>
         <div className="flex items-center gap-2">
