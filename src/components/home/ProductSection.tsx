@@ -267,7 +267,6 @@ export const ProductSection = ({
                   style={{
                     width: "calc((100% - 5 * 1rem) / 6)",
                     minWidth: "150px",
-                    pointerEvents: isDragging ? "none" : "auto",
                   }}
                 >
                   <ProductCard {...product} />

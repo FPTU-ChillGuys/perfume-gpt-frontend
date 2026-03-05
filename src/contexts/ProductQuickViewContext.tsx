@@ -4,6 +4,16 @@ import { productService } from "@/services/productService";
 import type { ProductFastLook, ProductInformation } from "@/types/product";
 import ProductQuickViewDialog from "@/components/product/ProductQuickViewDialog";
 
+const toError = (error: unknown, fallbackMessage: string) => {
+  if (error instanceof Error) {
+    return error;
+  }
+  if (typeof error === "string") {
+    return new Error(error);
+  }
+  return new Error(fallbackMessage);
+};
+
 interface ProductQuickViewContextValue {
   openQuickView: (productId: string) => void;
 }
@@ -32,17 +42,49 @@ export const ProductQuickViewProvider = ({
   const [error, setError] = useState<string | null>(null);
 
   const fetchProductData = useCallback(async (productId: string) => {
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
-      const [info, fastLookResponse] = await Promise.all([
-        productService.getProductInformation(productId),
+      const [fastLookResult, infoResult] = await Promise.allSettled([
         productService.getProductFastLook(productId),
+        productService.getProductInformation(productId),
       ]);
-      setInformation(info);
-      setFastLook(fastLookResponse);
+
+      if (fastLookResult.status !== "fulfilled" || !fastLookResult.value) {
+        const reason =
+          fastLookResult.status === "rejected"
+            ? toError(
+                fastLookResult.reason,
+                "Không thể tải thông tin xem nhanh",
+              )
+            : new Error("Không tìm thấy thông tin xem nhanh");
+        console.error("Error loading product fast look:", reason);
+        setFastLook(null);
+        setInformation(null);
+        setError(
+          reason.message ||
+            "Không thể tải thông tin sản phẩm. Vui lòng thử lại.",
+        );
+        return;
+      }
+
+      setFastLook(fastLookResult.value);
+
+      if (infoResult.status === "fulfilled") {
+        setInformation(infoResult.value);
+      } else {
+        setInformation(null);
+        if (infoResult.status === "rejected") {
+          const infoError = toError(
+            infoResult.reason,
+            "Không thể tải thông tin chi tiết",
+          );
+          console.warn("Không thể tải thông tin chi tiết:", infoError);
+        }
+      }
     } catch (err: any) {
-      console.error("Error loading quick view data:", err);
+      console.error("Unexpected error loading quick view data:", err);
       setError(
         err?.message || "Không thể tải thông tin sản phẩm. Vui lòng thử lại.",
       );

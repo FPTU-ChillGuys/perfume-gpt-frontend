@@ -6,8 +6,11 @@ const middleware: Middleware = {
     const accessToken = localStorage.getItem("accessToken");
     // (optional) add logic here to refresh token when it expires
 
-    // add Authorization header to every request
-    request.headers.set("Authorization", `Bearer ${accessToken}`);
+    if (accessToken) {
+      request.headers.set("Authorization", `Bearer ${accessToken}`);
+    } else {
+      request.headers.delete("Authorization");
+    }
     return request;
   },
   onResponse({ response }) {

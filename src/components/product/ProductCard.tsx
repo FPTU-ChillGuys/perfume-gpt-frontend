@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart } from "lucide-react";
+import { Eye, Heart } from "lucide-react";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
@@ -19,6 +19,7 @@ export interface ProductCardProps {
 }
 
 export const ProductCard = ({
+  id,
   brand,
   name,
   originalPrice,
@@ -84,22 +85,31 @@ export const ProductCard = ({
         )}
       </div>
 
-      {/* Favorite Button */}
-      <button className="absolute top-2 right-2 z-10 p-2 bg-white rounded-full shadow hover:bg-gray-100">
-        <Heart size={18} className="text-gray-600" />
-      </button>
-
-      {/* Quick View Button */}
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          openQuickView(id);
-        }}
-        className="absolute inset-x-6 top-1/2 z-20 translate-y-6 rounded-full bg-red-600 px-6 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-lg opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100"
-      >
-        Xem nhanh
-      </button>
+      {/* Favorite & Quick View Buttons */}
+      <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
+        <button
+          type="button"
+          aria-label="Xem nhanh sản phẩm"
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            openQuickView(id);
+          }}
+          className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
+        >
+          <Eye size={18} className="text-gray-700" />
+        </button>
+        <button
+          type="button"
+          aria-label="Thêm vào yêu thích"
+          onMouseDown={(event) => event.stopPropagation()}
+          onTouchStart={(event) => event.stopPropagation()}
+          className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
+        >
+          <Heart size={18} className="text-gray-600" />
+        </button>
+      </div>
 
       {/* Image */}
       <div
