@@ -32,3 +32,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+build_errors.txt
+ts_errors.txt
