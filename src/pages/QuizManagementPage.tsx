@@ -1,90 +1,66 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
     Box,
-    Typography,
-    TextField,
-    InputAdornment,
+    Button,
     CircularProgress,
     Container,
-    Chip,
+    InputAdornment,
+    Paper,
     Table,
     TableBody,
     TableCell,
     TableContainer,
     TableHead,
     TableRow,
-    IconButton,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    Paper,
-    Collapse,
-    Tooltip,
-    List,
-    ListItem,
-    ListItemText,
-    Divider,
-    Alert,
-    ToggleButton,
-    ToggleButtonGroup,
+    TextField,
+    Typography,
 } from "@mui/material";
 import {
-    Search as SearchIcon,
-    Quiz as QuizIcon,
     Add as AddIcon,
-    Delete as DeleteIcon,
-    Edit as EditIcon,
-    Close as CloseIcon,
-    ExpandMore as ExpandMoreIcon,
-    ExpandLess as ExpandLessIcon,
-    AddCircleOutline as AddAnswerIcon,
-    RemoveCircleOutline as RemoveAnswerIcon,
-    Save as SaveIcon,
+    Quiz as QuizIcon,
+    Search as SearchIcon,
 } from "@mui/icons-material";
 import { useToast } from "@/hooks/useToast";
 import { quizService } from "@/services/ai/quizService";
 import { QuestionType } from "@/types/quiz";
 import type { QuizQuestion } from "@/types/quiz";
 import { AdminLayout } from "@/layouts/AdminLayout";
-import dayjs from "dayjs";
+import QuizQuestionRow from "@/components/quiz/admin/QuizQuestionRow";
+import QuizAddDialog from "@/components/quiz/admin/QuizAddDialog";
+import QuizEditDialog from "@/components/quiz/admin/QuizEditDialog";
+import QuizDeleteDialog from "@/components/quiz/admin/QuizDeleteDialog";
 
 export default function QuizManagementPage() {
+    const { showToast } = useToast();
+
+    // ── List state ────────────────────────────────────────────────
     const [questions, setQuestions] = useState<QuizQuestion[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-
-    // Expandable rows
     const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
-    // Add question dialog
-    const [addDialogOpen, setAddDialogOpen] = useState(false);
+    // ── Add dialog state ──────────────────────────────────────────
+    const [addOpen, setAddOpen] = useState(false);
     const [newQuestion, setNewQuestion] = useState("");
     const [newQuestionType, setNewQuestionType] = useState<QuestionType>(QuestionType.SINGLE);
     const [newAnswers, setNewAnswers] = useState<string[]>(["", ""]);
     const [isCreating, setIsCreating] = useState(false);
 
-    // Delete confirmation dialog
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [deletingItem, setDeletingItem] = useState<QuizQuestion | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
-
-    // Edit dialog
-    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    // ── Edit dialog state ─────────────────────────────────────────
+    const [editOpen, setEditOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<QuizQuestion | null>(null);
     const [editQuestion, setEditQuestion] = useState("");
     const [editQuestionType, setEditQuestionType] = useState<QuestionType>(QuestionType.SINGLE);
     const [editAnswers, setEditAnswers] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
-    const { showToast } = useToast();
+    // ── Delete dialog state ───────────────────────────────────────
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [deletingItem, setDeletingItem] = useState<QuizQuestion | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    useEffect(() => {
-        fetchQuestions();
-    }, []);
-
-    const fetchQuestions = async () => {
+    // ── Data fetching ─────────────────────────────────────────────
+    const fetchQuestions = useCallback(async () => {
         setLoading(true);
         try {
             const response = await quizService.getQuestions();
@@ -95,7 +71,11 @@ export default function QuizManagementPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [showToast]);
+
+    useEffect(() => {
+        fetchQuestions();
+    }, [fetchQuestions]);
 
     const filteredQuestions = useMemo(() => {
         if (!searchQuery.trim()) return questions;
@@ -107,65 +87,60 @@ export default function QuizManagementPage() {
         );
     }, [questions, searchQuery]);
 
-    const toggleRow = (id: string) => {
+    // ── Row toggle ────────────────────────────────────────────────
+    const handleToggleRow = useCallback((id: string) => {
         setExpandedRows((prev) => {
             const next = new Set(prev);
-            if (next.has(id)) next.delete(id);
-            else next.add(id);
+            next.has(id) ? next.delete(id) : next.add(id);
             return next;
         });
-    };
+    }, []);
 
-    // ── Add Question ──────────────────────────────────────────────
-    const handleOpenAdd = () => {
+    // ── Add handlers ──────────────────────────────────────────────
+    const handleOpenAdd = useCallback(() => {
         setNewQuestion("");
         setNewQuestionType(QuestionType.SINGLE);
         setNewAnswers(["", ""]);
-        setAddDialogOpen(true);
-    };
+        setAddOpen(true);
+    }, []);
 
-    const handleCloseAdd = () => {
-        if (isCreating) return;
-        setAddDialogOpen(false);
-    };
+    const handleCloseAdd = useCallback(() => {
+        if (!isCreating) setAddOpen(false);
+    }, [isCreating]);
 
-    const handleAnswerChange = (index: number, value: string) => {
+    const handleNewAnswerChange = useCallback((index: number, value: string) => {
         setNewAnswers((prev) => {
-            const updated = [...prev];
-            updated[index] = value;
-            return updated;
+            const next = [...prev];
+            next[index] = value;
+            return next;
         });
-    };
+    }, []);
 
-    const handleAddAnswer = () => {
-        setNewAnswers((prev) => [...prev, ""]);
-    };
+    const handleAddNewAnswer = useCallback(() => setNewAnswers((prev) => [...prev, ""]), []);
 
-    const handleRemoveAnswer = (index: number) => {
-        if (newAnswers.length <= 2) return; // min 2 answers
-        setNewAnswers((prev) => prev.filter((_, i) => i !== index));
-    };
+    const handleRemoveNewAnswer = useCallback((index: number) => {
+        setNewAnswers((prev) => prev.length <= 2 ? prev : prev.filter((_, i) => i !== index));
+    }, []);
 
-    const handleCreateQuestion = async () => {
+    const handleCreate = useCallback(async () => {
         if (!newQuestion.trim()) {
             showToast("Nội dung câu hỏi không được để trống", "warning");
             return;
         }
-        const filledAnswers = newAnswers.filter((a) => a.trim() !== "");
-        if (filledAnswers.length < 2) {
+        const filled = newAnswers.filter((a) => a.trim());
+        if (filled.length < 2) {
             showToast("Phải có ít nhất 2 câu trả lời", "warning");
             return;
         }
-
         setIsCreating(true);
         try {
             await quizService.createQuestion({
                 question: newQuestion.trim(),
                 questionType: newQuestionType,
-                answers: filledAnswers.map((a) => ({ answer: a.trim() })),
+                answers: filled.map((a) => ({ answer: a.trim() })),
             });
             showToast("Tạo câu hỏi thành công!", "success");
-            setAddDialogOpen(false);
+            setAddOpen(false);
             fetchQuestions();
         } catch (error) {
             console.error("Error creating question:", error);
@@ -173,21 +148,81 @@ export default function QuizManagementPage() {
         } finally {
             setIsCreating(false);
         }
-    };
+    }, [newQuestion, newQuestionType, newAnswers, showToast, fetchQuestions]);
 
-    // ── Delete Question ───────────────────────────────────────────
-    const handleOpenDelete = (item: QuizQuestion) => {
+    // ── Edit handlers ─────────────────────────────────────────────
+    const handleOpenEdit = useCallback((item: QuizQuestion) => {
+        setEditingItem(item);
+        setEditQuestion(item.question);
+        setEditQuestionType(item.questionType);
+        setEditAnswers(item.answers.map((a) => a.answer));
+        setEditOpen(true);
+    }, []);
+
+    const handleCloseEdit = useCallback(() => {
+        if (!isSaving) {
+            setEditOpen(false);
+            setEditingItem(null);
+        }
+    }, [isSaving]);
+
+    const handleEditAnswerChange = useCallback((index: number, value: string) => {
+        setEditAnswers((prev) => {
+            const next = [...prev];
+            next[index] = value;
+            return next;
+        });
+    }, []);
+
+    const handleAddEditAnswer = useCallback(() => setEditAnswers((prev) => [...prev, ""]), []);
+
+    const handleRemoveEditAnswer = useCallback((index: number) => {
+        setEditAnswers((prev) => prev.length <= 2 ? prev : prev.filter((_, i) => i !== index));
+    }, []);
+
+    const handleSaveEdit = useCallback(async () => {
+        if (!editingItem) return;
+        if (!editQuestion.trim()) {
+            showToast("Nội dung câu hỏi không được để trống", "warning");
+            return;
+        }
+        const filled = editAnswers.filter((a) => a.trim());
+        if (filled.length < 2) {
+            showToast("Phải có ít nhất 2 câu trả lời", "warning");
+            return;
+        }
+        setIsSaving(true);
+        try {
+            await quizService.updateQuestion(editingItem.id, {
+                question: editQuestion.trim(),
+                questionType: editQuestionType,
+                answers: filled.map((a) => ({ answer: a.trim() })),
+            });
+            showToast("Cập nhật câu hỏi thành công!", "success");
+            fetchQuestions();
+            handleCloseEdit();
+        } catch (error) {
+            console.error("Error updating question:", error);
+            showToast("Đã có lỗi xảy ra khi cập nhật câu hỏi", "error");
+        } finally {
+            setIsSaving(false);
+        }
+    }, [editingItem, editQuestion, editQuestionType, editAnswers, showToast, fetchQuestions, handleCloseEdit]);
+
+    // ── Delete handlers ───────────────────────────────────────────
+    const handleOpenDelete = useCallback((item: QuizQuestion) => {
         setDeletingItem(item);
-        setDeleteDialogOpen(true);
-    };
+        setDeleteOpen(true);
+    }, []);
 
-    const handleCloseDelete = () => {
-        if (isDeleting) return;
-        setDeleteDialogOpen(false);
-        setDeletingItem(null);
-    };
+    const handleCloseDelete = useCallback(() => {
+        if (!isDeleting) {
+            setDeleteOpen(false);
+            setDeletingItem(null);
+        }
+    }, [isDeleting]);
 
-    const handleConfirmDelete = async () => {
+    const handleConfirmDelete = useCallback(async () => {
         if (!deletingItem) return;
         setIsDeleting(true);
         try {
@@ -201,79 +236,9 @@ export default function QuizManagementPage() {
         } finally {
             setIsDeleting(false);
         }
-    };
+    }, [deletingItem, showToast, handleCloseDelete]);
 
-    // ── Edit Question ─────────────────────────────────────────────
-    const handleOpenEdit = (item: QuizQuestion) => {
-        setEditingItem(item);
-        setEditQuestion(item.question);
-        setEditQuestionType(item.questionType);
-        setEditAnswers(item.answers.map((a) => a.answer));
-        setEditDialogOpen(true);
-    };
-
-    const handleCloseEdit = () => {
-        if (isSaving) return;
-        setEditDialogOpen(false);
-        setEditingItem(null);
-    };
-
-    const handleEditAnswerChange = (index: number, value: string) => {
-        setEditAnswers((prev) => {
-            const updated = [...prev];
-            updated[index] = value;
-            return updated;
-        });
-    };
-
-    const handleEditAddAnswer = () => {
-        setEditAnswers((prev) => [...prev, ""]);
-    };
-
-    const handleEditRemoveAnswer = (index: number) => {
-        if (editAnswers.length <= 2) return;
-        setEditAnswers((prev) => prev.filter((_, i) => i !== index));
-    };
-
-    const handleSaveEdit = async () => {
-        if (!editingItem) return;
-        if (!editQuestion.trim()) {
-            showToast("Nội dung câu hỏi không được để trống", "warning");
-            return;
-        }
-        const filledAnswers = editAnswers.filter((a) => a.trim() !== "");
-        if (filledAnswers.length < 2) {
-            showToast("Phải có ít nhất 2 câu trả lời", "warning");
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            const updated = await quizService.updateQuestion(editingItem.id, {
-                question: editQuestion.trim(),
-                questionType: editQuestionType,
-                answers: filledAnswers.map((a) => ({ answer: a.trim() })),
-            });
-            showToast("Cập nhật câu hỏi thành công!", "success");
-            // Update local state to avoid full re-fetch
-            setQuestions((prev) =>
-                prev.map((q) =>
-                    q.id === editingItem.id
-                        ? { ...q, question: editQuestion.trim(), questionType: editQuestionType, answers: updated?.data?.answers ?? q.answers }
-                        : q
-                )
-            );
-            fetchQuestions(); // re-fetch to get fresh answer IDs
-            handleCloseEdit();
-        } catch (error) {
-            console.error("Error updating question:", error);
-            showToast("Đã có lỗi xảy ra khi cập nhật câu hỏi", "error");
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    // ── Render ─────────────────────────────────────────────────────
+    // ── Render ────────────────────────────────────────────────────
     if (loading) {
         return (
             <AdminLayout>
@@ -307,17 +272,8 @@ export default function QuizManagementPage() {
                             </Button>
                         </Box>
 
-                        {/* Toolbar */}
-                        <Box
-                            sx={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: 2,
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                mb: 3,
-                            }}
-                        >
+                        {/* Search */}
+                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "space-between", alignItems: "center", mb: 3 }}>
                             <TextField
                                 placeholder="Tìm kiếm câu hỏi hoặc câu trả lời..."
                                 variant="outlined"
@@ -346,15 +302,9 @@ export default function QuizManagementPage() {
                                         <TableCell sx={{ fontWeight: "bold", width: 48 }} />
                                         <TableCell sx={{ fontWeight: "bold" }}>Câu hỏi</TableCell>
                                         <TableCell sx={{ fontWeight: "bold", width: 130 }}>Loại</TableCell>
-                                        <TableCell sx={{ fontWeight: "bold", width: 110 }}>
-                                            Số đáp án
-                                        </TableCell>
-                                        <TableCell sx={{ fontWeight: "bold", width: 160 }}>
-                                            Ngày tạo
-                                        </TableCell>
-                                        <TableCell sx={{ fontWeight: "bold", width: 80, textAlign: "center" }}>
-                                            Thao tác
-                                        </TableCell>
+                                        <TableCell sx={{ fontWeight: "bold", width: 110 }}>Số đáp án</TableCell>
+                                        <TableCell sx={{ fontWeight: "bold", width: 160 }}>Ngày tạo</TableCell>
+                                        <TableCell sx={{ fontWeight: "bold", width: 100, textAlign: "center" }}>Thao tác</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -367,125 +317,16 @@ export default function QuizManagementPage() {
                                             </TableCell>
                                         </TableRow>
                                     ) : (
-                                        filteredQuestions.map((item) => {
-                                            const isExpanded = expandedRows.has(item.id);
-                                            return (
-                                                <>
-                                                    <TableRow
-                                                        key={item.id}
-                                                        hover
-                                                        sx={{ cursor: "pointer" }}
-                                                        onClick={() => toggleRow(item.id)}
-                                                    >
-                                                        <TableCell padding="checkbox">
-                                                            <IconButton size="small">
-                                                                {isExpanded ? (
-                                                                    <ExpandLessIcon fontSize="small" />
-                                                                ) : (
-                                                                    <ExpandMoreIcon fontSize="small" />
-                                                                )}
-                                                            </IconButton>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Typography fontWeight={500} sx={{ fontSize: "0.9rem" }}>
-                                                                {item.question}
-                                                            </Typography>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Chip
-                                                                label={item.questionType === QuestionType.MULTIPLE ? 'Nhiều đáp án' : 'Một đáp án'}
-                                                                size="small"
-                                                                color={item.questionType === QuestionType.MULTIPLE ? 'secondary' : 'info'}
-                                                                variant="outlined"
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Chip
-                                                                label={`${item.answers.length} đáp án`}
-                                                                size="small"
-                                                                color="primary"
-                                                                variant="outlined"
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Typography variant="body2" color="text.secondary">
-                                                                {dayjs(item.createdAt).format("DD/MM/YYYY HH:mm")}
-                                                            </Typography>
-                                                        </TableCell>
-                                                        <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                                                            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "center" }}>
-                                                                <Tooltip title="Chỉnh sửa">
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        color="primary"
-                                                                        onClick={() => handleOpenEdit(item)}
-                                                                        sx={{
-                                                                            bgcolor: "rgba(25,118,210,0.06)",
-                                                                            "&:hover": { bgcolor: "rgba(25,118,210,0.14)" },
-                                                                        }}
-                                                                    >
-                                                                        <EditIcon fontSize="small" />
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                                <Tooltip title="Xóa câu hỏi">
-                                                                    <IconButton
-                                                                        size="small"
-                                                                        color="error"
-                                                                        onClick={() => handleOpenDelete(item)}
-                                                                        sx={{
-                                                                            bgcolor: "rgba(211,47,47,0.06)",
-                                                                            "&:hover": { bgcolor: "rgba(211,47,47,0.14)" },
-                                                                        }}
-                                                                    >
-                                                                        <DeleteIcon fontSize="small" />
-                                                                    </IconButton>
-                                                                </Tooltip>
-                                                            </Box>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                    {/* Expandable answers row */}
-                                                    <TableRow key={`${item.id}-answers`}>
-                                                        <TableCell
-                                                            colSpan={6}
-                                                            sx={{ p: 0, border: isExpanded ? undefined : "none" }}
-                                                        >
-                                                            <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                                                                <Box sx={{ bgcolor: "#fafafa", px: 4, py: 2 }}>
-                                                                    <Typography
-                                                                        variant="subtitle2"
-                                                                        fontWeight="bold"
-                                                                        color="text.secondary"
-                                                                        sx={{ mb: 1 }}
-                                                                    >
-                                                                        Danh sách đáp án:
-                                                                    </Typography>
-                                                                    <List dense disablePadding>
-                                                                        {item.answers.map((ans, idx) => (
-                                                                            <ListItem
-                                                                                key={ans.id}
-                                                                                disablePadding
-                                                                                sx={{ py: 0.25 }}
-                                                                            >
-                                                                                <ListItemText
-                                                                                    primary={
-                                                                                        <Typography
-                                                                                            variant="body2"
-                                                                                            color="text.primary"
-                                                                                        >
-                                                                                            {idx + 1}. {ans.answer}
-                                                                                        </Typography>
-                                                                                    }
-                                                                                />
-                                                                            </ListItem>
-                                                                        ))}
-                                                                    </List>
-                                                                </Box>
-                                                            </Collapse>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                </>
-                                            );
-                                        })
+                                        filteredQuestions.map((item) => (
+                                            <QuizQuestionRow
+                                                key={item.id}
+                                                item={item}
+                                                isExpanded={expandedRows.has(item.id)}
+                                                onToggle={handleToggleRow}
+                                                onEdit={handleOpenEdit}
+                                                onDelete={handleOpenDelete}
+                                            />
+                                        ))
                                     )}
                                 </TableBody>
                             </Table>
@@ -494,313 +335,44 @@ export default function QuizManagementPage() {
                 </Paper>
             </Container>
 
-            {/* ── Add Question Dialog ─────────────────────────── */}
-            <Dialog
-                open={addDialogOpen}
+            {/* Dialogs */}
+            <QuizAddDialog
+                open={addOpen}
+                isCreating={isCreating}
+                question={newQuestion}
+                questionType={newQuestionType}
+                answers={newAnswers}
                 onClose={handleCloseAdd}
-                maxWidth="md"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: 3 } }}
-            >
-                <DialogTitle
-                    sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        pb: 2,
-                    }}
-                >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <QuizIcon color="primary" />
-                        <Typography variant="h6" fontWeight="bold">
-                            Thêm câu hỏi mới
-                        </Typography>
-                    </Box>
-                    <IconButton onClick={handleCloseAdd} disabled={isCreating} size="small">
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
+                onQuestionChange={setNewQuestion}
+                onQuestionTypeChange={setNewQuestionType}
+                onAnswerChange={handleNewAnswerChange}
+                onAddAnswer={handleAddNewAnswer}
+                onRemoveAnswer={handleRemoveNewAnswer}
+                onSubmit={handleCreate}
+            />
 
-                <DialogContent sx={{ p: 3, mt: 1 }}>
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                        Loại câu hỏi
-                    </Typography>
-                    <ToggleButtonGroup
-                        value={newQuestionType}
-                        exclusive
-                        onChange={(_, v) => { if (v) setNewQuestionType(v); }}
-                        size="small"
-                        sx={{ mb: 2.5 }}
-                    >
-                        <ToggleButton value={QuestionType.SINGLE}>Một đáp án (single)</ToggleButton>
-                        <ToggleButton value={QuestionType.MULTIPLE}>Nhiều đáp án (multiple)</ToggleButton>
-                    </ToggleButtonGroup>
-
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                        Nội dung câu hỏi *
-                    </Typography>
-                    <TextField
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        variant="outlined"
-                        placeholder="Nhập câu hỏi..."
-                        value={newQuestion}
-                        onChange={(e) => setNewQuestion(e.target.value)}
-                        disabled={isCreating}
-                        sx={{ mb: 3 }}
-                    />
-
-                    <Divider sx={{ mb: 2 }} />
-
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
-                        <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
-                            Danh sách câu trả lời * (tối thiểu 2)
-                        </Typography>
-                        <Button
-                            size="small"
-                            startIcon={<AddAnswerIcon />}
-                            onClick={handleAddAnswer}
-                            disabled={isCreating}
-                        >
-                            Thêm đáp án
-                        </Button>
-                    </Box>
-
-                    {newAnswers.map((ans, idx) => (
-                        <Box key={idx} sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
-                            <Chip
-                                label={idx + 1}
-                                size="small"
-                                color="primary"
-                                variant="outlined"
-                                sx={{ minWidth: 32, fontWeight: "bold" }}
-                            />
-                            <TextField
-                                fullWidth
-                                size="small"
-                                placeholder={`Đáp án ${idx + 1}...`}
-                                value={ans}
-                                onChange={(e) => handleAnswerChange(idx, e.target.value)}
-                                disabled={isCreating}
-                            />
-                            <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleRemoveAnswer(idx)}
-                                disabled={newAnswers.length <= 2 || isCreating}
-                            >
-                                <RemoveAnswerIcon />
-                            </IconButton>
-                        </Box>
-                    ))}
-
-                    {newAnswers.filter((a) => a.trim()).length < 2 && (
-                        <Alert severity="warning" sx={{ mt: 1 }}>
-                            Cần ít nhất 2 đáp án hợp lệ
-                        </Alert>
-                    )}
-                </DialogContent>
-
-                <DialogActions
-                    sx={{ p: 3, borderTop: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}
-                >
-                    <Button onClick={handleCloseAdd} color="inherit" disabled={isCreating} sx={{ px: 3, borderRadius: 2 }}>
-                        Hủy
-                    </Button>
-                    <Button
-                        onClick={handleCreateQuestion}
-                        variant="contained"
-                        color="primary"
-                        disabled={isCreating}
-                        startIcon={isCreating ? <CircularProgress size={18} color="inherit" /> : <AddIcon />}
-                        sx={{ px: 4, borderRadius: 2, fontWeight: "bold" }}
-                    >
-                        {isCreating ? "Đang tạo..." : "Tạo câu hỏi"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* ── Delete Confirm Dialog ───────────────────────── */}
-            <Dialog
-                open={deleteDialogOpen}
-                onClose={handleCloseDelete}
-                maxWidth="sm"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: 3 } }}
-            >
-                <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1.5, pb: 1 }}>
-                    <DeleteIcon color="error" />
-                    <Typography variant="h6" fontWeight="bold">
-                        Xác nhận xóa câu hỏi
-                    </Typography>
-                </DialogTitle>
-                <DialogContent>
-                    <Alert severity="warning" sx={{ mb: 2 }}>
-                        Hành động này sẽ <strong>soft delete</strong> câu hỏi và không thể hoàn tác.
-                    </Alert>
-                    {deletingItem && (
-                        <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                            <Typography variant="body1" fontWeight={500}>
-                                {deletingItem.question}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {deletingItem.answers.length} câu trả lời
-                            </Typography>
-                        </Paper>
-                    )}
-                </DialogContent>
-                <DialogActions sx={{ p: 2.5, pt: 0 }}>
-                    <Button onClick={handleCloseDelete} color="inherit" disabled={isDeleting} sx={{ borderRadius: 2 }}>
-                        Hủy
-                    </Button>
-                    <Button
-                        onClick={handleConfirmDelete}
-                        variant="contained"
-                        color="error"
-                        disabled={isDeleting}
-                        startIcon={isDeleting ? <CircularProgress size={18} color="inherit" /> : <DeleteIcon />}
-                        sx={{ borderRadius: 2, fontWeight: "bold", px: 3 }}
-                    >
-                        {isDeleting ? "Đang xóa..." : "Xóa"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-
-            {/* ── Edit Question Dialog ─────────────────────────── */}
-            <Dialog
-                open={editDialogOpen}
+            <QuizEditDialog
+                open={editOpen}
+                isSaving={isSaving}
+                question={editQuestion}
+                questionType={editQuestionType}
+                answers={editAnswers}
                 onClose={handleCloseEdit}
-                maxWidth="md"
-                fullWidth
-                PaperProps={{ sx: { borderRadius: 3 } }}
-            >
-                <DialogTitle
-                    sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        pb: 2,
-                    }}
-                >
-                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                        <EditIcon color="primary" />
-                        <Typography variant="h6" fontWeight="bold">
-                            Chỉnh sửa câu hỏi
-                        </Typography>
-                    </Box>
-                    <IconButton onClick={handleCloseEdit} disabled={isSaving} size="small">
-                        <CloseIcon />
-                    </IconButton>
-                </DialogTitle>
+                onQuestionChange={setEditQuestion}
+                onQuestionTypeChange={setEditQuestionType}
+                onAnswerChange={handleEditAnswerChange}
+                onAddAnswer={handleAddEditAnswer}
+                onRemoveAnswer={handleRemoveEditAnswer}
+                onSubmit={handleSaveEdit}
+            />
 
-                <DialogContent sx={{ p: 3, mt: 1 }}>
-                    {/* Question Type */}
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                        Loại câu hỏi
-                    </Typography>
-                    <ToggleButtonGroup
-                        value={editQuestionType}
-                        exclusive
-                        onChange={(_, v) => { if (v) setEditQuestionType(v); }}
-                        size="small"
-                        sx={{ mb: 2.5 }}
-                        disabled={isSaving}
-                    >
-                        <ToggleButton value={QuestionType.SINGLE}>Một đáp án (single)</ToggleButton>
-                        <ToggleButton value={QuestionType.MULTIPLE}>Nhiều đáp án (multiple)</ToggleButton>
-                    </ToggleButtonGroup>
-
-                    {/* Question text */}
-                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                        Nội dung câu hỏi *
-                    </Typography>
-                    <TextField
-                        fullWidth
-                        multiline
-                        minRows={2}
-                        variant="outlined"
-                        placeholder="Nhập câu hỏi..."
-                        value={editQuestion}
-                        onChange={(e) => setEditQuestion(e.target.value)}
-                        disabled={isSaving}
-                        sx={{ mb: 3 }}
-                    />
-
-                    <Divider sx={{ mb: 2 }} />
-
-                    {/* Answers */}
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
-                        <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
-                            Danh sách câu trả lời * (tối thiểu 2)
-                        </Typography>
-                        <Button
-                            size="small"
-                            startIcon={<AddAnswerIcon />}
-                            onClick={handleEditAddAnswer}
-                            disabled={isSaving}
-                        >
-                            Thêm đáp án
-                        </Button>
-                    </Box>
-
-                    {editAnswers.map((ans, idx) => (
-                        <Box key={idx} sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
-                            <Chip
-                                label={idx + 1}
-                                size="small"
-                                color="primary"
-                                variant="outlined"
-                                sx={{ minWidth: 32, fontWeight: "bold" }}
-                            />
-                            <TextField
-                                fullWidth
-                                size="small"
-                                placeholder={`Đáp án ${idx + 1}...`}
-                                value={ans}
-                                onChange={(e) => handleEditAnswerChange(idx, e.target.value)}
-                                disabled={isSaving}
-                            />
-                            <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => handleEditRemoveAnswer(idx)}
-                                disabled={editAnswers.length <= 2 || isSaving}
-                            >
-                                <RemoveAnswerIcon />
-                            </IconButton>
-                        </Box>
-                    ))}
-
-                    {editAnswers.filter((a) => a.trim()).length < 2 && (
-                        <Alert severity="warning" sx={{ mt: 1 }}>
-                            Cần ít nhất 2 đáp án hợp lệ
-                        </Alert>
-                    )}
-                </DialogContent>
-
-                <DialogActions
-                    sx={{ p: 3, borderTop: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}
-                >
-                    <Button onClick={handleCloseEdit} color="inherit" disabled={isSaving} sx={{ px: 3, borderRadius: 2 }}>
-                        Hủy
-                    </Button>
-                    <Button
-                        onClick={handleSaveEdit}
-                        variant="contained"
-                        color="primary"
-                        disabled={isSaving}
-                        startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
-                        sx={{ px: 4, borderRadius: 2, fontWeight: "bold" }}
-                    >
-                        {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            <QuizDeleteDialog
+                open={deleteOpen}
+                item={deletingItem}
+                isDeleting={isDeleting}
+                onClose={handleCloseDelete}
+                onConfirm={handleConfirmDelete}
+            />
         </AdminLayout>
     );
 }
