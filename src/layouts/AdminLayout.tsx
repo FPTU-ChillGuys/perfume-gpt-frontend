@@ -34,6 +34,7 @@ import {
   ShoppingCart as ShoppingCartIcon,
   Slideshow as SlideshowIcon,
   SmartToy as BotIcon,
+  Quiz as QuizIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -133,6 +134,12 @@ const menuItems: MenuItem[] = [
     text: "Cấu hình AI",
     icon: <BotIcon />,
     path: "/admin/instructions",
+    roles: ["admin"],
+  },
+  {
+    text: "Quiz",
+    icon: <QuizIcon />,
+    path: "/admin/quiz",
     roles: ["admin"],
   },
 ];

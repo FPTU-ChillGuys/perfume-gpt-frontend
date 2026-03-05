@@ -31,6 +31,7 @@ import { OrderManagementPage } from "./pages/OrderManagementPage";
 import { ContentManagementPage } from "./pages/ContentManagementPage";
 import ChatbotWidget from "./components/chatbot/ChatbotWidget";
 import AIInstructionPage from "./pages/AIInstructionPage";
+import QuizManagementPage from "./pages/QuizManagementPage";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -129,6 +130,14 @@ function App() {
                     element={
                       <RoleBasedRoute allowedRoles={["admin"]}>
                         <AIInstructionPage />
+                      </RoleBasedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/quiz"
+                    element={
+                      <RoleBasedRoute allowedRoles={["admin"]}>
+                        <QuizManagementPage />
                       </RoleBasedRoute>
                     }
                   />
