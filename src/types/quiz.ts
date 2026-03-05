@@ -1,3 +1,10 @@
+/** Loại câu hỏi quiz */
+export const QuestionType = {
+    SINGLE: 'single',
+    MULTIPLE: 'multiple',
+} as const;
+export type QuestionType = typeof QuestionType[keyof typeof QuestionType];
+
 export interface QuizAnswer {
     id: string;
     createdAt: string;
@@ -11,6 +18,7 @@ export interface QuizQuestion {
     createdAt: string;
     updatedAt: string;
     question: string;
+    questionType: QuestionType;
     answers: QuizAnswer[];
 }
 
@@ -20,6 +28,7 @@ export interface QuizAnswerRequest {
 
 export interface QuizQuestionRequest {
     question: string;
+    questionType?: QuestionType;
     answers: QuizAnswerRequest[];
 }
 

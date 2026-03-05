@@ -8,8 +8,10 @@ import type {
     CheckFirstTimeResponse,
     QuizQuesAnsDetailRequest,
     SubmitQuizResponse,
-    UserQuizRecordResponse
+    UserQuizRecordResponse,
+    QuestionType
 } from "@/types/quiz";
+
 
 class QuizService {
     // 1. GET /quizzes/questions
@@ -59,20 +61,20 @@ class QuizService {
         }
     }
 
-    // 4. PUT /quizzes/questions/{id}
-    async updateAnswers(id: string, answers: QuizAnswerRequest[]): Promise<any> {
+    // 4. PUT /quizzes/questions/{id} — update question, questionType, answers
+    async updateQuestion(id: string, payload: { question: string; questionType?: QuestionType; answers: QuizAnswerRequest[] }): Promise<any> {
         try {
             const response = await aiApiInstance.PUT(`/quizzes/questions/${id}`, {
-                body: answers
+                body: payload
             });
 
             if (!response.data?.success) {
-                throw new Error(response.data?.error || "Failed to update quiz answers");
+                throw new Error(response.data?.error || "Failed to update quiz question");
             }
             return response.data;
         } catch (error: any) {
-            console.error("Error updating quiz answers:", error);
-            throw new Error(error.response?.data?.error || error.message || "Failed to update quiz answers");
+            console.error("Error updating quiz question:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to update quiz question");
         }
     }
 

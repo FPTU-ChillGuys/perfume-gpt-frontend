@@ -27,20 +27,25 @@ import {
     ListItemText,
     Divider,
     Alert,
+    ToggleButton,
+    ToggleButtonGroup,
 } from "@mui/material";
 import {
     Search as SearchIcon,
     Quiz as QuizIcon,
     Add as AddIcon,
     Delete as DeleteIcon,
+    Edit as EditIcon,
     Close as CloseIcon,
     ExpandMore as ExpandMoreIcon,
     ExpandLess as ExpandLessIcon,
     AddCircleOutline as AddAnswerIcon,
     RemoveCircleOutline as RemoveAnswerIcon,
+    Save as SaveIcon,
 } from "@mui/icons-material";
 import { useToast } from "@/hooks/useToast";
 import { quizService } from "@/services/ai/quizService";
+import { QuestionType } from "@/types/quiz";
 import type { QuizQuestion } from "@/types/quiz";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import dayjs from "dayjs";
@@ -56,6 +61,7 @@ export default function QuizManagementPage() {
     // Add question dialog
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [newQuestion, setNewQuestion] = useState("");
+    const [newQuestionType, setNewQuestionType] = useState<QuestionType>(QuestionType.SINGLE);
     const [newAnswers, setNewAnswers] = useState<string[]>(["", ""]);
     const [isCreating, setIsCreating] = useState(false);
 
@@ -63,6 +69,14 @@ export default function QuizManagementPage() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [deletingItem, setDeletingItem] = useState<QuizQuestion | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+
+    // Edit dialog
+    const [editDialogOpen, setEditDialogOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<QuizQuestion | null>(null);
+    const [editQuestion, setEditQuestion] = useState("");
+    const [editQuestionType, setEditQuestionType] = useState<QuestionType>(QuestionType.SINGLE);
+    const [editAnswers, setEditAnswers] = useState<string[]>([]);
+    const [isSaving, setIsSaving] = useState(false);
 
     const { showToast } = useToast();
 
@@ -74,7 +88,7 @@ export default function QuizManagementPage() {
         setLoading(true);
         try {
             const response = await quizService.getQuestions();
-            setQuestions(response.data);
+            setQuestions(response.data.reverse());
         } catch (error) {
             console.error("Failed to fetch quiz questions:", error);
             showToast("Lỗi khi tải danh sách câu hỏi Quiz", "error");
@@ -105,6 +119,7 @@ export default function QuizManagementPage() {
     // ── Add Question ──────────────────────────────────────────────
     const handleOpenAdd = () => {
         setNewQuestion("");
+        setNewQuestionType(QuestionType.SINGLE);
         setNewAnswers(["", ""]);
         setAddDialogOpen(true);
     };
@@ -146,6 +161,7 @@ export default function QuizManagementPage() {
         try {
             await quizService.createQuestion({
                 question: newQuestion.trim(),
+                questionType: newQuestionType,
                 answers: filledAnswers.map((a) => ({ answer: a.trim() })),
             });
             showToast("Tạo câu hỏi thành công!", "success");
@@ -184,6 +200,76 @@ export default function QuizManagementPage() {
             showToast("Đã có lỗi xảy ra khi xóa câu hỏi", "error");
         } finally {
             setIsDeleting(false);
+        }
+    };
+
+    // ── Edit Question ─────────────────────────────────────────────
+    const handleOpenEdit = (item: QuizQuestion) => {
+        setEditingItem(item);
+        setEditQuestion(item.question);
+        setEditQuestionType(item.questionType);
+        setEditAnswers(item.answers.map((a) => a.answer));
+        setEditDialogOpen(true);
+    };
+
+    const handleCloseEdit = () => {
+        if (isSaving) return;
+        setEditDialogOpen(false);
+        setEditingItem(null);
+    };
+
+    const handleEditAnswerChange = (index: number, value: string) => {
+        setEditAnswers((prev) => {
+            const updated = [...prev];
+            updated[index] = value;
+            return updated;
+        });
+    };
+
+    const handleEditAddAnswer = () => {
+        setEditAnswers((prev) => [...prev, ""]);
+    };
+
+    const handleEditRemoveAnswer = (index: number) => {
+        if (editAnswers.length <= 2) return;
+        setEditAnswers((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingItem) return;
+        if (!editQuestion.trim()) {
+            showToast("Nội dung câu hỏi không được để trống", "warning");
+            return;
+        }
+        const filledAnswers = editAnswers.filter((a) => a.trim() !== "");
+        if (filledAnswers.length < 2) {
+            showToast("Phải có ít nhất 2 câu trả lời", "warning");
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const updated = await quizService.updateQuestion(editingItem.id, {
+                question: editQuestion.trim(),
+                questionType: editQuestionType,
+                answers: filledAnswers.map((a) => ({ answer: a.trim() })),
+            });
+            showToast("Cập nhật câu hỏi thành công!", "success");
+            // Update local state to avoid full re-fetch
+            setQuestions((prev) =>
+                prev.map((q) =>
+                    q.id === editingItem.id
+                        ? { ...q, question: editQuestion.trim(), questionType: editQuestionType, answers: updated?.data?.answers ?? q.answers }
+                        : q
+                )
+            );
+            fetchQuestions(); // re-fetch to get fresh answer IDs
+            handleCloseEdit();
+        } catch (error) {
+            console.error("Error updating question:", error);
+            showToast("Đã có lỗi xảy ra khi cập nhật câu hỏi", "error");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -259,6 +345,7 @@ export default function QuizManagementPage() {
                                     <TableRow>
                                         <TableCell sx={{ fontWeight: "bold", width: 48 }} />
                                         <TableCell sx={{ fontWeight: "bold" }}>Câu hỏi</TableCell>
+                                        <TableCell sx={{ fontWeight: "bold", width: 130 }}>Loại</TableCell>
                                         <TableCell sx={{ fontWeight: "bold", width: 110 }}>
                                             Số đáp án
                                         </TableCell>
@@ -273,7 +360,7 @@ export default function QuizManagementPage() {
                                 <TableBody>
                                     {filteredQuestions.length === 0 ? (
                                         <TableRow>
-                                            <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                                            <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                                                 <Typography variant="body2" color="text.secondary">
                                                     Không tìm thấy dữ liệu phù hợp.
                                                 </Typography>
@@ -306,6 +393,14 @@ export default function QuizManagementPage() {
                                                         </TableCell>
                                                         <TableCell>
                                                             <Chip
+                                                                label={item.questionType === QuestionType.MULTIPLE ? 'Nhiều đáp án' : 'Một đáp án'}
+                                                                size="small"
+                                                                color={item.questionType === QuestionType.MULTIPLE ? 'secondary' : 'info'}
+                                                                variant="outlined"
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Chip
                                                                 label={`${item.answers.length} đáp án`}
                                                                 size="small"
                                                                 color="primary"
@@ -318,25 +413,40 @@ export default function QuizManagementPage() {
                                                             </Typography>
                                                         </TableCell>
                                                         <TableCell align="center" onClick={(e) => e.stopPropagation()}>
-                                                            <Tooltip title="Xóa câu hỏi">
-                                                                <IconButton
-                                                                    size="small"
-                                                                    color="error"
-                                                                    onClick={() => handleOpenDelete(item)}
-                                                                    sx={{
-                                                                        bgcolor: "rgba(211,47,47,0.06)",
-                                                                        "&:hover": { bgcolor: "rgba(211,47,47,0.14)" },
-                                                                    }}
-                                                                >
-                                                                    <DeleteIcon fontSize="small" />
-                                                                </IconButton>
-                                                            </Tooltip>
+                                                            <Box sx={{ display: "flex", gap: 0.5, justifyContent: "center" }}>
+                                                                <Tooltip title="Chỉnh sửa">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="primary"
+                                                                        onClick={() => handleOpenEdit(item)}
+                                                                        sx={{
+                                                                            bgcolor: "rgba(25,118,210,0.06)",
+                                                                            "&:hover": { bgcolor: "rgba(25,118,210,0.14)" },
+                                                                        }}
+                                                                    >
+                                                                        <EditIcon fontSize="small" />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                                <Tooltip title="Xóa câu hỏi">
+                                                                    <IconButton
+                                                                        size="small"
+                                                                        color="error"
+                                                                        onClick={() => handleOpenDelete(item)}
+                                                                        sx={{
+                                                                            bgcolor: "rgba(211,47,47,0.06)",
+                                                                            "&:hover": { bgcolor: "rgba(211,47,47,0.14)" },
+                                                                        }}
+                                                                    >
+                                                                        <DeleteIcon fontSize="small" />
+                                                                    </IconButton>
+                                                                </Tooltip>
+                                                            </Box>
                                                         </TableCell>
                                                     </TableRow>
                                                     {/* Expandable answers row */}
                                                     <TableRow key={`${item.id}-answers`}>
                                                         <TableCell
-                                                            colSpan={5}
+                                                            colSpan={6}
                                                             sx={{ p: 0, border: isExpanded ? undefined : "none" }}
                                                         >
                                                             <Collapse in={isExpanded} timeout="auto" unmountOnExit>
@@ -414,6 +524,20 @@ export default function QuizManagementPage() {
                 </DialogTitle>
 
                 <DialogContent sx={{ p: 3, mt: 1 }}>
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
+                        Loại câu hỏi
+                    </Typography>
+                    <ToggleButtonGroup
+                        value={newQuestionType}
+                        exclusive
+                        onChange={(_, v) => { if (v) setNewQuestionType(v); }}
+                        size="small"
+                        sx={{ mb: 2.5 }}
+                    >
+                        <ToggleButton value={QuestionType.SINGLE}>Một đáp án (single)</ToggleButton>
+                        <ToggleButton value={QuestionType.MULTIPLE}>Nhiều đáp án (multiple)</ToggleButton>
+                    </ToggleButtonGroup>
+
                     <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
                         Nội dung câu hỏi *
                     </Typography>
@@ -541,6 +665,139 @@ export default function QuizManagementPage() {
                         sx={{ borderRadius: 2, fontWeight: "bold", px: 3 }}
                     >
                         {isDeleting ? "Đang xóa..." : "Xóa"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* ── Edit Question Dialog ─────────────────────────── */}
+            <Dialog
+                open={editDialogOpen}
+                onClose={handleCloseEdit}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{ sx: { borderRadius: 3 } }}
+            >
+                <DialogTitle
+                    sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        borderBottom: "1px solid",
+                        borderColor: "divider",
+                        pb: 2,
+                    }}
+                >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <EditIcon color="primary" />
+                        <Typography variant="h6" fontWeight="bold">
+                            Chỉnh sửa câu hỏi
+                        </Typography>
+                    </Box>
+                    <IconButton onClick={handleCloseEdit} disabled={isSaving} size="small">
+                        <CloseIcon />
+                    </IconButton>
+                </DialogTitle>
+
+                <DialogContent sx={{ p: 3, mt: 1 }}>
+                    {/* Question Type */}
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
+                        Loại câu hỏi
+                    </Typography>
+                    <ToggleButtonGroup
+                        value={editQuestionType}
+                        exclusive
+                        onChange={(_, v) => { if (v) setEditQuestionType(v); }}
+                        size="small"
+                        sx={{ mb: 2.5 }}
+                        disabled={isSaving}
+                    >
+                        <ToggleButton value={QuestionType.SINGLE}>Một đáp án (single)</ToggleButton>
+                        <ToggleButton value={QuestionType.MULTIPLE}>Nhiều đáp án (multiple)</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    {/* Question text */}
+                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
+                        Nội dung câu hỏi *
+                    </Typography>
+                    <TextField
+                        fullWidth
+                        multiline
+                        minRows={2}
+                        variant="outlined"
+                        placeholder="Nhập câu hỏi..."
+                        value={editQuestion}
+                        onChange={(e) => setEditQuestion(e.target.value)}
+                        disabled={isSaving}
+                        sx={{ mb: 3 }}
+                    />
+
+                    <Divider sx={{ mb: 2 }} />
+
+                    {/* Answers */}
+                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+                        <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
+                            Danh sách câu trả lời * (tối thiểu 2)
+                        </Typography>
+                        <Button
+                            size="small"
+                            startIcon={<AddAnswerIcon />}
+                            onClick={handleEditAddAnswer}
+                            disabled={isSaving}
+                        >
+                            Thêm đáp án
+                        </Button>
+                    </Box>
+
+                    {editAnswers.map((ans, idx) => (
+                        <Box key={idx} sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
+                            <Chip
+                                label={idx + 1}
+                                size="small"
+                                color="primary"
+                                variant="outlined"
+                                sx={{ minWidth: 32, fontWeight: "bold" }}
+                            />
+                            <TextField
+                                fullWidth
+                                size="small"
+                                placeholder={`Đáp án ${idx + 1}...`}
+                                value={ans}
+                                onChange={(e) => handleEditAnswerChange(idx, e.target.value)}
+                                disabled={isSaving}
+                            />
+                            <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleEditRemoveAnswer(idx)}
+                                disabled={editAnswers.length <= 2 || isSaving}
+                            >
+                                <RemoveAnswerIcon />
+                            </IconButton>
+                        </Box>
+                    ))}
+
+                    {editAnswers.filter((a) => a.trim()).length < 2 && (
+                        <Alert severity="warning" sx={{ mt: 1 }}>
+                            Cần ít nhất 2 đáp án hợp lệ
+                        </Alert>
+                    )}
+                </DialogContent>
+
+                <DialogActions
+                    sx={{ p: 3, borderTop: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}
+                >
+                    <Button onClick={handleCloseEdit} color="inherit" disabled={isSaving} sx={{ px: 3, borderRadius: 2 }}>
+                        Hủy
+                    </Button>
+                    <Button
+                        onClick={handleSaveEdit}
+                        variant="contained"
+                        color="primary"
+                        disabled={isSaving}
+                        startIcon={isSaving ? <CircularProgress size={18} color="inherit" /> : <SaveIcon />}
+                        sx={{ px: 4, borderRadius: 2, fontWeight: "bold" }}
+                    >
+                        {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
                     </Button>
                 </DialogActions>
             </Dialog>
