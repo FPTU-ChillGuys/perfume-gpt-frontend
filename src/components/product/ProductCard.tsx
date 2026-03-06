@@ -70,7 +70,7 @@ export const ProductCard = ({
   };
 
   return (
-    <div className="group relative bg-white rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+    <div className="group relative bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
       {/* Badges */}
       <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
         {isNew && (
@@ -154,16 +154,6 @@ export const ProductCard = ({
             {formatPrice(salePrice)}
           </span>
         </div>
-        {variantId && (
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={isAdding}
-            className="mt-4 w-full rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-gray-700 transition hover:border-red-200 hover:text-red-600 disabled:opacity-60"
-          >
-            {isAdding ? "Đang thêm..." : "Thêm vào giỏ"}
-          </button>
-        )}
       </div>
     </div>
   );

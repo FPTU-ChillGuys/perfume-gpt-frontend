@@ -53,7 +53,9 @@ const ProductQuickViewDialog = ({
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
@@ -65,12 +67,16 @@ const ProductQuickViewDialog = ({
   }, [fastLook]);
 
   const selectedVariant = useMemo(
-    () => fastLook?.variants?.find((variant) => variant.id === selectedVariantId) || null,
+    () =>
+      fastLook?.variants?.find((variant) => variant.id === selectedVariantId) ||
+      null,
     [fastLook, selectedVariantId],
   );
 
   const heroImage =
-    selectedVariant?.media?.url || fastLook?.variants?.[0]?.media?.url || undefined;
+    selectedVariant?.media?.url ||
+    fastLook?.variants?.[0]?.media?.url ||
+    undefined;
 
   const handleClose = () => {
     if (isAdding) {
@@ -120,7 +126,12 @@ const ProductQuickViewDialog = ({
   const renderContent = () => {
     if (loading) {
       return (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight={240}>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight={240}
+        >
           <CircularProgress />
         </Box>
       );
@@ -172,17 +183,26 @@ const ProductQuickViewDialog = ({
           <Box flex={1} minWidth={0}>
             <Stack direction="row" spacing={1} alignItems="center" mb={1}>
               {information?.style && (
-                <Chip label={information.style.toUpperCase()} color="info" size="small" />
+                <Chip
+                  label={information.style.toUpperCase()}
+                  color="info"
+                  size="small"
+                />
               )}
               {information?.scentGroup && (
-                <Chip label={information.scentGroup} size="small" color="secondary" />
+                <Chip
+                  label={information.scentGroup}
+                  size="small"
+                  color="secondary"
+                />
               )}
             </Stack>
             <Typography variant="h5" fontWeight={600} gutterBottom>
               {fastLook.name}
             </Typography>
             <Typography color="text.secondary" fontWeight={500} gutterBottom>
-              Thương hiệu: {information?.brandName || fastLook.brandName || "Đang cập nhật"}
+              Thương hiệu:{" "}
+              {information?.brandName || fastLook.brandName || "Đang cập nhật"}
             </Typography>
             {information?.productCode && (
               <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -190,11 +210,18 @@ const ProductQuickViewDialog = ({
               </Typography>
             )}
             <Typography variant="body2" color="text.secondary" gutterBottom>
-              {fastLook.description || information?.description || "Đang cập nhật mô tả"}
+              {fastLook.description ||
+                information?.description ||
+                "Đang cập nhật mô tả"}
             </Typography>
 
             <Stack direction="row" spacing={1} alignItems="center" mt={1}>
-              <Rating value={fastLook.rating ?? 0} precision={0.5} readOnly size="small" />
+              <Rating
+                value={fastLook.rating ?? 0}
+                precision={0.5}
+                readOnly
+                size="small"
+              />
               <Typography variant="body2" color="text.secondary">
                 {fastLook.rating ?? 0}/5 ({fastLook.reviewCount ?? 0} đánh giá)
               </Typography>
@@ -213,7 +240,11 @@ const ProductQuickViewDialog = ({
               size="small"
             >
               {(fastLook.variants || []).map((variant) => (
-                <ToggleButton key={variant.id} value={variant.id} sx={{ textTransform: "none", borderRadius: 2 }}>
+                <ToggleButton
+                  key={variant.id}
+                  value={variant.id}
+                  sx={{ textTransform: "none", borderRadius: 2 }}
+                >
                   {variant.displayName || "Size"}
                 </ToggleButton>
               ))}
@@ -232,12 +263,14 @@ const ProductQuickViewDialog = ({
               )}
             </Stack>
 
-            <Stack direction="row" spacing={1} alignItems="center" mt={2}>
-              <LocalShippingIcon fontSize="small" color="success" />
-              <Typography variant="body2" fontWeight={500} color="success.main">
-                Free Ship mọi đơn hàng
-              </Typography>
-            </Stack>
+            <Button
+              startIcon={<InfoIcon />}
+              variant="text"
+              sx={{ mt: 1, textTransform: "none" }}
+              onClick={handleViewDetail}
+            >
+              Xem chi tiết sản phẩm
+            </Button>
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={3}>
               <Button
@@ -258,15 +291,6 @@ const ProductQuickViewDialog = ({
                 {isAdding ? "Đang xử lý..." : "Mua ngay"}
               </Button>
             </Stack>
-
-            <Button
-              startIcon={<InfoIcon />}
-              variant="text"
-              sx={{ mt: 1, textTransform: "none" }}
-              onClick={handleViewDetail}
-            >
-              Xem chi tiết sản phẩm
-            </Button>
           </Box>
         </Stack>
       </Stack>
@@ -275,7 +299,13 @@ const ProductQuickViewDialog = ({
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         Xem nhanh sản phẩm
         <IconButton onClick={handleClose} size="small">
           <CloseIcon fontSize="small" />
