@@ -35,6 +35,7 @@ import {
   Slideshow as SlideshowIcon,
   SmartToy as BotIcon,
   Quiz as QuizIcon,
+  Feed as FeedIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -140,6 +141,12 @@ const menuItems: MenuItem[] = [
     text: "Quiz",
     icon: <QuizIcon />,
     path: "/admin/quiz",
+    roles: ["admin"],
+  },
+  {
+    text: "Quản lý Log",
+    icon: <FeedIcon />,
+    path: "/admin/logs",
     roles: ["admin"],
   },
 ];
