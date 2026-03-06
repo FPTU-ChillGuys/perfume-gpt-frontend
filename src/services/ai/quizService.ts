@@ -61,6 +61,24 @@ class QuizService {
         }
     }
 
+    // 3.5. POST /quizzes/questions/list
+    async createQuestions(data: QuizQuestionRequest[]): Promise<any> {
+        try {
+            const response = await aiApiInstance.POST("/quizzes/questions/list", {
+                body: data
+            });
+
+            if (!response.data?.success) {
+                throw new Error(response.data?.error || "Failed to create quiz questions");
+            }
+            return response.data;
+        } catch (error: any) {
+            console.error("Error creating quiz questions:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to create quiz questions");
+        }
+    }
+
+
     // 4. PUT /quizzes/questions/{id} — update question, questionType, answers
     async updateQuestion(id: string, payload: { question: string; questionType?: QuestionType; answers: QuizAnswerRequest[] }): Promise<any> {
         try {

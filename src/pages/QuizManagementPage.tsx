@@ -88,24 +88,28 @@ export default function QuizManagementPage() {
     }, []);
 
     // ── Add ───────────────────────────────────────────────────────
-    const handleCreate = useCallback(async (payload: QuizQuestionRequest) => {
-        if (!payload.question) {
-            showToast("Nội dung câu hỏi không được để trống", "warning");
-            return;
-        }
-        if ((payload.answers?.length ?? 0) < 2) {
-            showToast("Phải có ít nhất 2 câu trả lời", "warning");
-            return;
+    const handleCreate = useCallback(async (payloadArray: QuizQuestionRequest[]) => {
+        // Validation is now primarily handled inside the dialog via isInvalid,
+        // but we can double check
+        for (const payload of payloadArray) {
+            if (!payload.question) {
+                showToast("Nội dung câu hỏi không được để trống", "warning");
+                return;
+            }
+            if ((payload.answers?.length ?? 0) < 2) {
+                showToast("Phải có ít nhất 2 câu trả lời cho mỗi câu hỏi", "warning");
+                return;
+            }
         }
         setIsCreating(true);
         try {
-            await quizService.createQuestion(payload);
-            showToast("Tạo câu hỏi thành công!", "success");
+            await quizService.createQuestions(payloadArray);
+            showToast(`Tạo thành công ${payloadArray.length} câu hỏi!`, "success");
             setAddOpen(false);
             fetchQuestions();
         } catch (error) {
-            console.error("Error creating question:", error);
-            showToast("Đã có lỗi xảy ra khi tạo câu hỏi", "error");
+            console.error("Error creating questions:", error);
+            showToast("Đã có lỗi xảy ra khi tạo danh sách câu hỏi", "error");
         } finally {
             setIsCreating(false);
         }
