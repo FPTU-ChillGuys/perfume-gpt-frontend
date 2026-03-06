@@ -6,47 +6,35 @@ class AuthService {
   private readonly AUTH_ENDPOINT = "/api/auths";
 
   async login(credentials: LoginRequest): Promise<User> {
-    try {
-      //const response = await axiosInstance.post<LoginResponse>(`${this.AUTH_ENDPOINT}/login`,credentials,);
-      const response = await apiInstance.POST(`${this.AUTH_ENDPOINT}/login`, {
-        body: credentials,
-      });
+    const response = await apiInstance.POST(`${this.AUTH_ENDPOINT}/login`, {
+      body: credentials,
+    });
 
-
-      if (!response.data!.success) {
-        throw new Error(response.data!.message || "Login failed");
+    if (response.error !== undefined || !response.data?.success) {
+      const status = response.response?.status;
+      if (status === 401 || status === 404) {
+        throw new Error("Email hoặc mật khẩu không chính xác. Vui lòng thử lại.");
       }
-
-      const accessToken = response.data!.payload!.accessToken!;
-
-      // Extract user info from token
-      const user = getUserFromToken(accessToken);
-      if (!user) {
-        throw new Error("Invalid token format");
-      }
-
-      // Store token and user info
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      return user;
-    } catch (error: any) {
-      console.error("Login error:", error);
-
-      // Return generic message for both 401 and 404 to prevent account enumeration
-      const statusCode = error.response?.status;
-      if (statusCode === 401 || statusCode === 404) {
-        throw new Error(
-          "Email hoặc mật khẩu không chính xác. Vui lòng thử lại.",
-        );
-      }
-
       throw new Error(
-        error.response?.data?.message ||
-          error.message ||
+        (response.error as any)?.message ||
+          response.data?.message ||
           "Đăng nhập thất bại. Vui lòng thử lại sau.",
       );
     }
+
+    const accessToken = response.data.payload!.accessToken!;
+
+    // Extract user info from token
+    const user = getUserFromToken(accessToken);
+    if (!user) {
+      throw new Error("Invalid token format");
+    }
+
+    // Store token and user info
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("user", JSON.stringify(user));
+
+    return user;
   }
 
   async googleLogin(idToken: string): Promise<User> {
