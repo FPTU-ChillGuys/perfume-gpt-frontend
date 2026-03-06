@@ -37,11 +37,15 @@ const ProductDetailPage = () => {
   const { showToast } = useToast();
   const { refreshCart } = useCart();
 
-  const [information, setInformation] = useState<ProductInformation | null>(null);
+  const [information, setInformation] = useState<ProductInformation | null>(
+    null,
+  );
   const [fastLook, setFastLook] = useState<ProductFastLook | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
@@ -89,7 +93,9 @@ const ProductDetailPage = () => {
   }, [productId]);
 
   const selectedVariant = useMemo(
-    () => fastLook?.variants?.find((variant) => variant.id === selectedVariantId) || null,
+    () =>
+      fastLook?.variants?.find((variant) => variant.id === selectedVariantId) ||
+      null,
     [fastLook, selectedVariantId],
   );
 
@@ -238,7 +244,9 @@ const ProductDetailPage = () => {
     }
 
     const heroImage =
-      selectedVariant?.media?.url || fastLook.variants?.[0]?.media?.url || undefined;
+      selectedVariant?.media?.url ||
+      fastLook.variants?.[0]?.media?.url ||
+      undefined;
 
     return (
       <>
@@ -298,7 +306,8 @@ const ProductDetailPage = () => {
               <Stack direction="row" spacing={1} alignItems="center">
                 <Rating value={fastLook.rating ?? 0} precision={0.5} readOnly />
                 <Typography variant="body2" color="text.secondary">
-                  {fastLook.rating ?? 0}/5 ({fastLook.reviewCount ?? 0} đánh giá)
+                  {fastLook.rating ?? 0}/5 ({fastLook.reviewCount ?? 0} đánh
+                  giá)
                 </Typography>
               </Stack>
 
@@ -315,7 +324,11 @@ const ProductDetailPage = () => {
                 size="small"
               >
                 {(fastLook.variants || []).map((variant) => (
-                  <ToggleButton key={variant.id} value={variant.id} sx={{ textTransform: "none", borderRadius: 2 }}>
+                  <ToggleButton
+                    key={variant.id}
+                    value={variant.id}
+                    sx={{ textTransform: "none", borderRadius: 2 }}
+                  >
                     {variant.displayName || "Size"}
                   </ToggleButton>
                 ))}
@@ -329,13 +342,6 @@ const ProductDetailPage = () => {
                 </Typography>
                 <Typography variant="caption" color="text.secondary">
                   Giá đã bao gồm VAT
-                </Typography>
-              </Stack>
-
-              <Stack direction="row" spacing={1} alignItems="center">
-                <LocalShippingIcon color="success" />
-                <Typography color="success.main" fontWeight={600}>
-                  Free ship mọi đơn hàng trong ngày
                 </Typography>
               </Stack>
 

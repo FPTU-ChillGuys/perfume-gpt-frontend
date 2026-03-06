@@ -31,9 +31,23 @@ export const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
-  // NOTE: Auto-redirect removed to allow logging in with different accounts
-  // Users can manually navigate away or login will overwrite existing session
+  const validateEmail = (value: string) => {
+    if (!value.trim()) return "Email hoặc số điện thoại không được để trống";
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    const isPhone = /^(0|\+84)\d{9}$/.test(value.replace(/\s/g, ""));
+    if (!isEmail && !isPhone)
+      return "Email hoặc số điện thoại không đúng định dạng";
+    return "";
+  };
+
+  const validatePassword = (value: string) => {
+    if (!value) return "Mật khẩu không được để trống";
+    if (value.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
+    return "";
+  };
 
   const handleGoogleLoginSuccess = async (credentialResponse: any) => {
     setIsLoading(true);
@@ -71,6 +85,13 @@ export const LoginPage = () => {
     if (isLoading) return; // Prevent double submission
 
     setError("");
+
+    const eErr = validateEmail(email);
+    const pErr = validatePassword(password);
+    setEmailError(eErr);
+    setPasswordError(pErr);
+    if (eErr || pErr) return;
+
     setIsLoading(true);
 
     try {
@@ -189,10 +210,16 @@ export const LoginPage = () => {
                 fullWidth
                 placeholder="Nhập email hoặc số điện thoại"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (emailError) setEmailError("");
+                }}
+                onBlur={() => setEmailError(validateEmail(email))}
                 size="small"
                 required
                 disabled={isLoading}
+                error={!!emailError}
+                helperText={emailError}
               />
             </Box>
 
@@ -225,10 +252,16 @@ export const LoginPage = () => {
                 type={showPassword ? "text" : "password"}
                 placeholder="Nhập mật khẩu"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordError) setPasswordError("");
+                }}
+                onBlur={() => setPasswordError(validatePassword(password))}
                 size="small"
                 required
                 disabled={isLoading}
+                error={!!passwordError}
+                helperText={passwordError}
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">

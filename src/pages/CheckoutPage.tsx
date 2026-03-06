@@ -61,8 +61,8 @@ const PAYMENT_METHODS: {
     label: "Thanh toán tại cửa hàng",
     description: "Thanh toán trực tiếp tại cửa hàng",
   },
-  { value: "VnPay", label: "VnPay", description: "Thanh toán qua VnPay" },
-  { value: "Momo", label: "Momo", description: "Thanh toán qua Momo" },
+  { value: "VnPay", label: "VNPay", description: "Thanh toán qua VNPay" },
+  { value: "Momo", label: "MoMo", description: "Thanh toán qua MoMo" },
 ];
 
 export const CheckoutPage = () => {
@@ -120,6 +120,7 @@ export const CheckoutPage = () => {
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingWards, setIsLoadingWards] = useState(false);
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -140,7 +141,6 @@ export const CheckoutPage = () => {
     useNewAddress,
     newAddress.districtId,
     newAddress.wardCode,
-    voucherCode,
   ]);
 
   const loadProvinces = async () => {
@@ -261,20 +261,6 @@ export const CheckoutPage = () => {
     try {
       setIsLoading(true);
 
-      // Load voucher từ sessionStorage nếu có
-      const savedVoucherStr = sessionStorage.getItem("appliedVoucher");
-      let savedVoucher: ApplyVoucherResponse | null = null;
-      if (savedVoucherStr) {
-        try {
-          savedVoucher = JSON.parse(savedVoucherStr);
-          setAppliedVoucher(savedVoucher);
-          setVoucherCode(savedVoucher?.voucherCode || "");
-        } catch (error) {
-          console.error("Failed to parse saved voucher:", error);
-          sessionStorage.removeItem("appliedVoucher");
-        }
-      }
-
       // Load addresses and cart
       const [addressList, cartData] = await Promise.all([
         addressService.getAddresses().catch(() => [] as AddressResponse[]),
@@ -284,37 +270,6 @@ export const CheckoutPage = () => {
       setAddresses(addressList);
       setItems(cartData.items);
       setTotals(cartData.totals);
-
-      // Nếu giỏ hàng trống, xóa voucher để tránh voucher cũ được áp dụng cho giỏ hàng mới
-      if (cartData.items.length === 0) {
-        setAppliedVoucher(null);
-        setVoucherCode("");
-        sessionStorage.removeItem("appliedVoucher");
-      }
-      // Nếu có voucher đã lưu, call API apply để tính lại discount
-      else if (savedVoucher && cartData.totals.subtotal > 0) {
-        try {
-          const voucherResult = await voucherService.applyVoucher({
-            voucherCode: savedVoucher.voucherCode,
-            orderAmount: cartData.totals.subtotal,
-          });
-          setAppliedVoucher(voucherResult);
-          setVoucherCode(voucherResult.voucherCode);
-          // Update totals với discount từ voucher
-          setTotals((prev) => ({
-            ...prev,
-            discount: voucherResult.discountAmount,
-            totalPrice: voucherResult.finalAmount,
-          }));
-        } catch (voucherError) {
-          // Nếu voucher không còn valid, xóa voucher
-          console.error("Voucher is no longer valid:", voucherError);
-          setAppliedVoucher(null);
-          setVoucherCode("");
-          sessionStorage.removeItem("appliedVoucher");
-          showToast("Mã giảm giá không còn hiệu lực", "warning");
-        }
-      }
 
       // Set default address if exists
       const defaultAddr = addressList.find((addr) => addr.isDefault);
@@ -329,13 +284,15 @@ export const CheckoutPage = () => {
   };
 
   // Update totals khi địa chỉ hoặc voucher thay đổi
-  const updateTotalsWithAddress = async () => {
+  const updateTotalsWithAddress = async (voucherCodeOverride?: string | null) => {
+    const activeVoucher =
+      voucherCodeOverride !== undefined
+        ? voucherCodeOverride || undefined
+        : appliedVoucher?.voucherCode || undefined;
     try {
       // Nếu là pickup in store, không cần địa chỉ
       if (isPickupInStore) {
-        const totalsData = await cartService.getTotals(
-          voucherCode || undefined,
-        );
+        const totalsData = await cartService.getTotals(activeVoucher);
         setTotals(totalsData);
         return;
       }
@@ -362,7 +319,7 @@ export const CheckoutPage = () => {
       // Chỉ call API nếu có đủ thông tin địa chỉ
       if (districtId && wardCode) {
         const totalsData = await cartService.getTotals(
-          voucherCode || undefined,
+          activeVoucher,
           districtId,
           wardCode,
         );
@@ -391,6 +348,7 @@ export const CheckoutPage = () => {
       return;
     }
 
+    setVoucherError(null);
     setIsApplyingVoucher(true);
     try {
       // Call API apply voucher để validate
@@ -403,19 +361,19 @@ export const CheckoutPage = () => {
       setAppliedVoucher(voucherResult);
       setVoucherCode(voucherResult.voucherCode);
 
-      // Lưu voucher vào sessionStorage để dùng khi đặt hàng
-      sessionStorage.setItem("appliedVoucher", JSON.stringify(voucherResult));
-
-      // Update totals với địa chỉ và voucher
-      await updateTotalsWithAddress();
+      // Update totals - truyền thẳng voucherCode để tránh stale closure
+      await updateTotalsWithAddress(voucherResult.voucherCode);
 
       showToast(voucherResult.message || "Đã áp dụng mã giảm giá", "success");
     } catch (error) {
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "Không thể áp dụng mã giảm giá",
-        "error",
+      const msg =
+        error instanceof Error ? error.message : "Mã giảm giá không hợp lệ";
+      setVoucherError(
+        msg.toLowerCase().includes("not found") ||
+          msg.toLowerCase().includes("404") ||
+          msg.toLowerCase().includes("failed to apply")
+          ? "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại."
+          : msg,
       );
     } finally {
       setIsApplyingVoucher(false);
@@ -428,12 +386,10 @@ export const CheckoutPage = () => {
       // Reset voucher state
       setAppliedVoucher(null);
       setVoucherCode("");
+      setVoucherError(null);
 
-      // Xóa voucher khỏi sessionStorage
-      sessionStorage.removeItem("appliedVoucher");
-
-      // Update totals không có voucher code
-      await updateTotalsWithAddress();
+      // Update totals - truyền null để tránh stale closure
+      await updateTotalsWithAddress(null);
 
       showToast("Đã bỏ mã giảm giá", "info");
     } catch (error) {
@@ -951,8 +907,12 @@ export const CheckoutPage = () => {
                     size="small"
                     placeholder="Mã giảm giá"
                     value={voucherCode}
-                    onChange={(e) => setVoucherCode(e.target.value)}
+                    onChange={(e) => {
+                      setVoucherCode(e.target.value);
+                      if (voucherError) setVoucherError(null);
+                    }}
                     disabled={!!appliedVoucher || isApplyingVoucher}
+                    error={!!voucherError}
                     fullWidth
                   />
                   {!appliedVoucher && (
@@ -971,6 +931,15 @@ export const CheckoutPage = () => {
                     </Button>
                   )}
                 </Box>
+                {voucherError && (
+                  <Typography
+                    variant="caption"
+                    color="error"
+                    sx={{ mt: 0.5, display: "block" }}
+                  >
+                    {voucherError}
+                  </Typography>
+                )}
                 {appliedVoucher && (
                   <Box
                     sx={{

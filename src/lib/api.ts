@@ -15,9 +15,11 @@ const middleware: Middleware = {
   },
   onResponse({ response }) {
     if (response?.status === 401) {
-      // Handle unauthorized
+      // Handle unauthorized - but skip redirect if already on login page
       localStorage.removeItem("accessToken");
-      window.location.href = "/login";
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login";
+      }
     }
   },
   onError({ error }) {

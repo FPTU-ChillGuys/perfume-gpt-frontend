@@ -24,7 +24,6 @@ import ReceiveImportStock from "./pages/ReceiveImportStock";
 import { CartPage } from "./pages/CartPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import { CheckoutShippingPage } from "./pages/checkout/CheckoutShippingPage";
-import { CheckoutPackagingPage } from "./pages/checkout/CheckoutPackagingPage";
 import { CheckoutPaymentPage } from "./pages/checkout/CheckoutPaymentPage";
 import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
 import { PaymentFailurePage } from "./pages/PaymentFailurePage";
@@ -64,10 +63,7 @@ function App() {
                       element={<CheckoutShippingPage />}
                     />
                     <Route
-                      path="/checkout/packaging"
-                      element={<CheckoutPackagingPage />}
-                    />
-                    <Route
+
                       path="/checkout/payment"
                       element={<CheckoutPaymentPage />}
                     />
