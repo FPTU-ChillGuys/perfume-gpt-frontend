@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -10,6 +10,7 @@ import {
   Container,
   Divider,
   Grid,
+  IconButton,
   Link,
   Stack,
   ToggleButton,
@@ -17,13 +18,18 @@ import {
   Typography,
 } from "@mui/material";
 import Rating from "@mui/material/Rating";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
+import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { MainLayout } from "@/layouts/MainLayout";
 import { productService } from "@/services/productService";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
-import type { ProductFastLook, ProductInformation } from "@/types/product";
+import type {
+  MediaResponse,
+  ProductFastLook,
+  ProductInformation,
+} from "@/types/product";
 
 const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   style: "currency",
@@ -47,6 +53,15 @@ const ProductDetailPage = () => {
     null,
   );
   const [isAdding, setIsAdding] = useState(false);
+  const [variantMediaList, setVariantMediaList] = useState<MediaResponse[]>([]);
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  const [thumbnailOffset, setThumbnailOffset] = useState(0);
+  const variantCacheRef = useRef<Map<string, MediaResponse[]>>(new Map());
+
+  const THUMB_VISIBLE = 5;
+  const THUMB_SIZE = 72;
+  const THUMB_GAP = 8;
 
   useEffect(() => {
     if (!productId) {
@@ -91,6 +106,49 @@ const ProductDetailPage = () => {
       isMounted = false;
     };
   }, [productId]);
+
+  useEffect(() => {
+    if (!selectedVariantId) {
+      setVariantMediaList([]);
+      return;
+    }
+
+    // Cache hit: swap instantly with no loading state
+    const cached = variantCacheRef.current.get(selectedVariantId);
+    if (cached) {
+      setVariantMediaList(cached);
+      setActiveSlide(0);
+      setThumbnailOffset(0);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingMedia(true);
+    // Keep existing variantMediaList visible while fetching (no blank flash)
+
+    productService
+      .getVariantById(selectedVariantId)
+      .then((variant) => {
+        if (!isMounted) return;
+        const sorted = [...(variant.media || [])].sort(
+          (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+        );
+        variantCacheRef.current.set(selectedVariantId, sorted);
+        setVariantMediaList(sorted);
+        setActiveSlide(0);
+        setThumbnailOffset(0);
+      })
+      .catch(() => {
+        if (isMounted) setVariantMediaList([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingMedia(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedVariantId]);
 
   const selectedVariant = useMemo(
     () =>
@@ -139,7 +197,7 @@ const ProductDetailPage = () => {
           style: "Phong cách",
         };
         return (
-          <Grid item xs={6} md={3} key={key}>
+          <Grid size={{ xs: 6, md: 3 }} key={key}>
             <Typography variant="caption" color="text.secondary">
               {labels[key]}
             </Typography>
@@ -170,7 +228,7 @@ const ProductDetailPage = () => {
         </Typography>
         <Grid container spacing={2}>
           {notes.map((note) => (
-            <Grid item xs={12} md={4} key={note.label}>
+            <Grid size={{ xs: 12, md: 4 }} key={note.label}>
               <Box
                 sx={{
                   p: 2,
@@ -243,40 +301,201 @@ const ProductDetailPage = () => {
       );
     }
 
-    const heroImage =
+    const fallbackImage =
       selectedVariant?.media?.url ||
       fastLook.variants?.[0]?.media?.url ||
       undefined;
 
+    const activeImage = variantMediaList[activeSlide];
+
     return (
       <>
         <Grid container spacing={4}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
+            {/* Main image — fixed height so no-image placeholder is same size */}
             <Box
               sx={{
                 borderRadius: 3,
                 border: "1px solid",
                 borderColor: "divider",
-                p: 4,
                 bgcolor: "grey.50",
-                minHeight: 420,
+                height: 420,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                position: "relative",
+                overflow: "hidden",
               }}
             >
-              {heroImage ? (
+              {activeImage ? (
+                <>
+                  <img
+                    key={activeImage.id}
+                    src={activeImage.url || ""}
+                    alt={activeImage.altText || fastLook.name || "Product"}
+                    style={{
+                      maxHeight: 380,
+                      maxWidth: "90%",
+                      objectFit: "contain",
+                    }}
+                  />
+                  {isLoadingMedia && (
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        bgcolor: "rgba(255,255,255,0.65)",
+                        borderRadius: 3,
+                      }}
+                    >
+                      <CircularProgress size={36} />
+                    </Box>
+                  )}
+                </>
+              ) : isLoadingMedia ? (
+                <CircularProgress />
+              ) : fallbackImage ? (
                 <img
-                  src={heroImage}
+                  src={fallbackImage}
                   alt={fastLook.name || "Product"}
-                  style={{ maxHeight: 360, objectFit: "contain" }}
+                  style={{
+                    maxHeight: 380,
+                    maxWidth: "90%",
+                    objectFit: "contain",
+                  }}
                 />
               ) : (
-                <Typography color="text.secondary">Chưa có hình ảnh</Typography>
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 2,
+                    color: "text.disabled",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      bgcolor: "grey.200",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Typography fontSize={32}>📷</Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có hình ảnh
+                  </Typography>
+                </Box>
               )}
             </Box>
+
+            {/* Thumbnail strip — auto width, max THUMB_VISIBLE items, slide nav */}
+            {variantMediaList.length > 1 &&
+              (() => {
+                const canPrev = thumbnailOffset > 0;
+                const canNext =
+                  thumbnailOffset + THUMB_VISIBLE < variantMediaList.length;
+                const needsNav = variantMediaList.length > THUMB_VISIBLE;
+                const visibleThumbs = variantMediaList.slice(
+                  thumbnailOffset,
+                  thumbnailOffset + THUMB_VISIBLE,
+                );
+                return (
+                  <Box
+                    sx={{
+                      mt: 2,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                      justifyContent: "center",
+                    }}
+                  >
+                    {needsNav && (
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          setThumbnailOffset((p) => Math.max(0, p - 1))
+                        }
+                        disabled={!canPrev}
+                        sx={{ flexShrink: 0 }}
+                      >
+                        <ChevronLeftIcon fontSize="small" />
+                      </IconButton>
+                    )}
+
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: `${THUMB_GAP}px`,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {visibleThumbs.map((media) => {
+                        const realIndex = variantMediaList.indexOf(media);
+                        return (
+                          <Box
+                            key={media.id}
+                            onClick={() => setActiveSlide(realIndex)}
+                            sx={{
+                              width: THUMB_SIZE,
+                              height: THUMB_SIZE,
+                              borderRadius: 1,
+                              border: "2px solid",
+                              borderColor:
+                                activeSlide === realIndex
+                                  ? "error.main"
+                                  : "divider",
+                              overflow: "hidden",
+                              cursor: "pointer",
+                              flexShrink: 0,
+                              transition: "border-color 0.2s",
+                              "&:hover": { borderColor: "error.light" },
+                            }}
+                          >
+                            <img
+                              src={media.url || ""}
+                              alt={media.altText || `Ảnh ${realIndex + 1}`}
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          </Box>
+                        );
+                      })}
+                    </Box>
+
+                    {needsNav && (
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          setThumbnailOffset((p) =>
+                            Math.min(
+                              p + 1,
+                              variantMediaList.length - THUMB_VISIBLE,
+                            ),
+                          )
+                        }
+                        disabled={!canNext}
+                        sx={{ flexShrink: 0 }}
+                      >
+                        <ChevronRightIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </Box>
+                );
+              })()}
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <Stack spacing={2}>
               <Breadcrumbs separator="/">
                 <Link
@@ -313,29 +532,66 @@ const ProductDetailPage = () => {
 
               <Divider />
 
-              <Typography variant="subtitle1" fontWeight={600}>
-                Lựa chọn size
-              </Typography>
-              <ToggleButtonGroup
-                exclusive
-                value={selectedVariantId}
-                onChange={handleVariantChange}
-                sx={{ flexWrap: "wrap", gap: 1 }}
-                size="small"
-              >
-                {(fastLook.variants || []).map((variant) => (
-                  <ToggleButton
-                    key={variant.id}
-                    value={variant.id}
-                    sx={{ textTransform: "none", borderRadius: 2 }}
-                  >
-                    {variant.displayName || "Size"}
-                  </ToggleButton>
-                ))}
-              </ToggleButtonGroup>
+              {/* Size selector */}
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600} mb={1}>
+                  Lựa chọn size
+                </Typography>
+                <ToggleButtonGroup
+                  exclusive
+                  value={selectedVariantId}
+                  onChange={handleVariantChange}
+                  size="small"
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 1,
+                    "& .MuiToggleButtonGroup-grouped": {
+                      border: "1px solid rgba(0, 0, 0, 0.12) !important",
+                      borderRadius: "8px !important",
+                      marginLeft: "0 !important",
+                    },
+                    "& .MuiToggleButtonGroup-grouped.Mui-selected": {
+                      borderColor: "primary.main !important",
+                    },
+                  }}
+                >
+                  {(fastLook.variants || []).map((variant) => (
+                    <ToggleButton
+                      key={variant.id}
+                      value={variant.id}
+                      sx={{
+                        textTransform: "none",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        px: 1.5,
+                        py: 0.75,
+                      }}
+                    >
+                      {variant.media?.url && (
+                        <Box
+                          component="img"
+                          src={variant.media.url}
+                          alt={variant.displayName || ""}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            objectFit: "cover",
+                            borderRadius: 0.5,
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      {variant.displayName || "Size"}
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </Box>
 
-              <Stack direction="row" spacing={2} alignItems="baseline">
-                <Typography variant="h3" fontWeight={700} color="error">
+              {/* Price */}
+              <Stack direction="row" spacing={1} alignItems="baseline">
+                <Typography variant="h4" fontWeight={700} color="error">
                   {selectedVariant?.price
                     ? currencyFormatter.format(Number(selectedVariant.price))
                     : "Liên hệ"}
@@ -345,6 +601,7 @@ const ProductDetailPage = () => {
                 </Typography>
               </Stack>
 
+              {/* Action buttons */}
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <Button
                   variant="outlined"

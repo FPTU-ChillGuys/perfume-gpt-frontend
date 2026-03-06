@@ -139,7 +139,7 @@ export const ProductCard = ({
           {brand}
         </p>
         <h3
-          className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[40px] cursor-pointer"
+          className="text-sm font-medium text-gray-800 mb-2 line-clamp-2  min-h-10 cursor-pointer"
           onClick={handleNavigateDetail}
         >
           {name}

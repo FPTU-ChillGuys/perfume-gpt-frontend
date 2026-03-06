@@ -1,0 +1,12 @@
+{
+  "version": "0.2",
+  "language": "en,vi",
+  "ignorePaths": [
+    "node_modules",
+    "dist",
+    "*.lock",
+    "package-lock.json"
+  ],
+  "ignoreWords": [],
+  "allowCompoundWords": true
+}
