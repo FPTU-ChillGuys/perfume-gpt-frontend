@@ -32,3 +32,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+build_errors.txt
+ts_errors.txt
+api-1.json
+tsc_output.txt
+temp_logs.json

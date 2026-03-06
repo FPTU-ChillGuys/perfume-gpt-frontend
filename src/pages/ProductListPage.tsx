@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 import { MainLayout } from "../layouts/MainLayout";
 import {
@@ -30,10 +31,12 @@ export const ProductListPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE_OPTIONS[0] || 0);
   const [totalPages, setTotalPages] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchParamValue = searchParams.get("search") || "";
+  const [searchTerm, setSearchTerm] = useState(searchParamValue);
   const [sort, setSort] = useState<SortValue>("featured");
 
   useEffect(() => {
@@ -44,24 +47,49 @@ export const ProductListPage = () => {
       setError(null);
 
       try {
-        const [productPage, variantPage] = await Promise.all([
-          productService.getProducts({
+        let productPage;
+        let variantPage;
+
+        if (searchParamValue) {
+          // If searching, use Semantic Search API
+          const searchResult = await productService.searchProductsSemantic({
+            searchText: searchParamValue,
             PageNumber: page,
             PageSize: pageSize,
             IsDescending: true,
-          }),
-          productService.getProductVariantsPaged({
+          });
+
+          productPage = searchResult;
+
+          // Semantic search might return variants embedded, or we fall back to fetching them
+          variantPage = await productService.getProductVariantsPaged({
             PageNumber: 1,
             PageSize: Math.max(pageSize * 4, 120),
             IsDescending: true,
-          }),
-        ]);
+          });
+        } else {
+          // Standard product list API
+          const [pPage, vPage] = await Promise.all([
+            productService.getProducts({
+              PageNumber: page,
+              PageSize: pageSize,
+              IsDescending: true,
+            }),
+            productService.getProductVariantsPaged({
+              PageNumber: 1,
+              PageSize: Math.max(pageSize * 4, 120),
+              IsDescending: true,
+            }),
+          ]);
+          productPage = pPage;
+          variantPage = vPage;
+        }
 
         if (!isMounted) {
           return;
         }
 
-        const items = (productPage.items ?? []).filter(
+        const items = (productPage?.items ?? []).filter(
           (product): product is ProductListItem & { id: string } =>
             Boolean(product.id),
         );
@@ -110,8 +138,8 @@ export const ProductListPage = () => {
         );
 
         setProducts(mapped);
-        setTotalPages(productPage.totalPages ?? 0);
-        setTotalCount(productPage.totalCount ?? items.length);
+        setTotalPages(productPage?.totalPages ?? 0);
+        setTotalCount(productPage?.totalCount ?? items.length);
       } catch (fetchError) {
         if (!isMounted) {
           return;
@@ -133,7 +161,7 @@ export const ProductListPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [page, pageSize]);
+  }, [page, pageSize, searchParamValue]);
 
   useEffect(() => {
     if (totalPages > 0 && page > totalPages) {
@@ -142,13 +170,20 @@ export const ProductListPage = () => {
   }, [page, totalPages]);
 
   const displayedProducts = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    const filtered = normalizedSearch
+    // If we have a semantic search term from URL, the backend already filtered it.
+    // So we only filter client-side if the user types locally but hasn't submitted yet.
+    const normalizedLocalSearch = searchTerm.trim().toLowerCase();
+    const normalizedUrlSearch = searchParamValue.trim().toLowerCase();
+
+    // Only apply local filter if the local search term is different from the URL parameter
+    const shouldFilterLocally = normalizedLocalSearch && normalizedLocalSearch !== normalizedUrlSearch;
+
+    const filtered = shouldFilterLocally
       ? products.filter(
-          (product) =>
-            product.name.toLowerCase().includes(normalizedSearch) ||
-            product.brand.toLowerCase().includes(normalizedSearch),
-        )
+        (product) =>
+          product.name.toLowerCase().includes(normalizedLocalSearch) ||
+          product.brand.toLowerCase().includes(normalizedLocalSearch),
+      )
       : products;
 
     const sorted = [...filtered];
@@ -180,7 +215,7 @@ export const ProductListPage = () => {
     totalPages > 0 ? page < totalPages : products.length === pageSize;
 
   const renderSkeletons = () =>
-    Array.from({ length: pageSize }).map((_, index) => (
+    Array.from({ length: pageSize || 12 }).map((_, index) => (
       <div
         key={`skeleton-${index}`}
         className="h-full animate-pulse rounded-2xl border border-gray-100 bg-white p-4"
@@ -236,6 +271,16 @@ export const ProductListPage = () => {
                   placeholder="Tìm theo tên hoặc thương hiệu"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      if (searchTerm.trim()) {
+                        setSearchParams({ search: searchTerm.trim() });
+                      } else {
+                        searchParams.delete("search");
+                        setSearchParams(searchParams);
+                      }
+                    }
+                  }}
                   className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-12 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-900"
                 />
               </div>

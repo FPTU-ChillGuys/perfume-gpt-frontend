@@ -29,7 +29,13 @@ import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
 import { PaymentFailurePage } from "./pages/PaymentFailurePage";
 import { OrderManagementPage } from "./pages/OrderManagementPage";
 import { ContentManagementPage } from "./pages/ContentManagementPage";
+import ChatbotWidget from "./components/chatbot/ChatbotWidget";
+import AIInstructionPage from "./pages/AIInstructionPage";
+import QuizManagementPage from "./pages/QuizManagementPage";
+import QuizPage from "./pages/QuizPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
+import { UserLogsManagementPage } from "./pages/UserLogsManagementPage";
+import { AdminConversationsPage } from "./pages/AdminConversationsPage";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -49,14 +55,9 @@ function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/products" element={<ProductListPage />} />
-                    <Route
-                      path="/products/:productId"
-                      element={<ProductDetailPage />}
-                    />
-                    <Route
-                      path="/unauthorized"
-                      element={<UnauthorizedPage />}
-                    />
+                    <Route path="/quiz" element={<QuizPage />} />
+                    <Route path="/products/:productId" element={<ProductDetailPage />} />
+                    <Route path="/unauthorized" element={<UnauthorizedPage />} />
                     <Route path="/cart" element={<CartPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route
@@ -64,6 +65,7 @@ function App() {
                       element={<CheckoutShippingPage />}
                     />
                     <Route
+
                       path="/checkout/payment"
                       element={<CheckoutPaymentPage />}
                     />
@@ -80,9 +82,7 @@ function App() {
                     <Route
                       path="/profile"
                       element={
-                        <RoleBasedRoute
-                          allowedRoles={["user", "admin", "staff"]}
-                        >
+                        <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
                           <ProfilePage />
                         </RoleBasedRoute>
                       }
@@ -130,10 +130,42 @@ function App() {
                       }
                     />
                     <Route
+                      path="/admin/instructions"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <AIInstructionPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/quiz"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <QuizManagementPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
                       path="/admin/profile"
                       element={
                         <RoleBasedRoute allowedRoles={["admin"]}>
                           <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/logs"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <UserLogsManagementPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/conversations"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <AdminConversationsPage />
                         </RoleBasedRoute>
                       }
                     />
@@ -181,6 +213,7 @@ function App() {
                       }
                     />
                   </Routes>
+                  <ChatbotWidget />
                 </ProductQuickViewProvider>
               </CartProvider>
             </AuthProvider>

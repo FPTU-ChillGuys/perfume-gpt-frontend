@@ -3,11 +3,9 @@ import {
   Toolbar,
   Box,
   Container,
-  TextField,
   IconButton,
   Button,
   Typography,
-  InputAdornment,
   Menu,
   MenuItem,
   Divider,
@@ -16,7 +14,6 @@ import {
   Badge,
 } from "@mui/material";
 import {
-  Search,
   FavoriteBorder,
   ShoppingCartOutlined,
   PersonOutline,
@@ -30,6 +27,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
 import { useState, useEffect } from "react";
 import { CartDropdown } from "../common/CartDropdown";
+import { HeaderSearch } from "./HeaderSearch";
 
 const navItems = [
   { label: "Tất cả sản phẩm", href: "/products" },
@@ -37,6 +35,7 @@ const navItems = [
   { label: "Nước Hoa Nữ", href: "#" },
   { label: "GiftSet", href: "#" },
   { label: "Thương Hiệu", href: "#" },
+  { label: "Quiz AI", href: "/quiz" },
 ];
 
 export const Header = () => {
@@ -180,18 +179,7 @@ export const Header = () => {
               justifyContent: "center",
             }}
           >
-            <TextField
-              fullWidth
-              size="small"
-              placeholder="Tìm kiếm sản phẩm..."
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Search color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
+            <HeaderSearch />
           </Box>
 
           {/* Right Icons */}
