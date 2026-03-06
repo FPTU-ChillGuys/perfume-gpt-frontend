@@ -5,6 +5,8 @@ import {
   Autocomplete,
   Box,
   Button,
+  Card,
+  CardMedia,
   Chip,
   CircularProgress,
   Dialog,
@@ -12,7 +14,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  Grid,
   IconButton,
   MenuItem,
   Paper,
@@ -29,10 +30,14 @@ import {
   Save as SaveIcon,
   Edit as EditIcon,
   Star as StarIcon,
+  ChevronLeft,
+  ChevronRight,
 } from "@mui/icons-material";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { attributeService } from "@/services/attributeService";
 import { productService } from "@/services/productService";
+import { concentrationService } from "@/services/concentrationService";
+import type { ConcentrationLookupItem } from "@/services/concentrationService";
 import { useToast } from "@/hooks/useToast";
 import type {
   AttributeLookupItem,
@@ -55,7 +60,7 @@ interface ManageProductVariantsDialogProps {
 
 interface AttributeSelection {
   attribute: AttributeLookupItem | null;
-  value: AttributeValueLookupItem | null;
+  values: AttributeValueLookupItem[];
   valueOptions: AttributeValueLookupItem[];
   loadingValues: boolean;
 }
@@ -82,7 +87,7 @@ const VARIANT_STATUS: { value: VariantStatus; label: string }[] = [
 
 const createEmptyAttributeSelection = (): AttributeSelection => ({
   attribute: null,
-  value: null,
+  values: [],
   valueOptions: [],
   loadingValues: false,
 });
@@ -101,17 +106,93 @@ const normalizeSkuSeed = (text: string) =>
     .replace(/^-+|-+$/g, "")
     .toUpperCase();
 
-const extractDigits = (text: string) => text.replace(/\D/g, "");
+const STOP_WORDS = new Set([
+  "de",
+  "du",
+  "la",
+  "le",
+  "les",
+  "et",
+  "the",
+  "a",
+  "of",
+  "au",
+  "aux",
+  "pour",
+  "par",
+  "en",
+  "and",
+]);
+
+const CONC_WORDS = new Set([
+  "eau",
+  "parfum",
+  "toilette",
+  "cologne",
+  "extrait",
+  "fraiche",
+  "chypre",
+  "aromatic",
+  "fougere",
+]);
+
+const abbreviateProductName = (name: string): string => {
+  const words = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w && !STOP_WORDS.has(w) && !CONC_WORDS.has(w));
+  if (!words.length) return "";
+  const [first, ...rest] = words;
+  const parts = [first!.slice(0, 3).toUpperCase()];
+  for (const w of rest.slice(0, 3)) {
+    parts.push(w.slice(0, 2).toUpperCase());
+  }
+  return parts.join("");
+};
+
+const CONCENTRATION_ABBR: Record<string, string> = {
+  "extrait de parfum": "EXT",
+  "eau de parfum": "EDP",
+  "eau de toilette": "EDT",
+  "eau de cologne": "EDC",
+  "eau fraiche": "EF",
+  parfum: "PAR",
+  cologne: "COL",
+};
+
+const abbreviateConcentration = (name: string): string => {
+  if (!name) return "";
+  const normalized = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  for (const [key, abbr] of Object.entries(CONCENTRATION_ABBR)) {
+    if (normalized.includes(key)) return abbr;
+  }
+  return normalized
+    .split(/\s+/)
+    .filter((w) => w && !STOP_WORDS.has(w))
+    .map((w) => w[0]!.toUpperCase())
+    .join("");
+};
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const deriveSkuSeed = (
   info: ProductInformation | null | undefined,
   product: ProductListItem | null,
 ) => {
-  if (info?.productCode) {
-    return normalizeSkuSeed(info.productCode);
-  }
+  // Always prefer human-readable product name
   if (product?.name) {
-    return normalizeSkuSeed(product.name);
+    return abbreviateProductName(product.name);
+  }
+  // Use productCode only if it is not a raw UUID
+  if (info?.productCode && !UUID_RE.test(info.productCode.trim())) {
+    return normalizeSkuSeed(info.productCode);
   }
   if (product?.id) {
     return normalizeSkuSeed(product.id.slice(0, 8));
@@ -119,41 +200,15 @@ const deriveSkuSeed = (
   return "";
 };
 
-const buildSuggestedSku = (seed: string, nextIndex: number) => {
-  if (!seed) {
-    return "";
-  }
-  return `${seed}-${String(nextIndex).padStart(2, "0")}`;
-};
-
-const deriveBarcodeSeed = (
-  info: ProductInformation | null | undefined,
-  product: ProductListItem | null,
+const buildSuggestedSku = (
+  seed: string,
+  volumeMl: string,
+  concentrationName: string,
 ) => {
-  const fromProductCode = info?.productCode ? extractDigits(info.productCode) : "";
-  if (fromProductCode) {
-    return fromProductCode;
-  }
-  const fromName = product?.name ? extractDigits(product.name) : "";
-  if (fromName) {
-    return fromName;
-  }
-  const fromId = product?.id ? extractDigits(product.id) : "";
-  if (fromId) {
-    return fromId;
-  }
-  return extractDigits(Date.now().toString());
-};
-
-const buildSuggestedBarcode = (seed: string, nextIndex: number) => {
-  if (!seed) {
-    return "";
-  }
-  const raw = `${seed}${nextIndex}`;
-  if (raw.length >= 13) {
-    return raw.slice(0, 13);
-  }
-  return raw.padEnd(13, "0");
+  if (!seed) return "";
+  const volPart = volumeMl ? Math.round(parseFloat(volumeMl)).toString() : "";
+  const concPart = abbreviateConcentration(concentrationName);
+  return [seed, volPart, concPart].filter(Boolean).join("-");
 };
 
 const selectVariantPreviewMedia = (
@@ -181,7 +236,6 @@ const createInitialFormValues = () => ({
   sku: "",
   barCode: "",
   volumeMl: "",
-  concentrationId: "",
   basePrice: "",
   type: VARIANT_TYPES[0]?.value ?? "FullBox",
   status: VARIANT_STATUS[0]?.value ?? "Active",
@@ -204,24 +258,37 @@ export default function ManageProductVariantsDialog({
     AttributeSelection[]
   >([createEmptyAttributeSelection()]);
   const [loadingAttributes, setLoadingAttributes] = useState(false);
+  const [concentrations, setConcentrations] = useState<
+    ConcentrationLookupItem[]
+  >([]);
+  const [selectedConcentration, setSelectedConcentration] =
+    useState<ConcentrationLookupItem | null>(null);
+  const [loadingConcentrations, setLoadingConcentrations] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<UploadedVariantImage[]>(
     [],
   );
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [formValues, setFormValues] = useState(createInitialFormValues());
   const [skuSeed, setSkuSeed] = useState("");
   const [isSkuDirty, setIsSkuDirty] = useState(false);
-  const [barcodeSeed, setBarcodeSeed] = useState("");
-  const [isBarcodeDirty, setIsBarcodeDirty] = useState(false);
   const [, setLoadingProductInfo] = useState(false);
-  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(null);
-  const [existingVariantMedia, setExistingVariantMedia] = useState<MediaResponse[]>([]);
+  const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(
+    null,
+  );
+  const [existingVariantMedia, setExistingVariantMedia] = useState<
+    MediaResponse[]
+  >([]);
   const [mediaIdsToDelete, setMediaIdsToDelete] = useState<string[]>([]);
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
     variant: null as ProductVariant | null,
   });
-  const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
+  const [deletingVariantId, setDeletingVariantId] = useState<string | null>(
+    null,
+  );
   const isEditMode = Boolean(editingVariant?.id);
 
   const revokePreviewUrls = useCallback((images: UploadedVariantImage[]) => {
@@ -235,9 +302,9 @@ export default function ManageProductVariantsDialog({
     setExistingVariantMedia([]);
     setMediaIdsToDelete([]);
     setAttributeSelections([createEmptyAttributeSelection()]);
+    setSelectedConcentration(null);
     setFormValues(createInitialFormValues());
     setIsSkuDirty(false);
-    setIsBarcodeDirty(false);
     setUploadedImages((prev) => {
       revokePreviewUrls(prev);
       return [];
@@ -248,10 +315,9 @@ export default function ManageProductVariantsDialog({
     setVariants([]);
     setError(null);
     setAvailableAttributes([]);
+    setConcentrations([]);
     setSkuSeed("");
     setIsSkuDirty(false);
-    setBarcodeSeed("");
-    setIsBarcodeDirty(false);
     setDeleteDialog({ open: false, variant: null });
     setDeletingVariantId(null);
     resetFormToCreateMode();
@@ -264,8 +330,8 @@ export default function ManageProductVariantsDialog({
 
     try {
       setLoadingVariants(true);
-      const data = await productService.getProductVariants(product.id);
-      setVariants(data);
+      const productDetail = await productService.getProductDetail(product.id);
+      setVariants(productDetail?.variants || []);
     } catch (err: any) {
       console.error("Error fetching variants:", err);
       setError(err.message || "Không thể tải danh sách variant");
@@ -287,6 +353,20 @@ export default function ManageProductVariantsDialog({
     }
   }, []);
 
+  const fetchConcentrations = useCallback(async () => {
+    try {
+      setLoadingConcentrations(true);
+      const concentrationsList =
+        await concentrationService.getConcentrationsLookup();
+      setConcentrations(concentrationsList);
+    } catch (err: any) {
+      console.error("Failed to fetch concentrations:", err);
+      showToast("Không thể tải danh sách nồng độ", "error");
+    } finally {
+      setLoadingConcentrations(false);
+    }
+  }, [showToast]);
+
   const fetchProductInfo = useCallback(async () => {
     if (!product?.id) {
       setSkuSeed("");
@@ -297,11 +377,9 @@ export default function ManageProductVariantsDialog({
       setLoadingProductInfo(true);
       const info = await productService.getProductInformation(product.id);
       setSkuSeed(deriveSkuSeed(info, product));
-      setBarcodeSeed(deriveBarcodeSeed(info, product));
     } catch (err) {
       console.error("Error fetching product information:", err);
       setSkuSeed(deriveSkuSeed(null, product));
-      setBarcodeSeed(deriveBarcodeSeed(null, product));
     } finally {
       setLoadingProductInfo(false);
     }
@@ -315,40 +393,57 @@ export default function ManageProductVariantsDialog({
         return;
       }
 
+      // Group attributes by attributeId
+      const groupedAttributes = variantAttributes.reduce(
+        (acc: any, attr: any) => {
+          const attrId = attr.attributeId;
+          if (!acc[attrId]) acc[attrId] = [];
+          acc[attrId].push(attr);
+          return acc;
+        },
+        {},
+      );
+
       const selections = await Promise.all(
-        variantAttributes.map(async (attr) => {
-          if (!attr?.attributeId) {
+        Object.values(groupedAttributes).map(async (attrs: any) => {
+          const firstAttr = attrs[0];
+          if (!firstAttr?.attributeId) {
             return createEmptyAttributeSelection();
           }
 
           let valueOptions: AttributeValueLookupItem[] = [];
           try {
-            valueOptions = await attributeService.getAttributeValues(attr.attributeId);
+            valueOptions = await attributeService.getAttributeValues(
+              firstAttr.attributeId,
+            );
           } catch (err) {
             console.error("Error hydrating attribute values:", err);
           }
 
-          if (!valueOptions.length && attr.valueId && attr.value) {
-            valueOptions = [{ id: attr.valueId, value: attr.value }];
-          }
-
           const attributeOption =
-            availableAttributes.find((item) => item.id === attr.attributeId) ||
-            (attr.attributeId
+            availableAttributes.find(
+              (item) => item.id === firstAttr.attributeId,
+            ) ||
+            (firstAttr.attributeId
               ? {
-                  id: attr.attributeId,
-                  name: attr.attribute || `Thuộc tính #${attr.attributeId}`,
-                  description: attr.description,
+                  id: firstAttr.attributeId,
+                  name:
+                    firstAttr.attribute ||
+                    `Thuộc tính #${firstAttr.attributeId}`,
+                  description: firstAttr.description,
                   isVariantLevel: true,
                 }
               : null);
 
-          const valueOption =
-            valueOptions.find((option) => option.id === attr.valueId) || null;
+          const selectedValues = attrs
+            .map((attr: any) =>
+              valueOptions.find((opt) => opt.id === attr.valueId),
+            )
+            .filter(Boolean);
 
           return {
             attribute: attributeOption,
-            value: valueOption,
+            values: selectedValues,
             valueOptions,
             loadingValues: false,
           } as AttributeSelection;
@@ -368,8 +463,19 @@ export default function ManageProductVariantsDialog({
     }
 
     setError(null);
-    await Promise.all([fetchVariants(), fetchAttributes(), fetchProductInfo()]);
-  }, [product?.id, fetchVariants, fetchAttributes, fetchProductInfo]);
+    await Promise.all([
+      fetchVariants(),
+      fetchAttributes(),
+      fetchConcentrations(),
+      fetchProductInfo(),
+    ]);
+  }, [
+    product?.id,
+    fetchVariants,
+    fetchAttributes,
+    fetchConcentrations,
+    fetchProductInfo,
+  ]);
 
   const handleEditVariant = useCallback(
     async (variant: ProductVariant) => {
@@ -381,7 +487,12 @@ export default function ManageProductVariantsDialog({
       setExistingVariantMedia(variant.media ?? []);
       setMediaIdsToDelete([]);
       setIsSkuDirty(true);
-      setIsBarcodeDirty(true);
+      // Find and set concentration
+      const concentration = concentrations.find(
+        (c) => c.id === variant.concentrationId,
+      );
+      setSelectedConcentration(concentration || null);
+
       setFormValues({
         sku: variant.sku || "",
         barCode:
@@ -389,13 +500,13 @@ export default function ManageProductVariantsDialog({
           (variant as unknown as { barcode?: string })?.barcode ||
           "",
         volumeMl: variant.volumeMl ? String(variant.volumeMl) : "",
-        concentrationId: variant.concentrationId
-          ? String(variant.concentrationId)
-          : "",
         basePrice: variant.basePrice ? String(variant.basePrice) : "",
-        type: (variant.type as VariantType) || (VARIANT_TYPES[0]?.value ?? "FullBox"),
+        type:
+          (variant.type as VariantType) ||
+          (VARIANT_TYPES[0]?.value ?? "FullBox"),
         status:
-          (variant.status as VariantStatus) || (VARIANT_STATUS[0]?.value ?? "Active"),
+          (variant.status as VariantStatus) ||
+          (VARIANT_STATUS[0]?.value ?? "Active"),
       });
       await hydrateAttributeSelectionsFromVariant(variant);
       setUploadedImages((prev) => {
@@ -403,7 +514,7 @@ export default function ManageProductVariantsDialog({
         return [];
       });
     },
-    [hydrateAttributeSelectionsFromVariant, revokePreviewUrls],
+    [hydrateAttributeSelectionsFromVariant, revokePreviewUrls, concentrations],
   );
 
   const handleToggleExistingMedia = (mediaId?: string) => {
@@ -458,7 +569,11 @@ export default function ManageProductVariantsDialog({
     }
   };
 
-  useEffect(() => () => revokePreviewUrls(uploadedImages), [uploadedImages]);
+  // Cleanup preview URLs when component unmounts or uploadedImages changes
+  useEffect(
+    () => () => revokePreviewUrls(uploadedImages),
+    [uploadedImages, revokePreviewUrls],
+  );
 
   useEffect(() => {
     if (open && product?.id) {
@@ -472,27 +587,18 @@ export default function ManageProductVariantsDialog({
     if (!skuSeed || isSkuDirty) {
       return;
     }
-    const suggestion = buildSuggestedSku(skuSeed, variants.length + 1);
+    const suggestion = buildSuggestedSku(
+      skuSeed,
+      formValues.volumeMl,
+      selectedConcentration?.name ?? "",
+    );
     if (!suggestion) {
       return;
     }
     setFormValues((prev) =>
       prev.sku === suggestion ? prev : { ...prev, sku: suggestion },
     );
-  }, [skuSeed, variants.length, isSkuDirty]);
-
-  useEffect(() => {
-    if (!barcodeSeed || isBarcodeDirty) {
-      return;
-    }
-    const suggestion = buildSuggestedBarcode(barcodeSeed, variants.length + 1);
-    if (!suggestion) {
-      return;
-    }
-    setFormValues((prev) =>
-      prev.barCode === suggestion ? prev : { ...prev, barCode: suggestion },
-    );
-  }, [barcodeSeed, variants.length, isBarcodeDirty]);
+  }, [skuSeed, isSkuDirty, formValues.volumeMl, selectedConcentration]);
 
   const handleClose = () => {
     if (saving || uploadingImage || deletingVariantId) {
@@ -514,10 +620,19 @@ export default function ManageProductVariantsDialog({
     const { name, value } = event.target;
     if (name === "sku") {
       setIsSkuDirty(true);
-    } else if (name === "barCode") {
-      setIsBarcodeDirty(true);
     }
-    setFormValues((prev) => ({ ...prev, [name]: value }));
+
+    // For basePrice, remove non-digits to store clean number
+    if (name === "basePrice") {
+      const cleanValue = value.replace(/\D/g, "");
+      setFormValues((prev) => ({ ...prev, [name]: cleanValue }));
+    } else if (name === "volumeMl") {
+      // For volumeMl, allow only digits and decimal point
+      const cleanValue = value.replace(/[^\d.]/g, "");
+      setFormValues((prev) => ({ ...prev, [name]: cleanValue }));
+    } else {
+      setFormValues((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleAttributeChange = async (
@@ -528,7 +643,7 @@ export default function ManageProductVariantsDialog({
       const updated = [...prev];
       updated[index] = {
         attribute,
-        value: null,
+        values: [],
         valueOptions: [],
         loadingValues: !!attribute,
       };
@@ -566,20 +681,23 @@ export default function ManageProductVariantsDialog({
 
   const handleValueChange = (
     index: number,
-    value: AttributeValueLookupItem | null,
+    values: AttributeValueLookupItem[],
   ) => {
     setAttributeSelections((prev) => {
       const updated = [...prev];
       const current = updated[index];
       if (current) {
-        updated[index] = { ...current, value };
+        updated[index] = { ...current, values };
       }
       return updated;
     });
   };
 
   const handleAddAttribute = () => {
-    setAttributeSelections((prev) => [...prev, createEmptyAttributeSelection()]);
+    setAttributeSelections((prev) => [
+      ...prev,
+      createEmptyAttributeSelection(),
+    ]);
   };
 
   const handleRemoveAttribute = (index: number) => {
@@ -598,12 +716,14 @@ export default function ManageProductVariantsDialog({
 
     try {
       setUploadingImage(true);
+      const isFirstImage =
+        existingVariantMedia.length === 0 && uploadedImages.length === 0;
       const payload = [
         {
           file,
           altText: file.name,
           displayOrder: uploadedImages.length,
-          isPrimary: uploadedImages.length === 0,
+          isPrimary: isFirstImage,
         },
       ];
 
@@ -617,7 +737,7 @@ export default function ManageProductVariantsDialog({
         temporaryMediaId: uploadedMedia[0].id,
         previewUrl,
         altText: file.name,
-        isPrimary: uploadedImages.length === 0,
+        isPrimary: isFirstImage,
       };
 
       setUploadedImages((prev) => [...prev, newImage]);
@@ -635,14 +755,27 @@ export default function ManageProductVariantsDialog({
 
   const handleRemoveImage = (temporaryMediaId: string) => {
     setUploadedImages((prev) => {
-      const removedImage = prev.find((img) => img.temporaryMediaId === temporaryMediaId);
+      const removedImage = prev.find(
+        (img) => img.temporaryMediaId === temporaryMediaId,
+      );
       if (removedImage) {
         URL.revokeObjectURL(removedImage.previewUrl);
       }
-      const remaining = prev.filter((img) => img.temporaryMediaId !== temporaryMediaId);
+      const remaining = prev.filter(
+        (img) => img.temporaryMediaId !== temporaryMediaId,
+      );
       if (remaining.length && !remaining.some((img) => img.isPrimary)) {
         const [first, ...rest] = remaining;
-        return [{ ...first, isPrimary: true }, ...rest];
+        if (!first) return remaining;
+        return [
+          {
+            temporaryMediaId: first.temporaryMediaId,
+            previewUrl: first.previewUrl,
+            altText: first.altText,
+            isPrimary: true,
+          },
+          ...rest,
+        ];
       }
       return remaining;
     });
@@ -650,7 +783,42 @@ export default function ManageProductVariantsDialog({
 
   const handleSetPrimaryImage = (temporaryMediaId: string) => {
     setUploadedImages((prev) =>
-      prev.map((img) => ({ ...img, isPrimary: img.temporaryMediaId === temporaryMediaId })),
+      prev.map(
+        (img): UploadedVariantImage => ({
+          temporaryMediaId: img.temporaryMediaId,
+          previewUrl: img.previewUrl,
+          altText: img.altText,
+          isPrimary: img.temporaryMediaId === temporaryMediaId,
+        }),
+      ),
+    );
+  };
+
+  const handleSetPrimaryExistingImage = async (mediaId: string) => {
+    try {
+      setSaving(true);
+      await productService.setVariantImagePrimary(mediaId);
+      setExistingVariantMedia((prev) =>
+        prev.map((m) => ({ ...m, isPrimary: m.id === mediaId })),
+      );
+      showToast("Đã đặt ảnh làm chính", "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể đặt ảnh chính";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleImageAltTextChange = (
+    temporaryMediaId: string,
+    altText: string,
+  ) => {
+    setUploadedImages((prev) =>
+      prev.map((img) =>
+        img.temporaryMediaId === temporaryMediaId ? { ...img, altText } : img,
+      ),
     );
   };
 
@@ -667,8 +835,8 @@ export default function ManageProductVariantsDialog({
     if (!formValues.volumeMl || Number(formValues.volumeMl) <= 0) {
       return "Dung tích phải lớn hơn 0";
     }
-    if (!formValues.concentrationId) {
-      return "Vui lòng nhập ID nồng độ";
+    if (!selectedConcentration?.id) {
+      return "Vui lòng chọn nồng độ";
     }
     if (!formValues.basePrice || Number(formValues.basePrice) <= 0) {
       return "Giá cơ bản phải lớn hơn 0";
@@ -678,11 +846,13 @@ export default function ManageProductVariantsDialog({
 
   const buildAttributePayload = () =>
     attributeSelections
-      .filter((sel) => sel.attribute?.id && sel.value?.id)
-      .map((sel) => ({
-        attributeId: sel.attribute!.id!,
-        valueId: sel.value!.id!,
-      }));
+      .filter((sel) => sel.attribute?.id && sel.values.length > 0)
+      .flatMap((sel) =>
+        sel.values.map((value) => ({
+          attributeId: sel.attribute!.id!,
+          valueId: value.id!,
+        })),
+      );
 
   const buildOrderedTemporaryMediaIds = () =>
     [...uploadedImages]
@@ -700,7 +870,7 @@ export default function ManageProductVariantsDialog({
       sku: formValues.sku.trim(),
       barcode: formValues.barCode.trim(),
       volumeMl: Number(formValues.volumeMl),
-      concentrationId: Number(formValues.concentrationId),
+      concentrationId: selectedConcentration!.id,
       type: formValues.type as VariantType,
       basePrice: Number(formValues.basePrice),
       status: formValues.status as VariantStatus,
@@ -738,7 +908,7 @@ export default function ManageProductVariantsDialog({
       sku: formValues.sku.trim(),
       ...(trimmedBarcode ? { barcode: trimmedBarcode } : {}),
       volumeMl: Number(formValues.volumeMl),
-      concentrationId: Number(formValues.concentrationId),
+      concentrationId: selectedConcentration!.id,
       type: formValues.type as VariantType,
       basePrice: Number(formValues.basePrice),
       status: formValues.status as VariantStatus,
@@ -804,10 +974,7 @@ export default function ManageProductVariantsDialog({
     return (
       <Stack spacing={1.5}>
         {variants.map((variant) => {
-          const previewMedia = selectVariantPreviewMedia(
-            variant,
-            product?.primaryImage,
-          );
+          const previewMedia = selectVariantPreviewMedia(variant, null);
           const previewUrl = previewMedia?.url;
           const detailText =
             [
@@ -893,7 +1060,10 @@ export default function ManageProductVariantsDialog({
                 spacing={1}
                 flexWrap="wrap"
                 justifyContent={{ xs: "flex-start", sm: "flex-end" }}
-                sx={{ flex: { xs: "1 1 100%", sm: "0 0 auto" }, minWidth: { sm: 220 } }}
+                sx={{
+                  flex: { xs: "1 1 100%", sm: "0 0 auto" },
+                  minWidth: { sm: 220 },
+                }}
               >
                 <Chip
                   label={variant.type || "Không xác định"}
@@ -909,7 +1079,8 @@ export default function ManageProductVariantsDialog({
                 />
                 <Chip
                   label={
-                    VARIANT_STATUS.find((item) => item.value === variant.status)?.label ||
+                    VARIANT_STATUS.find((item) => item.value === variant.status)
+                      ?.label ||
                     variant.status ||
                     "Unknown"
                   }
@@ -935,8 +1106,14 @@ export default function ManageProductVariantsDialog({
                     onClick={() => {
                       void handleEditVariant(variant);
                     }}
-                    disabled={saving || uploadingImage || Boolean(deletingVariantId)}
-                    sx={{ minWidth: 160, fontWeight: 600, textTransform: "none" }}
+                    disabled={
+                      saving || uploadingImage || Boolean(deletingVariantId)
+                    }
+                    sx={{
+                      minWidth: 160,
+                      fontWeight: 600,
+                      textTransform: "none",
+                    }}
                   >
                     {isActive ? "Đang chỉnh sửa" : "Chỉnh sửa variant"}
                   </Button>
@@ -946,8 +1123,14 @@ export default function ManageProductVariantsDialog({
                     color="error"
                     startIcon={<DeleteIcon fontSize="small" />}
                     onClick={() => handleRequestDeleteVariant(variant)}
-                    disabled={saving || uploadingImage || Boolean(deletingVariantId)}
-                    sx={{ minWidth: 130, fontWeight: 600, textTransform: "none" }}
+                    disabled={
+                      saving || uploadingImage || Boolean(deletingVariantId)
+                    }
+                    sx={{
+                      minWidth: 130,
+                      fontWeight: 600,
+                      textTransform: "none",
+                    }}
                   >
                     Xoá variant
                   </Button>
@@ -967,7 +1150,12 @@ export default function ManageProductVariantsDialog({
           Quản lý variant
         </Typography>
         {product?.name && (
-          <Typography variant="subtitle2" color="text.secondary" ml={1} component="span">
+          <Typography
+            variant="subtitle2"
+            color="text.secondary"
+            ml={1}
+            component="span"
+          >
             · {product.name}
           </Typography>
         )}
@@ -994,7 +1182,12 @@ export default function ManageProductVariantsDialog({
         ) : (
           <Stack spacing={3}>
             <Paper variant="outlined" sx={{ p: 3 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={2}
+              >
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600}>
                     Danh sách variant
@@ -1003,7 +1196,8 @@ export default function ManageProductVariantsDialog({
                     Tổng cộng {variants.length} biến thể
                   </Typography>
                   <Typography variant="caption" color="primary.main">
-                    Chọn biến thể và bấm "Chỉnh sửa variant" để bắt đầu chỉnh sửa
+                    Chọn biến thể và bấm "Chỉnh sửa biến thể" để bắt đầu chỉnh
+                    sửa
                   </Typography>
                 </Box>
                 <Button
@@ -1049,266 +1243,622 @@ export default function ManageProductVariantsDialog({
                 )}
               </Box>
 
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="SKU"
-                    name="sku"
-                    value={formValues.sku}
-                    onChange={handleInputChange}
-                    fullWidth
-                    required
-                    disabled={saving}
-                    helperText={
-                      skuSeed
-                        ? `Tự động gợi ý từ mã: ${skuSeed}`
-                        : "SKU sẽ được gợi ý theo sản phẩm chính"
-                    }
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Barcode"
-                    name="barCode"
-                    value={formValues.barCode}
-                    onChange={handleInputChange}
-                    fullWidth
-                    required
-                    disabled={saving}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField
-                    label="Dung tích (ml)"
-                    name="volumeMl"
-                    type="number"
-                    value={formValues.volumeMl}
-                    onChange={handleInputChange}
-                    fullWidth
-                    required
-                    disabled={saving}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={3}>
-                  <TextField
-                    label="ID nồng độ"
-                    name="concentrationId"
-                    type="number"
-                    helperText="Ví dụ: 1 = Eau de Parfum"
-                    value={formValues.concentrationId}
-                    onChange={handleInputChange}
-                    fullWidth
-                    required
-                    disabled={saving}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Giá cơ bản (VND)"
-                    name="basePrice"
-                    type="number"
-                    value={formValues.basePrice}
-                    onChange={handleInputChange}
-                    fullWidth
-                    required
-                    disabled={saving}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Loại variant"
-                    name="type"
-                    select
-                    value={formValues.type}
-                    onChange={handleInputChange}
-                    fullWidth
-                    disabled={saving}
+              {/* Two column layout: Images on left, Form inputs on right */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "400px 1fr",
+                  },
+                  gap: 3,
+                }}
+              >
+                {/* Left column: Image upload and carousel */}
+                <Box>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Ảnh variant
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Thêm ảnh cho variant này
+                    </Typography>
+                  </Box>
+
+                  <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={2}
+                    mb={2}
                   >
-                    {VARIANT_TYPES.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <TextField
-                    label="Trạng thái"
-                    name="status"
-                    select
-                    value={formValues.status}
-                    onChange={handleInputChange}
-                    fullWidth
-                    disabled={saving}
-                  >
-                    {VARIANT_STATUS.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Grid>
-              </Grid>
+                    <Button
+                      variant="outlined"
+                      component="label"
+                      startIcon={
+                        uploadingImage ? (
+                          <CircularProgress size={18} />
+                        ) : (
+                          <AddIcon />
+                        )
+                      }
+                      disabled={saving || uploadingImage}
+                    >
+                      {uploadingImage ? "Đang tải ảnh..." : "Tải ảnh"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        onChange={handleImageUpload}
+                        disabled={saving || uploadingImage}
+                      />
+                    </Button>
+                    {!!uploadedImages.length && (
+                      <Chip
+                        icon={<StarIcon fontSize="small" />}
+                        label={`${uploadedImages.length} ảnh tạm`}
+                        color="primary"
+                        variant="outlined"
+                      />
+                    )}
+                  </Stack>
 
-              <Divider sx={{ my: 3 }} />
+                  {/* Unified Image Carousel: existing + newly uploaded */}
+                  {(() => {
+                    type CarouselItem =
+                      | { kind: "existing"; media: MediaResponse }
+                      | { kind: "uploaded"; image: UploadedVariantImage };
 
-              <Box mb={2}>
-                <Typography variant="subtitle2" fontWeight={600}>
-                  Ảnh variant
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Ảnh đầu tiên sẽ được đặt làm hình đại diện
-                </Typography>
-              </Box>
+                    const allItems: CarouselItem[] = [
+                      ...existingVariantMedia.map(
+                        (m): CarouselItem => ({ kind: "existing", media: m }),
+                      ),
+                      ...uploadedImages.map(
+                        (i): CarouselItem => ({ kind: "uploaded", image: i }),
+                      ),
+                    ];
 
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <Button
-                  variant="outlined"
-                  component="label"
-                  startIcon={uploadingImage ? <CircularProgress size={18} /> : <ImageIcon />}
-                  disabled={saving || uploadingImage}
-                >
-                  {uploadingImage ? "Đang tải ảnh..." : "Tải ảnh"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    hidden
-                    onChange={handleImageUpload}
-                    disabled={saving || uploadingImage}
-                  />
-                </Button>
-                {!!uploadedImages.length && (
-                  <Chip
-                    icon={<StarIcon fontSize="small" />}
-                    label={`${uploadedImages.length} ảnh tạm`}
-                    color="primary"
-                    variant="outlined"
-                  />
-                )}
-              </Stack>
+                    const safeIndex = Math.min(
+                      currentImageIndex,
+                      Math.max(allItems.length - 1, 0),
+                    );
+                    const current = allItems[safeIndex];
 
-              {isEditMode && existingVariantMedia.length > 0 && (
-                <Grid container spacing={2} mt={1}>
-                  {existingVariantMedia.map((media) => {
-                    const mediaId = media.id;
-                    if (!mediaId) {
-                      return null;
-                    }
-                    const marked = mediaIdsToDelete.includes(mediaId);
-                    return (
-                      <Grid item xs={12} sm={6} md={4} key={mediaId}>
-                        <Paper
-                          variant="outlined"
+                    const goNext = () =>
+                      setCurrentImageIndex((p) =>
+                        p < allItems.length - 1 ? p + 1 : 0,
+                      );
+                    const goPrev = () =>
+                      setCurrentImageIndex((p) =>
+                        p > 0 ? p - 1 : allItems.length - 1,
+                      );
+
+                    const onTouchStart = (e: React.TouchEvent) => {
+                      setTouchEnd(null);
+                      const t = e.targetTouches[0];
+                      if (t) setTouchStart(t.clientX);
+                    };
+                    const onTouchMove = (e: React.TouchEvent) => {
+                      const t = e.targetTouches[0];
+                      if (t) setTouchEnd(t.clientX);
+                    };
+                    const onTouchEnd = () => {
+                      if (!touchStart || !touchEnd) return;
+                      const d = touchStart - touchEnd;
+                      if (d > 50) goNext();
+                      if (d < -50) goPrev();
+                    };
+
+                    if (allItems.length === 0) {
+                      return (
+                        <Box
                           sx={{
-                            p: 2,
-                            borderColor: marked ? "error.main" : "grey.200",
+                            border: 1,
+                            borderStyle: "dashed",
+                            borderColor: "divider",
+                            borderRadius: 1,
+                            p: 3,
+                            textAlign: "center",
+                            minHeight: 200,
                             display: "flex",
-                            flexDirection: "column",
-                            gap: 1,
+                            alignItems: "center",
+                            justifyContent: "center",
                           }}
                         >
                           <Box>
-                            {media.url ? (
-                              <Box
-                                component="img"
-                                src={media.url}
-                                alt={media.altText || mediaId}
-                                sx={{
-                                  width: "100%",
-                                  height: 140,
-                                  objectFit: "cover",
-                                  borderRadius: 1,
-                                }}
+                            <ImageIcon
+                              style={{
+                                fontSize: 40,
+                                color: "#9e9e9e",
+                                marginBottom: 8,
+                              }}
+                            />
+                            <Typography variant="body2" color="text.secondary">
+                              Chưa có ảnh nào
+                            </Typography>
+                          </Box>
+                        </Box>
+                      );
+                    }
+
+                    const currentUrl =
+                      current?.kind === "existing"
+                        ? current.media.url
+                        : current?.kind === "uploaded"
+                          ? current.image.previewUrl
+                          : undefined;
+
+                    const currentAlt =
+                      current?.kind === "existing"
+                        ? current.media.altText || ""
+                        : current?.kind === "uploaded"
+                          ? current.image.altText
+                          : "";
+
+                    const isPrimaryFlag =
+                      current?.kind === "existing"
+                        ? !!current.media.isPrimary
+                        : current?.kind === "uploaded"
+                          ? !!current.image.isPrimary
+                          : false;
+
+                    const isMarkedDelete =
+                      current?.kind === "existing" && current.media.id
+                        ? mediaIdsToDelete.includes(current.media.id)
+                        : false;
+
+                    return (
+                      <Box>
+                        {/* Main carousel image */}
+                        <Card
+                          sx={{
+                            position: "relative",
+                            mb: 1.5,
+                            cursor: allItems.length > 1 ? "grab" : "default",
+                            userSelect: "none",
+                            border: isMarkedDelete ? 2 : 0,
+                            borderColor: isMarkedDelete
+                              ? "error.main"
+                              : "transparent",
+                            "&:active": {
+                              cursor:
+                                allItems.length > 1 ? "grabbing" : "default",
+                            },
+                          }}
+                          onTouchStart={onTouchStart}
+                          onTouchMove={onTouchMove}
+                          onTouchEnd={onTouchEnd}
+                        >
+                          {currentUrl ? (
+                            <CardMedia
+                              component="img"
+                              height="220"
+                              image={currentUrl}
+                              alt={currentAlt}
+                              sx={{
+                                objectFit: "contain",
+                                bgcolor: "grey.50",
+                                pointerEvents: "none",
+                                opacity: isMarkedDelete ? 0.4 : 1,
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                height: 220,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                bgcolor: "grey.100",
+                              }}
+                            >
+                              <ImageIcon
+                                style={{ fontSize: 48, color: "#bdbdbd" }}
                               />
-                            ) : (
-                              <Box
+                            </Box>
+                          )}
+
+                          {/* Prev/Next arrows */}
+                          {allItems.length > 1 && (
+                            <>
+                              <IconButton
+                                onClick={goPrev}
+                                disabled={saving}
+                                size="small"
                                 sx={{
-                                  width: "100%",
-                                  height: 140,
-                                  borderRadius: 1,
-                                  bgcolor: "grey.100",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  color: "text.secondary",
+                                  position: "absolute",
+                                  left: 6,
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  bgcolor: "rgba(255,255,255,0.9)",
+                                  "&:hover": { bgcolor: "#fff" },
                                 }}
                               >
-                                Không có ảnh
-                              </Box>
-                            )}
-                          </Box>
-                          <Typography variant="body2" noWrap>
-                            {media.altText || mediaId}
-                          </Typography>
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Button
+                                <ChevronLeft />
+                              </IconButton>
+                              <IconButton
+                                onClick={goNext}
+                                disabled={saving}
+                                size="small"
+                                sx={{
+                                  position: "absolute",
+                                  right: 6,
+                                  top: "50%",
+                                  transform: "translateY(-50%)",
+                                  bgcolor: "rgba(255,255,255,0.9)",
+                                  "&:hover": { bgcolor: "#fff" },
+                                }}
+                              >
+                                <ChevronRight />
+                              </IconButton>
+                            </>
+                          )}
+
+                          {/* Counter */}
+                          <Chip
+                            label={`${safeIndex + 1} / ${allItems.length}`}
+                            size="small"
+                            sx={{
+                              position: "absolute",
+                              top: 8,
+                              right: 8,
+                              bgcolor: "rgba(0,0,0,0.6)",
+                              color: "white",
+                            }}
+                          />
+
+                          {/* Primary badge */}
+                          {isPrimaryFlag && (
+                            <Chip
+                              label="Hình chính"
+                              color="primary"
                               size="small"
-                              variant={marked ? "contained" : "outlined"}
-                              color={marked ? "error" : "inherit"}
-                              onClick={() => handleToggleExistingMedia(mediaId)}
-                            >
-                              {marked ? "Bỏ xoá" : "Xoá ảnh"}
-                            </Button>
-                            {media.isPrimary && (
-                              <Chip label="Primary" size="small" color="primary" variant="outlined" />
-                            )}
-                          </Stack>
-                          {marked && (
-                            <Typography variant="caption" color="error.main">
-                              Ảnh sẽ bị xoá sau khi lưu
-                            </Typography>
+                              sx={{ position: "absolute", top: 8, left: 8 }}
+                            />
+                          )}
+
+                          {/* Deleted overlay label */}
+                          {isMarkedDelete && (
+                            <Chip
+                              label="Sẽ bị xoá"
+                              color="error"
+                              size="small"
+                              sx={{
+                                position: "absolute",
+                                bottom: 8,
+                                left: "50%",
+                                transform: "translateX(-50%)",
+                              }}
+                            />
+                          )}
+                        </Card>
+
+                        {/* Controls for current image */}
+                        <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
+                          {current?.kind === "existing" && current.media.id && (
+                            <Box display="flex" gap={1}>
+                              {!current.media.isPrimary && !isMarkedDelete && (
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  startIcon={
+                                    <StarIcon style={{ fontSize: 14 }} />
+                                  }
+                                  onClick={() =>
+                                    handleSetPrimaryExistingImage(
+                                      current.media.id!,
+                                    )
+                                  }
+                                  disabled={saving}
+                                  fullWidth
+                                >
+                                  Đặt làm chính
+                                </Button>
+                              )}
+                              <Button
+                                size="small"
+                                variant={
+                                  isMarkedDelete ? "contained" : "outlined"
+                                }
+                                color={isMarkedDelete ? "error" : "inherit"}
+                                fullWidth
+                                onClick={() =>
+                                  handleToggleExistingMedia(current.media.id)
+                                }
+                                disabled={saving}
+                              >
+                                {isMarkedDelete ? "Bỏ xoá" : "Xoá ảnh này"}
+                              </Button>
+                            </Box>
+                          )}
+
+                          {current?.kind === "uploaded" && (
+                            <Stack spacing={1}>
+                              <Box display="flex" gap={1}>
+                                {!current.image.isPrimary && (
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={
+                                      <StarIcon style={{ fontSize: 14 }} />
+                                    }
+                                    onClick={() =>
+                                      handleSetPrimaryImage(
+                                        current.image.temporaryMediaId,
+                                      )
+                                    }
+                                    disabled={saving}
+                                    fullWidth
+                                  >
+                                    Đặt làm chính
+                                  </Button>
+                                )}
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  startIcon={
+                                    <DeleteIcon style={{ fontSize: 14 }} />
+                                  }
+                                  onClick={() =>
+                                    handleRemoveImage(
+                                      current.image.temporaryMediaId,
+                                    )
+                                  }
+                                  disabled={saving}
+                                  fullWidth
+                                >
+                                  Xóa
+                                </Button>
+                              </Box>
+                              <TextField
+                                label="Alt text"
+                                fullWidth
+                                size="small"
+                                value={current.image.altText || ""}
+                                onChange={(e) =>
+                                  handleImageAltTextChange(
+                                    current.image.temporaryMediaId,
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={saving}
+                                placeholder="Mô tả hình ảnh"
+                              />
+                            </Stack>
                           )}
                         </Paper>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              )}
 
-              {uploadedImages.length > 0 && (
-                <Grid container spacing={2} mt={1}>
-                  {uploadedImages.map((img) => (
-                    <Grid item xs={12} sm={6} md={4} key={img.temporaryMediaId}>
-                      <Paper
-                        variant="outlined"
-                        sx={{ p: 2, display: "flex", flexDirection: "column", gap: 1 }}
-                      >
-                        <Box
-                          component="img"
-                          src={img.previewUrl}
-                          alt={img.altText}
-                          sx={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 1 }}
-                        />
-                        <Typography variant="body2" noWrap>
-                          {img.altText}
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
-                          {!img.isPrimary && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => handleSetPrimaryImage(img.temporaryMediaId)}
-                            >
-                              Đặt làm chính
-                            </Button>
-                          )}
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleRemoveImage(img.temporaryMediaId)}
+                        {/* Thumbnail strip */}
+                        {allItems.length > 1 && (
+                          <Box
+                            sx={{
+                              display: "flex",
+                              gap: 1,
+                              overflowX: "auto",
+                              pb: 0.5,
+                            }}
                           >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Stack>
-                      </Paper>
-                    </Grid>
-                  ))}
-                </Grid>
-              )}
+                            {allItems.map((item, idx) => {
+                              const thumbUrl =
+                                item.kind === "existing"
+                                  ? item.media.url
+                                  : item.image.previewUrl;
+                              const isSelected = idx === safeIndex;
+                              const isDeleted =
+                                item.kind === "existing" && item.media.id
+                                  ? mediaIdsToDelete.includes(item.media.id)
+                                  : false;
+                              return (
+                                <Box
+                                  key={
+                                    item.kind === "existing"
+                                      ? item.media.id
+                                      : item.image.temporaryMediaId
+                                  }
+                                  onClick={() => setCurrentImageIndex(idx)}
+                                  sx={{
+                                    width: 52,
+                                    height: 52,
+                                    flexShrink: 0,
+                                    cursor: "pointer",
+                                    border: 2,
+                                    borderColor: isSelected
+                                      ? "primary.main"
+                                      : "divider",
+                                    borderRadius: 1,
+                                    overflow: "hidden",
+                                    opacity: isDeleted
+                                      ? 0.3
+                                      : isSelected
+                                        ? 1
+                                        : 0.65,
+                                    transition: "all 0.15s",
+                                    bgcolor: "grey.100",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    "&:hover": { opacity: 1 },
+                                  }}
+                                >
+                                  {thumbUrl ? (
+                                    <Box
+                                      component="img"
+                                      src={thumbUrl}
+                                      sx={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                        pointerEvents: "none",
+                                      }}
+                                    />
+                                  ) : (
+                                    <ImageIcon
+                                      style={{ fontSize: 20, color: "#bdbdbd" }}
+                                    />
+                                  )}
+                                </Box>
+                              );
+                            })}
+                          </Box>
+                        )}
+                      </Box>
+                    );
+                  })()}
+                </Box>
+
+                {/* Right column: Form inputs */}
+                <Box>
+                  <Box mb={2}>
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Thông tin variant
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Điền thông tin chi tiết
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: 2,
+                    }}
+                  >
+                    <Box>
+                      <TextField
+                        label="SKU"
+                        name="sku"
+                        value={formValues.sku}
+                        onChange={handleInputChange}
+                        fullWidth
+                        required
+                        disabled={saving}
+                        helperText={
+                          skuSeed
+                            ? `Tự động gợi ý: ${skuSeed}-[dung tích]-[nồng độ]`
+                            : "SKU sẽ được gợi ý theo sản phẩm chính"
+                        }
+                      />
+                    </Box>
+                    <Box>
+                      <TextField
+                        label="Barcode"
+                        name="barCode"
+                        value={formValues.barCode}
+                        onChange={handleInputChange}
+                        fullWidth
+                        required
+                        disabled={saving}
+                      />
+                    </Box>
+                    <Box>
+                      <TextField
+                        label="Dung tích (ml)"
+                        name="volumeMl"
+                        type="number"
+                        value={formValues.volumeMl}
+                        onChange={handleInputChange}
+                        fullWidth
+                        required
+                        disabled={saving}
+                        inputProps={{ min: 0, step: "any" }}
+                        helperText="Phải lớn hơn 0"
+                      />
+                    </Box>
+                    <Box>
+                      <Autocomplete
+                        options={concentrations}
+                        getOptionLabel={(option) => option.name || ""}
+                        value={selectedConcentration}
+                        onChange={(_, newValue) =>
+                          setSelectedConcentration(newValue)
+                        }
+                        disabled={saving || loadingConcentrations}
+                        loading={loadingConcentrations}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Nồng độ"
+                            required
+                            helperText="Ví dụ: Eau de Parfum"
+                            InputProps={{
+                              ...params.InputProps,
+                              endAdornment: (
+                                <>
+                                  {loadingConcentrations ? (
+                                    <CircularProgress size={20} />
+                                  ) : null}
+                                  {params.InputProps.endAdornment}
+                                </>
+                              ),
+                            }}
+                          />
+                        )}
+                      />
+                    </Box>
+                    <Box>
+                      <TextField
+                        label="Giá cơ bản (VND)"
+                        name="basePrice"
+                        value={
+                          formValues.basePrice
+                            ? parseInt(formValues.basePrice).toLocaleString(
+                                "vi-VN",
+                              )
+                            : ""
+                        }
+                        onChange={handleInputChange}
+                        fullWidth
+                        required
+                        disabled={saving}
+                        helperText="Phải lớn hơn 0"
+                      />
+                    </Box>
+                    <Box>
+                      <TextField
+                        label="Loại variant"
+                        name="type"
+                        select
+                        value={formValues.type}
+                        onChange={handleInputChange}
+                        fullWidth
+                        disabled={saving}
+                      >
+                        {VARIANT_TYPES.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Box>
+                    <Box sx={{ gridColumn: "span 2" }}>
+                      <TextField
+                        label="Trạng thái"
+                        name="status"
+                        select
+                        value={formValues.status}
+                        onChange={handleInputChange}
+                        fullWidth
+                        disabled={saving}
+                      >
+                        {VARIANT_STATUS.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            {option.label}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
 
               <Divider sx={{ my: 3 }} />
 
-              <Box mb={1} display="flex" justifyContent="space-between" alignItems="center">
+              <Box
+                mb={1}
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
                 <Typography variant="subtitle2" fontWeight={600}>
                   Thuộc tính (tuỳ chọn)
                 </Typography>
@@ -1325,13 +1875,25 @@ export default function ManageProductVariantsDialog({
               <Stack spacing={2}>
                 {attributeSelections.map((selection, index) => (
                   <Paper key={`attr-${index}`} variant="outlined" sx={{ p: 2 }}>
-                    <Grid container spacing={2} alignItems="center">
-                      <Grid item xs={12} sm={5}>
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: {
+                          xs: "1fr",
+                          sm: "repeat(12, 1fr)",
+                        },
+                        gap: 2,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Box sx={{ gridColumn: { xs: "span 1", sm: "span 5" } }}>
                         <Autocomplete
                           options={availableAttributes}
                           getOptionLabel={(option) => option.name || ""}
                           value={selection.attribute}
-                          onChange={(_, newValue) => handleAttributeChange(index, newValue)}
+                          onChange={(_, newValue) =>
+                            handleAttributeChange(index, newValue)
+                          }
                           loading={loadingAttributes}
                           isOptionEqualToValue={(option, value) =>
                             option?.id === value?.id
@@ -1344,7 +1906,9 @@ export default function ManageProductVariantsDialog({
                                 ...params.InputProps,
                                 endAdornment: (
                                   <>
-                                    {selection.loadingValues && <CircularProgress size={18} />}
+                                    {selection.loadingValues && (
+                                      <CircularProgress size={18} />
+                                    )}
                                     {params.InputProps.endAdornment}
                                   </>
                                 ),
@@ -1352,13 +1916,16 @@ export default function ManageProductVariantsDialog({
                             />
                           )}
                         />
-                      </Grid>
-                      <Grid item xs={12} sm={5}>
+                      </Box>
+                      <Box sx={{ gridColumn: { xs: "span 1", sm: "span 5" } }}>
                         <Autocomplete
+                          multiple
                           options={selection.valueOptions}
                           getOptionLabel={(option) => option.value || ""}
-                          value={selection.value}
-                          onChange={(_, newValue) => handleValueChange(index, newValue)}
+                          value={selection.values}
+                          onChange={(_, newValue) =>
+                            handleValueChange(index, newValue)
+                          }
                           loading={selection.loadingValues}
                           isOptionEqualToValue={(option, value) =>
                             option?.id === value?.id
@@ -1367,11 +1934,14 @@ export default function ManageProductVariantsDialog({
                             <TextField
                               {...params}
                               label="Giá trị"
+                              placeholder="Chọn một hoặc nhiều giá trị"
                               InputProps={{
                                 ...params.InputProps,
                                 endAdornment: (
                                   <>
-                                    {selection.loadingValues && <CircularProgress size={18} />}
+                                    {selection.loadingValues && (
+                                      <CircularProgress size={18} />
+                                    )}
                                     {params.InputProps.endAdornment}
                                   </>
                                 ),
@@ -1379,24 +1949,21 @@ export default function ManageProductVariantsDialog({
                             />
                           )}
                         />
-                      </Grid>
-                      <Grid item xs={12} sm={2}>
+                      </Box>
+                      <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
                         <IconButton
                           color="error"
                           onClick={() => handleRemoveAttribute(index)}
                         >
                           <DeleteIcon />
                         </IconButton>
-                      </Grid>
-                    </Grid>
+                      </Box>
+                    </Box>
                   </Paper>
                 ))}
               </Stack>
 
               <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
-                <Button onClick={handleClose} disabled={saving}>
-                  Huỷ
-                </Button>
                 <Button
                   variant="contained"
                   onClick={handleSubmit}
@@ -1436,7 +2003,10 @@ export default function ManageProductVariantsDialog({
       />
 
       <DialogActions>
-        <Button onClick={handleClose} disabled={saving || uploadingImage || Boolean(deletingVariantId)}>
+        <Button
+          onClick={handleClose}
+          disabled={saving || uploadingImage || Boolean(deletingVariantId)}
+        >
           Đóng
         </Button>
       </DialogActions>

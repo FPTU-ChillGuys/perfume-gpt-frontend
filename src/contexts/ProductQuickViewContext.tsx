@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { productService } from "@/services/productService";
 import type { ProductFastLook, ProductInformation } from "@/types/product";
 import ProductQuickViewDialog from "@/components/product/ProductQuickViewDialog";
+import { ProductQuickViewContext } from "@/contexts/productQuickViewContextDefinition";
 
 const toError = (error: unknown, fallbackMessage: string) => {
   if (error instanceof Error) {
@@ -14,18 +15,10 @@ const toError = (error: unknown, fallbackMessage: string) => {
   return new Error(fallbackMessage);
 };
 
-interface ProductQuickViewContextValue {
-  openQuickView: (productId: string) => void;
-}
-
 interface ProductQuickViewState {
   open: boolean;
   productId: string | null;
 }
-
-const ProductQuickViewContext = createContext<ProductQuickViewContextValue | null>(
-  null,
-);
 
 export const ProductQuickViewProvider = ({
   children,
@@ -36,7 +29,9 @@ export const ProductQuickViewProvider = ({
     open: false,
     productId: null,
   });
-  const [information, setInformation] = useState<ProductInformation | null>(null);
+  const [information, setInformation] = useState<ProductInformation | null>(
+    null,
+  );
   const [fastLook, setFastLook] = useState<ProductFastLook | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,14 +124,4 @@ export const ProductQuickViewProvider = ({
       />
     </ProductQuickViewContext.Provider>
   );
-};
-
-export const useProductQuickView = () => {
-  const context = useContext(ProductQuickViewContext);
-  if (!context) {
-    throw new Error(
-      "useProductQuickView must be used within a ProductQuickViewProvider",
-    );
-  }
-  return context;
 };

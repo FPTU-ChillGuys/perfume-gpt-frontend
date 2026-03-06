@@ -310,12 +310,9 @@ class ProductService {
     payload: CreateVariantRequest & { barcode?: string },
   ): Promise<string> {
     try {
-      const response = await apiInstance.POST(
-        this.PRODUCT_VARIANTS_ENDPOINT,
-        {
-          body: payload,
-        },
-      );
+      const response = await apiInstance.POST(this.PRODUCT_VARIANTS_ENDPOINT, {
+        body: payload,
+      });
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to create variant");
@@ -384,6 +381,30 @@ class ProductService {
         error.response?.data?.message ||
           error.message ||
           "Failed to delete product variant",
+      );
+    }
+  }
+
+  async setVariantImagePrimary(mediaId: string): Promise<void> {
+    try {
+      const response = await apiInstance.PUT(
+        "/api/productvariants/images/{mediaId}/set-primary",
+        {
+          params: { path: { mediaId } },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to set primary image",
+        );
+      }
+    } catch (error: any) {
+      console.error("Error setting primary image:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to set primary image",
       );
     }
   }
