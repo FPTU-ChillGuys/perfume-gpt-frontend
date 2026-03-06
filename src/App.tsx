@@ -35,6 +35,7 @@ import QuizManagementPage from "./pages/QuizManagementPage";
 import QuizPage from "./pages/QuizPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import { UserLogsManagementPage } from "./pages/UserLogsManagementPage";
+import { AdminConversationsPage } from "./pages/AdminConversationsPage";
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -157,6 +158,14 @@ function App() {
                       element={
                         <RoleBasedRoute allowedRoles={["admin"]}>
                           <UserLogsManagementPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/conversations"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <AdminConversationsPage />
                         </RoleBasedRoute>
                       }
                     />

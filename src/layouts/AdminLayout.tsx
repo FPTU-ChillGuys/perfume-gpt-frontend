@@ -36,6 +36,7 @@ import {
   SmartToy as BotIcon,
   Quiz as QuizIcon,
   Feed as FeedIcon,
+  Chat as ChatIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -147,6 +148,12 @@ const menuItems: MenuItem[] = [
     text: "Quản lý Log",
     icon: <FeedIcon />,
     path: "/admin/logs",
+    roles: ["admin"],
+  },
+  {
+    text: "Quản lý Hội thoại",
+    icon: <ChatIcon />,
+    path: "/admin/conversations",
     roles: ["admin"],
   },
 ];
