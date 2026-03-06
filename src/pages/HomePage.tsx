@@ -5,6 +5,7 @@ import { CollectionBannerSection } from "../components/home/CollectionBannerSect
 import { FeatureSection } from "../components/home/FeatureSection";
 import { ProductSection } from "../components/home/ProductSection";
 import { productService } from "../services/productService";
+import { trendService } from "../services/ai/trendService";
 import type { ProductListItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
 import { buildVariantMap, mapProductToCard } from "../utils/productCardMapper";
@@ -12,9 +13,14 @@ import { buildVariantMap, mapProductToCard } from "../utils/productCardMapper";
 export const HomePage = () => {
   const [newArrivals, setNewArrivals] = useState<ProductCardProps[]>([]);
   const [bestsellers, setBestsellers] = useState<ProductCardProps[]>([]);
+  const [trendingProducts, setTrendingProducts] = useState<ProductCardProps[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
+  const [isTrendingLoading, setIsTrendingLoading] = useState(true);
+
   const [error, setError] = useState<string | null>(null);
 
+  // General products fetch
   useEffect(() => {
     let isMounted = true;
 
@@ -82,10 +88,59 @@ export const HomePage = () => {
     };
   }, []);
 
+  // Trending fetch - separated so it doesn't block the rest
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchTrending = async () => {
+      setIsTrendingLoading(true);
+      try {
+        const products = await trendService.getTrendingProducts("weekly");
+        if (!isMounted) return;
+
+        const normalizedTrending = products
+          .filter((product): product is ProductListItem & { id: string } =>
+            Boolean(product.id),
+          )
+          .map((product: any) => {
+            // Trend API embeds `variants` directly in the product response.
+            const firstVariant = product.variants?.[0];
+            return {
+              ...mapProductToCard(product, firstVariant),
+              isTrending: true, // Optional tag if component supports it, or similar to isNew
+            };
+          });
+
+        setTrendingProducts(normalizedTrending);
+
+      } catch (e) {
+        console.warn("Failed to fetch trending products", e);
+      } finally {
+        if (isMounted) setIsTrendingLoading(false);
+      }
+    };
+
+    void fetchTrending();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <MainLayout>
       <HeroSection />
       <CollectionBannerSection />
+
+      {/* Completely hide the section while loading or if it's empty. */}
+      {(!isTrendingLoading && trendingProducts.length > 0) && (
+        <ProductSection
+          title="Trending (Weekly)"
+          products={trendingProducts}
+          isLoading={false}
+        />
+      )}
+
       <ProductSection
         title="New Arrivals"
         products={newArrivals}
@@ -107,3 +162,4 @@ export const HomePage = () => {
     </MainLayout>
   );
 };
+
