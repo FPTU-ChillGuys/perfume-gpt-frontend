@@ -14,7 +14,8 @@ const shippingChoices = [
     id: "home",
     title: "Home Delivery",
     timeline: "1-3 business days",
-    description: "Shipping available nationwide with temperature-controlled logistics.",
+    description:
+      "Shipping available nationwide with temperature-controlled logistics.",
     detail: "Complimentary for orders from 3.000.000đ",
   },
   {
@@ -34,7 +35,7 @@ export const CheckoutShippingPage = () => {
 
   return (
     <MainLayout>
-      <section className="bg-gradient-to-b from-[#fdf8f5] to-white py-16">
+      <section className="bg-linear-to-b from-[#fdf8f5] to-white py-16">
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -52,7 +53,8 @@ export const CheckoutShippingPage = () => {
               </p>
             </div>
             <div className="text-sm text-gray-500">
-              Cần hỗ trợ? <span className="font-semibold text-slate-900">1900-0000</span>
+              Cần hỗ trợ?{" "}
+              <span className="font-semibold text-slate-900">1900-0000</span>
             </div>
           </div>
 
@@ -84,7 +86,9 @@ export const CheckoutShippingPage = () => {
                           <p className="text-sm font-semibold text-slate-900">
                             {choice.title}
                           </p>
-                          <p className="text-xs text-gray-500">{choice.timeline}</p>
+                          <p className="text-xs text-gray-500">
+                            {choice.timeline}
+                          </p>
                         </div>
                         <span
                           className={[
@@ -95,7 +99,9 @@ export const CheckoutShippingPage = () => {
                           ].join(" ")}
                         />
                       </div>
-                      <p className="mt-4 text-sm text-gray-600">{choice.description}</p>
+                      <p className="mt-4 text-sm text-gray-600">
+                        {choice.description}
+                      </p>
                       <p className="mt-2 text-xs font-semibold text-gray-500">
                         {choice.detail}
                       </p>
@@ -104,52 +110,85 @@ export const CheckoutShippingPage = () => {
                 </div>
               </div>
 
-              <div className="rounded-[32px] border border-gray-100 bg-white/90 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)]">
+              <div className="rounded-4xl border border-gray-100 bg-white/90 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)]">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.4em] text-gray-400">
                       Shipping details
                     </p>
-                    <p className="text-lg font-semibold text-slate-900" style={{ fontFamily: '"General Sans", sans-serif' }}>
+                    <p
+                      className="text-lg font-semibold text-slate-900"
+                      style={{ fontFamily: '"General Sans", sans-serif' }}
+                    >
                       Customer Information
                     </p>
                   </div>
-                  <Link to="/cart" className="text-sm font-semibold text-red-600">
+                  <Link
+                    to="/cart"
+                    className="text-sm font-semibold text-red-600"
+                  >
                     Quay lại giỏ hàng
                   </Link>
                 </div>
 
                 <form className="mt-6 space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <input className={`${baseInputClass} w-full`} placeholder="First name*" />
-                    <input className={`${baseInputClass} w-full`} placeholder="Last name*" />
+                    <input
+                      className={`${baseInputClass} w-full`}
+                      placeholder="First name*"
+                    />
+                    <input
+                      className={`${baseInputClass} w-full`}
+                      placeholder="Last name*"
+                    />
                   </div>
-                  <input className={`${baseInputClass} w-full`} placeholder="Street address" />
+                  <input
+                    className={`${baseInputClass} w-full`}
+                    placeholder="Street address"
+                  />
                   <input
                     className={`${baseInputClass} w-full`}
                     placeholder="Apartment, building, floor (optional)"
                   />
                   <div className="grid gap-4 md:grid-cols-3">
-                    <input className={`${baseInputClass} w-full`} placeholder="City" />
-                    <select className={`${baseInputClass} w-full`} defaultValue="">
+                    <input
+                      className={`${baseInputClass} w-full`}
+                      placeholder="City"
+                    />
+                    <select
+                      className={`${baseInputClass} w-full`}
+                      defaultValue=""
+                    >
                       <option value="" disabled>
                         State
                       </option>
                       <option value="hcm">Ho Chi Minh City</option>
                       <option value="hn">Ha Noi</option>
                     </select>
-                    <input className={`${baseInputClass} w-full`} placeholder="Zip code" />
+                    <input
+                      className={`${baseInputClass} w-full`}
+                      placeholder="Zip code"
+                    />
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="flex gap-3">
-                      <select className={`${baseInputClass} w-28`} defaultValue="+84">
+                      <select
+                        className={`${baseInputClass} w-28`}
+                        defaultValue="+84"
+                      >
                         <option value="+84">+84</option>
                         <option value="+65">+65</option>
                         <option value="+1">+1</option>
                       </select>
-                      <input className={`${baseInputClass} flex-1`} placeholder="Phone number" />
+                      <input
+                        className={`${baseInputClass} flex-1`}
+                        placeholder="Phone number"
+                      />
                     </div>
-                    <input className={`${baseInputClass} w-full`} placeholder="Email address" />
+                    <input
+                      className={`${baseInputClass} w-full`}
+                      placeholder="Email address"
+                    />
                   </div>
                 </form>
 
@@ -175,7 +214,13 @@ export const CheckoutShippingPage = () => {
                 <p className="font-semibold text-slate-900">
                   Delivery preference
                 </p>
-                <p>{shippingChoices.find((choice) => choice.id === selectedOption)?.title}</p>
+                <p>
+                  {
+                    shippingChoices.find(
+                      (choice) => choice.id === selectedOption,
+                    )?.title
+                  }
+                </p>
               </div>
             </OrderSummaryCard>
           </div>

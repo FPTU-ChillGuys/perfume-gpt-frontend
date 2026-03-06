@@ -16,7 +16,6 @@ import {
   Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import LocalShippingIcon from "@mui/icons-material/LocalShipping";
 import InfoIcon from "@mui/icons-material/Info";
 import { useNavigate } from "react-router-dom";
 import Rating from "@mui/material/Rating";
@@ -236,41 +235,78 @@ const ProductQuickViewDialog = ({
               exclusive
               value={selectedVariantId}
               onChange={handleVariantChange}
-              sx={{ flexWrap: "wrap", gap: 1 }}
               size="small"
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: 1,
+                "& .MuiToggleButtonGroup-grouped": {
+                  border: "1px solid rgba(0, 0, 0, 0.12) !important",
+                  borderRadius: "8px !important",
+                  marginLeft: "0 !important",
+                },
+                "& .MuiToggleButtonGroup-grouped.Mui-selected": {
+                  borderColor: "primary.main !important",
+                },
+              }}
             >
               {(fastLook.variants || []).map((variant) => (
                 <ToggleButton
                   key={variant.id}
                   value={variant.id}
-                  sx={{ textTransform: "none", borderRadius: 2 }}
+                  sx={{
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-start",
+                    gap: 1,
+                    px: 2,
+                    py: 1,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    minWidth: 0,
+                  }}
                 >
+                  {variant.media?.url && (
+                    <Box
+                      component="img"
+                      src={variant.media.url}
+                      alt={variant.displayName || ""}
+                      sx={{
+                        width: 36,
+                        height: 36,
+                        objectFit: "cover",
+                        borderRadius: 0.5,
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
                   {variant.displayName || "Size"}
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
 
-            <Stack direction="row" spacing={2} alignItems="baseline" mt={3}>
+            <Stack direction="column" spacing={1} mt={3}>
               <Typography variant="h4" fontWeight={700} color="error">
                 {selectedVariant?.price
                   ? currencyFormatter.format(Number(selectedVariant.price))
                   : "Liên hệ"}
               </Typography>
-              {selectedVariant?.price && (
-                <Typography variant="body2" color="text.secondary">
-                  Deal thơm trong hôm nay
-                </Typography>
-              )}
+              <Button
+                startIcon={<InfoIcon />}
+                variant="text"
+                size="small"
+                sx={{
+                  textTransform: "none",
+                  p: 0,
+                  minWidth: 0,
+                  alignSelf: "flex-start",
+                }}
+                onClick={handleViewDetail}
+              >
+                Xem chi tiết sản phẩm
+              </Button>
             </Stack>
-
-            <Button
-              startIcon={<InfoIcon />}
-              variant="text"
-              sx={{ mt: 1, textTransform: "none" }}
-              onClick={handleViewDetail}
-            >
-              Xem chi tiết sản phẩm
-            </Button>
 
             <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={3}>
               <Button
@@ -298,7 +334,7 @@ const ProductQuickViewDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <DialogTitle
         sx={{
           display: "flex",

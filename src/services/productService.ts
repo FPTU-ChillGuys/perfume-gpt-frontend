@@ -329,6 +329,28 @@ class ProductService {
     }
   }
 
+  async getVariantById(variantId: string): Promise<ProductVariant> {
+    try {
+      const response = await apiInstance.GET(
+        "/api/productvariants/{variantId}",
+        { params: { path: { variantId } } },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to fetch variant");
+      }
+
+      return response.data.payload!;
+    } catch (error: any) {
+      console.error("Error fetching variant:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch variant",
+      );
+    }
+  }
+
   async updateProductVariant(
     variantId: string,
     payload: UpdateVariantRequest & {

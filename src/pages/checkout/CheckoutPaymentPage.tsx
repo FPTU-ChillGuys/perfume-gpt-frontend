@@ -39,7 +39,7 @@ export const CheckoutPaymentPage = () => {
 
   return (
     <MainLayout>
-      <section className="bg-gradient-to-b from-[#fdf8f5] to-white py-16">
+      <section className="bg-linear-to-b from-[#fdf8f5] to-white py-16">
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -56,7 +56,10 @@ export const CheckoutPaymentPage = () => {
                 Finalize your purchase to start your fragrance journey.
               </p>
             </div>
-            <Link to="/checkout/packaging" className="text-sm font-semibold text-red-600">
+            <Link
+              to="/checkout/packaging"
+              className="text-sm font-semibold text-red-600"
+            >
               Quay lại đóng gói
             </Link>
           </div>
@@ -67,17 +70,22 @@ export const CheckoutPaymentPage = () => {
 
           <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
             <div className="space-y-8">
-              <section className="rounded-[32px] border border-gray-100 bg-white/90 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)]">
+              <section className="rounded-4xl border border-gray-100 bg-white/90 p-8 shadow-[0_30px_90px_rgba(15,23,42,0.08)]">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.4em] text-gray-400">
                       Payment methods
                     </p>
-                    <p className="text-lg font-semibold text-slate-900" style={{ fontFamily: '"General Sans", sans-serif' }}>
+                    <p
+                      className="text-lg font-semibold text-slate-900"
+                      style={{ fontFamily: '"General Sans", sans-serif' }}
+                    >
                       Secure checkout
                     </p>
                   </div>
-                  <p className="text-xs text-gray-500">128-bit encrypted checkout</p>
+                  <p className="text-xs text-gray-500">
+                    128-bit encrypted checkout
+                  </p>
                 </div>
 
                 <div className="mt-6 space-y-4">
@@ -104,13 +112,17 @@ export const CheckoutPaymentPage = () => {
                             <p className="text-base font-semibold text-slate-900">
                               {method.title}
                             </p>
-                            <p className="text-sm text-gray-500">{method.description}</p>
+                            <p className="text-sm text-gray-500">
+                              {method.description}
+                            </p>
                           </div>
                         </div>
                         <span
                           className={[
                             "h-4 w-4 rounded-full border-2",
-                            isActive ? "border-red-500 bg-red-500" : "border-gray-200",
+                            isActive
+                              ? "border-red-500 bg-red-500"
+                              : "border-gray-200",
                           ].join(" ")}
                         />
                       </button>
@@ -125,8 +137,14 @@ export const CheckoutPaymentPage = () => {
                       placeholder="Card number"
                     />
                     <div className="grid gap-4 md:grid-cols-2">
-                      <input className={`${baseInputClass} w-full`} placeholder="MM / YY" />
-                      <input className={`${baseInputClass} w-full`} placeholder="CVV" />
+                      <input
+                        className={`${baseInputClass} w-full`}
+                        placeholder="MM / YY"
+                      />
+                      <input
+                        className={`${baseInputClass} w-full`}
+                        placeholder="CVV"
+                      />
                     </div>
                     <input
                       className={`${baseInputClass} w-full`}
@@ -143,7 +161,8 @@ export const CheckoutPaymentPage = () => {
 
                 {selectedMethod === "cod" && (
                   <div className="mt-6 rounded-3xl border border-dashed border-gray-200 p-4 text-sm text-gray-600">
-                    Bạn sẽ thanh toán cho nhân viên giao hàng khi nhận được sản phẩm.
+                    Bạn sẽ thanh toán cho nhân viên giao hàng khi nhận được sản
+                    phẩm.
                   </div>
                 )}
 
@@ -163,14 +182,18 @@ export const CheckoutPaymentPage = () => {
                 </div>
               </section>
 
-              <section className="rounded-[32px] border border-gray-100 bg-white/90 p-8">
+              <section className="rounded-4xl border border-gray-100 bg-white/90 p-8">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.4em] text-gray-400">
                       Contact
                     </p>
-                    <p className="text-lg font-semibold text-slate-900">Need help?</p>
-                    <p className="text-sm text-gray-500">1900-0000 • contact@perfumegpt.com</p>
+                    <p className="text-lg font-semibold text-slate-900">
+                      Need help?
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      1900-0000 • contact@perfumegpt.com
+                    </p>
                   </div>
                   <div className="text-right text-sm text-gray-600">
                     Weekdays 9am - 9pm
@@ -181,17 +204,26 @@ export const CheckoutPaymentPage = () => {
               </section>
             </div>
 
-            <OrderSummaryCard items={sampleOrderItems} totals={sampleOrderTotals}>
+            <OrderSummaryCard
+              items={sampleOrderItems}
+              totals={sampleOrderTotals}
+            >
               <div className="space-y-3 text-xs text-gray-600">
                 <div className="flex items-center justify-between">
                   <span>Shipping</span>
-                  <Link to="/checkout/shipping" className="font-semibold text-red-600">
+                  <Link
+                    to="/checkout/shipping"
+                    className="font-semibold text-red-600"
+                  >
                     Edit
                   </Link>
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Packaging</span>
-                  <Link to="/checkout/packaging" className="font-semibold text-red-600">
+                  <Link
+                    to="/checkout/packaging"
+                    className="font-semibold text-red-600"
+                  >
                     Edit
                   </Link>
                 </div>

@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 import { MainLayout } from "../layouts/MainLayout";
-import { ProductCard, type ProductCardProps } from "../components/product/ProductCard";
+import {
+  ProductCard,
+  type ProductCardProps,
+} from "../components/product/ProductCard";
 import { productService } from "../services/productService";
 import type { ProductListItem, VariantPagedItem } from "../types/product";
 import {
@@ -83,7 +86,10 @@ export const ProductListPage = () => {
                 );
                 const normalized = withVariantPrimaryImage(variants[0]);
                 if (normalized) {
-                  variantMap.set(product.id, { ...normalized, productId: product.id });
+                  variantMap.set(product.id, {
+                    ...normalized,
+                    productId: product.id,
+                  });
                 }
               } catch (variantError) {
                 console.error(
@@ -170,7 +176,8 @@ export const ProductListPage = () => {
   const startItem = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = totalCount === 0 ? 0 : startItem + products.length - 1;
   const canGoPrev = page > 1;
-  const canGoNext = totalPages > 0 ? page < totalPages : products.length === pageSize;
+  const canGoNext =
+    totalPages > 0 ? page < totalPages : products.length === pageSize;
 
   const renderSkeletons = () =>
     Array.from({ length: pageSize }).map((_, index) => (
@@ -188,7 +195,7 @@ export const ProductListPage = () => {
   return (
     <MainLayout>
       <section className="relative overflow-hidden bg-slate-950 pb-12 pt-20 text-white">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-rose-500/20 via-transparent to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-linear-to-b from-rose-500/20 via-transparent to-transparent" />
         <div className="container mx-auto px-4">
           <p className="text-xs uppercase tracking-[0.4em] text-white/60">
             Curated Catalog 2026
@@ -197,7 +204,8 @@ export const ProductListPage = () => {
             Danh sách nước hoa
           </h1>
           <p className="mt-4 max-w-3xl text-base text-white/70 md:text-lg">
-            Lọc theo thương hiệu, tìm kiếm nốt hương yêu thích và đặt giữ chỗ ngay trong cùng một trang.
+            Lọc theo thương hiệu, tìm kiếm nốt hương yêu thích và đặt giữ chỗ
+            ngay trong cùng một trang.
           </p>
         </div>
       </section>
@@ -219,7 +227,10 @@ export const ProductListPage = () => {
 
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="relative w-full md:max-w-md">
-                <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Search
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
                 <input
                   type="search"
                   placeholder="Tìm theo tên hoặc thương hiệu"
@@ -234,7 +245,9 @@ export const ProductListPage = () => {
                   Sắp xếp
                   <select
                     value={sort}
-                    onChange={(event) => setSort(event.target.value as SortValue)}
+                    onChange={(event) =>
+                      setSort(event.target.value as SortValue)
+                    }
                     className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 focus:border-slate-900"
                   >
                     {sortOptions.map((option) => (
@@ -299,7 +312,9 @@ export const ProductListPage = () => {
                   Đang tải trang {page}
                 </span>
               ) : totalPages > 0 ? (
-                <>Trang {page} / {Math.max(totalPages, 1)}</>
+                <>
+                  Trang {page} / {Math.max(totalPages, 1)}
+                </>
               ) : (
                 <>Trang {page}</>
               )}
@@ -307,7 +322,9 @@ export const ProductListPage = () => {
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => canGoPrev && setPage((prev) => Math.max(prev - 1, 1))}
+                onClick={() =>
+                  canGoPrev && setPage((prev) => Math.max(prev - 1, 1))
+                }
                 disabled={!canGoPrev}
                 className="rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
               >
