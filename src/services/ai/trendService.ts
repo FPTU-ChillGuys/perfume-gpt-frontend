@@ -24,10 +24,10 @@ class TrendService {
 
             // 2. Polling kiểm tra trạng thái job
             let retries = 0;
-            const maxRetries = 20; // 20 lần thử x 3s = 60s
+            const maxRetries = 1; // 20 lần thử x 3s = 60s
 
             while (retries < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, 3000)); // Đợi 3 giây
+                // await new Promise(resolve => setTimeout(resolve, 3000)); // Đợi 3 giây
 
                 const statusResponse = await (aiApiInstance as any).GET("/trends/product/job/{jobId}", {
                     params: {
