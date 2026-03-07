@@ -3,12 +3,43 @@ import type {
     ReviewSummaryAllResponse,
     ReviewSummaryResponse,
     ReviewSummaryStructuredResponse,
+    ReviewSummaryJobResponse,
+    ReviewSummaryJobResultResponse,
     ReviewLogListResponse,
     ReviewLogResponse,
     CreateReviewLogDto
 } from "@/types/review";
 
 class ReviewService {
+    // ----------------------
+    // Summary Methods
+    // ----------------------
+
+    /**
+     * Khởi tạo job để tóm tắt đánh giá theo variant ID
+     */
+    async createReviewSummaryJob(variantId: string): Promise<ReviewSummaryJobResponse> {
+        return this.handleResponse(
+            await (aiApiInstance as any).GET("/reviews/summary/job/{variantId}", {
+                params: { path: { variantId } }
+            })
+        );
+    }
+
+    /**
+     * Kiểm tra trạng thái hoàn thành của job tóm tắt đánh giá
+     */
+    async getReviewSummaryJobResult(jobId: string, variantId: string): Promise<ReviewSummaryJobResultResponse> {
+        return this.handleResponse(
+            await (aiApiInstance as any).GET("/reviews/summary/job/result/{jobId}", {
+                params: {
+                    path: { jobId },
+                    query: { variantId }
+                }
+            })
+        );
+    }
+
     async getAllReviewSummaries(): Promise<ReviewSummaryAllResponse> {
         return this.handleResponse(
             await aiApiInstance.GET("/reviews/summary/all", {})

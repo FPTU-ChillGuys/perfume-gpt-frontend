@@ -24,6 +24,20 @@ export interface ReviewSummaryResponse {
     __httpStatusCode?: number;
 }
 
+export interface ReviewSummaryJobResponse {
+    success: boolean;
+    data: {
+        jobId: string;
+    };
+    __httpStatusCode?: number;
+}
+
+export interface ReviewSummaryJobResultResponse {
+    success: boolean;
+    data: any; // Dynamic object like { status: 'pending' } or actual summary data
+    __httpStatusCode?: number;
+}
+
 export interface ReviewSummaryAllResponse {
     success: boolean;
     data: ReviewSummaryBase[];
