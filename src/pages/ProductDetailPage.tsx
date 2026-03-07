@@ -339,7 +339,7 @@ const ProductDetailPage = () => {
       return (
         <Box mt={4} p={3} borderRadius={2} bgcolor="success.lighter" color="success.darker" border="1px solid" borderColor="success.light">
           <Typography variant="h6" fontWeight={600} gutterBottom>
-            ✨ Đánh giá theo góc nhìn AI
+            ✨ Tóm tắt các đánh giá bằng AI
           </Typography>
           <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.7, color: "text.primary" }}>
             {reviewSummary}
