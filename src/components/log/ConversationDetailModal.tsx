@@ -43,11 +43,11 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                     sx={{
                         display: "flex",
                         flexDirection: "column",
-                        gap: 2,
-                        p: 2,
-                        bgcolor: "grey.50",
-                        borderRadius: 2,
-                        maxHeight: "60vh",
+                        gap: 3,
+                        p: 3,
+                        bgcolor: "#f5f7fa", // Thêm màu nền nhạt giống messenger
+                        borderRadius: 3,
+                        maxHeight: "65vh",
                         overflowY: "auto",
                     }}
                 >
@@ -58,10 +58,9 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                 const parsed = JSON.parse(parsedMessage);
                                 if (parsed.message) parsedMessage = parsed.message;
                             } catch {
-                                // Keep as raw string
+                                // Giữ nguyên dạng raw
                             }
 
-                            // Fallback handling if API returns wrapped message without id
                             const keyId = (msgRef as any).id || Math.random().toString(36).substr(2, 9);
                             const createdAtStr = (msgRef as any).createdAt;
                             const isUser = msgRef.sender === 'user';
@@ -71,47 +70,77 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                     key={keyId}
                                     sx={{
                                         display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: isUser ? "flex-end" : "flex-start",
-                                        maxWidth: "80%",
+                                        flexDirection: isUser ? "row-reverse" : "row",
+                                        alignItems: "flex-end",
+                                        gap: 1.5,
                                         alignSelf: isUser ? "flex-end" : "flex-start",
+                                        maxWidth: "85%",
                                     }}
                                 >
+                                    {/* Avatar */}
                                     <Box
                                         sx={{
-                                            bgcolor: isUser ? "primary.main" : "white",
-                                            color: isUser ? "primary.contrastText" : "text.primary",
-                                            p: 2,
-                                            borderRadius: 2,
-                                            borderTopRightRadius: isUser ? 0 : 2,
-                                            borderTopLeftRadius: !isUser ? 0 : 2,
-                                            boxShadow: 1,
-                                            position: "relative",
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: "50%",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            flexShrink: 0,
+                                            bgcolor: isUser ? "primary.main" : "secondary.main",
+                                            color: "white",
+                                            fontWeight: "bold",
+                                            fontSize: "0.85rem",
+                                            boxShadow: 1
                                         }}
                                     >
-                                        <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                                            {parsedMessage}
-                                        </Typography>
-                                        {(msgRef as any).products && (msgRef as any).products.length > 0 && (
-                                            <Box mt={2} p={1} bgcolor="rgba(255,255,255,0.2)" borderRadius={1} border="1px dashed">
-                                                <Typography variant="subtitle2">
-                                                    Đã gợi ý {(msgRef as any).products.length} sản phẩm
-                                                </Typography>
-                                            </Box>
+                                        {isUser ? "U" : "AI"}
+                                    </Box>
+
+                                    {/* Chat Bubble */}
+                                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
+                                        <Box
+                                            sx={{
+                                                bgcolor: isUser ? "primary.main" : "white",
+                                                color: isUser ? "primary.contrastText" : "text.primary",
+                                                p: 2,
+                                                borderRadius: 3,
+                                                borderBottomRightRadius: isUser ? 0 : 3,
+                                                borderBottomLeftRadius: !isUser ? 0 : 3,
+                                                boxShadow: "0 2px 5px rgba(0,0,0,0.05)",
+                                                border: "1px solid",
+                                                borderColor: isUser ? "primary.dark" : "grey.200",
+                                                position: "relative",
+                                            }}
+                                        >
+                                            <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                                {parsedMessage}
+                                            </Typography>
+                                            {(msgRef as any).products && (msgRef as any).products.length > 0 && (
+                                                <Box mt={2} p={1.5} bgcolor={isUser ? "rgba(255,255,255,0.15)" : "grey.50"} borderRadius={2} border="1px dashed" borderColor={isUser ? "rgba(255,255,255,0.4)" : "grey.300"}>
+                                                    <Typography variant="subtitle2" fontWeight={600}>
+                                                        🎁 Đã gợi ý {(msgRef as any).products.length} sản phẩm
+                                                    </Typography>
+                                                </Box>
+                                            )}
+                                        </Box>
+
+                                        {/* Timestamp */}
+                                        {createdAtStr && (
+                                            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, px: 1 }}>
+                                                {formatDate(createdAtStr)}
+                                            </Typography>
                                         )}
                                     </Box>
-                                    {createdAtStr && (
-                                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
-                                            {formatDate(createdAtStr)}
-                                        </Typography>
-                                    )}
                                 </Box>
                             );
                         })
                     ) : (
-                        <Typography variant="body2" color="text.secondary" align="center">
-                            Không có tin nhắn nào
-                        </Typography>
+                        <Box sx={{ textAlign: "center", my: 5 }}>
+                            <Typography variant="body1" color="text.secondary">
+                                Chưa có tin nhắn nào trong cuộc hội thoại này.
+                            </Typography>
+                        </Box>
                     )}
                 </Box>
             </DialogContent>
