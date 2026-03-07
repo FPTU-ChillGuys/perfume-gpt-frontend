@@ -40,6 +40,47 @@ class ReviewService {
         );
     }
 
+    /**
+     * Hàm tiện ích tích hợp vòng lặp polling tự động (Giống Trend Service)
+     */
+    async fetchReviewSummaryWithPolling(variantId: string): Promise<string> {
+        try {
+            // 1. Tạo Job
+            const jobResponse = await this.createReviewSummaryJob(variantId);
+            if (!jobResponse.data || !jobResponse.data.jobId) {
+                throw new Error("Không thể khởi tạo job tóm tắt đánh giá.");
+            }
+
+            const jobId = jobResponse.data.jobId;
+
+            // 2. Polling kết quả
+            let retries = 0;
+            const maxRetries = 1; // Thử 20 lần x 3s = 60s
+
+            while (retries < maxRetries) {
+                // await new Promise(resolve => setTimeout(resolve, 3000)); // Đợi 3s mỗi mốc
+
+                const resultResponse = await this.getReviewSummaryJobResult(jobId, variantId);
+                const jobInfo = resultResponse.data;
+
+                if (jobInfo?.status === "completed") {
+                    return jobInfo.data || "Không có nội dung đánh giá.";
+                } else if (jobInfo?.status === "failed" || jobInfo?.status === "error") {
+                    throw new Error("Quá trình tóm tắt bị lỗi tại máy chủ.");
+                }
+
+                // Nếu pending hoặc processing thì lặp lại
+                retries++;
+            }
+
+            throw new Error("Hết thời gian chờ phản hồi từ AI.");
+
+        } catch (error: any) {
+            console.error("Lỗi fetchReviewSummaryWithPolling:", error);
+            throw new Error(error.message || "Lỗi tải tóm tắt đánh giá.");
+        }
+    }
+
     async getAllReviewSummaries(): Promise<ReviewSummaryAllResponse> {
         return this.handleResponse(
             await aiApiInstance.GET("/reviews/summary/all", {})

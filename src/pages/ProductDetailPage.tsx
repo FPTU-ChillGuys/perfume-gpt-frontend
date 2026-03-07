@@ -25,6 +25,7 @@ import { productService } from "@/services/productService";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import { reviewService } from "@/services/ai/reviewService";
 import type {
   MediaResponse,
   ProductFastLook,
@@ -58,6 +59,11 @@ const ProductDetailPage = () => {
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [thumbnailOffset, setThumbnailOffset] = useState(0);
   const variantCacheRef = useRef<Map<string, MediaResponse[]>>(new Map());
+
+  // States: AI Review Summary
+  const [reviewSummary, setReviewSummary] = useState<string | null>(null);
+  const [isReviewLoading, setIsReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const THUMB_VISIBLE = 5;
   const THUMB_SIZE = 72;
@@ -143,6 +149,37 @@ const ProductDetailPage = () => {
       })
       .finally(() => {
         if (isMounted) setIsLoadingMedia(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedVariantId]);
+
+  // Effect: Fetch AI Review Summary
+  useEffect(() => {
+    if (!selectedVariantId) {
+      setReviewSummary(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsReviewLoading(true);
+    setReviewError(null);
+    setReviewSummary(null);
+
+    reviewService
+      .fetchReviewSummaryWithPolling(selectedVariantId)
+      .then((summary) => {
+        if (!isMounted) return;
+        setReviewSummary(summary);
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setReviewError(err.message || "Không thể tải tóm tắt đánh giá hiện tại.");
+      })
+      .finally(() => {
+        if (isMounted) setIsReviewLoading(false);
       });
 
     return () => {
@@ -267,6 +304,51 @@ const ProductDetailPage = () => {
         </Typography>
       </Box>
     );
+  };
+
+  const renderReviewSummary = () => {
+    if (!selectedVariantId) return null;
+
+    if (isReviewLoading) {
+      return (
+        <Box mt={4} p={3} borderRadius={2} bgcolor="grey.50" border="1px solid" borderColor="divider">
+          <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+            <CircularProgress size={24} color="secondary" />
+            <Typography variant="h6" fontWeight={600} color="secondary.main">
+              AI đang tổng hợp hàng nghìn đánh giá...
+            </Typography>
+          </Stack>
+          <Typography variant="body2" color="text.secondary">
+            Quá trình này có thể mất vài giây. Vui lòng giữ mạng ổn định.
+          </Typography>
+        </Box>
+      );
+    }
+
+    if (reviewError) {
+      return (
+        <Box mt={4}>
+          <Alert severity="warning" variant="outlined">
+            {reviewError}
+          </Alert>
+        </Box>
+      );
+    }
+
+    if (reviewSummary) {
+      return (
+        <Box mt={4} p={3} borderRadius={2} bgcolor="success.lighter" color="success.darker" border="1px solid" borderColor="success.light">
+          <Typography variant="h6" fontWeight={600} gutterBottom>
+            ✨ Đánh giá theo góc nhìn AI
+          </Typography>
+          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.7, color: "text.primary" }}>
+            {reviewSummary}
+          </Typography>
+        </Box>
+      );
+    }
+
+    return null;
   };
 
   const renderContent = () => {
@@ -559,7 +641,7 @@ const ProductDetailPage = () => {
                   {(fastLook.variants || []).map((variant) => (
                     <ToggleButton
                       key={variant.id}
-                      value={variant.id}
+                      value={variant.id || ""}
                       sx={{
                         textTransform: "none",
                         display: "flex",
@@ -626,6 +708,7 @@ const ProductDetailPage = () => {
         {renderHighlights()}
         {renderFragranceNotes()}
         {renderDescription()}
+        {renderReviewSummary()}
       </>
     );
   };
