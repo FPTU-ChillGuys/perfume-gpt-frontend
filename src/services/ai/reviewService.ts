@@ -73,7 +73,7 @@ class ReviewService {
                 retries++;
             }
 
-            throw new Error("Hết thời gian chờ phản hồi từ AI.");
+            throw new Error("Hiện tại chưa có review bằng AI, bạn có thể chờ hoặc thử lại sau!");
 
         } catch (error: any) {
             console.error("Lỗi fetchReviewSummaryWithPolling:", error);
