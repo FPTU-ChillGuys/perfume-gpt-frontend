@@ -263,8 +263,8 @@ const ProductQuickViewDialog = ({
                     px: 2,
                     py: 1,
                     whiteSpace: "nowrap",
-                    overflow: "hidden",
                     minWidth: 0,
+                    fontSize: "0.8rem",
                   }}
                 >
                   {variant.media?.url && (
@@ -273,15 +273,17 @@ const ProductQuickViewDialog = ({
                       src={variant.media.url}
                       alt={variant.displayName || ""}
                       sx={{
-                        width: 36,
-                        height: 36,
+                        width: 32,
+                        height: 32,
                         objectFit: "cover",
                         borderRadius: 0.5,
                         flexShrink: 0,
                       }}
                     />
                   )}
-                  {variant.displayName || "Size"}
+                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                    {variant.displayName || "Size"}
+                  </Box>
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>
@@ -334,7 +336,13 @@ const ProductQuickViewDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{ sx: { maxWidth: 960 } }}
+    >
       <DialogTitle
         sx={{
           display: "flex",
