@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
@@ -10,6 +11,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -21,6 +23,7 @@ import {
 import { Close } from "@mui/icons-material";
 import { orderService } from "@/services/orderService";
 import type { OrderResponse, CarrierName } from "@/types/order";
+import type { ReviewResponse, ReviewStatus, ReviewDialogTarget } from "@/types/review";
 import {
   orderStatusLabels,
   orderStatusColors,
@@ -35,16 +38,29 @@ const carrierNameLabel: Record<CarrierName, string> = {
   GHTK: "Giao Hàng Tiết Kiệm",
 };
 
+const reviewStatusChip: Record<ReviewStatus, { label: string; color: "default" | "warning" | "success" | "error" }> = {
+  Pending: { label: "Chờ duyệt", color: "warning" },
+  Approved: { label: "Đã duyệt", color: "success" },
+  Rejected: { label: "Từ chối", color: "error" },
+};
+
 interface MyOrderDetailModalProps {
   open: boolean;
   orderId: string | null;
   onClose: () => void;
+  reviewsIndex?: Record<string, ReviewResponse>;
+  onReview?: (
+    target: ReviewDialogTarget,
+    existing?: ReviewResponse | null,
+  ) => void;
 }
 
 export const MyOrderDetailModal = ({
   open,
   orderId,
   onClose,
+  reviewsIndex,
+  onReview,
 }: MyOrderDetailModalProps) => {
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,6 +103,29 @@ export const MyOrderDetailModal = ({
   const shortenId = (id: string) => {
     return `${id.substring(0, 8)}...${id.substring(id.length - 4)}`;
   };
+
+  const handleReviewAction = (
+    orderDetailId: string,
+    variantId: string,
+    variantName?: string,
+    imageUrl?: string | null,
+    existing?: ReviewResponse | null,
+  ) => {
+    if (!onReview || !orderDetailId || !variantId) return;
+    onReview(
+      {
+        orderDetailId,
+        variantId,
+        variantName,
+        productName: variantName,
+        thumbnailUrl: imageUrl || null,
+      },
+      existing || null,
+    );
+    onClose();
+  };
+
+  const canReviewOrder = order?.status === "Delivered";
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -332,57 +371,104 @@ export const MyOrderDetailModal = ({
                         <TableCell align="right">Số lượng</TableCell>
                         <TableCell align="right">Đơn giá</TableCell>
                         <TableCell align="right">Thành tiền</TableCell>
+                        <TableCell align="center">Đánh giá</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {order.orderDetails?.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            {item.imageUrl ? (
-                              <img
-                                src={item.imageUrl}
-                                alt={item.variantName}
-                                style={{
-                                  width: 60,
-                                  height: 60,
-                                  objectFit: "cover",
-                                  borderRadius: 4,
-                                }}
-                              />
-                            ) : (
-                              <Box
-                                sx={{
-                                  width: 60,
-                                  height: 60,
-                                  bgcolor: "grey.200",
-                                  borderRadius: 1,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
+                      {order.orderDetails?.map((item) => {
+                        const orderDetailId = item.id || "";
+                        const existingReview = orderDetailId
+                          ? reviewsIndex?.[orderDetailId]
+                          : undefined;
+                        const actionEnabled = Boolean(
+                          orderDetailId &&
+                            item.variantId &&
+                            (canReviewOrder || existingReview),
+                        );
+                        const statusConfig = existingReview?.status
+                          ? reviewStatusChip[existingReview.status]
+                          : undefined;
+
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              {item.imageUrl ? (
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.variantName}
+                                  style={{
+                                    width: 60,
+                                    height: 60,
+                                    objectFit: "cover",
+                                    borderRadius: 4,
+                                  }}
+                                />
+                              ) : (
+                                <Box
+                                  sx={{
+                                    width: 60,
+                                    height: 60,
+                                    bgcolor: "grey.200",
+                                    borderRadius: 1,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
                                 >
-                                  No image
-                                </Typography>
-                              </Box>
-                            )}
-                          </TableCell>
-                          <TableCell>{item.variantName}</TableCell>
-                          <TableCell align="right">{item.quantity}</TableCell>
-                          <TableCell align="right">
-                            {formatCurrency(item.unitPrice ?? 0)}
-                          </TableCell>
-                          <TableCell
-                            align="right"
-                            sx={{ fontWeight: "medium" }}
-                          >
-                            {formatCurrency(item.total ?? 0)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    No image
+                                  </Typography>
+                                </Box>
+                              )}
+                            </TableCell>
+                            <TableCell>{item.variantName}</TableCell>
+                            <TableCell align="right">{item.quantity}</TableCell>
+                            <TableCell align="right">
+                              {formatCurrency(item.unitPrice ?? 0)}
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontWeight: "medium" }}>
+                              {formatCurrency(item.total ?? 0)}
+                            </TableCell>
+                            <TableCell align="center" sx={{ minWidth: 180 }}>
+                              <Stack spacing={1} alignItems="center">
+                                {existingReview && (
+                                  <Chip
+                                    label={statusConfig?.label || existingReview.status}
+                                    color={statusConfig?.color || "default"}
+                                    size="small"
+                                    variant={existingReview.status === "Approved" ? "filled" : "outlined"}
+                                  />
+                                )}
+                                <Button
+                                  size="small"
+                                  variant={existingReview ? "outlined" : "contained"}
+                                  color={existingReview ? "primary" : "secondary"}
+                                  disabled={!actionEnabled}
+                                  onClick={() =>
+                                    handleReviewAction(
+                                      orderDetailId,
+                                      item.variantId || "",
+                                      item.variantName,
+                                      item.imageUrl,
+                                      existingReview,
+                                    )
+                                  }
+                                >
+                                  {existingReview ? "Chỉnh sửa" : "Đánh giá"}
+                                </Button>
+                                {!canReviewOrder && !existingReview && (
+                                  <Typography variant="caption" color="text.secondary" textAlign="center">
+                                    Đơn cần giao thành công để đánh giá
+                                  </Typography>
+                                )}
+                              </Stack>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                       <TableRow>
                         <TableCell colSpan={4} align="right">
                           <Typography variant="h6" fontWeight="bold">

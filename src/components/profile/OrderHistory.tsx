@@ -15,7 +15,7 @@ import {
   MenuItem,
   FormControl,
 } from "@mui/material";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { OrderListItem } from "@/types/order";
 import { MyOrderDetailModal } from "@/components/order/MyOrderDetailModal";
 import {
@@ -24,6 +24,8 @@ import {
   paymentStatusLabels,
   paymentStatusColors,
 } from "@/utils/orderStatus";
+import type { ReviewResponse } from "@/types/review";
+import type { ReviewDialogTarget } from "@/types/review";
 
 interface OrderHistoryProps {
   orders: OrderListItem[];
@@ -33,6 +35,11 @@ interface OrderHistoryProps {
   totalCount: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  myReviews: ReviewResponse[];
+  onReviewSelected: (
+    target: ReviewDialogTarget,
+    existing?: ReviewResponse | null,
+  ) => void;
 }
 
 const OrderHistory = ({
@@ -43,9 +50,21 @@ const OrderHistory = ({
   totalCount,
   onPageChange,
   onPageSizeChange,
+  myReviews,
+  onReviewSelected,
 }: OrderHistoryProps) => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const reviewsByOrderDetailId = useMemo(() => {
+    const map: Record<string, ReviewResponse> = {};
+    myReviews.forEach((review) => {
+      if (review.orderDetailId) {
+        map[review.orderDetailId] = review;
+      }
+    });
+    return map;
+  }, [myReviews]);
 
   const handleRowClick = (orderId: string) => {
     setSelectedOrderId(orderId);
@@ -190,6 +209,8 @@ const OrderHistory = ({
         open={isModalOpen}
         orderId={selectedOrderId}
         onClose={handleCloseModal}
+        reviewsIndex={reviewsByOrderDetailId}
+        onReview={(target, existing) => onReviewSelected(target, existing)}
       />
     </>
   );

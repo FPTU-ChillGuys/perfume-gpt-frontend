@@ -1,3 +1,5 @@
+import type { components } from "./api/v1";
+
 export interface ReviewSummaryBase {
     id: string;
     createdAt: string;
@@ -71,4 +73,35 @@ export interface CreateReviewLogDto {
     rating: number;
     platform: string;
     variantId: string;
+}
+
+// ----------------------
+// E-commerce Review Types
+// ----------------------
+
+export type ReviewResponse = components["schemas"]["ReviewResponse"];
+export type ReviewListItem = components["schemas"]["ReviewListItem"];
+export type ReviewDetailResponse = components["schemas"]["ReviewDetailResponse"];
+export type ReviewStatisticsResponse = components["schemas"]["ReviewStatisticsResponse"];
+export type ReviewStatus = components["schemas"]["ReviewStatus"];
+export type PagedReviewList = components["schemas"]["PagedResultOfReviewListItem"];
+
+export type CreateReviewRequest = components["schemas"]["CreateReviewRequest"];
+export type UpdateReviewRequest = components["schemas"]["UpdateReviewRequest"];
+export type ModerateReviewRequest = components["schemas"]["ModerateReviewRequest"];
+
+export type BulkActionResultOfGuid = components["schemas"]["BulkActionResultOfGuid"];
+export type BulkActionResultOfstring = components["schemas"]["BulkActionResultOfstring"];
+export type BulkActionResultOfListOfTemporaryMediaResponse =
+    components["schemas"]["BulkActionResultOfListOfTemporaryMediaResponse"];
+
+export type TemporaryReviewMedia = components["schemas"]["TemporaryMediaResponse"];
+export type ReviewMedia = components["schemas"]["MediaResponse"];
+
+export interface ReviewDialogTarget {
+    orderDetailId: string;
+    variantId: string;
+    variantName?: string;
+    productName?: string;
+    thumbnailUrl?: string | null;
 }

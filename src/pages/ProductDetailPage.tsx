@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -25,12 +25,18 @@ import { productService } from "@/services/productService";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import { reviewService } from "@/services/ai/reviewService";
+import { productReviewService } from "@/services/reviewService";
+import { orderService } from "@/services/orderService";
+import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
+import { ReviewSection } from "@/components/review/ReviewSection";
 import type {
   MediaResponse,
   ProductFastLook,
   ProductInformation,
 } from "@/types/product";
+import type { ReviewDialogTarget, ReviewResponse } from "@/types/review";
 
 const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   style: "currency",
@@ -43,6 +49,7 @@ const ProductDetailPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
+  const { user, isAuthenticated } = useAuth();
 
   const [information, setInformation] = useState<ProductInformation | null>(
     null,
@@ -59,11 +66,45 @@ const ProductDetailPage = () => {
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   const [thumbnailOffset, setThumbnailOffset] = useState(0);
   const variantCacheRef = useRef<Map<string, MediaResponse[]>>(new Map());
+  const reviewTargetCacheRef = useRef<Record<string, ReviewDialogTarget>>({});
 
   // States: AI Review Summary
   const [reviewSummary, setReviewSummary] = useState<string | null>(null);
   const [isReviewLoading, setIsReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
+  const [myReviews, setMyReviews] = useState<ReviewResponse[]>([]);
+  const [isLoadingMyReviews, setIsLoadingMyReviews] = useState(false);
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [reviewDialogMode, setReviewDialogMode] = useState<"create" | "edit">(
+    "create",
+  );
+  const [reviewDialogTarget, setReviewDialogTarget] =
+    useState<ReviewDialogTarget | null>(null);
+  const [selectedReview, setSelectedReview] = useState<ReviewResponse | null>(
+    null,
+  );
+  const [isFindingReviewTarget, setIsFindingReviewTarget] = useState(false);
+  const [reviewActionError, setReviewActionError] = useState<string | null>(
+    null,
+  );
+  const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
+
+  const fetchMyReviews = useCallback(async () => {
+    if (!isAuthenticated) {
+      setMyReviews([]);
+      return;
+    }
+
+    setIsLoadingMyReviews(true);
+    try {
+      const data = await productReviewService.getMyReviews();
+      setMyReviews(data);
+    } catch (error) {
+      console.error("Error loading personal reviews:", error);
+    } finally {
+      setIsLoadingMyReviews(false);
+    }
+  }, [isAuthenticated]);
 
   const THUMB_VISIBLE = 5;
   const THUMB_SIZE = 72;
@@ -187,6 +228,14 @@ const ProductDetailPage = () => {
     };
   }, [selectedVariantId]);
 
+  useEffect(() => {
+    void fetchMyReviews();
+  }, [fetchMyReviews]);
+
+  useEffect(() => {
+    setReviewActionError(null);
+  }, [selectedVariantId]);
+
   const selectedVariant = useMemo(
     () =>
       fastLook?.variants?.find((variant) => variant.id === selectedVariantId) ||
@@ -194,10 +243,161 @@ const ProductDetailPage = () => {
     [fastLook, selectedVariantId],
   );
 
+  const fallbackReviewThumbnail = useMemo(
+    () =>
+      selectedVariant?.media?.url ||
+      variantMediaList[0]?.url ||
+      fastLook?.variants?.[0]?.media?.url ||
+      null,
+    [selectedVariant, variantMediaList, fastLook],
+  );
+
+  const existingReviewForVariant = useMemo(
+    () =>
+      myReviews.find((review) => review.variantId === selectedVariantId) ||
+      null,
+    [myReviews, selectedVariantId],
+  );
+
   const handleVariantChange = (_: unknown, value: string | null) => {
     if (value) {
       setSelectedVariantId(value);
     }
+  };
+
+  const resolveReviewTargetForVariant = async (
+    variantId: string,
+  ): Promise<ReviewDialogTarget | null> => {
+    if (reviewTargetCacheRef.current[variantId]) {
+      return reviewTargetCacheRef.current[variantId];
+    }
+
+    const PAGE_SIZE = 10;
+    let currentPage = 1;
+    let hasMore = true;
+
+    // Lazily scan delivered orders to find the corresponding order detail ID
+    // required by the reviews API. We only run this when the customer
+    // explicitly requests to write a review to avoid unnecessary network cost.
+    while (hasMore) {
+      const { items, totalCount } = await orderService.getMyOrders({
+        Status: "Delivered",
+        PageNumber: currentPage,
+        PageSize: PAGE_SIZE,
+        SortBy: "CreatedAt",
+        SortOrder: "desc",
+      });
+
+      if (!items.length) {
+        break;
+      }
+
+      for (const order of items) {
+        if (!order.id) {
+          continue;
+        }
+        const detail = await orderService.getMyOrderById(order.id);
+        const match = detail.orderDetails?.find(
+          (item) => item.variantId === variantId,
+        );
+        if (match?.id) {
+          const target: ReviewDialogTarget = {
+            orderDetailId: match.id,
+            variantId,
+            variantName:
+              match.variantName ||
+              selectedVariant?.displayName ||
+              fastLook?.name,
+            productName: fastLook?.name || match.variantName || undefined,
+            thumbnailUrl: match.imageUrl || fallbackReviewThumbnail || null,
+          };
+          reviewTargetCacheRef.current[variantId] = target;
+          return target;
+        }
+      }
+
+      const totalPages =
+        typeof totalCount === "number" && totalCount > 0
+          ? Math.ceil(totalCount / PAGE_SIZE)
+          : currentPage;
+      currentPage += 1;
+      hasMore = currentPage <= totalPages;
+    }
+
+    return null;
+  };
+
+  const handleOpenReviewDialog = async () => {
+    if (!isAuthenticated) {
+      showToast("Vui lòng đăng nhập để đánh giá sản phẩm", "info");
+      navigate("/login");
+      return;
+    }
+
+    if (!selectedVariantId) {
+      showToast("Vui lòng chọn phiên bản để đánh giá", "warning");
+      return;
+    }
+
+    if (existingReviewForVariant) {
+      setReviewDialogMode("edit");
+      setReviewDialogTarget({
+        orderDetailId: existingReviewForVariant.orderDetailId || "",
+        variantId: existingReviewForVariant.variantId || selectedVariantId,
+        variantName:
+          existingReviewForVariant.variantName ||
+          selectedVariant?.displayName ||
+          fastLook?.name,
+        productName: fastLook?.name || existingReviewForVariant.variantName,
+        thumbnailUrl:
+          existingReviewForVariant.images?.[0]?.url ||
+          fallbackReviewThumbnail ||
+          null,
+      });
+      setSelectedReview(existingReviewForVariant);
+      setIsReviewDialogOpen(true);
+      setReviewActionError(null);
+      return;
+    }
+
+    try {
+      setIsFindingReviewTarget(true);
+      const target = await resolveReviewTargetForVariant(selectedVariantId);
+      if (!target) {
+        setReviewActionError(
+          "Bạn chỉ có thể đánh giá sau khi đơn hàng được giao thành công.",
+        );
+        showToast(
+          "Chỉ những đơn đã giao thành công mới có thể viết đánh giá.",
+          "info",
+        );
+        return;
+      }
+      setReviewDialogMode("create");
+      setReviewDialogTarget(target);
+      setSelectedReview(null);
+      setIsReviewDialogOpen(true);
+      setReviewActionError(null);
+    } catch (error: any) {
+      const message =
+        error?.message || "Không thể kiểm tra điều kiện đánh giá lúc này.";
+      setReviewActionError(message);
+      showToast(message, "error");
+    } finally {
+      setIsFindingReviewTarget(false);
+    }
+  };
+
+  const handleReviewDialogClose = () => {
+    setIsReviewDialogOpen(false);
+    setReviewDialogTarget(null);
+    setSelectedReview(null);
+  };
+
+  const handleReviewSuccess = async () => {
+    await fetchMyReviews();
+    setReviewRefreshToken((prev) => prev + 1);
+    setReviewActionError(null);
   };
 
   const handleAddToCart = async (redirectToCheckout = false) => {
@@ -305,6 +505,45 @@ const ProductDetailPage = () => {
       </Box>
     );
   };
+
+  const renderReviewCallout = () => (
+    <Box mt={6}>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", md: "center" }}
+      >
+        <Box>
+          <Typography variant="h5" fontWeight={700}>
+            Chia sẻ cảm nhận của bạn
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {existingReviewForVariant
+              ? "Bạn đã từng đánh giá phiên bản này. Có thể cập nhật nếu trải nghiệm thay đổi."
+              : "Đơn hàng đã được giao? Hãy để lại đánh giá để cộng đồng có thêm thông tin."}
+          </Typography>
+        </Box>
+        <Button
+          variant={existingReviewForVariant ? "outlined" : "contained"}
+          color="secondary"
+          onClick={handleOpenReviewDialog}
+          disabled={!selectedVariantId || isFindingReviewTarget}
+        >
+          {isFindingReviewTarget
+            ? "Đang kiểm tra..."
+            : existingReviewForVariant
+              ? "Cập nhật đánh giá"
+              : "Viết đánh giá"}
+        </Button>
+      </Stack>
+      {reviewActionError && (
+        <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
+          {reviewActionError}
+        </Alert>
+      )}
+    </Box>
+  );
 
   const renderReviewSummary = () => {
     if (!selectedVariantId) return null;
@@ -709,6 +948,11 @@ const ProductDetailPage = () => {
         {renderFragranceNotes()}
         {renderDescription()}
         {renderReviewSummary()}
+        {renderReviewCallout()}
+        <ReviewSection
+          variantId={selectedVariantId}
+          refreshToken={reviewRefreshToken}
+        />
       </>
     );
   };
@@ -726,6 +970,15 @@ const ProductDetailPage = () => {
           {renderContent()}
         </Container>
       </Box>
+
+      <ReviewEditorDialog
+        open={isReviewDialogOpen}
+        mode={reviewDialogMode}
+        target={reviewDialogTarget}
+        initialReview={selectedReview}
+        onClose={handleReviewDialogClose}
+        onSuccess={handleReviewSuccess}
+      />
     </MainLayout>
   );
 };

@@ -14,19 +14,26 @@ import {
   Person as PersonIcon,
   LocationOn as LocationIcon,
   ShoppingBag as ShoppingBagIcon,
+  Stars as StarsIcon,
 } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
+import { useToast } from "../hooks/useToast";
 import { profileService } from "../services/profileService";
 import { addressService } from "../services/addressService";
 import { orderService } from "../services/orderService";
+import { productReviewService } from "../services/reviewService";
 import type { UserProfile, UpdateProfileRequest } from "../types/profile";
 import type { AddressResponse } from "../types/address";
 import type { OrderListItem } from "../types/order";
+import type { ReviewResponse } from "../types/review";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { MainLayout } from "../layouts/MainLayout";
 import ProfileInfo from "../components/profile/ProfileInfo";
 import AddressList from "../components/profile/AddressList";
 import OrderHistory from "../components/profile/OrderHistory";
+import { MyReviews } from "../components/profile/MyReviews";
+import { ReviewEditorDialog } from "../components/review/ReviewEditorDialog";
+import type { ReviewDialogTarget } from "../types/review";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -51,6 +58,7 @@ function TabPanel(props: TabPanelProps) {
 
 const ProfilePage = () => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [addresses, setAddresses] = useState<AddressResponse[]>([]);
   const [orders, setOrders] = useState<OrderListItem[]>([]);
@@ -61,10 +69,16 @@ const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [myReviews, setMyReviews] = useState<ReviewResponse[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
+  const [reviewDialogMode, setReviewDialogMode] = useState<"create" | "edit">("create");
+  const [reviewDialogTarget, setReviewDialogTarget] = useState<ReviewDialogTarget | null>(null);
+  const [selectedReview, setSelectedReview] = useState<ReviewResponse | null>(null);
 
   // Determine which layout to use based on user role
   const Layout =
@@ -84,10 +98,16 @@ const ProfilePage = () => {
   }, []);
 
   useEffect(() => {
+    loadMyReviews();
+  }, []);
+
+  useEffect(() => {
     if (activeTab === 1 && addresses.length === 0) {
       loadAddresses();
     } else if (activeTab === 2 && orders.length === 0) {
       loadOrders(1, orderPageSize);
+    } else if (activeTab === 3 && myReviews.length === 0 && !isLoadingReviews) {
+      loadMyReviews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
@@ -142,6 +162,18 @@ const ProfilePage = () => {
     }
   };
 
+  const loadMyReviews = async () => {
+    setIsLoadingReviews(true);
+    try {
+      const data = await productReviewService.getMyReviews();
+      setMyReviews(data);
+    } catch (err: any) {
+      console.error("Error loading reviews:", err);
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
   const handleOrderPageChange = (newPage: number) => {
     setOrderPage(newPage);
     loadOrders(newPage, orderPageSize);
@@ -151,6 +183,54 @@ const ProfilePage = () => {
     setOrderPageSize(newPageSize);
     setOrderPage(1);
     loadOrders(1, newPageSize);
+  };
+
+  const handleOpenReviewFromOrder = (
+    target: ReviewDialogTarget,
+    existing?: ReviewResponse | null,
+  ) => {
+    setReviewDialogMode(existing ? "edit" : "create");
+    setReviewDialogTarget(target);
+    setSelectedReview(existing || null);
+    setIsReviewDialogOpen(true);
+  };
+
+  const handleEditReview = (review: ReviewResponse) => {
+    if (!review.orderDetailId || !review.variantId) {
+      showToast("Không thể mở đánh giá này", "error");
+      return;
+    }
+    setReviewDialogMode("edit");
+    setReviewDialogTarget({
+      orderDetailId: review.orderDetailId,
+      variantId: review.variantId,
+      variantName: review.variantName,
+      productName: review.variantName,
+      thumbnailUrl: review.images?.[0]?.url || null,
+    });
+    setSelectedReview(review);
+    setIsReviewDialogOpen(true);
+  };
+
+  const handleReviewDialogClose = () => {
+    setIsReviewDialogOpen(false);
+    setReviewDialogTarget(null);
+    setSelectedReview(null);
+  };
+
+  const handleReviewSuccess = async () => {
+    await loadMyReviews();
+  };
+
+  const handleDeleteReview = async (review: ReviewResponse) => {
+    if (!review.id) return;
+    try {
+      await productReviewService.deleteReview(review.id);
+      showToast("Đã xoá đánh giá", "success");
+      await loadMyReviews();
+    } catch (err: any) {
+      showToast(err.message || "Không thể xoá đánh giá", "error");
+    }
   };
 
   const handleEdit = () => {
@@ -275,6 +355,7 @@ const ProfilePage = () => {
               label="Lịch sử mua hàng"
               iconPosition="start"
             />
+            <Tab icon={<StarsIcon />} label="Đánh giá" iconPosition="start" />
           </Tabs>
 
           <Box sx={{ px: 3, pb: 3 }}>
@@ -315,11 +396,32 @@ const ProfilePage = () => {
                 totalCount={orderTotalCount}
                 onPageChange={handleOrderPageChange}
                 onPageSizeChange={handleOrderPageSizeChange}
+                myReviews={myReviews}
+                onReviewSelected={handleOpenReviewFromOrder}
+              />
+            </TabPanel>
+
+            <TabPanel value={activeTab} index={3}>
+              <MyReviews
+                reviews={myReviews}
+                isLoading={isLoadingReviews}
+                onRefresh={loadMyReviews}
+                onEdit={handleEditReview}
+                onDelete={handleDeleteReview}
               />
             </TabPanel>
           </Box>
         </Paper>
       </Container>
+
+      <ReviewEditorDialog
+        open={isReviewDialogOpen}
+        mode={reviewDialogMode}
+        target={reviewDialogTarget}
+        initialReview={selectedReview}
+        onClose={handleReviewDialogClose}
+        onSuccess={handleReviewSuccess}
+      />
     </Layout>
   );
 };
