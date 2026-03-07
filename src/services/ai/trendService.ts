@@ -3,15 +3,19 @@ import type { ProductListItem } from "@/types/product";
 import dayjs from "dayjs";
 
 class TrendService {
-    async getTrendingProducts(period: "weekly" | "monthly" | "yearly" = "weekly", endDate: string = dayjs().startOf("day").toISOString(), startDate?: string,): Promise<ProductListItem[]> {
+    async getTrendingProducts(period: "weekly" | "monthly" | "yearly" = "weekly", endDate?: string, startDate?: string): Promise<ProductListItem[]> {
         try {
+            // Chuẩn hoá ngày về chuỗi YYYY-MM-DD theo yêu cầu của user
+            const finalEndDate = endDate ? dayjs(endDate).format("YYYY-MM-DD") : dayjs().format("YYYY-MM-DD");
+            const finalStartDate = startDate ? dayjs(startDate).format("YYYY-MM-DD") : undefined;
+
             // 1. Khởi tạo job
             const jobResponse = await (aiApiInstance as any).GET("/trends/product/job", {
                 params: {
                     query: {
                         period,
-                        ...(endDate ? { endDate } : {}),
-                        ...(startDate ? { startDate } : {})
+                        endDate: finalEndDate,
+                        ...(finalStartDate ? { startDate: finalStartDate } : {})
                     }
                 }
             });
