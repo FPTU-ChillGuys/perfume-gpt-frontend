@@ -21,6 +21,7 @@ import {
   ArrowDropUp,
   Dashboard as DashboardIcon,
   Logout as LogoutIcon,
+  ShoppingBag as ShoppingBagIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -127,6 +128,11 @@ export const Header = () => {
     } else {
       navigate("/profile");
     }
+    handleMenuClose();
+  };
+
+  const handleMyOrders = () => {
+    navigate("/my-orders");
     handleMenuClose();
   };
 
@@ -303,6 +309,14 @@ export const Header = () => {
                     </Typography>
                   </MenuItem>
                   <Divider />
+                  {user.role === "user" && (
+                    <MenuItem onClick={handleMyOrders} sx={{ py: 1.5 }}>
+                      <ListItemIcon>
+                        <ShoppingBagIcon fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="body2">Đơn hàng của tôi</Typography>
+                    </MenuItem>
+                  )}
                   {(user.role === "admin" || user.role === "staff") && (
                     <MenuItem onClick={handleDashboard} sx={{ py: 1.5 }}>
                       <ListItemIcon>

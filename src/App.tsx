@@ -27,6 +27,7 @@ import { CheckoutShippingPage } from "./pages/checkout/CheckoutShippingPage";
 import { CheckoutPaymentPage } from "./pages/checkout/CheckoutPaymentPage";
 import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
 import { PaymentFailurePage } from "./pages/PaymentFailurePage";
+import { MyOrdersPage } from "./pages/MyOrdersPage";
 import { OrderManagementPage } from "./pages/OrderManagementPage";
 import { ContentManagementPage } from "./pages/ContentManagementPage";
 import ChatbotWidget from "./components/chatbot/ChatbotWidget";
@@ -84,6 +85,14 @@ function App() {
                       element={
                         <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
                           <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/my-orders"
+                      element={
+                        <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
+                          <MyOrdersPage />
                         </RoleBasedRoute>
                       }
                     />
