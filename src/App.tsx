@@ -42,6 +42,7 @@ const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const UserLogsManagementPage = lazy(() => import("./pages/UserLogsManagementPage").then(m => ({ default: m.UserLogsManagementPage })));
 const AdminConversationsPage = lazy(() => import("./pages/AdminConversationsPage").then(m => ({ default: m.AdminConversationsPage })));
 const InventoryReportLogsPage = lazy(() => import("./pages/InventoryReportLogsPage").then(m => ({ default: m.InventoryReportLogsPage })));
+const AIAcceptancePage = lazy(() => import("./pages/AIAcceptancePage").then(m => ({ default: m.AIAcceptancePage })));
 const ChatbotWidget = lazy(() => import("./components/chatbot/ChatbotWidget"));
 
 const PageLoader = () => (
@@ -196,6 +197,14 @@ function App() {
                       element={
                         <RoleBasedRoute allowedRoles={["admin"]}>
                           <InventoryReportLogsPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/ai-acceptance"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <AIAcceptancePage />
                         </RoleBasedRoute>
                       }
                     />
