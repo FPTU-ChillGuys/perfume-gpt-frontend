@@ -12,6 +12,7 @@ import {
     Divider,
     LinearProgress,
     Alert,
+    Tooltip,
 } from "@mui/material";
 import { AutoAwesome as AutoAwesomeIcon } from "@mui/icons-material";
 import { inventoryService } from "@/services/ai/inventoryService";
@@ -29,12 +30,22 @@ export const AIInventoryReportDialog = ({ open, onClose }: AIInventoryReportDial
     const [phase, setPhase] = useState<JobPhase>("idle");
     const [reportText, setReportText] = useState<string | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [expirationTime, setExpirationTime] = useState<Date | null>(null);
+    const [now, setNow] = useState(() => new Date());
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const stopPolling = useCallback(() => {
         if (pollRef.current !== null) {
             clearInterval(pollRef.current);
             pollRef.current = null;
+        }
+    }, []);
+
+    const stopClock = useCallback(() => {
+        if (clockRef.current !== null) {
+            clearInterval(clockRef.current);
+            clockRef.current = null;
         }
     }, []);
 
@@ -46,6 +57,27 @@ export const AIInventoryReportDialog = ({ open, onClose }: AIInventoryReportDial
         return () => stopPolling();
     }, [open, stopPolling]);
 
+    useEffect(() => {
+        return () => stopClock();
+    }, [stopClock]);
+
+    const startClock = useCallback(() => {
+        stopClock();
+        clockRef.current = setInterval(() => setNow(new Date()), 1000);
+    }, [stopClock]);
+
+    const isExpired = expirationTime ? now >= expirationTime : true;
+
+    const remainingSeconds = expirationTime
+        ? Math.max(0, Math.ceil((expirationTime.getTime() - now.getTime()) / 1000))
+        : 0;
+
+    const formatRemaining = (secs: number) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return m > 0 ? `${m}p ${s}s` : `${s}s`;
+    };
+
     const handleStart = async () => {
         setPhase("pending");
         setReportText(null);
@@ -54,6 +86,8 @@ export const AIInventoryReportDialog = ({ open, onClose }: AIInventoryReportDial
         try {
             const res = await inventoryService.createInventoryReportJob();
             jobId = res.data.jobId;
+            setExpirationTime(new Date(res.data.expirationTime));
+            startClock();
         } catch (err: any) {
             setPhase("error");
             setErrorMsg(err?.message ?? "Không thể khởi tạo job.");
@@ -64,11 +98,11 @@ export const AIInventoryReportDialog = ({ open, onClose }: AIInventoryReportDial
             try {
                 const res = await inventoryService.getInventoryReportJobResult(jobId);
                 const jobData = res.data;
-                if (jobData?.status === "done") {
+                if (jobData?.status === "completed") {
                     stopPolling();
-                    setReportText(jobData.result ?? "");
+                    setReportText(jobData.data ?? "");
                     setPhase("done");
-                } else if (jobData?.status === "error") {
+                } else if (jobData?.status === "failed") {
                     stopPolling();
                     setErrorMsg(jobData.error ?? "Job thất bại.");
                     setPhase("error");
@@ -91,9 +125,11 @@ export const AIInventoryReportDialog = ({ open, onClose }: AIInventoryReportDial
 
     const handleRetry = () => {
         stopPolling();
+        stopClock();
         setPhase("idle");
         setReportText(null);
         setErrorMsg(null);
+        setExpirationTime(null);
     };
 
     return (
@@ -169,14 +205,22 @@ export const AIInventoryReportDialog = ({ open, onClose }: AIInventoryReportDial
                     </Button>
                 )}
                 {phase === "error" && (
-                    <Button variant="outlined" onClick={handleRetry}>
-                        Thử lại
-                    </Button>
+                    <Tooltip title={!isExpired ? `Vui lòng chờ thêm ${formatRemaining(remainingSeconds)}` : ""}>
+                        <span>
+                            <Button variant="outlined" onClick={handleRetry} disabled={!isExpired}>
+                                {isExpired ? "Thử lại" : `Thử lại (${formatRemaining(remainingSeconds)})`}
+                            </Button>
+                        </span>
+                    </Tooltip>
                 )}
                 {phase === "done" && (
-                    <Button variant="outlined" onClick={handleRetry}>
-                        Tạo lại
-                    </Button>
+                    <Tooltip title={!isExpired ? `Vui lòng chờ thêm ${formatRemaining(remainingSeconds)}` : ""}>
+                        <span>
+                            <Button variant="outlined" onClick={handleRetry} disabled={!isExpired}>
+                                {isExpired ? "Tạo lại" : `Tạo lại (${formatRemaining(remainingSeconds)})`}
+                            </Button>
+                        </span>
+                    </Tooltip>
                 )}
                 <Button onClick={handleClose} color="inherit" disabled={phase === "pending"}>
                     Đóng

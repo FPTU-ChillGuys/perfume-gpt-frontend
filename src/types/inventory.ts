@@ -21,11 +21,11 @@ export interface InventoryReportJobCreated {
     expirationTime: string;
 }
 
-export type InventoryReportJobStatus = 'pending' | 'done' | 'error';
+export type InventoryReportJobStatus = 'pending' | 'completed' | 'failed';
 
 export interface InventoryReportJobResult {
     status: InventoryReportJobStatus;
-    result?: string;
+    data?: string;
     error?: string;
 }
 

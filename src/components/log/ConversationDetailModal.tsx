@@ -61,7 +61,7 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                 // Giữ nguyên dạng raw
                             }
 
-                            const keyId = (msgRef as any).id || Math.random().toString(36).substr(2, 9);
+                            const keyId = (msgRef as any).id;
                             const createdAtStr = (msgRef as any).createdAt;
                             const isUser = msgRef.sender === 'user';
 
