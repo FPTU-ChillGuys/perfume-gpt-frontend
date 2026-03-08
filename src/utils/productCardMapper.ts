@@ -1,6 +1,7 @@
 import type { ProductCardProps } from "@/components/product/ProductCard";
 import type {
   ProductListItem,
+  ProductListItemWithVariants,
   ProductVariant,
   VariantPagedItem,
 } from "@/types/product";
@@ -72,5 +73,25 @@ export const withVariantPrimaryImage = (
   return {
     ...variant,
     primaryImage,
+  };
+};
+
+/**
+ * Maps a semantic search result (product with embedded variants) directly to a card,
+ * without needing a separate variant API call.
+ */
+export const mapProductWithVariantsToCard = (
+  product: ProductListItemWithVariants & { id: string },
+): ProductCardProps => {
+  const firstVariant = product.variants?.[0];
+  const price = Number(firstVariant?.basePrice ?? 0);
+
+  return {
+    id: product.id,
+    brand: product.brandName ?? "\u0110ang c\u1eadp nh\u1eadt",
+    name: product.name ?? "\u0110ang c\u1eadp nh\u1eadt",
+    salePrice: Number.isFinite(price) ? price : 0,
+    imageUrl: product.primaryImage?.url ?? undefined,
+    variantId: firstVariant?.id,
   };
 };

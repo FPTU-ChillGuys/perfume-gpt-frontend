@@ -11,6 +11,7 @@ import type { ProductListItem, VariantPagedItem } from "../types/product";
 import {
   buildVariantMap,
   mapProductToCard,
+  mapProductWithVariantsToCard,
   withVariantPrimaryImage,
 } from "../utils/productCardMapper";
 
@@ -51,7 +52,7 @@ export const ProductListPage = () => {
         let variantPage;
 
         if (searchParamValue) {
-          // If searching, use Semantic Search API
+          // Semantic search returns products with embedded variants — no extra variant API call needed
           const searchResult = await productService.searchProductsSemantic({
             searchText: searchParamValue,
             PageNumber: page,
@@ -59,14 +60,17 @@ export const ProductListPage = () => {
             IsDescending: true,
           });
 
-          productPage = searchResult;
+          if (!isMounted) return;
 
-          // Semantic search might return variants embedded, or we fall back to fetching them
-          variantPage = await productService.getProductVariantsPaged({
-            PageNumber: 1,
-            PageSize: Math.max(pageSize * 4, 120),
-            IsDescending: true,
-          });
+          const items = (searchResult?.items ?? []).filter(
+            (product): product is typeof product & { id: string } => Boolean(product.id),
+          );
+
+          const mapped = items.map(mapProductWithVariantsToCard);
+          setProducts(mapped);
+          setTotalPages(searchResult?.totalPages ?? 0);
+          setTotalCount(searchResult?.totalCount ?? items.length);
+          return;
         } else {
           // Standard product list API
           const [pPage, vPage] = await Promise.all([
@@ -206,7 +210,7 @@ export const ProductListPage = () => {
     }
 
     return sorted;
-  }, [products, searchTerm, sort]);
+  }, [products, searchTerm, searchParamValue, sort]);
 
   const startItem = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = totalCount === 0 ? 0 : startItem + products.length - 1;
