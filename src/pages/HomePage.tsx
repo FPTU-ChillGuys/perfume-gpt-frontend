@@ -105,9 +105,16 @@ export const HomePage = () => {
           .map((product: any) => {
             // Trend API embeds `variants` directly in the product response.
             const firstVariant = product.variants?.[0];
+            const mapped = mapProductToCard(product, firstVariant);
+            // Trend API returns primaryImage as a plain string URL, not a MediaResponse object
+            const imageUrl =
+              typeof product.primaryImage === "string"
+                ? product.primaryImage
+                : mapped.imageUrl;
             return {
-              ...mapProductToCard(product, firstVariant),
-              isTrending: true, // Optional tag if component supports it, or similar to isNew
+              ...mapped,
+              imageUrl,
+              isTrending: true,
             };
           });
 
