@@ -5,10 +5,11 @@ import { CollectionBannerSection } from "../components/home/CollectionBannerSect
 import { FeatureSection } from "../components/home/FeatureSection";
 import { ProductSection } from "../components/home/ProductSection";
 import { productService } from "../services/productService";
-import { trendService } from "../services/ai/trendService";
+import { trendService, getLastSunday, getPrevSunday } from "../services/ai/trendService";
 import type { ProductListItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
 import { buildVariantMap, mapProductToCard } from "../utils/productCardMapper";
+import dayjs from "dayjs";
 
 export const HomePage = () => {
   const [newArrivals, setNewArrivals] = useState<ProductCardProps[]>([]);
@@ -92,34 +93,41 @@ export const HomePage = () => {
   useEffect(() => {
     let isMounted = true;
 
+    const normalizeTrendProducts = (products: ProductListItem[]): ProductCardProps[] =>
+      products
+        .filter((product): product is ProductListItem & { id: string } => Boolean(product.id))
+        .map((product: any) => {
+          const firstVariant = product.variants?.[0];
+          const mapped = mapProductToCard(product, firstVariant);
+          const imageUrl =
+            typeof product.primaryImage === "string"
+              ? product.primaryImage
+              : mapped.imageUrl;
+          return { ...mapped, imageUrl, isTrending: true };
+        });
+
     const fetchTrending = async () => {
       setIsTrendingLoading(true);
       try {
-        const products = await trendService.getTrendingProducts("weekly");
+        // Always use the most recent Sunday as endDate (cached weekly).
+        // e.g. Monday 9/3 → endDate = Sunday 8/3; Sunday 15/3 → endDate = 15/3
+        const lastSunday = dayjs(getLastSunday()).format("YYYY-MM-DD");
+        const prevSunday = dayjs(getPrevSunday()).format("YYYY-MM-DD");
+
+        // Try the most recent Sunday first
+        let products = await trendService.getTrendingProducts("weekly", lastSunday).catch(() => null);
+
+        // If still generating (null), fall back to the previous Sunday
+        if (products === null) {
+          products = await trendService.getTrendingProducts("weekly", prevSunday).catch(() => null);
+        }
+
         if (!isMounted) return;
 
-        const normalizedTrending = products
-          .filter((product): product is ProductListItem & { id: string } =>
-            Boolean(product.id),
-          )
-          .map((product: any) => {
-            // Trend API embeds `variants` directly in the product response.
-            const firstVariant = product.variants?.[0];
-            const mapped = mapProductToCard(product, firstVariant);
-            // Trend API returns primaryImage as a plain string URL, not a MediaResponse object
-            const imageUrl =
-              typeof product.primaryImage === "string"
-                ? product.primaryImage
-                : mapped.imageUrl;
-            return {
-              ...mapped,
-              imageUrl,
-              isTrending: true,
-            };
-          });
-
-        setTrendingProducts(normalizedTrending);
-
+        // If both unavailable, leave trendingProducts empty (section hidden)
+        if (products && products.length > 0) {
+          setTrendingProducts(normalizeTrendProducts(products));
+        }
       } catch (e) {
         console.warn("Failed to fetch trending products", e);
       } finally {
