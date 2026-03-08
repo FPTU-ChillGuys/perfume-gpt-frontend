@@ -1,4 +1,6 @@
 import { apiInstance } from "@/lib/api";
+import { dexieCache } from "@/utils/dexieCache";
+import { CACHE_KEYS, CACHE_TTL } from "@/constants/cache";
 
 export interface CategoryLookupItem {
   id?: number;
@@ -25,6 +27,14 @@ class CategoryService {
           "Failed to fetch categories",
       );
     }
+  }
+
+  async getCategoriesLookupCached(): Promise<CategoryLookupItem[]> {
+    return dexieCache.getOrFetch(
+      CACHE_KEYS.CATEGORIES_LOOKUP,
+      () => this.getCategoriesLookup(),
+      CACHE_TTL.ONE_HOUR * 2,
+    );
   }
 }
 
