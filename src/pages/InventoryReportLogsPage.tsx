@@ -15,108 +15,24 @@ import {
     IconButton,
     Tooltip,
     Chip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     Button,
-    Divider,
 } from "@mui/material";
 import {
     Search as SearchIcon,
     Clear as ClearIcon,
     Visibility as VisibilityIcon,
-    Assessment as AssessmentIcon,
+    AutoAwesome as AutoAwesomeIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { inventoryService } from "@/services/ai/inventoryService";
 import { useToast } from "@/hooks/useToast";
 import type { AIInventoryReportLog } from "@/types/inventory";
+import { InventoryLogDetailDialog } from "@/components/log/InventoryLogDetailDialog";
+import { AIInventoryReportDialog } from "@/components/log/AIInventoryReportDialog";
 
 const formatDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
     return new Date(dateStr).toLocaleString("vi-VN");
-};
-
-interface DetailDialogProps {
-    open: boolean;
-    onClose: () => void;
-    log: AIInventoryReportLog | null;
-}
-
-const LogDetailDialog = ({ open, onClose, log }: DetailDialogProps) => {
-    if (!log) return null;
-    return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle>
-                <Box display="flex" alignItems="center" gap={1}>
-                    <AssessmentIcon color="primary" />
-                    <Typography variant="h6" fontWeight="bold">
-                        Chi tiết Log Báo cáo Tồn kho
-                    </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                    ID: {log.id}
-                </Typography>
-            </DialogTitle>
-            <Divider />
-            <DialogContent>
-                <Box display="flex" flexDirection="column" gap={2} pt={1}>
-                    <Box
-                        sx={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(2, 1fr)",
-                            gap: 2,
-                        }}
-                    >
-                        <Box>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                Ngày tạo
-                            </Typography>
-                            <Typography variant="body2">{formatDate(log.createdAt)}</Typography>
-                        </Box>
-                        <Box>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                                Cập nhật lần cuối
-                            </Typography>
-                            <Typography variant="body2">{formatDate(log.updatedAt)}</Typography>
-                        </Box>
-                    </Box>
-
-                    <Divider />
-
-                    <Box>
-                        <Typography variant="caption" color="text.secondary" fontWeight={600} gutterBottom display="block">
-                            Nội dung phản hồi AI
-                        </Typography>
-                        <Paper
-                            variant="outlined"
-                            sx={{
-                                p: 2,
-                                maxHeight: 400,
-                                overflowY: "auto",
-                                bgcolor: "grey.50",
-                                borderRadius: 1,
-                            }}
-                        >
-                            <Typography
-                                variant="body2"
-                                component="pre"
-                                sx={{ whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "inherit", m: 0 }}
-                            >
-                                {log.inventoryLog || "Không có nội dung"}
-                            </Typography>
-                        </Paper>
-                    </Box>
-                </Box>
-            </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
-                <Button onClick={onClose} variant="outlined">
-                    Đóng
-                </Button>
-            </DialogActions>
-        </Dialog>
-    );
 };
 
 export const InventoryReportLogsPage = () => {
@@ -136,6 +52,9 @@ export const InventoryReportLogsPage = () => {
 
     // Detail dialog
     const [selectedLog, setSelectedLog] = useState<AIInventoryReportLog | null>(null);
+
+    // AI report job dialog
+    const [aiDialogOpen, setAiDialogOpen] = useState(false);
 
     useEffect(() => {
         loadLogs();
@@ -210,9 +129,20 @@ export const InventoryReportLogsPage = () => {
     return (
         <AdminLayout>
             <Box>
-                <Typography variant="h4" fontWeight="bold" mb={3}>
-                    Lịch sử Báo cáo Tồn kho
-                </Typography>
+                <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
+                    <Typography variant="h4" fontWeight="bold">
+                        Lịch sử Báo cáo Tồn kho
+                    </Typography>
+                    <Tooltip title="Tạo báo cáo tồn kho bằng AI">
+                        <Button
+                            variant="contained"
+                            startIcon={<AutoAwesomeIcon />}
+                            onClick={() => setAiDialogOpen(true)}
+                        >
+                            Tạo báo cáo AI
+                        </Button>
+                    </Tooltip>
+                </Box>
 
                 {/* Filters */}
                 <Paper sx={{ p: 3, mb: 3 }}>
@@ -375,10 +305,15 @@ export const InventoryReportLogsPage = () => {
                 </TableContainer>
             </Box>
 
-            <LogDetailDialog
+            <InventoryLogDetailDialog
                 open={!!selectedLog}
                 onClose={() => setSelectedLog(null)}
                 log={selectedLog}
+            />
+
+            <AIInventoryReportDialog
+                open={aiDialogOpen}
+                onClose={() => setAiDialogOpen(false)}
             />
         </AdminLayout>
     );
