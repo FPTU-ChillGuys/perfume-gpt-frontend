@@ -1,5 +1,8 @@
+import { lazy, Suspense } from "react";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import CircularProgress from "@mui/material/CircularProgress";
+import Box from "@mui/material/Box";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { theme } from "./theme/theme";
@@ -9,35 +12,43 @@ import { CartProvider } from "./contexts/CartContext";
 import { ProductQuickViewProvider } from "./contexts/ProductQuickViewContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
-import { HomePage } from "./pages/HomePage";
-import { ProductListPage } from "./pages/ProductListPage";
-import { LoginPage } from "./pages/LoginPage";
-import { RegisterPage } from "./pages/RegisterPage";
-import AdminDashboard from "./pages/AdminDashboard";
-import StaffDashboard from "./pages/StaffDashboard";
-import UnauthorizedPage from "./pages/UnauthorizedPage";
-import ImportStock from "./pages/ImportStock";
-import ProductManagement from "./pages/ProductManagement";
-import ProfilePage from "./pages/ProfilePage";
 import "./App.css";
-import ReceiveImportStock from "./pages/ReceiveImportStock";
-import { CartPage } from "./pages/CartPage";
-import { CheckoutPage } from "./pages/CheckoutPage";
-import { CheckoutShippingPage } from "./pages/checkout/CheckoutShippingPage";
-import { CheckoutPaymentPage } from "./pages/checkout/CheckoutPaymentPage";
-import { PaymentSuccessPage } from "./pages/PaymentSuccessPage";
-import { PaymentFailurePage } from "./pages/PaymentFailurePage";
-import { MyOrdersPage } from "./pages/MyOrdersPage";
-import { OrderManagementPage } from "./pages/OrderManagementPage";
-import { ContentManagementPage } from "./pages/ContentManagementPage";
-import ChatbotWidget from "./components/chatbot/ChatbotWidget";
-import AIInstructionPage from "./pages/AIInstructionPage";
-import QuizManagementPage from "./pages/QuizManagementPage";
-import QuizPage from "./pages/QuizPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import { UserLogsManagementPage } from "./pages/UserLogsManagementPage";
-import { AdminConversationsPage } from "./pages/AdminConversationsPage";
-import { InventoryReportLogsPage } from "./pages/InventoryReportLogsPage";
+
+// Lazy-loaded pages — each becomes a separate chunk
+const HomePage = lazy(() => import("./pages/HomePage").then(m => ({ default: m.HomePage })));
+const ProductListPage = lazy(() => import("./pages/ProductListPage").then(m => ({ default: m.ProductListPage })));
+const LoginPage = lazy(() => import("./pages/LoginPage").then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import("./pages/RegisterPage").then(m => ({ default: m.RegisterPage })));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const StaffDashboard = lazy(() => import("./pages/StaffDashboard"));
+const UnauthorizedPage = lazy(() => import("./pages/UnauthorizedPage"));
+const ImportStock = lazy(() => import("./pages/ImportStock"));
+const ProductManagement = lazy(() => import("./pages/ProductManagement"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const ReceiveImportStock = lazy(() => import("./pages/ReceiveImportStock"));
+const CartPage = lazy(() => import("./pages/CartPage").then(m => ({ default: m.CartPage })));
+const CheckoutPage = lazy(() => import("./pages/CheckoutPage").then(m => ({ default: m.CheckoutPage })));
+const CheckoutShippingPage = lazy(() => import("./pages/checkout/CheckoutShippingPage").then(m => ({ default: m.CheckoutShippingPage })));
+const CheckoutPaymentPage = lazy(() => import("./pages/checkout/CheckoutPaymentPage").then(m => ({ default: m.CheckoutPaymentPage })));
+const PaymentSuccessPage = lazy(() => import("./pages/PaymentSuccessPage").then(m => ({ default: m.PaymentSuccessPage })));
+const PaymentFailurePage = lazy(() => import("./pages/PaymentFailurePage").then(m => ({ default: m.PaymentFailurePage })));
+const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage").then(m => ({ default: m.MyOrdersPage })));
+const OrderManagementPage = lazy(() => import("./pages/OrderManagementPage").then(m => ({ default: m.OrderManagementPage })));
+const ContentManagementPage = lazy(() => import("./pages/ContentManagementPage").then(m => ({ default: m.ContentManagementPage })));
+const AIInstructionPage = lazy(() => import("./pages/AIInstructionPage"));
+const QuizManagementPage = lazy(() => import("./pages/QuizManagementPage"));
+const QuizPage = lazy(() => import("./pages/QuizPage"));
+const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
+const UserLogsManagementPage = lazy(() => import("./pages/UserLogsManagementPage").then(m => ({ default: m.UserLogsManagementPage })));
+const AdminConversationsPage = lazy(() => import("./pages/AdminConversationsPage").then(m => ({ default: m.AdminConversationsPage })));
+const InventoryReportLogsPage = lazy(() => import("./pages/InventoryReportLogsPage").then(m => ({ default: m.InventoryReportLogsPage })));
+const ChatbotWidget = lazy(() => import("./components/chatbot/ChatbotWidget"));
+
+const PageLoader = () => (
+  <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+    <CircularProgress />
+  </Box>
+);
 
 // Google OAuth Client ID - Replace with your actual Client ID from Google Cloud Console
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
@@ -52,6 +63,7 @@ function App() {
             <AuthProvider>
               <CartProvider>
                 <ProductQuickViewProvider>
+                  <Suspense fallback={<PageLoader />}>
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/login" element={<LoginPage />} />
@@ -231,7 +243,10 @@ function App() {
                       }
                     />
                   </Routes>
-                  <ChatbotWidget />
+                  </Suspense>
+                  <Suspense fallback={null}>
+                    <ChatbotWidget />
+                  </Suspense>
                 </ProductQuickViewProvider>
               </CartProvider>
             </AuthProvider>

@@ -14,5 +14,19 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true, // Allow external access
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // React core
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            // MUI core
+            "vendor-mui": ["@mui/material", "@mui/icons-material"],
+            // Emotion (MUI styling engine)
+            "vendor-emotion": ["@emotion/react", "@emotion/styled"],
+          },
+        },
+      },
+    },
   };
 });
