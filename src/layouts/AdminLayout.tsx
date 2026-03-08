@@ -129,7 +129,7 @@ const menuItems: MenuItem[] = [
   {
     text: "Báo cáo",
     icon: <ReportsIcon />,
-    path: "#",
+    path: "/admin/inventory-report-logs",
     roles: ["admin"],
   },
   {

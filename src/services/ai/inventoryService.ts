@@ -3,6 +3,7 @@ import type {
     AIInventoryReportResponse,
     AIInventoryReportStructuredResponse,
     AIInventoryReportLogListResponse,
+    AIInventoryReportLogPagedResponse,
     AIInventoryReportLogResponse
 } from "@/types/inventory";
 
@@ -38,6 +39,15 @@ class InventoryService {
      * Lấy danh sách lịch sử log báo cáo tồn kho AI
      */
     async getAllInventoryReportLogs(): Promise<AIInventoryReportLogListResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/report/logs", {})
+        );
+    }
+
+    /**
+     * Lấy danh sách lịch sử log báo cáo tồn kho AI (paged)
+     */
+    async getInventoryReportLogsPaged(): Promise<AIInventoryReportLogPagedResponse> {
         return this.handleResponse(
             await aiApiInstance.GET("/inventory/report/logs", {})
         );
