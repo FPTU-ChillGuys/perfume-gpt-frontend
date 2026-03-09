@@ -1,40 +1,40 @@
-export interface AIInventoryReportBase {
-    id: string;
-    createdAt: string;
-    updatedAt: string;
-    isActive: boolean;
-    reportId?: string; // Tùy thuộc cấu trúc Entity nếu có Audit Log gốc
+import type { ApiResponse, BaseEntity } from "./common";
+
+export type { ApiResponse, BaseEntity };
+
+export interface AIInventoryReportBase extends BaseEntity {
+    reportId?: string;
 }
 
-export interface AIInventoryReportStructuredResponse {
-    success: boolean;
-    data: any; // Dynamic JSON structure based on the structured AI response
-    __httpStatusCode?: number;
+export interface AIInventoryReportLog extends BaseEntity {
+    inventoryLog: string;
 }
 
-export interface AIInventoryReportResponse {
-    success: boolean;
-    data: string; // The raw AI report string
-    __httpStatusCode?: number;
+/** Actual paged shape returned by /inventory/report/logs */
+export interface InventoryLogPagedResult {
+    items: AIInventoryReportLog[];
+    totalCount: number;
 }
 
-export interface AIInventoryReportLog {
-    id: string;
-    createdAt: string;
-    updatedAt: string;
-    isActive: boolean;
-    reportId: string;
-    aiResponse: string;
+export interface InventoryReportJobCreated {
+    jobId: string;
+    expirationTime: string;
 }
 
-export interface AIInventoryReportLogListResponse {
-    success: boolean;
-    data: AIInventoryReportLog[];
-    __httpStatusCode?: number;
+export type InventoryReportJobStatus = 'pending' | 'completed' | 'failed';
+
+export interface InventoryReportJobResult {
+    status: InventoryReportJobStatus;
+    data?: string;
+    error?: string;
 }
 
-export interface AIInventoryReportLogResponse {
-    success: boolean;
-    data: AIInventoryReportLog;
-    __httpStatusCode?: number;
-}
+// Response type aliases
+export type AIInventoryReportStructuredResponse = ApiResponse<any>;
+export type AIInventoryReportResponse = ApiResponse<string>;
+export type AIInventoryReportLogListResponse = ApiResponse<AIInventoryReportLog[]>;
+export type AIInventoryReportLogPagedData = InventoryLogPagedResult;
+export type AIInventoryReportLogPagedResponse = ApiResponse<InventoryLogPagedResult>;
+export type AIInventoryReportLogResponse = ApiResponse<AIInventoryReportLog>;
+export type InventoryReportJobCreatedResponse = ApiResponse<InventoryReportJobCreated>;
+export type InventoryReportJobResultResponse = ApiResponse<InventoryReportJobResult>;

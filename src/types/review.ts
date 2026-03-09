@@ -1,72 +1,32 @@
 import type { components } from "./api/v1";
+import type { ApiResponse, BaseEntity } from "./common";
 
-export interface ReviewSummaryBase {
-    id: string;
-    createdAt: string;
-    updatedAt: string;
-    isActive: boolean;
+export interface ReviewSummaryBase extends BaseEntity {
     variantId: string;
 }
 
-export interface ReviewSummaryStructuredResponse {
-    success: boolean;
-    data: {
-        sentiment: string;
-        key_themes: string[];
-        pros: string[];
-        cons: string[];
-        rating_estimate: number;
-    };
-    __httpStatusCode?: number;
+export interface ReviewSummarySentiment {
+    sentiment: string;
+    key_themes: string[];
+    pros: string[];
+    cons: string[];
+    rating_estimate: number;
 }
 
-export interface ReviewSummaryResponse {
-    success: boolean;
-    data: string; // The raw summary text
-    __httpStatusCode?: number;
-}
-
-export interface ReviewSummaryJobResponse {
-    success: boolean;
-    data: {
-        jobId: string;
-    };
-    __httpStatusCode?: number;
-}
-
-export interface ReviewSummaryJobResultResponse {
-    success: boolean;
-    data: any; // Dynamic object like { status: 'pending' } or actual summary data
-    __httpStatusCode?: number;
-}
-
-export interface ReviewSummaryAllResponse {
-    success: boolean;
-    data: ReviewSummaryBase[];
-    __httpStatusCode?: number;
-}
-
-export interface ReviewLog {
-    id: string;
-    createdAt: string;
-    updatedAt: string;
-    isActive: boolean;
+export interface ReviewLog extends BaseEntity {
     content: string;
     rating: number;
     platform: string;
 }
 
-export interface ReviewLogResponse {
-    success: boolean;
-    data: ReviewLog;
-    __httpStatusCode?: number;
-}
-
-export interface ReviewLogListResponse {
-    success: boolean;
-    data: ReviewLog[];
-    __httpStatusCode?: number;
-}
+// Response type aliases — use ApiResponse<T> generics instead of repeating the shape
+export type ReviewSummaryStructuredResponse = ApiResponse<ReviewSummarySentiment>;
+export type ReviewSummaryResponse = ApiResponse<string>;
+export type ReviewSummaryJobResponse = ApiResponse<{ jobId: string }>;
+export type ReviewSummaryJobResultResponse = ApiResponse<any>;
+export type ReviewSummaryAllResponse = ApiResponse<ReviewSummaryBase[]>;
+export type ReviewLogResponse = ApiResponse<ReviewLog>;
+export type ReviewLogListResponse = ApiResponse<ReviewLog[]>;
 
 export interface CreateReviewLogDto {
     content: string;

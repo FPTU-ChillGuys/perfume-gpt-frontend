@@ -3,7 +3,10 @@ import type {
     AIInventoryReportResponse,
     AIInventoryReportStructuredResponse,
     AIInventoryReportLogListResponse,
-    AIInventoryReportLogResponse
+    AIInventoryReportLogPagedResponse,
+    AIInventoryReportLogResponse,
+    InventoryReportJobCreatedResponse,
+    InventoryReportJobResultResponse
 } from "@/types/inventory";
 
 class InventoryService {
@@ -44,12 +47,41 @@ class InventoryService {
     }
 
     /**
+     * Lấy danh sách lịch sử log báo cáo tồn kho AI (paged)
+     */
+    async getInventoryReportLogsPaged(): Promise<AIInventoryReportLogPagedResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/report/logs", {})
+        );
+    }
+
+    /**
      * Lấy chi tiết một lịch sử log báo cáo tồn kho AI dựa theo ID
      */
     async getInventoryReportLogById(id: string): Promise<AIInventoryReportLogResponse> {
         return this.handleResponse(
             await aiApiInstance.GET("/inventory/report/logs/{id}", {
                 params: { path: { id } }
+            })
+        );
+    }
+
+    /**
+     * Khởi tạo job để tạo báo cáo tồn kho bằng AI (background job)
+     */
+    async createInventoryReportJob(): Promise<InventoryReportJobCreatedResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/report/ai/job", {})
+        );
+    }
+
+    /**
+     * Kiểm tra trạng thái / kết quả của job báo cáo tồn kho AI
+     */
+    async getInventoryReportJobResult(jobId: string): Promise<InventoryReportJobResultResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/report/ai/job/result/{jobId}" as any, {
+                params: { path: { jobId } }
             })
         );
     }

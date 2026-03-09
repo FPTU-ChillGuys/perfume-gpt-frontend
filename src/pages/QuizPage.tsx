@@ -85,7 +85,11 @@ export default function QuizPage() {
         setSelections((prev) => {
             const next = new Map(prev);
             const cur = new Set(next.get(questionId) ?? []);
-            checked ? cur.add(answerId) : cur.delete(answerId);
+            if (checked) {
+                cur.add(answerId);
+            } else {
+                cur.delete(answerId);
+            }
             return next.set(questionId, cur);
         });
     }, []);
@@ -116,8 +120,8 @@ export default function QuizPage() {
             // If we have recommended products, generate an AI acceptance record
             if (parsedRes.products.length > 0) {
                 try {
-                    const id = await aiAcceptanceService.createAcceptanceRecord(userId);
-                    setAcceptanceId(id);
+                    const record = await aiAcceptanceService.createAcceptanceRecord(userId);
+                    setAcceptanceId(record.id);
                 } catch (e) {
                     console.error("Failed to create AI acceptance for Quiz:", e);
                 }

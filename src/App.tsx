@@ -12,6 +12,7 @@ import { CartProvider } from "./contexts/CartContext";
 import { ProductQuickViewProvider } from "./contexts/ProductQuickViewContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
+import { ChatbotWidgetWrapper } from "./components/chatbot/ChatbotWidgetWrapper";
 import "./App.css";
 
 // Lazy-loaded pages — each becomes a separate chunk
@@ -41,7 +42,8 @@ const QuizPage = lazy(() => import("./pages/QuizPage"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const UserLogsManagementPage = lazy(() => import("./pages/UserLogsManagementPage").then(m => ({ default: m.UserLogsManagementPage })));
 const AdminConversationsPage = lazy(() => import("./pages/AdminConversationsPage").then(m => ({ default: m.AdminConversationsPage })));
-const ChatbotWidget = lazy(() => import("./components/chatbot/ChatbotWidget"));
+const InventoryReportLogsPage = lazy(() => import("./pages/InventoryReportLogsPage").then(m => ({ default: m.InventoryReportLogsPage })));
+const AIAcceptancePage = lazy(() => import("./pages/AIAcceptancePage").then(m => ({ default: m.AIAcceptancePage })));
 
 const PageLoader = () => (
   <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -190,6 +192,22 @@ function App() {
                         </RoleBasedRoute>
                       }
                     />
+                    <Route
+                      path="/admin/inventory-report-logs"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <InventoryReportLogsPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/admin/ai-acceptance"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin"]}>
+                          <AIAcceptancePage />
+                        </RoleBasedRoute>
+                      }
+                    />
 
                     {/* Staff Routes */}
                     <Route
@@ -235,9 +253,7 @@ function App() {
                     />
                   </Routes>
                   </Suspense>
-                  <Suspense fallback={null}>
-                    <ChatbotWidget />
-                  </Suspense>
+                  <ChatbotWidgetWrapper />
                 </ProductQuickViewProvider>
               </CartProvider>
             </AuthProvider>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, X } from "lucide-react";
 import { MainLayout } from "../layouts/MainLayout";
 import {
   ProductCard,
@@ -11,8 +11,11 @@ import type { ProductListItem, VariantPagedItem } from "../types/product";
 import {
   buildVariantMap,
   mapProductToCard,
+  mapProductWithVariantsToCard,
   withVariantPrimaryImage,
 } from "../utils/productCardMapper";
+import { dexieCache } from "../utils/dexieCache";
+import { CACHE_KEYS, CACHE_TTL } from "../constants/cache";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 36];
 
@@ -36,6 +39,8 @@ export const ProductListPage = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [searchParams, setSearchParams] = useSearchParams();
   const searchParamValue = searchParams.get("search") || "";
+  const categoryIdParam = searchParams.get("categoryId") || "";
+  const categoryNameParam = searchParams.get("categoryName") || "";
   const [searchTerm, setSearchTerm] = useState(searchParamValue);
   const [sort, setSort] = useState<SortValue>("featured");
 
@@ -51,7 +56,7 @@ export const ProductListPage = () => {
         let variantPage;
 
         if (searchParamValue) {
-          // If searching, use Semantic Search API
+          // Semantic search returns products with embedded variants — no extra variant API call needed
           const searchResult = await productService.searchProductsSemantic({
             searchText: searchParamValue,
             PageNumber: page,
@@ -59,14 +64,60 @@ export const ProductListPage = () => {
             IsDescending: true,
           });
 
-          productPage = searchResult;
+          if (!isMounted) return;
 
-          // Semantic search might return variants embedded, or we fall back to fetching them
-          variantPage = await productService.getProductVariantsPaged({
-            PageNumber: 1,
-            PageSize: Math.max(pageSize * 4, 120),
-            IsDescending: true,
-          });
+          const items = (searchResult?.items ?? []).filter(
+            (product): product is typeof product & { id: string } => Boolean(product.id),
+          );
+
+          const mapped = items.map(mapProductWithVariantsToCard);
+          setProducts(mapped);
+          setTotalPages(searchResult?.totalPages ?? 0);
+          setTotalCount(searchResult?.totalCount ?? items.length);
+          return;
+        } else if (categoryIdParam) {
+          // Category filter: fetch all products client-side, cache for 5 min
+          const allMapped = await dexieCache.getOrFetch<ProductCardProps[]>(
+            CACHE_KEYS.ALL_PRODUCTS_FOR_CATEGORY_FILTER,
+            async () => {
+              const [pPage, vPage] = await Promise.all([
+                productService.getProducts({ PageNumber: 1, PageSize: 500, IsDescending: true }),
+                productService.getProductVariantsPaged({ PageNumber: 1, PageSize: 2000, IsDescending: true }),
+              ]);
+              const allItems = (pPage?.items ?? []).filter(
+                (p): p is ProductListItem & { id: string } => Boolean(p.id),
+              );
+              const idSet = new Set(allItems.map((p) => p.id));
+              const relevantVariants = (vPage.items ?? []).filter(
+                (v): v is VariantPagedItem & { productId: string } =>
+                  Boolean(v.productId && idSet.has(v.productId)),
+              );
+              const vMap = buildVariantMap(relevantVariants);
+              return allItems.map((p) => mapProductToCard(p, vMap.get(p.id)));
+            },
+            CACHE_TTL.FIVE_MINUTES,
+          );
+
+          if (!isMounted) return;
+
+          const categoryId = Number(categoryIdParam);
+          // Re-fetch raw items to get categoryId for filtering (mapped cards don't carry it)
+          const rawPage = await productService.getProducts({ PageNumber: 1, PageSize: 500, IsDescending: true });
+          const rawItems = (rawPage?.items ?? []).filter(
+            (p): p is ProductListItem & { id: string } => Boolean(p.id),
+          );
+          const filteredIds = new Set(
+            rawItems.filter((p) => p.categoryId === categoryId).map((p) => p.id),
+          );
+          const filtered = allMapped.filter((p) => filteredIds.has(p.id));
+
+          // Client-side pagination
+          const start = (page - 1) * pageSize;
+          const paginated = filtered.slice(start, start + pageSize);
+          setProducts(paginated);
+          setTotalPages(Math.ceil(filtered.length / pageSize));
+          setTotalCount(filtered.length);
+          return;
         } else {
           // Standard product list API
           const [pPage, vPage] = await Promise.all([
@@ -161,7 +212,11 @@ export const ProductListPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [page, pageSize, searchParamValue]);
+  }, [page, pageSize, searchParamValue, categoryIdParam]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchParamValue, categoryIdParam]);
 
   useEffect(() => {
     if (totalPages > 0 && page > totalPages) {
@@ -206,7 +261,7 @@ export const ProductListPage = () => {
     }
 
     return sorted;
-  }, [products, searchTerm, sort]);
+  }, [products, searchTerm, searchParamValue, sort]);
 
   const startItem = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = totalCount === 0 ? 0 : startItem + products.length - 1;
@@ -236,7 +291,7 @@ export const ProductListPage = () => {
             Curated Catalog 2026
           </p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight md:text-5xl">
-            Danh sách nước hoa
+            {categoryNameParam ? `Danh sách nước hoa — ${categoryNameParam}` : "Danh sách nước hoa"}
           </h1>
           <p className="mt-4 max-w-3xl text-base text-white/70 md:text-lg">
             Lọc theo thương hiệu, tìm kiếm nốt hương yêu thích và đặt giữ chỗ
@@ -285,7 +340,25 @@ export const ProductListPage = () => {
                 />
               </div>
 
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap items-center gap-4">
+                {categoryIdParam && (
+                  <span className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-700">
+                    {categoryNameParam || "Danh mục"}
+                    <button
+                      type="button"
+                      aria-label="Xóa bộ lọc danh mục"
+                      onClick={() => {
+                        searchParams.delete("categoryId");
+                        searchParams.delete("categoryName");
+                        setSearchParams(searchParams);
+                        setPage(1);
+                      }}
+                      className="ml-1 rounded-full p-0.5 hover:bg-rose-200"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                )}
                 <label className="flex items-center gap-2 text-sm text-slate-500">
                   Sắp xếp
                   <select

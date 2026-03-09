@@ -29,15 +29,9 @@ import { useCart } from "../../hooks/useCart";
 import { useState, useEffect } from "react";
 import { CartDropdown } from "../common/CartDropdown";
 import { HeaderSearch } from "./HeaderSearch";
+import { categoryService, type CategoryLookupItem } from "../../services/categoryService";
 
-const navItems = [
-  { label: "Tất cả sản phẩm", href: "/products" },
-  { label: "Nước Hoa Nam", href: "#" },
-  { label: "Nước Hoa Nữ", href: "#" },
-  { label: "GiftSet", href: "#" },
-  { label: "Thương Hiệu", href: "#" },
-  { label: "Quiz AI", href: "/quiz" },
-];
+const MAX_VISIBLE_CATEGORIES = 5;
 
 export const Header = () => {
   const navigate = useNavigate();
@@ -46,6 +40,17 @@ export const Header = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [cartAnchorEl, setCartAnchorEl] = useState<null | HTMLElement>(null);
   const [hoverTimerRef, setHoverTimerRef] = useState<number | null>(null);
+  const [categories, setCategories] = useState<CategoryLookupItem[]>([]);
+  const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
+
+  useEffect(() => {
+    categoryService.getCategoriesLookupCached()
+      .then(setCategories)
+      .catch(() => { console.error("Failed to load categories"); });
+  }, []);
+
+  const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
+  const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -357,22 +362,71 @@ export const Header = () => {
             py: 2,
           }}
         >
-          {navItems.map((item) => (
+          {/* All products */}
+          <Button
+            color="inherit"
+            onClick={() => navigate("/products")}
+            sx={{ fontWeight: 500, color: "text.primary", "&:hover": { color: "primary.main" } }}
+          >
+            Tất cả sản phẩm
+          </Button>
+
+          {/* Dynamic categories */}
+          {visibleCategories.map((cat) => (
             <Button
-              key={item.label}
+              key={cat.id}
               color="inherit"
-              onClick={() => handleNavClick(item.href)}
-              sx={{
-                fontWeight: 500,
-                color: "text.primary",
-                "&:hover": {
-                  color: "primary.main",
-                },
-              }}
+              onClick={() =>
+                navigate(`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`)
+              }
+              sx={{ fontWeight: 500, color: "text.primary", "&:hover": { color: "primary.main" } }}
             >
-              {item.label}
+              {cat.name}
             </Button>
           ))}
+
+          {/* Overflow "Thêm" dropdown */}
+          {overflowCategories.length > 0 && (
+            <>
+              <Button
+                color="inherit"
+                endIcon={moreAnchorEl ? <ArrowDropUp /> : <ArrowDropDown />}
+                onClick={(e) => setMoreAnchorEl(e.currentTarget)}
+                sx={{ fontWeight: 500, color: "text.primary", "&:hover": { color: "primary.main" } }}
+              >
+                Thêm
+              </Button>
+              <Menu
+                anchorEl={moreAnchorEl}
+                open={Boolean(moreAnchorEl)}
+                onClose={() => setMoreAnchorEl(null)}
+                anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+                transformOrigin={{ vertical: "top", horizontal: "left" }}
+                PaperProps={{ sx: { mt: 1, minWidth: 180 } }}
+              >
+                {overflowCategories.map((cat) => (
+                  <MenuItem
+                    key={cat.id}
+                    onClick={() => {
+                      setMoreAnchorEl(null);
+                      navigate(`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`);
+                    }}
+                  >
+                    {cat.name}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          )}
+
+          {/* Quiz AI */}
+          <Button
+            color="inherit"
+            onClick={() => navigate("/quiz")}
+            sx={{ fontWeight: 500, color: "text.primary", "&:hover": { color: "primary.main" } }}
+          >
+            Quiz AI
+          </Button>
         </Box>
       </Container>
     </AppBar>

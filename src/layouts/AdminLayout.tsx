@@ -37,6 +37,7 @@ import {
   Quiz as QuizIcon,
   Feed as FeedIcon,
   Chat as ChatIcon,
+  ThumbsUpDown as ThumbsUpDownIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -129,7 +130,7 @@ const menuItems: MenuItem[] = [
   {
     text: "Báo cáo",
     icon: <ReportsIcon />,
-    path: "#",
+    path: "/admin/inventory-report-logs",
     roles: ["admin"],
   },
   {
@@ -154,6 +155,12 @@ const menuItems: MenuItem[] = [
     text: "Quản lý Hội thoại",
     icon: <ChatIcon />,
     path: "/admin/conversations",
+    roles: ["admin"],
+  },
+  {
+    text: "AI Acceptance",
+    icon: <ThumbsUpDownIcon />,
+    path: "/admin/ai-acceptance",
     roles: ["admin"],
   },
 ];
