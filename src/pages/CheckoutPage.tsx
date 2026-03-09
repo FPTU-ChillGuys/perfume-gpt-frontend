@@ -32,8 +32,10 @@ import { orderService } from "@/services/orderService";
 import { addressService } from "@/services/addressService";
 import { cartService } from "@/services/cartService";
 import { voucherService } from "@/services/voucherService";
+import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import type {
   AddressResponse,
   ProvinceResponse,
@@ -69,6 +71,7 @@ export const CheckoutPage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
+  const { user } = useAuth();
 
   // State
   const [isPickupInStore, setIsPickupInStore] = useState(false);
@@ -485,6 +488,21 @@ export const CheckoutPage = () => {
 
       // Call checkout API
       const response = await orderService.checkout(request);
+
+      // Update AI acceptance for all cart items with status = true
+      if (user?.id) {
+        try {
+          for (const item of items) {
+            const cartItemId = item.cartItemId;
+            if (cartItemId) {
+              await aiAcceptanceService.updateCheckoutAcceptance(user.id, cartItemId, true);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to update AI acceptance on checkout:", e);
+          // Don't fail the checkout if acceptance update fails
+        }
+      }
 
       // Clear cart
       await refreshCart();
