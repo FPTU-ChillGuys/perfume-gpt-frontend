@@ -68,7 +68,7 @@ class AiAcceptanceService {
         }
     }
 
-    async createAcceptanceRecord(userId: string, isAccepted: boolean): Promise<AiAcceptanceRecord> {
+    async createAcceptanceRecord(userId: string, isAccepted: boolean = false): Promise<AiAcceptanceRecord> {
         try {
             const response = await aiApiInstance.POST("/ai-acceptance/record/{userId}", {
                 params: {
