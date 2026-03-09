@@ -1,21 +1,14 @@
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Divider,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import SaveIcon from "@mui/icons-material/Save";
-import CancelIcon from "@mui/icons-material/Cancel";
+import { Alert, Box, Chip, Divider, Typography } from "@mui/material";
+import PersonIcon from "@mui/icons-material/Person";
+import EmailIcon from "@mui/icons-material/Email";
+import PhoneIcon from "@mui/icons-material/Phone";
 import type { UserProfile } from "@/types/profile";
 import type { UpdateProfileRequest } from "@/types/profile";
+import type { UserCredentials } from "@/services/userService";
 
 interface ProfileInfoProps {
   profile: UserProfile | null;
+  userInfo: UserCredentials | null;
   formData: UpdateProfileRequest;
   isEditing: boolean;
   isSaving: boolean;
@@ -29,23 +22,64 @@ interface ProfileInfoProps {
   onClearSuccess: () => void;
 }
 
+const InfoRow = ({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) => (
+  <Box
+    sx={{
+      display: "flex",
+      alignItems: "center",
+      gap: 2,
+      py: 2,
+      borderBottom: "1px solid",
+      borderColor: "divider",
+    }}
+  >
+    <Box
+      sx={{
+        width: 40,
+        height: 40,
+        borderRadius: "50%",
+        bgcolor: "error.50",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "error.main",
+        flexShrink: 0,
+      }}
+    >
+      {icon}
+    </Box>
+    <Box sx={{ flex: 1 }}>
+      <Typography variant="caption" color="text.secondary" display="block">
+        {label}
+      </Typography>
+      <Typography
+        variant="body1"
+        fontWeight={500}
+        color={value ? "text.primary" : "text.disabled"}
+      >
+        {value || "Chưa cập nhật"}
+      </Typography>
+    </Box>
+  </Box>
+);
+
 const ProfileInfo = ({
-  profile,
-  formData,
-  isEditing,
-  isSaving,
+  userInfo,
   error,
   success,
-  onEdit,
-  onCancel,
-  onSave,
-  onChange,
   onClearError,
   onClearSuccess,
 }: ProfileInfoProps) => {
   return (
     <>
-      {/* Alerts */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={onClearError}>
           {error}
@@ -57,143 +91,48 @@ const ProfileInfo = ({
         </Alert>
       )}
 
+      {/* Header */}
       <Box
         display="flex"
-        justifyContent="space-between"
         alignItems="center"
+        justifyContent="space-between"
         mb={3}
       >
-        <Typography variant="h6" fontWeight="bold">
-          Thông tin cá nhân
-        </Typography>
-        {!isEditing && (
-          <Button variant="contained" startIcon={<EditIcon />} onClick={onEdit}>
-            Chỉnh sửa
-          </Button>
-        )}
+        <Box>
+          <Typography variant="h6" fontWeight="bold">
+            Hồ Sơ Của Tôi
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Quản lý thông tin hồ sơ để bảo mật tài khoản
+          </Typography>
+        </Box>
+        <Chip
+          label="Người dùng"
+          size="small"
+          sx={{ bgcolor: "error.main", color: "#fff", fontWeight: 600 }}
+        />
       </Box>
 
-      {/* Basic Info (Read-only) */}
-      <Stack spacing={2} mb={3}>
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
-            label="Họ và tên"
-            value={profile?.name || ""}
-            fullWidth
-            disabled
-            variant="outlined"
-          />
-          <TextField
-            label="Email"
-            value={profile?.email || ""}
-            fullWidth
-            disabled
-            variant="outlined"
-          />
-        </Stack>
-        {profile?.phoneNumber && (
-          <TextField
-            label="Số điện thoại"
-            value={profile.phoneNumber}
-            fullWidth
-            disabled
-            variant="outlined"
-            sx={{ maxWidth: { sm: "calc(50% - 8px)" } }}
-          />
-        )}
-      </Stack>
+      <Divider sx={{ mb: 3 }} />
 
-      <Divider sx={{ my: 3 }} />
-
-      <Typography variant="h6" fontWeight="bold" mb={2}>
-        Sở thích nước hoa
-      </Typography>
-
-      {/* Editable Preferences */}
-      <Stack spacing={2}>
-        <TextField
-          label="Mùi hương yêu thích"
-          value={formData.scentPreference || ""}
-          onChange={(e) => onChange("scentPreference", e.target.value)}
-          fullWidth
-          disabled={!isEditing}
-          placeholder="VD: Hương gỗ ấm áp, hương hoa nhẹ nhàng..."
-          multiline
-          rows={2}
+      {/* Info rows */}
+      <Box>
+        <InfoRow
+          icon={<PersonIcon fontSize="small" />}
+          label="Họ và tên"
+          value={userInfo?.fullName || ""}
         />
-        <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-          <TextField
-            label="Ngân sách tối thiểu (VNĐ)"
-            type="number"
-            value={formData.minBudget || ""}
-            onChange={(e) =>
-              onChange(
-                "minBudget",
-                e.target.value ? Number(e.target.value) : undefined,
-              )
-            }
-            fullWidth
-            disabled={!isEditing}
-            placeholder="VD: 500000"
-          />
-          <TextField
-            label="Ngân sách tối đa (VNĐ)"
-            type="number"
-            value={formData.maxBudget || ""}
-            onChange={(e) =>
-              onChange(
-                "maxBudget",
-                e.target.value ? Number(e.target.value) : undefined,
-              )
-            }
-            fullWidth
-            disabled={!isEditing}
-            placeholder="VD: 2000000"
-          />
-        </Stack>
-        <TextField
-          label="Phong cách ưa thích"
-          value={formData.preferredStyle || ""}
-          onChange={(e) => onChange("preferredStyle", e.target.value)}
-          fullWidth
-          disabled={!isEditing}
-          placeholder="VD: Sang trọng, trẻ trung, cổ điển..."
-          multiline
-          rows={2}
+        <InfoRow
+          icon={<EmailIcon fontSize="small" />}
+          label="Email"
+          value={userInfo?.email || ""}
         />
-        <TextField
-          label="Note hương yêu thích"
-          value={formData.favoriteNotes || ""}
-          onChange={(e) => onChange("favoriteNotes", e.target.value)}
-          fullWidth
-          disabled={!isEditing}
-          placeholder="VD: Xạ hương, gỗ tuyết tùng, hoa hồng..."
-          multiline
-          rows={2}
+        <InfoRow
+          icon={<PhoneIcon fontSize="small" />}
+          label="Số điện thoại"
+          value={userInfo?.phoneNumber || ""}
         />
-      </Stack>
-
-      {/* Action Buttons */}
-      {isEditing && (
-        <Box display="flex" gap={2} justifyContent="flex-end" mt={3}>
-          <Button
-            variant="outlined"
-            startIcon={<CancelIcon />}
-            onClick={onCancel}
-            disabled={isSaving}
-          >
-            Hủy
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<SaveIcon />}
-            onClick={onSave}
-            disabled={isSaving}
-          >
-            {isSaving ? <CircularProgress size={24} color="inherit" /> : "Lưu"}
-          </Button>
-        </Box>
-      )}
+      </Box>
     </>
   );
 };

@@ -1,7 +1,18 @@
 import { apiInstance } from "@/lib/api";
 import type { StaffLookupResponse } from "../types/staff-user";
+import type { components } from "@/types/api/v1";
+
+export type UserCredentials = components["schemas"]["UserCredentialsResponse"];
 
 class UserService {
+
+  async getUserMe(): Promise<UserCredentials> {
+    const response = await apiInstance.GET("/api/users/me");
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to fetch user info");
+    }
+    return response.data.payload as UserCredentials;
+  }
 
   async getStaffLookup(): Promise<StaffLookupResponse> {
     try {

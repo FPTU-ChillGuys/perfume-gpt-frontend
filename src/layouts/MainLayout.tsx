@@ -19,7 +19,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
       }}
     >
       <Header />
-      <Box component="main" sx={{ flex: 1 }}>
+      <Box component="main" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {children}
       </Box>
       <Footer />

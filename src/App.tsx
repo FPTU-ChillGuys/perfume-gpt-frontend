@@ -93,9 +93,41 @@ function App() {
                       element={<PaymentFailurePage />}
                     />
 
-                    {/* User Profile Route */}
+                    {/* User Profile Routes */}
                     <Route
                       path="/profile"
+                      element={
+                        <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
+                          <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile/address"
+                      element={
+                        <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
+                          <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile/change-password"
+                      element={
+                        <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
+                          <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile/vouchers"
+                      element={
+                        <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
+                          <ProfilePage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/profile/notifications"
                       element={
                         <RoleBasedRoute allowedRoles={["user", "admin", "staff"]}>
                           <ProfilePage />
