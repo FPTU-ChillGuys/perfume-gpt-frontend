@@ -12,6 +12,7 @@ import { CartProvider } from "./contexts/CartContext";
 import { ProductQuickViewProvider } from "./contexts/ProductQuickViewContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
+import { ChatbotWidgetWrapper } from "./components/chatbot/ChatbotWidgetWrapper";
 import "./App.css";
 
 // Lazy-loaded pages — each becomes a separate chunk
@@ -43,7 +44,6 @@ const UserLogsManagementPage = lazy(() => import("./pages/UserLogsManagementPage
 const AdminConversationsPage = lazy(() => import("./pages/AdminConversationsPage").then(m => ({ default: m.AdminConversationsPage })));
 const InventoryReportLogsPage = lazy(() => import("./pages/InventoryReportLogsPage").then(m => ({ default: m.InventoryReportLogsPage })));
 const AIAcceptancePage = lazy(() => import("./pages/AIAcceptancePage").then(m => ({ default: m.AIAcceptancePage })));
-const ChatbotWidget = lazy(() => import("./components/chatbot/ChatbotWidget"));
 
 const PageLoader = () => (
   <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
@@ -253,9 +253,7 @@ function App() {
                     />
                   </Routes>
                   </Suspense>
-                  <Suspense fallback={null}>
-                    <ChatbotWidget />
-                  </Suspense>
+                  <ChatbotWidgetWrapper />
                 </ProductQuickViewProvider>
               </CartProvider>
             </AuthProvider>
