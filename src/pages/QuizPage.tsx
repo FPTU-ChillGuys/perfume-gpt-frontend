@@ -59,7 +59,6 @@ export default function QuizPage() {
     const [currentStep, setCurrentStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState<AssistantPayload | null>(null);
-    const [acceptanceId, setAcceptanceId] = useState<string | undefined>();
 
     // ── Fetch ─────────────────────────────────────────────────────
     const fetchQuestions = useCallback(async () => {
@@ -116,17 +115,6 @@ export default function QuizPage() {
         try {
             const res = await quizService.submitQuizV2(userId, payload);
             const parsedRes = parseAiResponse(res.data);
-
-            // If we have recommended products, generate an AI acceptance record
-            if (parsedRes.products.length > 0) {
-                try {
-                    const record = await aiAcceptanceService.createAcceptanceRecord(userId);
-                    setAcceptanceId(record.id);
-                } catch (e) {
-                    console.error("Failed to create AI acceptance for Quiz:", e);
-                }
-            }
-
             setResult(parsedRes);
         } catch (err) {
             console.error("Quiz submit error:", err);
@@ -140,7 +128,6 @@ export default function QuizPage() {
         setSelections(new Map());
         setCurrentStep(0);
         setResult(null);
-        setAcceptanceId(undefined);
     };
 
     // ── Loading ───────────────────────────────────────────────────
@@ -174,7 +161,7 @@ export default function QuizPage() {
             <>
                 <Header />
                 <Container maxWidth="md" sx={{ py: 6 }}>
-                    <QuizResultView result={result} acceptanceId={acceptanceId} onRestart={handleRestart} />
+                    <QuizResultView result={result} userId={userId} onRestart={handleRestart} />
                 </Container>
             </>
         );
