@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { v4 as uuid } from "uuid";
+import ReactMarkdown from "react-markdown";
 import {
   Box,
   IconButton,
@@ -26,12 +28,14 @@ import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { authService } from "@/services/authService";
+import { getOrCreateGuestUserId } from "@/utils/guestUserId";
 import type {
   ChatMessage,
   AssistantPayload,
   ChatProduct,
   ChatVariant,
 } from "@/types/chatbot";
+import remarkGfm from 'remark-gfm';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -326,14 +330,40 @@ function MessageBubble({
             px: 2,
             py: 1,
             mb: payload.products.length > 0 ? 1 : 0,
+            "& > p": { lineHeight: 1.6, mb: 1, margin: 0 },
+            "& > p:last-child": { mb: 0 },
+            "& ul, & ol": { pl: 2, mb: 1 },
+            "& li": { mb: 0.5 },
+            "& code": {
+              bgcolor: "#e9ecef",
+              px: 0.5,
+              py: 0.25,
+              borderRadius: 0.5,
+              fontFamily: "monospace",
+            },
+            "& pre": {
+              bgcolor: "#2d3748",
+              color: "#e2e8f0",
+              p: 1.5,
+              borderRadius: 1,
+              overflowX: "auto",
+              mb: 1,
+            },
+            "& pre code": {
+              bgcolor: "transparent",
+              p: 0,
+              m: 0,
+            },
+            "& strong": { fontWeight: 700 },
+            "& em": { fontStyle: "italic" },
+            "& a": {
+              color: "#dc2626",
+              textDecoration: "underline",
+              cursor: "pointer",
+            },
           }}
         >
-          <Typography
-            variant="body2"
-            sx={{ lineHeight: 1.6, whiteSpace: "pre-wrap" }}
-          >
-            {payload.message}
-          </Typography>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{payload.message}</ReactMarkdown>
         </Box>
 
         {/* Product cards */}
@@ -428,9 +458,9 @@ export default function ChatbotWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Stable IDs for the lifetime of the widget
-  const conversationId = useRef(crypto.randomUUID());
+  const conversationId = useRef(uuid());
   const userId = useRef(
-    authService.getCurrentUser()?.id ?? crypto.randomUUID(),
+    authService.getCurrentUser()?.id ?? getOrCreateGuestUserId(),
   );
 
   // Scroll to bottom on new message
@@ -482,23 +512,20 @@ export default function ChatbotWidget() {
         showToast(`Đã thêm "${productName}" vào giỏ hàng!`, "success");
 
         // Create AI acceptance record with the actual cartItemId
-        const userId = authService.getCurrentUser()?.id;
-        if (userId) {
-          try {
-            // Fetch cart items to get the actual cartItemId
-            const items = await cartService.getItems();
-            // Find the item we just added by variantId
-            const addedItem = items.find((item) => item.variantId === variantId);
-            if (addedItem?.cartItemId) {
-              await aiAcceptanceService.createCheckoutAcceptance(
-                userId,
-                addedItem.cartItemId,
-              );
-            }
-          } catch (e) {
-            console.error("Failed to create AI acceptance:", e);
-            // Don't fail the add-to-cart if acceptance creation fails
+        try {
+          // Fetch cart items to get the actual cartItemId
+          const items = await cartService.getItems();
+          // Find the item we just added by variantId
+          const addedItem = items.find((item) => item.variantId === variantId);
+          if (addedItem?.cartItemId) {
+            await aiAcceptanceService.createCheckoutAcceptance(
+              userId.current,
+              addedItem.cartItemId,
+            );
           }
+        } catch (e) {
+          console.error("Failed to create AI acceptance:", e);
+          // Don't fail the add-to-cart if acceptance creation fails
         }
       } catch {
         showToast("Thêm vào giỏ hàng thất bại. Vui lòng thử lại.", "error");

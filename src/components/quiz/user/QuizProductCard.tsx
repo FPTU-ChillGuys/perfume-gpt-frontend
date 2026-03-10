@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import {
     Box,
     Button,
@@ -24,10 +24,10 @@ function formatPrice(price: number): string {
 
 interface Props {
     product: ChatProduct;
-    acceptanceId?: string;
+    userId: string;
 }
 
-export default function QuizProductCard({ product, acceptanceId }: Props) {
+export default function QuizProductCard({ product, userId }: Props) {
     const navigate = useNavigate();
     const { showToast } = useToast();
 
@@ -35,18 +35,8 @@ export default function QuizProductCard({ product, acceptanceId }: Props) {
         (product.variants && product.variants.length > 0 ? product.variants[0] : null) ?? null
     );
     const [adding, setAdding] = useState(false);
-    const hasAcceptedRef = useRef(false);
 
-    const goToProduct = async () => {
-        // Trigger AI Acceptance if provided
-        if (acceptanceId && !hasAcceptedRef.current) {
-            try {
-                await aiAcceptanceService.updateAcceptanceRecord(acceptanceId);
-                hasAcceptedRef.current = true;
-            } catch (err) {
-                console.error("Failed to update AI acceptance on navigation:", err);
-            }
-        }
+    const goToProduct = () => {
         navigate(`/products/${product.id}`);
     };
 
@@ -56,18 +46,23 @@ export default function QuizProductCard({ product, acceptanceId }: Props) {
 
         setAdding(true);
         try {
-            // Trigger AI Acceptance if provided
-            if (acceptanceId && !hasAcceptedRef.current) {
-                try {
-                    await aiAcceptanceService.updateAcceptanceRecord(acceptanceId);
-                    hasAcceptedRef.current = true;
-                } catch (err) {
-                    console.error("Failed to update AI acceptance on add to cart:", err);
-                }
-            }
-
+            // Add item to cart
             await cartService.addItem(selectedVariant.id, 1);
             showToast(`Đã thêm "${product.name}" vào giỏ hàng`, "success");
+
+            // Create AI acceptance record with the actual cartItemId
+            try {
+                // Fetch cart items to get the actual cartItemId
+                const items = await cartService.getItems();
+                // Find the item we just added by variantId
+                const addedItem = items.find((item) => item.variantId === selectedVariant.id);
+                if (addedItem?.cartItemId) {
+                    await aiAcceptanceService.createCheckoutAcceptance(userId, addedItem.cartItemId);
+                }
+            } catch (err) {
+                console.error("Failed to create AI acceptance:", err);
+                // Don't fail the add-to-cart if acceptance creation fails
+            }
         } catch (err) {
             console.error("AddToCart error:", err);
             showToast("Thêm vào giỏ hàng thất bại. Vui lòng thử lại.", "error");

@@ -18,26 +18,12 @@ import {
 import { AuthContext } from "@/contexts/AuthContextType";
 import { quizService } from "@/services/ai/quizService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
+import { getOrCreateGuestUserId } from "@/utils/guestUserId";
 import type { QuizQuestion, QuizQuesAnsDetailRequest } from "@/types/quiz";
 import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
 import QuizQuestionCard from "@/components/quiz/user/QuizQuestionCard";
 import QuizResultView from "@/components/quiz/user/QuizResultView";
-
-// ── UUID helper ─────────────────────────────────────────────────
-const GUEST_ID_KEY = "quiz_guest_id";
-
-function getOrCreateGuestId(): string {
-    let id = localStorage.getItem(GUEST_ID_KEY);
-    if (!id) {
-        id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-            const r = (Math.random() * 16) | 0;
-            return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-        });
-        localStorage.setItem(GUEST_ID_KEY, id);
-    }
-    return id;
-}
 
 // ── Parse AI response string ────────────────────────────────────
 function parseAiResponse(raw: string): AssistantPayload {
@@ -51,7 +37,7 @@ function parseAiResponse(raw: string): AssistantPayload {
 // ── Page ────────────────────────────────────────────────────────
 export default function QuizPage() {
     const authCtx = useContext(AuthContext);
-    const userId = authCtx?.user?.id ?? getOrCreateGuestId();
+    const userId = authCtx?.user?.id ?? getOrCreateGuestUserId();
 
     const [questions, setQuestions] = useState<QuizQuestion[]>([]);
     const [loading, setLoading] = useState(true);
@@ -59,7 +45,6 @@ export default function QuizPage() {
     const [currentStep, setCurrentStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState<AssistantPayload | null>(null);
-    const [acceptanceId, setAcceptanceId] = useState<string | undefined>();
 
     // ── Fetch ─────────────────────────────────────────────────────
     const fetchQuestions = useCallback(async () => {
@@ -116,17 +101,6 @@ export default function QuizPage() {
         try {
             const res = await quizService.submitQuizV2(userId, payload);
             const parsedRes = parseAiResponse(res.data);
-
-            // If we have recommended products, generate an AI acceptance record
-            if (parsedRes.products.length > 0) {
-                try {
-                    const record = await aiAcceptanceService.createAcceptanceRecord(userId);
-                    setAcceptanceId(record.id);
-                } catch (e) {
-                    console.error("Failed to create AI acceptance for Quiz:", e);
-                }
-            }
-
             setResult(parsedRes);
         } catch (err) {
             console.error("Quiz submit error:", err);
@@ -140,7 +114,6 @@ export default function QuizPage() {
         setSelections(new Map());
         setCurrentStep(0);
         setResult(null);
-        setAcceptanceId(undefined);
     };
 
     // ── Loading ───────────────────────────────────────────────────
@@ -174,7 +147,7 @@ export default function QuizPage() {
             <>
                 <Header />
                 <Container maxWidth="md" sx={{ py: 6 }}>
-                    <QuizResultView result={result} acceptanceId={acceptanceId} onRestart={handleRestart} />
+                    <QuizResultView result={result} userId={userId} onRestart={handleRestart} />
                 </Container>
             </>
         );

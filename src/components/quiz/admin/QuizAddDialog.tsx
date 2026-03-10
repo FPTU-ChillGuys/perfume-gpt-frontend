@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { v4 as uuid } from "uuid";
 import {
     Alert,
     Box,
@@ -44,7 +45,7 @@ interface QuestionForm {
 
 export default function QuizAddDialog({ open, isCreating, onClose, onSubmit }: Props) {
     const createEmptyForm = (): QuestionForm => ({
-        id: crypto.randomUUID(),
+        id: uuid(),
         question: "",
         questionType: QuestionType.SINGLE,
         answers: ["", ""],
@@ -55,6 +56,7 @@ export default function QuizAddDialog({ open, isCreating, onClose, onSubmit }: P
     // Reset when dialog opens
     useEffect(() => {
         if (open) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setForms([createEmptyForm()]);
         }
     }, [open]);
