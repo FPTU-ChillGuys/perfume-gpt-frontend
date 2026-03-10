@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { v4 as uuid } from "uuid";
+import ReactMarkdown from "react-markdown";
 import {
   Box,
   IconButton,
@@ -34,6 +35,7 @@ import type {
   ChatProduct,
   ChatVariant,
 } from "@/types/chatbot";
+import remarkGfm from 'remark-gfm';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -328,14 +330,40 @@ function MessageBubble({
             px: 2,
             py: 1,
             mb: payload.products.length > 0 ? 1 : 0,
+            "& > p": { lineHeight: 1.6, mb: 1, margin: 0 },
+            "& > p:last-child": { mb: 0 },
+            "& ul, & ol": { pl: 2, mb: 1 },
+            "& li": { mb: 0.5 },
+            "& code": {
+              bgcolor: "#e9ecef",
+              px: 0.5,
+              py: 0.25,
+              borderRadius: 0.5,
+              fontFamily: "monospace",
+            },
+            "& pre": {
+              bgcolor: "#2d3748",
+              color: "#e2e8f0",
+              p: 1.5,
+              borderRadius: 1,
+              overflowX: "auto",
+              mb: 1,
+            },
+            "& pre code": {
+              bgcolor: "transparent",
+              p: 0,
+              m: 0,
+            },
+            "& strong": { fontWeight: 700 },
+            "& em": { fontStyle: "italic" },
+            "& a": {
+              color: "#dc2626",
+              textDecoration: "underline",
+              cursor: "pointer",
+            },
           }}
         >
-          <Typography
-            variant="body2"
-            sx={{ lineHeight: 1.6, whiteSpace: "pre-wrap" }}
-          >
-            {payload.message}
-          </Typography>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{payload.message}</ReactMarkdown>
         </Box>
 
         {/* Product cards */}

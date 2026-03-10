@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
 import {
   Avatar,
   Box,
@@ -15,6 +16,7 @@ import {
 import Rating from "@mui/material/Rating";
 import CloseIcon from "@mui/icons-material/Close";
 import type { ReviewMedia, ReviewResponse, ReviewStatus } from "@/types/review";
+import remarkGfm from "remark-gfm";
 
 const statusStyles: Record<ReviewStatus, { label: string; color: "default" | "success" | "warning" | "error" }> = {
   Pending: { label: "Chờ duyệt", color: "warning" },
@@ -118,12 +120,49 @@ export const ReviewCard = ({
         </Stack>
 
         {review.comment && (
-          <Typography
-            variant="body1"
-            color="text.primary"
+          <Box
             sx={{
               lineHeight: 1.7,
-              whiteSpace: "pre-line",
+              "& > p": { lineHeight: 1.7, mb: 1, margin: 0 },
+              "& > p:last-child": { mb: 0 },
+              "& ul, & ol": { pl: 2, mb: 1 },
+              "& li": { mb: 0.5 },
+              "& code": {
+                bgcolor: "#f0f0f0",
+                px: 0.5,
+                py: 0.25,
+                borderRadius: 0.5,
+                fontFamily: "monospace",
+                fontSize: "0.875em",
+              },
+              "& pre": {
+                bgcolor: "#f5f5f5",
+                color: "#333",
+                p: 1.5,
+                borderRadius: 1,
+                overflowX: "auto",
+                mb: 1,
+                border: "1px solid #e0e0e0",
+              },
+              "& pre code": {
+                bgcolor: "transparent",
+                p: 0,
+                m: 0,
+              },
+              "& strong": { fontWeight: 700 },
+              "& em": { fontStyle: "italic" },
+              "& a": {
+                color: "#dc2626",
+                textDecoration: "underline",
+                cursor: "pointer",
+              },
+              "& blockquote": {
+                borderLeft: "3px solid #dc2626",
+                pl: 2,
+                ml: 0,
+                my: 1,
+                opacity: 0.8,
+              },
               ...(commentNeedsClamp && !expanded
                 ? {
                     display: "-webkit-box",
@@ -134,8 +173,8 @@ export const ReviewCard = ({
                 : {}),
             }}
           >
-            {review.comment}
-          </Typography>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{review.comment}</ReactMarkdown>
+          </Box>
         )}
 
         {commentNeedsClamp && (

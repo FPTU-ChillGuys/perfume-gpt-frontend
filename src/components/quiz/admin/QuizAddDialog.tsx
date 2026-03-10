@@ -56,6 +56,7 @@ export default function QuizAddDialog({ open, isCreating, onClose, onSubmit }: P
     // Reset when dialog opens
     useEffect(() => {
         if (open) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setForms([createEmptyForm()]);
         }
     }, [open]);
