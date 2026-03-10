@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { v4 as uuid } from "uuid";
 import {
   Box,
   IconButton,
@@ -26,6 +27,7 @@ import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { authService } from "@/services/authService";
+import { getOrCreateGuestUserId } from "@/utils/guestUserId";
 import type {
   ChatMessage,
   AssistantPayload,
@@ -428,9 +430,9 @@ export default function ChatbotWidget() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Stable IDs for the lifetime of the widget
-  const conversationId = useRef(crypto.randomUUID());
+  const conversationId = useRef(uuid());
   const userId = useRef(
-    authService.getCurrentUser()?.id ?? crypto.randomUUID(),
+    authService.getCurrentUser()?.id ?? getOrCreateGuestUserId(),
   );
 
   // Scroll to bottom on new message
@@ -482,23 +484,20 @@ export default function ChatbotWidget() {
         showToast(`Đã thêm "${productName}" vào giỏ hàng!`, "success");
 
         // Create AI acceptance record with the actual cartItemId
-        const userId = authService.getCurrentUser()?.id;
-        if (userId) {
-          try {
-            // Fetch cart items to get the actual cartItemId
-            const items = await cartService.getItems();
-            // Find the item we just added by variantId
-            const addedItem = items.find((item) => item.variantId === variantId);
-            if (addedItem?.cartItemId) {
-              await aiAcceptanceService.createCheckoutAcceptance(
-                userId,
-                addedItem.cartItemId,
-              );
-            }
-          } catch (e) {
-            console.error("Failed to create AI acceptance:", e);
-            // Don't fail the add-to-cart if acceptance creation fails
+        try {
+          // Fetch cart items to get the actual cartItemId
+          const items = await cartService.getItems();
+          // Find the item we just added by variantId
+          const addedItem = items.find((item) => item.variantId === variantId);
+          if (addedItem?.cartItemId) {
+            await aiAcceptanceService.createCheckoutAcceptance(
+              userId.current,
+              addedItem.cartItemId,
+            );
           }
+        } catch (e) {
+          console.error("Failed to create AI acceptance:", e);
+          // Don't fail the add-to-cart if acceptance creation fails
         }
       } catch {
         showToast("Thêm vào giỏ hàng thất bại. Vui lòng thử lại.", "error");

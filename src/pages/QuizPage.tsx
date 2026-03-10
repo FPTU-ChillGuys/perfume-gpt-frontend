@@ -18,26 +18,12 @@ import {
 import { AuthContext } from "@/contexts/AuthContextType";
 import { quizService } from "@/services/ai/quizService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
+import { getOrCreateGuestUserId } from "@/utils/guestUserId";
 import type { QuizQuestion, QuizQuesAnsDetailRequest } from "@/types/quiz";
 import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
 import QuizQuestionCard from "@/components/quiz/user/QuizQuestionCard";
 import QuizResultView from "@/components/quiz/user/QuizResultView";
-
-// ── UUID helper ─────────────────────────────────────────────────
-const GUEST_ID_KEY = "quiz_guest_id";
-
-function getOrCreateGuestId(): string {
-    let id = localStorage.getItem(GUEST_ID_KEY);
-    if (!id) {
-        id = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-            const r = (Math.random() * 16) | 0;
-            return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
-        });
-        localStorage.setItem(GUEST_ID_KEY, id);
-    }
-    return id;
-}
 
 // ── Parse AI response string ────────────────────────────────────
 function parseAiResponse(raw: string): AssistantPayload {
@@ -51,7 +37,7 @@ function parseAiResponse(raw: string): AssistantPayload {
 // ── Page ────────────────────────────────────────────────────────
 export default function QuizPage() {
     const authCtx = useContext(AuthContext);
-    const userId = authCtx?.user?.id ?? getOrCreateGuestId();
+    const userId = authCtx?.user?.id ?? getOrCreateGuestUserId();
 
     const [questions, setQuestions] = useState<QuizQuestion[]>([]);
     const [loading, setLoading] = useState(true);
