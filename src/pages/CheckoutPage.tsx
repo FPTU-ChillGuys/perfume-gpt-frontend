@@ -44,6 +44,10 @@ import type {
 } from "@/types/address";
 import type { PaymentMethod, CreateOrderRequest } from "@/types/checkout";
 import type { CartItem, CartTotals, ApplyVoucherResponse } from "@/types/cart";
+import codIcon from "@/assets/cod.png";
+import storeIcon from "@/assets/store.png";
+import vnpayIcon from "@/assets/vnpay.jpg";
+import momoIcon from "@/assets/momo.png";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -52,19 +56,32 @@ const PAYMENT_METHODS: {
   value: PaymentMethod;
   label: string;
   description: string;
+  icon: string;
 }[] = [
   {
     value: "CashOnDelivery",
     label: "Thanh toán khi nhận hàng",
     description: "Thanh toán bằng tiền mặt khi nhận hàng",
+    icon: codIcon,
   },
   {
     value: "CashInStore",
     label: "Thanh toán tại cửa hàng",
     description: "Thanh toán trực tiếp tại cửa hàng",
+    icon: storeIcon,
   },
-  { value: "VnPay", label: "VNPay", description: "Thanh toán qua VNPay" },
-  { value: "Momo", label: "MoMo", description: "Thanh toán qua MoMo" },
+  {
+    value: "VnPay",
+    label: "VNPay",
+    description: "Thanh toán qua VNPay",
+    icon: vnpayIcon,
+  },
+  {
+    value: "Momo",
+    label: "MoMo",
+    description: "Thanh toán qua MoMo",
+    icon: momoIcon,
+  },
 ];
 
 export const CheckoutPage = () => {
@@ -130,6 +147,10 @@ export const CheckoutPage = () => {
     loadProvinces();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setPaymentMethod(isPickupInStore ? "CashInStore" : "CashOnDelivery");
+  }, [isPickupInStore]);
 
   // Update totals khi địa chỉ hoặc các thông tin liên quan thay đổi
   useEffect(() => {
@@ -287,7 +308,9 @@ export const CheckoutPage = () => {
   };
 
   // Update totals khi địa chỉ hoặc voucher thay đổi
-  const updateTotalsWithAddress = async (voucherCodeOverride?: string | null) => {
+  const updateTotalsWithAddress = async (
+    voucherCodeOverride?: string | null,
+  ) => {
     const activeVoucher =
       voucherCodeOverride !== undefined
         ? voucherCodeOverride || undefined
@@ -495,7 +518,11 @@ export const CheckoutPage = () => {
           for (const item of items) {
             const cartItemId = item.cartItemId;
             if (cartItemId) {
-              await aiAcceptanceService.updateCheckoutAcceptance(user.id, cartItemId, true);
+              await aiAcceptanceService.updateCheckoutAcceptance(
+                user.id,
+                cartItemId,
+                true,
+              );
             }
           }
         } catch (e) {
@@ -860,17 +887,46 @@ export const CheckoutPage = () => {
                   setPaymentMethod(e.target.value as PaymentMethod)
                 }
               >
-                {PAYMENT_METHODS.map((method) => (
+                {PAYMENT_METHODS.filter((m) =>
+                  isPickupInStore
+                    ? m.value !== "CashOnDelivery"
+                    : m.value !== "CashInStore",
+                ).map((method) => (
                   <FormControlLabel
                     key={method.value}
                     value={method.value}
                     control={<Radio />}
                     label={
-                      <Box>
-                        <Typography fontWeight={500}>{method.label}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {method.description}
-                        </Typography>
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        gap={1.5}
+                        py={0.5}
+                      >
+                        <Box
+                          component="img"
+                          src={method.icon}
+                          alt={method.label}
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            objectFit: "contain",
+                            borderRadius: 1,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            bgcolor: "#fff",
+                            p: 0.5,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Box>
+                          <Typography fontWeight={500}>
+                            {method.label}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {method.description}
+                          </Typography>
+                        </Box>
                       </Box>
                     }
                   />

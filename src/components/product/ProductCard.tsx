@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Eye, Heart } from "lucide-react";
+import { Eye } from "lucide-react";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
@@ -99,15 +99,6 @@ export const ProductCard = ({
           className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
         >
           <Eye size={18} className="text-gray-700" />
-        </button>
-        <button
-          type="button"
-          aria-label="Thêm vào yêu thích"
-          onMouseDown={(event) => event.stopPropagation()}
-          onTouchStart={(event) => event.stopPropagation()}
-          className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
-        >
-          <Heart size={18} className="text-gray-600" />
         </button>
       </div>
 

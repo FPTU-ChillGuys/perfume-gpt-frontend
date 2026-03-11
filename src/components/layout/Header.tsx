@@ -14,7 +14,7 @@ import {
   Badge,
 } from "@mui/material";
 import {
-  FavoriteBorder,
+  NotificationsNone,
   ShoppingCartOutlined,
   PersonOutline,
   ArrowDropDown,
@@ -31,7 +31,10 @@ import { useCart } from "../../hooks/useCart";
 import { useState, useEffect } from "react";
 import { CartDropdown } from "../common/CartDropdown";
 import { HeaderSearch } from "./HeaderSearch";
-import { categoryService, type CategoryLookupItem } from "../../services/categoryService";
+import {
+  categoryService,
+  type CategoryLookupItem,
+} from "../../services/categoryService";
 
 const MAX_VISIBLE_CATEGORIES = 5;
 
@@ -46,9 +49,12 @@ export const Header = () => {
   const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
-    categoryService.getCategoriesLookupCached()
+    categoryService
+      .getCategoriesLookupCached()
       .then(setCategories)
-      .catch(() => { console.error("Failed to load categories"); });
+      .catch(() => {
+        console.error("Failed to load categories");
+      });
   }, []);
 
   const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
@@ -214,8 +220,8 @@ export const Header = () => {
               flexShrink: 0,
             }}
           >
-            <IconButton color="default">
-              <FavoriteBorder />
+            <IconButton color="default" aria-label="Thông báo">
+              <NotificationsNone />
             </IconButton>
             <IconButton
               onClick={handleCartClick}
@@ -355,7 +361,9 @@ export const Header = () => {
                       <ListItemIcon>
                         <TvIcon fontSize="small" />
                       </ListItemIcon>
-                      <Typography variant="body2">Màn hình khách tại quầy</Typography>
+                      <Typography variant="body2">
+                        Màn hình khách tại quầy
+                      </Typography>
                     </MenuItem>
                   )}
                   <MenuItem onClick={handleLogout} sx={{ py: 1.5 }}>
@@ -394,7 +402,11 @@ export const Header = () => {
           <Button
             color="inherit"
             onClick={() => navigate("/products")}
-            sx={{ fontWeight: 500, color: "text.primary", "&:hover": { color: "primary.main" } }}
+            sx={{
+              fontWeight: 500,
+              color: "text.primary",
+              "&:hover": { color: "primary.main" },
+            }}
           >
             Tất cả sản phẩm
           </Button>
@@ -405,9 +417,15 @@ export const Header = () => {
               key={cat.id}
               color="inherit"
               onClick={() =>
-                navigate(`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`)
+                navigate(
+                  `/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`,
+                )
               }
-              sx={{ fontWeight: 500, color: "text.primary", "&:hover": { color: "primary.main" } }}
+              sx={{
+                fontWeight: 500,
+                color: "text.primary",
+                "&:hover": { color: "primary.main" },
+              }}
             >
               {cat.name}
             </Button>
@@ -420,7 +438,11 @@ export const Header = () => {
                 color="inherit"
                 endIcon={moreAnchorEl ? <ArrowDropUp /> : <ArrowDropDown />}
                 onClick={(e) => setMoreAnchorEl(e.currentTarget)}
-                sx={{ fontWeight: 500, color: "text.primary", "&:hover": { color: "primary.main" } }}
+                sx={{
+                  fontWeight: 500,
+                  color: "text.primary",
+                  "&:hover": { color: "primary.main" },
+                }}
               >
                 Thêm
               </Button>
@@ -437,7 +459,9 @@ export const Header = () => {
                     key={cat.id}
                     onClick={() => {
                       setMoreAnchorEl(null);
-                      navigate(`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`);
+                      navigate(
+                        `/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`,
+                      );
                     }}
                   >
                     {cat.name}
@@ -451,7 +475,11 @@ export const Header = () => {
           <Button
             color="inherit"
             onClick={() => navigate("/quiz")}
-            sx={{ fontWeight: 500, color: "text.primary", "&:hover": { color: "primary.main" } }}
+            sx={{
+              fontWeight: 500,
+              color: "text.primary",
+              "&:hover": { color: "primary.main" },
+            }}
           >
             Quiz AI
           </Button>
