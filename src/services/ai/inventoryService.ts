@@ -6,7 +6,9 @@ import type {
     AIInventoryReportLogPagedResponse,
     AIInventoryReportLogResponse,
     InventoryReportJobCreatedResponse,
-    InventoryReportJobResultResponse
+    InventoryReportJobResultResponse,
+    RestockAIPredictionResponse,
+    RestockLogPagedResponse
 } from "@/types/inventory";
 
 class InventoryService {
@@ -83,6 +85,24 @@ class InventoryService {
             await aiApiInstance.GET("/inventory/report/ai/job/result/{jobId}" as any, {
                 params: { path: { jobId } }
             })
+        );
+    }
+
+    /**
+     * Lấy dự đoán nhập hàng từ AI (Restock Prediction)
+     */
+    async getRestockAIPrediction(): Promise<RestockAIPredictionResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/restock/ai" as any, {})
+        );
+    }
+
+    /**
+     * Lấy danh sách lịch sử log dự đoán nhập hàng (Restock Logs)
+     */
+    async getRestockLogsPaged(): Promise<RestockLogPagedResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/restock/logs" as any, {})
         );
     }
 
