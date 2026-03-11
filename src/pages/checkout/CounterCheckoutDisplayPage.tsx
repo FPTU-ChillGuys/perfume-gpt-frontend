@@ -20,6 +20,7 @@ import type { OrderResponse } from "@/types/order";
 
 const AUTO_REFRESH_INTERVAL_MS = 3000;
 const COUNTER_DISPLAY_ORDER_KEY = "counter:display:orderId";
+const COUNTER_DISPLAY_COMMAND_KEY = "counter:display:command";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -126,6 +127,14 @@ export const CounterCheckoutDisplayPage = () => {
 
   useEffect(() => {
     const handleStorageSync = (event: StorageEvent) => {
+      if (event.key === COUNTER_DISPLAY_COMMAND_KEY && event.newValue?.startsWith("clear:")) {
+        setOrder(null);
+        setError(null);
+        setOrderIdInput("");
+        setSearchParams({});
+        return;
+      }
+
       if (event.key !== COUNTER_DISPLAY_ORDER_KEY || !event.newValue) {
         return;
       }
