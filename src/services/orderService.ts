@@ -11,6 +11,7 @@ import type {
   CreateOrderRequest,
   CheckoutResponse,
   PaymentMethod,
+  CreateInStoreOrderRequest,
 } from "@/types/checkout";
 
 interface GetMyOrdersParams {
@@ -104,6 +105,35 @@ class OrderService {
       console.error("Error during checkout:", error);
       throw new Error(
         error.response?.data?.message || error.message || "Checkout failed",
+      );
+    }
+  }
+
+  async checkoutInStore(
+    request: CreateInStoreOrderRequest,
+  ): Promise<CheckoutResponse> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/orders/checkout-in-store",
+        {
+          body: request,
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Checkout failed");
+      }
+
+      return {
+        orderId: response.data.payload ?? undefined,
+        url: undefined,
+      };
+    } catch (error: any) {
+      console.error("Error during in-store checkout:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Checkout failed",
       );
     }
   }
@@ -228,6 +258,40 @@ class OrderService {
         error.response?.data?.message ||
           error.message ||
           "Failed to retry payment",
+      );
+    }
+  }
+
+  async confirmPayment(
+    paymentId: string,
+    isSuccess: boolean,
+    failureReason?: string,
+  ): Promise<boolean> {
+    try {
+      const response = await apiInstance.PUT(
+        "/api/payments/confirm/{paymentId}",
+        {
+          params: {
+            path: { paymentId },
+            query: {
+              isSuccess,
+              failureReason,
+            },
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to confirm payment");
+      }
+
+      return Boolean(response.data.payload);
+    } catch (error: any) {
+      console.error("Error confirming payment:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to confirm payment",
       );
     }
   }

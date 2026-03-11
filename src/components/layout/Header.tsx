@@ -22,6 +22,8 @@ import {
   Dashboard as DashboardIcon,
   Logout as LogoutIcon,
   ShoppingBag as ShoppingBagIcon,
+  PointOfSale as PointOfSaleIcon,
+  Tv as TvIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -143,6 +145,16 @@ export const Header = () => {
 
   const handleLogout = () => {
     logout();
+    handleMenuClose();
+  };
+
+  const handleCounterCheckout = () => {
+    navigate("/checkout/counter/staff");
+    handleMenuClose();
+  };
+
+  const handleCounterDisplay = () => {
+    navigate("/checkout/counter/display");
     handleMenuClose();
   };
 
@@ -328,6 +340,22 @@ export const Header = () => {
                         <DashboardIcon fontSize="small" />
                       </ListItemIcon>
                       <Typography variant="body2">Trang chủ</Typography>
+                    </MenuItem>
+                  )}
+                  {(user.role === "admin" || user.role === "staff") && (
+                    <MenuItem onClick={handleCounterCheckout} sx={{ py: 1.5 }}>
+                      <ListItemIcon>
+                        <PointOfSaleIcon fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="body2">Checkout tại quầy</Typography>
+                    </MenuItem>
+                  )}
+                  {(user.role === "admin" || user.role === "staff") && (
+                    <MenuItem onClick={handleCounterDisplay} sx={{ py: 1.5 }}>
+                      <ListItemIcon>
+                        <TvIcon fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="body2">Màn hình khách tại quầy</Typography>
                     </MenuItem>
                   )}
                   <MenuItem onClick={handleLogout} sx={{ py: 1.5 }}>

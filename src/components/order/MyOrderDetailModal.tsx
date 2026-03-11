@@ -100,10 +100,6 @@ export const MyOrderDetailModal = ({
     return new Date(dateString).toLocaleString("vi-VN");
   };
 
-  const shortenId = (id: string) => {
-    return `${id.substring(0, 8)}...${id.substring(id.length - 4)}`;
-  };
-
   const handleReviewAction = (
     orderDetailId: string,
     variantId: string,
@@ -175,8 +171,12 @@ export const MyOrderDetailModal = ({
                     <Typography variant="body2" color="text.secondary">
                       Mã đơn hàng
                     </Typography>
-                    <Typography variant="body1" fontWeight="medium">
-                      {order.id ? shortenId(order.id) : "N/A"}
+                    <Typography
+                      variant="body1"
+                      fontWeight="medium"
+                      sx={{ wordBreak: "break-all" }}
+                    >
+                      {order.id || "N/A"}
                     </Typography>
                   </Box>
                   <Box>

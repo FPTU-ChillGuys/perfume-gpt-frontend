@@ -31,6 +31,8 @@ const CartPage = lazy(() => import("./pages/CartPage").then(m => ({ default: m.C
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage").then(m => ({ default: m.CheckoutPage })));
 const CheckoutShippingPage = lazy(() => import("./pages/checkout/CheckoutShippingPage").then(m => ({ default: m.CheckoutShippingPage })));
 const CheckoutPaymentPage = lazy(() => import("./pages/checkout/CheckoutPaymentPage").then(m => ({ default: m.CheckoutPaymentPage })));
+const CounterCheckoutStaffPage = lazy(() => import("./pages/checkout/CounterCheckoutStaffPage").then(m => ({ default: m.CounterCheckoutStaffPage })));
+const CounterCheckoutDisplayPage = lazy(() => import("./pages/checkout/CounterCheckoutDisplayPage").then(m => ({ default: m.CounterCheckoutDisplayPage })));
 const PaymentSuccessPage = lazy(() => import("./pages/PaymentSuccessPage").then(m => ({ default: m.PaymentSuccessPage })));
 const PaymentFailurePage = lazy(() => import("./pages/PaymentFailurePage").then(m => ({ default: m.PaymentFailurePage })));
 const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage").then(m => ({ default: m.MyOrdersPage })));
@@ -69,6 +71,18 @@ function App() {
                     <Route path="/" element={<HomePage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
+                    <Route
+                      path="/checkout/counter/staff"
+                      element={
+                        <RoleBasedRoute allowedRoles={["admin", "staff"]}>
+                          <CounterCheckoutStaffPage />
+                        </RoleBasedRoute>
+                      }
+                    />
+                    <Route
+                      path="/checkout/counter/display"
+                      element={<CounterCheckoutDisplayPage />}
+                    />
                     <Route path="/products" element={<ProductListPage />} />
                     <Route path="/quiz" element={<QuizPage />} />
                     <Route path="/products/:productId" element={<ProductDetailPage />} />
