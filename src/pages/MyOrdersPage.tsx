@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Button,
@@ -41,7 +42,6 @@ import {
   orderTypeLabels,
   orderTypeColors,
 } from "@/utils/orderStatus";
-import { MyOrderDetailModal } from "@/components/order/MyOrderDetailModal";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 
@@ -73,22 +73,25 @@ const shortenId = (id?: string | null) => {
 
 export const MyOrdersPage = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
 
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [status, setStatus] = useState<OrderStatus | "">("");
+  const initialStatus =
+    (location.state as { status?: OrderStatus | "" } | null)?.status ?? "";
+  const [status, setStatus] = useState<OrderStatus | "">(initialStatus);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | "">("");
   const [type, setType] = useState<OrderType | "">("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const [myReviews, setMyReviews] = useState<ReviewResponse[]>([]);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewDialogMode, setReviewDialogMode] = useState<"create" | "edit">(
     "create",
@@ -98,19 +101,6 @@ export const MyOrdersPage = () => {
   const [selectedReview, setSelectedReview] = useState<ReviewResponse | null>(
     null,
   );
-
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-
-  const reviewsIndex = useMemo(() => {
-    const map: Record<string, ReviewResponse> = {};
-    myReviews.forEach((review) => {
-      if (review.orderDetailId) {
-        map[review.orderDetailId] = review;
-      }
-    });
-    return map;
-  }, [myReviews]);
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
@@ -152,15 +142,6 @@ export const MyOrdersPage = () => {
     type,
   ]);
 
-  const loadReviews = useCallback(async () => {
-    try {
-      const data = await productReviewService.getMyReviews();
-      setMyReviews(data);
-    } catch (error) {
-      console.error("Failed to load my reviews", error);
-    }
-  }, []);
-
   useEffect(() => {
     void userService.getUserMe().then(setUserInfo).catch(console.error);
   }, []);
@@ -168,10 +149,6 @@ export const MyOrdersPage = () => {
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
-
-  useEffect(() => {
-    loadReviews();
-  }, [loadReviews]);
 
   const handleSearch = () => {
     setSearchTerm(searchInput.trim());
@@ -191,8 +168,7 @@ export const MyOrdersPage = () => {
 
   const handleOpenDetail = (orderId?: string | null) => {
     if (!orderId) return;
-    setSelectedOrderId(orderId);
-    setIsDetailModalOpen(true);
+    navigate(`/my-orders/${orderId}`, { state: { status } });
   };
 
   const handleReviewSelected = (
@@ -212,7 +188,7 @@ export const MyOrdersPage = () => {
   };
 
   const handleReviewSuccess = () => {
-    void loadReviews();
+    // reviews are loaded fresh on detail page
   };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -338,7 +314,7 @@ export const MyOrdersPage = () => {
                             alignItems="center"
                           >
                             <Typography variant="body2" color="text.secondary">
-                              #{shortenId(order.id)}
+                              #{order.id}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               ·
@@ -506,14 +482,6 @@ export const MyOrdersPage = () => {
           </Paper>
         </Container>
       </Box>
-
-      <MyOrderDetailModal
-        open={isDetailModalOpen}
-        orderId={selectedOrderId}
-        onClose={() => setIsDetailModalOpen(false)}
-        reviewsIndex={reviewsIndex}
-        onReview={handleReviewSelected}
-      />
 
       <ReviewEditorDialog
         open={isReviewDialogOpen}

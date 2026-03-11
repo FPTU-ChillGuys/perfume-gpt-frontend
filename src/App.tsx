@@ -66,6 +66,11 @@ const PaymentFailurePage = lazy(() =>
 const MyOrdersPage = lazy(() =>
   import("./pages/MyOrdersPage").then((m) => ({ default: m.MyOrdersPage })),
 );
+const MyOrderDetailPage = lazy(() =>
+  import("./pages/MyOrderDetailPage").then((m) => ({
+    default: m.MyOrderDetailPage,
+  })),
+);
 const OrderManagementPage = lazy(() =>
   import("./pages/OrderManagementPage").then((m) => ({
     default: m.OrderManagementPage,
@@ -221,6 +226,16 @@ function App() {
                             allowedRoles={["user", "admin", "staff"]}
                           >
                             <MyOrdersPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-orders/:orderId"
+                        element={
+                          <RoleBasedRoute
+                            allowedRoles={["user", "admin", "staff"]}
+                          >
+                            <MyOrderDetailPage />
                           </RoleBasedRoute>
                         }
                       />
