@@ -26,6 +26,7 @@ import { inventoryService } from "@/services/ai/inventoryService";
 import { useToast } from "@/hooks/useToast";
 import type { RestockLog, RestockAIVariant, RestockAIPredictionData } from "@/types/inventory";
 import { RestockDetailDialog } from "@/components/log/RestockDetailDialog";
+import { AIRestockJobDialog } from "@/components/log/AIRestockJobDialog";
 
 const formatDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
@@ -36,7 +37,6 @@ export const RestockAITab = () => {
     const { showToast } = useToast();
     const [logs, setLogs] = useState<RestockLog[]>([]);
     const [loading, setLoading] = useState(true);
-    const [predictionLoading, setPredictionLoading] = useState(false);
 
     // Pagination
     const [page, setPage] = useState(0);
@@ -50,8 +50,11 @@ export const RestockAITab = () => {
 
     // Detail dialog
     const [selectedVariants, setSelectedVariants] = useState<RestockAIVariant[] | null>(null);
-    const [dialogOpen, setDialogOpen] = useState(false);
+    const [detailDialogOpen, setDetailDialogOpen] = useState(false);
     const [dialogTitle, setDialogTitle] = useState("");
+
+    // Job Dialog
+    const [jobDialogOpen, setJobDialogOpen] = useState(false);
 
     useEffect(() => {
         loadLogs();
@@ -99,37 +102,20 @@ export const RestockAITab = () => {
             const parsedData = JSON.parse(log.inventoryLog) as RestockAIPredictionData;
             setSelectedVariants(parsedData.variants || []);
             setDialogTitle(`Chi tiết log nhập hàng: ${log.id?.substring(0, 8)}`);
-            setDialogOpen(true);
+            setDetailDialogOpen(true);
         } catch (error) {
             console.error("Failed to parse restock log data", error);
             showToast("Dữ liệu log không đúng hệ dạng JSON hợp lệ hoặc là log thông báo lỗi.", "warning");
         }
     };
 
-    const handleGeneratePrediction = async () => {
-        try {
-            setPredictionLoading(true);
-            const response = await inventoryService.getRestockAIPrediction();
-
-            // The AI returns a JSON string inside data
-            const jsonString = response.data;
-            if (jsonString) {
-                const parsedData = JSON.parse(jsonString) as RestockAIPredictionData;
-                setSelectedVariants(parsedData.variants || []);
-                setDialogTitle("Kết quả Dự đoán Nhập hàng mới nhất");
-                setDialogOpen(true);
-                // Reload logs to get the newly generated one
-                loadLogs();
-            } else {
-                showToast("Không nhận được dữ liệu dự đoán hợp lệ.", "warning");
-            }
-
-        } catch (error) {
-            console.error("Failed to generate restock prediction:", error);
-            showToast("Sinh dự đoán thất bại. Vui lòng thử lại sau.", "error");
-        } finally {
-            setPredictionLoading(false);
-        }
+    const handleJobSuccess = (data: RestockAIPredictionData) => {
+        setSelectedVariants(data.variants || []);
+        setDialogTitle("Kết quả Dự đoán Nhập hàng mới nhất");
+        // Open detail dialog to show results
+        setDetailDialogOpen(true);
+        // Refresh logs in background
+        loadLogs();
     };
 
     const filteredLogs = useMemo(() => {
@@ -171,11 +157,10 @@ export const RestockAITab = () => {
                 <Tooltip title="Dự đoán nhu cầu nhập hàng trong thời gian tới dựa trên xu hướng bằng AI">
                     <Button
                         variant="contained"
-                        startIcon={predictionLoading ? <CircularProgress size={20} color="inherit" /> : <AutoGraphIcon />}
-                        onClick={handleGeneratePrediction}
-                        disabled={predictionLoading}
+                        startIcon={<AutoGraphIcon />}
+                        onClick={() => setJobDialogOpen(true)}
                     >
-                        {predictionLoading ? "Đang phân tích..." : "Dự đoán nhập kho (AI)"}
+                        Dự đoán nhập kho (AI)
                     </Button>
                 </Tooltip>
             </Box>
@@ -341,10 +326,16 @@ export const RestockAITab = () => {
             </TableContainer>
 
             <RestockDetailDialog
-                open={dialogOpen}
-                onClose={() => setDialogOpen(false)}
+                open={detailDialogOpen}
+                onClose={() => setDetailDialogOpen(false)}
                 data={selectedVariants}
                 title={dialogTitle}
+            />
+
+            <AIRestockJobDialog
+                open={jobDialogOpen}
+                onClose={() => setJobDialogOpen(false)}
+                onJobSuccess={handleJobSuccess}
             />
         </Box>
     );

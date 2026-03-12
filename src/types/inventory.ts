@@ -69,3 +69,7 @@ export interface RestockLogPagedResult {
 
 export type RestockAIPredictionResponse = ApiResponse<string>; // Data is JSON string
 export type RestockLogPagedResponse = ApiResponse<RestockLogPagedResult>;
+
+// Job Responses
+export type RestockJobCreatedResponse = ApiResponse<InventoryReportJobCreated>;
+export type RestockJobResultResponse = ApiResponse<InventoryReportJobResult>;
