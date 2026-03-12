@@ -8,7 +8,7 @@ import { productService } from "../services/productService";
 import { trendService, getLastSunday, getPrevSunday } from "../services/ai/trendService";
 import type { ProductListItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
-import { buildVariantMap, mapProductToCard } from "../utils/productCardMapper";
+import { buildVariantMap, mapProductToCard, normalizeTrendProducts } from "../utils/productCardMapper";
 import dayjs from "dayjs";
 
 export const HomePage = () => {
@@ -92,19 +92,6 @@ export const HomePage = () => {
   // Trending fetch - separated so it doesn't block the rest
   useEffect(() => {
     let isMounted = true;
-
-    const normalizeTrendProducts = (products: ProductListItem[]): ProductCardProps[] =>
-      products
-        .filter((product): product is ProductListItem & { id: string } => Boolean(product.id))
-        .map((product: any) => {
-          const firstVariant = product.variants?.[0];
-          const mapped = mapProductToCard(product, firstVariant);
-          const imageUrl =
-            typeof product.primaryImage === "string"
-              ? product.primaryImage
-              : mapped.imageUrl;
-          return { ...mapped, imageUrl, isTrending: true };
-        });
 
     const fetchTrending = async () => {
       setIsTrendingLoading(true);

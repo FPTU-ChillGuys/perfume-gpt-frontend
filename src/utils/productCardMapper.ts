@@ -9,8 +9,8 @@ import type {
 export type VariantCardSource =
   | VariantPagedItem
   | (ProductVariant & {
-      primaryImage?: VariantPagedItem["primaryImage"] | null;
-    });
+    primaryImage?: VariantPagedItem["primaryImage"] | null;
+  });
 
 const getVariantImageUrl = (variant?: VariantCardSource) => {
   if (!variant) {
@@ -95,3 +95,17 @@ export const mapProductWithVariantsToCard = (
     variantId: firstVariant?.id,
   };
 };
+
+export const normalizeTrendProducts = (products: ProductListItem[]): ProductCardProps[] =>
+  products
+    .filter((product): product is ProductListItem & { id: string } => Boolean(product.id))
+    .map((product: any) => {
+      const firstVariant = product.variants?.[0];
+      const mapped = mapProductToCard(product, firstVariant);
+      const imageUrl =
+        typeof product.primaryImage === "string"
+          ? product.primaryImage
+          : mapped.imageUrl;
+      return { ...mapped, imageUrl, isTrending: true };
+    });
+

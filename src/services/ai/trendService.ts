@@ -31,6 +31,7 @@ class TrendService {
         period: "weekly" | "monthly" | "yearly" = "weekly",
         endDate?: string,
         startDate?: string,
+        forceRefresh?: boolean,
     ): Promise<ProductListItem[] | null> {
         try {
             const finalEndDate = endDate
@@ -47,6 +48,7 @@ class TrendService {
                         period,
                         endDate: finalEndDate,
                         ...(finalStartDate ? { startDate: finalStartDate } : {}),
+                        ...(forceRefresh ? { forceRefresh } : {}),
                     },
                 },
             });
