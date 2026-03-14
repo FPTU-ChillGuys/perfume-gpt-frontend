@@ -3,8 +3,9 @@ import type { CartItem, CartTotals } from "@/types/cart";
 
 interface VoucherQuery {
   VoucherCode?: string;
-  DistrictId?: number | null;
-  WardCode?: string;
+  SavedAddressId?: string;
+  "Recipient.DistrictId"?: number;
+  "Recipient.WardCode"?: string;
 }
 
 const DEFAULT_TOTALS: CartTotals = {
@@ -24,6 +25,7 @@ class CartService {
     voucherId?: string,
     districtId?: number,
     wardCode?: string,
+    savedAddressId?: string,
   ): Promise<{
     items: CartItem[];
     totals: CartTotals;
@@ -31,7 +33,12 @@ class CartService {
     try {
       // Lấy items và totals từ API
       const items = await this.getItems();
-      const totals = await this.getTotals(voucherId, districtId, wardCode);
+      const totals = await this.getTotals(
+        voucherId,
+        districtId,
+        wardCode,
+        savedAddressId,
+      );
 
       return {
         items,
@@ -83,9 +90,15 @@ class CartService {
     voucherId?: string,
     districtId?: number,
     wardCode?: string,
+    savedAddressId?: string,
   ): Promise<CartTotals> {
     try {
-      const query = this.buildQuery(voucherId, districtId, wardCode);
+      const query = this.buildQuery(
+        voucherId,
+        districtId,
+        wardCode,
+        savedAddressId,
+      );
       const response = await apiInstance.GET(this.TOTAL_ENDPOINT, {
         params: query ? { query } : undefined,
       });
@@ -209,6 +222,7 @@ class CartService {
     voucherId?: string,
     districtId?: number,
     wardCode?: string,
+    savedAddressId?: string,
   ): VoucherQuery | undefined {
     const query: VoucherQuery = {};
 
@@ -216,12 +230,16 @@ class CartService {
       query.VoucherCode = voucherId;
     }
 
-    if (districtId) {
-      query.DistrictId = districtId;
+    if (savedAddressId) {
+      query.SavedAddressId = savedAddressId;
     }
 
-    if (wardCode) {
-      query.WardCode = wardCode;
+    if (typeof districtId === "number" && districtId > 0) {
+      query["Recipient.DistrictId"] = districtId;
+    }
+
+    if (wardCode && wardCode.trim()) {
+      query["Recipient.WardCode"] = wardCode.trim();
     }
 
     return Object.keys(query).length > 0 ? query : undefined;

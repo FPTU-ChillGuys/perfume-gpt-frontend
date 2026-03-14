@@ -37,15 +37,14 @@ import { productService } from "@/services/productService";
 import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
 import type { OrderResponse, CarrierName, OrderStatus } from "@/types/order";
-import type {
-  ReviewResponse,
-  ReviewStatus,
-  ReviewDialogTarget,
+import {
+  getReviewStatus,
+  type ReviewResponse,
+  type ReviewStatus,
+  type ReviewDialogTarget,
 } from "@/types/review";
 import {
   orderStatusLabels,
-  paymentStatusLabels,
-  paymentStatusColors,
 } from "@/utils/orderStatus";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
@@ -585,17 +584,6 @@ export const MyOrderDetailPage = () => {
                                   <b>{order.shippingInfo.trackingNumber}</b>
                                 </Typography>
                               )}
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <Chip
-                                  label={
-                                    paymentStatusLabels[order.paymentStatus!]
-                                  }
-                                  color={
-                                    paymentStatusColors[order.paymentStatus!]
-                                  }
-                                  size="small"
-                                />
-                              </Box>
                             </Stack>
                           )}
                         </Box>
@@ -633,8 +621,9 @@ export const MyOrderDetailPage = () => {
                             {order.orderDetails?.map((item) => {
                               const orderDetailId = item.id ?? "";
                               const existing = reviewsIndex[orderDetailId];
-                              const statusCfg = existing?.status
-                                ? REVIEW_STATUS_CHIP[existing.status]
+                              const existingStatus = getReviewStatus(existing);
+                              const statusCfg = existingStatus
+                                ? REVIEW_STATUS_CHIP[existingStatus]
                                 : undefined;
 
                               return (
@@ -644,8 +633,16 @@ export const MyOrderDetailPage = () => {
                                       display="flex"
                                       alignItems="center"
                                       gap={1.5}
-                                      onClick={() => void handleProductClick(item.variantId)}
-                                      sx={{ cursor: "pointer", "&:hover .product-name": { color: "primary.main", textDecoration: "underline" } }}
+                                      onClick={() =>
+                                        void handleProductClick(item.variantId)
+                                      }
+                                      sx={{
+                                        cursor: "pointer",
+                                        "&:hover .product-name": {
+                                          color: "primary.main",
+                                          textDecoration: "underline",
+                                        },
+                                      }}
                                     >
                                       {item.imageUrl ? (
                                         <Box
@@ -706,7 +703,7 @@ export const MyOrderDetailPage = () => {
                                             color={statusCfg.color}
                                             size="small"
                                             variant={
-                                              existing.status === "Approved"
+                                              existingStatus === "Approved"
                                                 ? "filled"
                                                 : "outlined"
                                             }

@@ -36,7 +36,7 @@ const heroSlides: readonly HeroSlide[] = [
     primaryCta: { label: "Mua ngay", href: "/products/elixir-absolu" },
     secondaryCta: { label: "Chi tiết", href: "/collections/exclusive" },
     bottleImage:
-        "https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=900&q=80",
     backgroundImage:
       "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80",
   },
@@ -52,7 +52,7 @@ const heroSlides: readonly HeroSlide[] = [
     bottleImage:
       "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=900&q=80",
     backgroundImage:
-       "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?auto=format&fit=crop&w=1600&q=80",
   },
   {
     id: "saffron-veil",
@@ -66,12 +66,17 @@ const heroSlides: readonly HeroSlide[] = [
     bottleImage:
       "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=900&q=80",
     backgroundImage:
-       "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=80",
   },
 ];
 
 const FALLBACK_PRIMARY_CTA = { label: "Khám phá ngay", href: "/products" };
-const FALLBACK_SECONDARY_CTA = { label: "Xem bộ sưu tập", href: "/collections" };
+const FALLBACK_SECONDARY_CTA = {
+  label: "Xem bộ sưu tập",
+  href: "/collections",
+};
+const FALLBACK_HERO_IMAGE =
+  "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80";
 
 const ensureMinimumSlides = (candidate: HeroSlide[]): HeroSlide[] => {
   if (candidate.length >= 3) {
@@ -83,11 +88,20 @@ const ensureMinimumSlides = (candidate: HeroSlide[]): HeroSlide[] => {
   );
   const extended = [...candidate];
   const pool = fallbackPool.length > 0 ? fallbackPool : [...heroSlides];
+  if (pool.length === 0) {
+    return extended;
+  }
   let index = 0;
 
   while (extended.length < 3) {
     const fallbackSlide = pool[index % pool.length];
-    extended.push({ ...fallbackSlide, id: `${fallbackSlide.id}-fallback-${index}` });
+    if (!fallbackSlide) {
+      break;
+    }
+    extended.push({
+      ...fallbackSlide,
+      id: `${fallbackSlide.id}-fallback-${index}`,
+    });
     index += 1;
   }
 
@@ -95,6 +109,17 @@ const ensureMinimumSlides = (candidate: HeroSlide[]): HeroSlide[] => {
 };
 
 const mapBannerToSlide = (banner: Banner): HeroSlide => {
+  const defaultSlide = heroSlides[0] || {
+    id: "default-slide",
+    label: "Featured Release",
+    title: ["PerfumeGPT"],
+    description: "Khám phá bộ sưu tập mùi hương nổi bật.",
+    notes: ["Best Seller"],
+    primaryCta: FALLBACK_PRIMARY_CTA,
+    secondaryCta: FALLBACK_SECONDARY_CTA,
+    bottleImage: FALLBACK_HERO_IMAGE,
+    backgroundImage: FALLBACK_HERO_IMAGE,
+  };
   const normalizedTitle = (banner.name || "PerfumeGPT")
     .split(/\n|\|/)
     .map((segment) => segment.trim())
@@ -102,18 +127,22 @@ const mapBannerToSlide = (banner: Banner): HeroSlide => {
   return {
     id: banner.id,
     label: banner.tagline || "Featured Release",
-    title: normalizedTitle.length ? normalizedTitle : [banner.name || "PerfumeGPT"],
+    title: normalizedTitle.length
+      ? normalizedTitle
+      : [banner.name || "PerfumeGPT"],
     description:
       banner.description ||
       "Khám phá hương thơm được tuyển chọn dành riêng cho bạn trong tuần này.",
-    notes: banner.notes && banner.notes.length > 0 ? banner.notes : ["Best Seller"],
+    notes:
+      banner.notes && banner.notes.length > 0 ? banner.notes : ["Best Seller"],
     primaryCta: {
       label: banner.ctaLabel || FALLBACK_PRIMARY_CTA.label,
       href: banner.ctaHref || FALLBACK_PRIMARY_CTA.href,
     },
     secondaryCta: FALLBACK_SECONDARY_CTA,
-    bottleImage: banner.mobileImageUrl || banner.heroImageUrl || heroSlides[0].bottleImage,
-    backgroundImage: banner.heroImageUrl || heroSlides[0].backgroundImage,
+    bottleImage:
+      banner.mobileImageUrl || banner.heroImageUrl || defaultSlide.bottleImage,
+    backgroundImage: banner.heroImageUrl || defaultSlide.backgroundImage,
   };
 };
 
@@ -137,7 +166,9 @@ export const HeroSection = () => {
     const loadBanners = async () => {
       try {
         const data = await bannerService.getBanners();
-        const published = data.filter((banner) => banner.status === "published");
+        const published = data.filter(
+          (banner) => banner.status === "published",
+        );
         const featured = published.filter((banner) => banner.isHomeFeatured);
         const source = featured.length > 0 ? featured : published;
         if (mounted && source.length > 0) {
@@ -167,6 +198,9 @@ export const HeroSection = () => {
   };
 
   const activeSlide = slides[activeIndex % totalSlides];
+  if (!activeSlide) {
+    return null;
+  }
 
   return (
     <Box
@@ -221,7 +255,12 @@ export const HeroSection = () => {
             </Typography>
             <Typography
               variant="body1"
-              sx={{ color: "rgba(255,255,255,0.8)", mb: 4, maxWidth: 520, lineHeight: 1.7 }}
+              sx={{
+                color: "rgba(255,255,255,0.8)",
+                mb: 4,
+                maxWidth: 520,
+                lineHeight: 1.7,
+              }}
             >
               {activeSlide.description}
             </Typography>
@@ -327,9 +366,7 @@ export const HeroSection = () => {
                   border: "none",
                   cursor: "pointer",
                   backgroundColor:
-                    index === activeIndex
-                      ? "white"
-                      : "rgba(255,255,255,0.35)",
+                    index === activeIndex ? "white" : "rgba(255,255,255,0.35)",
                   transition: "all 0.3s ease",
                 }}
               />

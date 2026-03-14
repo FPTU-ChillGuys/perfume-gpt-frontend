@@ -15,10 +15,18 @@ import {
 } from "@mui/material";
 import Rating from "@mui/material/Rating";
 import CloseIcon from "@mui/icons-material/Close";
-import type { ReviewMedia, ReviewResponse, ReviewStatus } from "@/types/review";
+import {
+  getReviewStatus,
+  type ReviewMedia,
+  type ReviewResponse,
+  type ReviewStatus,
+} from "@/types/review";
 import remarkGfm from "remark-gfm";
 
-const statusStyles: Record<ReviewStatus, { label: string; color: "default" | "success" | "warning" | "error" }> = {
+const statusStyles: Record<
+  ReviewStatus,
+  { label: string; color: "default" | "success" | "warning" | "error" }
+> = {
   Pending: { label: "Chờ duyệt", color: "warning" },
   Approved: { label: "Đã duyệt", color: "success" },
   Rejected: { label: "Từ chối", color: "error" },
@@ -63,8 +71,10 @@ export const ReviewCard = ({
     const hue = (seed * 23) % 360;
     return `linear-gradient(135deg, hsl(${hue}, 70%, 60%), hsl(${(hue + 40) % 360}, 75%, 55%))`;
   }, [review.userFullName]);
+  const reviewStatus = getReviewStatus(review);
 
-  const commentNeedsClamp = clampLines > 0 && (review.comment?.length || 0) > 220;
+  const commentNeedsClamp =
+    clampLines > 0 && (review.comment?.length || 0) > 220;
 
   return (
     <Paper
@@ -74,9 +84,10 @@ export const ReviewCard = ({
         borderRadius: 3,
         border: "1px solid",
         borderColor: "divider",
-        background: theme.palette.mode === "light"
-          ? "radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(248,248,248,0.9))"
-          : theme.palette.background.paper,
+        background:
+          theme.palette.mode === "light"
+            ? "radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(248,248,248,0.9))"
+            : theme.palette.background.paper,
       }}
     >
       <Stack spacing={dense ? 2 : 2.5}>
@@ -86,7 +97,9 @@ export const ReviewCard = ({
             sx={{
               width: dense ? 44 : 56,
               height: dense ? 44 : 56,
-              background: review.userProfilePictureUrl ? undefined : avatarGradient,
+              background: review.userProfilePictureUrl
+                ? undefined
+                : avatarGradient,
               color: "white",
               fontWeight: 600,
               textTransform: "uppercase",
@@ -95,21 +108,33 @@ export const ReviewCard = ({
             {getInitials(review.userFullName)}
           </Avatar>
           <Box flex={1} minWidth={0}>
-            <Typography variant={dense ? "subtitle1" : "h6"} fontWeight={600} noWrap>
+            <Typography
+              variant={dense ? "subtitle1" : "h6"}
+              fontWeight={600}
+              noWrap
+            >
               {review.userFullName || "Ẩn danh"}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {review.variantName}
             </Typography>
             <Stack direction="row" spacing={1} alignItems="center" mt={0.5}>
-              <Rating value={review.rating || 0} precision={0.5} size={dense ? "small" : "medium"} readOnly />
+              <Rating
+                value={review.rating || 0}
+                precision={0.5}
+                size={dense ? "small" : "medium"}
+                readOnly
+              />
               <Typography variant="body2" color="text.secondary">
-                {review.rating?.toFixed(1)} · {review.createdAt ? dateFormatter.format(new Date(review.createdAt)) : ""}
+                {review.rating?.toFixed(1)} ·{" "}
+                {review.createdAt
+                  ? dateFormatter.format(new Date(review.createdAt))
+                  : ""}
               </Typography>
-              {showStatus && review.status && (
+              {showStatus && reviewStatus && (
                 <Chip
-                  label={statusStyles[review.status]?.label || review.status}
-                  color={statusStyles[review.status]?.color}
+                  label={statusStyles[reviewStatus]?.label || reviewStatus}
+                  color={statusStyles[reviewStatus]?.color}
                   size="small"
                   sx={{ ml: 0.5 }}
                 />
@@ -173,7 +198,9 @@ export const ReviewCard = ({
                 : {}),
             }}
           >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{review.comment}</ReactMarkdown>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {review.comment}
+            </ReactMarkdown>
           </Box>
         )}
 
@@ -182,7 +209,11 @@ export const ReviewCard = ({
             variant="text"
             size="small"
             onClick={() => setExpanded((prev) => !prev)}
-            sx={{ alignSelf: "flex-start", textTransform: "none", fontWeight: 600 }}
+            sx={{
+              alignSelf: "flex-start",
+              textTransform: "none",
+              fontWeight: 600,
+            }}
           >
             {expanded ? "Thu gọn" : "Xem thêm"}
           </Button>
@@ -222,12 +253,23 @@ export const ReviewCard = ({
         )}
       </Stack>
 
-      <Dialog open={Boolean(selectedImage)} onClose={() => setSelectedImage(null)} maxWidth="md">
+      <Dialog
+        open={Boolean(selectedImage)}
+        onClose={() => setSelectedImage(null)}
+        maxWidth="md"
+      >
         <DialogContent sx={{ position: "relative", p: 0 }}>
           <IconButton
             size="small"
             onClick={() => setSelectedImage(null)}
-            sx={{ position: "absolute", top: 8, right: 8, bgcolor: "rgba(0,0,0,0.6)", color: "white", zIndex: 1 }}
+            sx={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              bgcolor: "rgba(0,0,0,0.6)",
+              color: "white",
+              zIndex: 1,
+            }}
           >
             <CloseIcon fontSize="small" />
           </IconButton>

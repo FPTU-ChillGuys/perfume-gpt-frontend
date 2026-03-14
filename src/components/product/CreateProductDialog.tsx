@@ -40,6 +40,7 @@ import {
   type CategoryLookupItem,
 } from "@/services/categoryService";
 import { useToast } from "@/hooks/useToast";
+import RichTextEditor from "@/components/common/RichTextEditor";
 
 interface AttributeSelection {
   attribute: AttributeLookupItem | null | undefined;
@@ -101,6 +102,13 @@ export default function CreateProductDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const normalizeDescription = (input: string) => {
+    const container = document.createElement("div");
+    container.innerHTML = input || "";
+    const text = (container.textContent || "").replace(/\u00a0/g, " ").trim();
+    return text ? container.innerHTML.replace(/[\r\n]+/g, "").trim() : "";
+  };
 
   useEffect(() => {
     if (open) {
@@ -197,7 +205,6 @@ export default function CreateProductDialog({
       });
       showToast("Đã tải ảnh lên thành công", "success");
     } catch (err: any) {
-      console.error("Error uploading image:", err);
       const errorMessage = err.message || "Không thể tải ảnh lên";
       setError(errorMessage);
       showToast(errorMessage, "error");
@@ -380,8 +387,7 @@ export default function CreateProductDialog({
         (img) => img.temporaryMediaId,
       );
 
-      // Normalize description: replace multiple spaces/newlines with single space
-      const normalizedDescription = description.trim().replace(/\s+/g, " ");
+      const normalizedDescription = normalizeDescription(description);
 
       const request: CreateProductRequest = {
         name: name.trim(),
@@ -799,14 +805,13 @@ export default function CreateProductDialog({
                 )}
               />
 
-              <TextField
+              <RichTextEditor
                 label="Mô tả"
-                fullWidth
-                multiline
-                rows={4}
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={setDescription}
                 disabled={loading}
+                minHeight={140}
+                placeholder="Nhập mô tả sản phẩm, có thể in đậm và xuống dòng"
               />
 
               {/* Attributes section */}

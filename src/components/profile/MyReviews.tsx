@@ -12,7 +12,11 @@ import {
 import RefreshIcon from "@mui/icons-material/Refresh";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import type { ReviewResponse, ReviewStatus } from "@/types/review";
+import {
+  getReviewStatus,
+  type ReviewResponse,
+  type ReviewStatus,
+} from "@/types/review";
 import { ReviewCard } from "@/components/review/ReviewCard";
 
 interface MyReviewsProps {
@@ -30,7 +34,13 @@ const statusOptions: { value: ReviewStatus | "all"; label: string }[] = [
   { value: "Rejected", label: "Bị từ chối" },
 ];
 
-export const MyReviews = ({ reviews, isLoading, onRefresh, onEdit, onDelete }: MyReviewsProps) => {
+export const MyReviews = ({
+  reviews,
+  isLoading,
+  onRefresh,
+  onEdit,
+  onDelete,
+}: MyReviewsProps) => {
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | "all">("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const filtered = useMemo(() => {
@@ -42,7 +52,7 @@ export const MyReviews = ({ reviews, isLoading, onRefresh, onEdit, onDelete }: M
     if (statusFilter === "all") {
       return sorted;
     }
-    return sorted.filter((review) => review.status === statusFilter);
+    return sorted.filter((review) => getReviewStatus(review) === statusFilter);
   }, [reviews, statusFilter]);
 
   const handleDelete = async (review: ReviewResponse) => {
@@ -60,7 +70,13 @@ export const MyReviews = ({ reviews, isLoading, onRefresh, onEdit, onDelete }: M
 
   return (
     <Box>
-      <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2} mb={3} alignItems={{ xs: "flex-start", md: "center" }}>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        justifyContent="space-between"
+        spacing={2}
+        mb={3}
+        alignItems={{ xs: "flex-start", md: "center" }}
+      >
         <Box>
           <Typography variant="h6" fontWeight={700}>
             Đánh giá của tôi
@@ -101,7 +117,16 @@ export const MyReviews = ({ reviews, isLoading, onRefresh, onEdit, onDelete }: M
       {isLoading ? (
         <Stack spacing={2}>
           {Array.from({ length: 2 }).map((_, idx) => (
-            <Box key={idx} sx={{ borderRadius: 3, border: "1px solid", borderColor: "divider", height: 160, bgcolor: "grey.50" }} />
+            <Box
+              key={idx}
+              sx={{
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "divider",
+                height: 160,
+                bgcolor: "grey.50",
+              }}
+            />
           ))}
         </Stack>
       ) : filtered.length === 0 ? (

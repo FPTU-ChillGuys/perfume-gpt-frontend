@@ -40,6 +40,30 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   maximumFractionDigits: 0,
 });
 
+const sanitizeDescriptionHtml = (html: string) => {
+  const container = document.createElement("div");
+  container.innerHTML = html;
+
+  container
+    .querySelectorAll("script,style,iframe,object,embed,link,meta")
+    .forEach((node) => node.remove());
+
+  container.querySelectorAll("*").forEach((node) => {
+    Array.from(node.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim().toLowerCase();
+      if (
+        name.startsWith("on") ||
+        ((name === "href" || name === "src") && value.startsWith("javascript:"))
+      ) {
+        node.removeAttribute(attr.name);
+      }
+    });
+  });
+
+  return container.innerHTML;
+};
+
 const ProductQuickViewDialog = ({
   open,
   productId,
@@ -57,9 +81,28 @@ const ProductQuickViewDialog = ({
   );
   const [isAdding, setIsAdding] = useState(false);
 
+  type FastLookVariant = NonNullable<ProductFastLook["variants"]>[number];
+
+  const getVariantStockQuantity = (variant?: FastLookVariant | null) => {
+    return typeof variant?.stockQuantity === "number"
+      ? variant.stockQuantity
+      : null;
+  };
+
+  const isVariantOutOfStock = (variant?: FastLookVariant | null) => {
+    const stockQuantity = getVariantStockQuantity(variant);
+    return stockQuantity !== null && stockQuantity <= 0;
+  };
+
   useEffect(() => {
     if (fastLook?.variants?.length) {
-      setSelectedVariantId(fastLook.variants[0]?.id || null);
+      const firstAvailableVariant = fastLook.variants.find((variant) => {
+        const stockQuantity = variant?.stockQuantity;
+        return typeof stockQuantity !== "number" || stockQuantity > 0;
+      });
+      setSelectedVariantId(
+        firstAvailableVariant?.id || fastLook.variants[0]?.id || null,
+      );
     } else {
       setSelectedVariantId(null);
     }
@@ -71,6 +114,16 @@ const ProductQuickViewDialog = ({
       null,
     [fastLook, selectedVariantId],
   );
+
+  const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
+
+  const descriptionHtml = useMemo(() => {
+    const description =
+      fastLook?.description ||
+      information?.description ||
+      "Đang cập nhật mô tả";
+    return sanitizeDescriptionHtml(description);
+  }, [fastLook?.description, information?.description]);
 
   const heroImage =
     selectedVariant?.media?.url ||
@@ -95,6 +148,12 @@ const ProductQuickViewDialog = ({
       showToast("Vui lòng chọn size để mua", "warning");
       return;
     }
+
+    if (isSelectedVariantOutOfStock) {
+      showToast("Size này đã hết hàng", "warning");
+      return;
+    }
+
     setIsAdding(true);
     try {
       await cartService.addItem(selectedVariant.id, 1);
@@ -180,22 +239,6 @@ const ProductQuickViewDialog = ({
           </Box>
 
           <Box flex={1} minWidth={0}>
-            <Stack direction="row" spacing={1} alignItems="center" mb={1}>
-              {information?.style && (
-                <Chip
-                  label={information.style.toUpperCase()}
-                  color="info"
-                  size="small"
-                />
-              )}
-              {information?.scentGroup && (
-                <Chip
-                  label={information.scentGroup}
-                  size="small"
-                  color="secondary"
-                />
-              )}
-            </Stack>
             <Typography variant="h5" fontWeight={600} gutterBottom>
               {fastLook.name}
             </Typography>
@@ -208,11 +251,17 @@ const ProductQuickViewDialog = ({
                 Mã hàng: {information.productCode}
               </Typography>
             )}
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {fastLook.description ||
-                information?.description ||
-                "Đang cập nhật mô tả"}
-            </Typography>
+            <Typography
+              component="div"
+              variant="body2"
+              color="text.secondary"
+              gutterBottom
+              sx={{
+                "& p": { m: 0, mb: 1 },
+                "& p:last-child": { mb: 0 },
+              }}
+              dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+            />
 
             <Stack direction="row" spacing={1} alignItems="center" mt={1}>
               <Rating
@@ -250,42 +299,59 @@ const ProductQuickViewDialog = ({
                 },
               }}
             >
-              {(fastLook.variants || []).map((variant) => (
-                <ToggleButton
-                  key={variant.id}
-                  value={variant.id}
-                  sx={{
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-start",
-                    gap: 1,
-                    px: 2,
-                    py: 1,
-                    whiteSpace: "nowrap",
-                    minWidth: 0,
-                    fontSize: "0.8rem",
-                  }}
-                >
-                  {variant.media?.url && (
-                    <Box
-                      component="img"
-                      src={variant.media.url}
-                      alt={variant.displayName || ""}
+              {(fastLook.variants || []).map((variant, index) =>
+                (() => {
+                  const outOfStock = isVariantOutOfStock(variant);
+
+                  return (
+                    <ToggleButton
+                      key={variant.id ?? `variant-${index}`}
+                      value={variant.id || ""}
                       sx={{
-                        width: 32,
-                        height: 32,
-                        objectFit: "cover",
-                        borderRadius: 0.5,
-                        flexShrink: 0,
+                        textTransform: "none",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "flex-start",
+                        gap: 1,
+                        px: 2,
+                        py: 1,
+                        whiteSpace: "nowrap",
+                        minWidth: 0,
+                        fontSize: "0.8rem",
+                        position: "relative",
+                        opacity: outOfStock ? 0.75 : 1,
                       }}
-                    />
-                  )}
-                  <Box component="span" sx={{ whiteSpace: "nowrap" }}>
-                    {variant.displayName || "Size"}
-                  </Box>
-                </ToggleButton>
-              ))}
+                    >
+                      {variant.media?.url && (
+                        <Box
+                          component="img"
+                          src={variant.media.url}
+                          alt={variant.displayName || ""}
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            objectFit: "cover",
+                            borderRadius: 0.5,
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <Box
+                        component="span"
+                        sx={{
+                          whiteSpace: "nowrap",
+                          textDecoration: outOfStock ? "line-through" : "none",
+                          textDecorationColor: outOfStock
+                            ? "error.main"
+                            : "inherit",
+                        }}
+                      >
+                        {variant.displayName || "Size"}
+                      </Box>
+                    </ToggleButton>
+                  );
+                })(),
+              )}
             </ToggleButtonGroup>
 
             <Stack direction="column" spacing={1} mt={3}>
@@ -310,25 +376,31 @@ const ProductQuickViewDialog = ({
               </Button>
             </Stack>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={3}>
-              <Button
-                variant="outlined"
-                onClick={() => handleAddToCart(false)}
-                disabled={isAdding}
-                fullWidth
-              >
-                {isAdding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={() => handleAddToCart(true)}
-                disabled={isAdding}
-                fullWidth
-              >
-                {isAdding ? "Đang xử lý..." : "Mua ngay"}
-              </Button>
-            </Stack>
+            {isSelectedVariantOutOfStock ? (
+              <Typography variant="h4" color="error" fontWeight={700} mt={3}>
+                Hết hàng
+              </Typography>
+            ) : (
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={3}>
+                <Button
+                  variant="outlined"
+                  onClick={() => handleAddToCart(false)}
+                  disabled={isAdding}
+                  fullWidth
+                >
+                  {isAdding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={() => handleAddToCart(true)}
+                  disabled={isAdding}
+                  fullWidth
+                >
+                  {isAdding ? "Đang xử lý..." : "Mua ngay"}
+                </Button>
+              </Stack>
+            )}
           </Box>
         </Stack>
       </Stack>

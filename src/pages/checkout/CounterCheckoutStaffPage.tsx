@@ -21,7 +21,13 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Delete, Launch, Payments, PointOfSale, QrCodeScanner } from "@mui/icons-material";
+import {
+  Delete,
+  Launch,
+  Payments,
+  PointOfSale,
+  QrCodeScanner,
+} from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { useToast } from "@/hooks/useToast";
 import { orderService } from "@/services/orderService";
@@ -40,7 +46,6 @@ const PAYMENT_CHOICES: { value: PaymentMethod; label: string }[] = [
   { value: "CashInStore", label: "Tiền mặt tại quầy" },
   { value: "VnPay", label: "VNPay" },
   { value: "Momo", label: "MoMo" },
- 
 ];
 
 const ONLINE_PAYMENT_METHODS: PaymentMethod[] = ["VnPay", "Momo"];
@@ -51,7 +56,9 @@ const formatCurrency = (value?: number) =>
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const isSupportedPaymentMethod = (value?: string | null): value is PaymentMethod =>
+const isSupportedPaymentMethod = (
+  value?: string | null,
+): value is PaymentMethod =>
   PAYMENT_CHOICES.some((choice) => choice.value === value);
 
 const isUuid = (value: string) => UUID_REGEX.test(value.trim());
@@ -101,7 +108,8 @@ export const CounterCheckoutStaffPage = () => {
   const draftSubtotal = useMemo(
     () =>
       draftItems.reduce(
-        (sum, item) => sum + Number(item.unitPrice ?? 0) * Number(item.quantity ?? 0),
+        (sum, item) =>
+          sum + Number(item.unitPrice ?? 0) * Number(item.quantity ?? 0),
         0,
       ),
     [draftItems],
@@ -148,7 +156,10 @@ export const CounterCheckoutStaffPage = () => {
     broadcastDisplayOrder(latest.id);
   };
 
-  const hydrateVariantInfo = (variant: ProductVariant, quantity: number): DraftOrderItem => {
+  const hydrateVariantInfo = (
+    variant: ProductVariant,
+    quantity: number,
+  ): DraftOrderItem => {
     const label = variant.productName
       ? `${variant.productName}${variant.volumeMl ? ` ${variant.volumeMl}ml` : ""}`
       : variant.sku || variant.barcode || "Biến thể";
@@ -186,7 +197,9 @@ export const CounterCheckoutStaffPage = () => {
       }
 
       setDraftItems((prev) => {
-        const existingIndex = prev.findIndex((item) => item.variantId === variant.id);
+        const existingIndex = prev.findIndex(
+          (item) => item.variantId === variant.id,
+        );
         if (existingIndex !== -1) {
           const updated = [...prev];
           const existingItem = updated[existingIndex];
@@ -214,7 +227,9 @@ export const CounterCheckoutStaffPage = () => {
   };
 
   const removeDraftItem = (variantId: string) => {
-    setDraftItems((prev) => prev.filter((item) => item.variantId !== variantId));
+    setDraftItems((prev) =>
+      prev.filter((item) => item.variantId !== variantId),
+    );
   };
 
   const updateQuantity = (variantId: string, quantity: number) => {
@@ -254,7 +269,6 @@ export const CounterCheckoutStaffPage = () => {
       isPickupInStore: true,
       orderDetails: validOrderDetails,
       recipient: {
-        addressId: null,
         fullName: recipientName,
         phone: recipientPhone,
         districtId: 0,
@@ -411,7 +425,11 @@ export const CounterCheckoutStaffPage = () => {
                 <Button
                   variant="contained"
                   startIcon={
-                    isLoadingOrder ? <CircularProgress size={18} /> : <QrCodeScanner />
+                    isLoadingOrder ? (
+                      <CircularProgress size={18} />
+                    ) : (
+                      <QrCodeScanner />
+                    )
                   }
                   onClick={handleLoadOrder}
                   disabled={isLoadingOrder}
@@ -440,7 +458,9 @@ export const CounterCheckoutStaffPage = () => {
                     value={quantityInput}
                     onChange={(e) => {
                       const next = Number(e.target.value);
-                      setQuantityInput(Number.isFinite(next) && next > 0 ? next : 1);
+                      setQuantityInput(
+                        Number.isFinite(next) && next > 0 ? next : 1,
+                      );
                     }}
                     sx={{ width: { xs: "100%", sm: 140 } }}
                   />
@@ -458,12 +478,21 @@ export const CounterCheckoutStaffPage = () => {
                   <Paper variant="outlined" sx={{ p: 2 }}>
                     <Stack spacing={1.5}>
                       {draftItems.map((item) => (
-                        <Box key={item.variantId} display="flex" alignItems="center" gap={1.5}>
+                        <Box
+                          key={item.variantId}
+                          display="flex"
+                          alignItems="center"
+                          gap={1.5}
+                        >
                           <Box flex={1} minWidth={0}>
                             <Typography fontWeight={600} noWrap>
                               {item.productName || item.variantName}
                             </Typography>
-                            <Typography variant="body2" color="text.secondary" noWrap>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              noWrap
+                            >
                               {item.variantId}
                             </Typography>
                           </Box>
@@ -474,15 +503,24 @@ export const CounterCheckoutStaffPage = () => {
                               const next = Number(e.target.value);
                               updateQuantity(
                                 item.variantId,
-                                Number.isFinite(next) && next > 0 ? next : item.quantity,
+                                Number.isFinite(next) && next > 0
+                                  ? next
+                                  : item.quantity,
                               );
                             }}
                             sx={{ width: 84 }}
                           />
-                          <Typography fontWeight={600} minWidth={100} textAlign="right">
+                          <Typography
+                            fontWeight={600}
+                            minWidth={100}
+                            textAlign="right"
+                          >
                             {formatCurrency(item.unitPrice * item.quantity)}
                           </Typography>
-                          <IconButton color="error" onClick={() => removeDraftItem(item.variantId)}>
+                          <IconButton
+                            color="error"
+                            onClick={() => removeDraftItem(item.variantId)}
+                          >
                             <Delete />
                           </IconButton>
                         </Box>
@@ -491,11 +529,15 @@ export const CounterCheckoutStaffPage = () => {
                     <Divider sx={{ my: 2 }} />
                     <Stack direction="row" justifyContent="space-between">
                       <Typography>Tạm tính</Typography>
-                      <Typography fontWeight={700}>{formatCurrency(draftSubtotal)}</Typography>
+                      <Typography fontWeight={700}>
+                        {formatCurrency(draftSubtotal)}
+                      </Typography>
                     </Stack>
                   </Paper>
                 ) : (
-                  <FormHelperText>Chưa có sản phẩm trong đơn nháp.</FormHelperText>
+                  <FormHelperText>
+                    Chưa có sản phẩm trong đơn nháp.
+                  </FormHelperText>
                 )}
 
                 <TextField
@@ -532,7 +574,11 @@ export const CounterCheckoutStaffPage = () => {
                   onClick={handleCreateOrder}
                   disabled={isCreatingOrder}
                 >
-                  {isCreatingOrder ? <CircularProgress size={22} /> : "Tạo đơn tại quầy"}
+                  {isCreatingOrder ? (
+                    <CircularProgress size={22} />
+                  ) : (
+                    "Tạo đơn tại quầy"
+                  )}
                 </Button>
               </Stack>
             </Paper>
@@ -587,13 +633,20 @@ export const CounterCheckoutStaffPage = () => {
 
           <Box flex={1} width="100%">
             <Paper sx={{ p: 3, position: "sticky", top: 88 }}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+              >
                 <Typography variant="h6" fontWeight={600}>
                   Thông tin đơn hàng
                 </Typography>
                 <Tooltip title="Mở màn hình cho khách">
                   <span>
-                    <IconButton onClick={openCustomerScreen} disabled={!loadedOrder?.id}>
+                    <IconButton
+                      onClick={openCustomerScreen}
+                      disabled={!loadedOrder?.id}
+                    >
                       <Launch />
                     </IconButton>
                   </span>
@@ -604,7 +657,12 @@ export const CounterCheckoutStaffPage = () => {
 
               {loadedOrder ? (
                 <Stack spacing={2}>
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    flexWrap="wrap"
+                  >
                     <Typography variant="subtitle1" fontWeight={600}>
                       Mã đơn:
                     </Typography>
@@ -620,15 +678,26 @@ export const CounterCheckoutStaffPage = () => {
                     />
                   </Stack>
 
-                  <Typography>Mã khách: {loadedOrder.customerName || "Khách lẻ"}</Typography>
-                  <Typography>Trạng thái đơn: {loadedOrder.status || "-"}</Typography>
-                  <Typography>Voucher: {loadedOrder.voucherCode || "Không có"}</Typography>
+                  <Typography>
+                    Mã khách: {loadedOrder.customerName || "Khách lẻ"}
+                  </Typography>
+                  <Typography>
+                    Trạng thái đơn: {loadedOrder.status || "-"}
+                  </Typography>
+                  <Typography>
+                    Voucher: {loadedOrder.voucherCode || "Không có"}
+                  </Typography>
 
                   <Divider />
 
                   <Stack spacing={1}>
                     {loadedOrder.orderDetails?.map((detail) => (
-                      <Box key={detail.id} display="flex" alignItems="center" gap={1.5}>
+                      <Box
+                        key={detail.id}
+                        display="flex"
+                        alignItems="center"
+                        gap={1.5}
+                      >
                         {detail.imageUrl ? (
                           <Box
                             component="img"
@@ -681,7 +750,8 @@ export const CounterCheckoutStaffPage = () => {
                 </Stack>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Chưa có đơn hàng nào được tải. Hãy nhập mã đơn để bắt đầu thanh toán.
+                  Chưa có đơn hàng nào được tải. Hãy nhập mã đơn để bắt đầu
+                  thanh toán.
                 </Typography>
               )}
             </Paper>

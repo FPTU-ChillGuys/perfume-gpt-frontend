@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
+  Badge,
   Typography,
   Paper,
   Table,
@@ -20,31 +22,37 @@ import {
   CircularProgress,
   IconButton,
   Tooltip,
+  Tab,
+  Tabs,
 } from "@mui/material";
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
-  Visibility as VisibilityIcon,
-  Edit as EditIcon,
+  ContentCopy as ContentCopyIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
-import type {
-  OrderListItem,
-  OrderStatus,
-  OrderType,
-  PaymentStatus,
-} from "@/types/order";
-import { OrderDetailModal } from "@/components/order/OrderDetailModal";
-import { UpdateOrderStatusDialog } from "@/components/order/UpdateOrderStatusDialog";
+import type { OrderListItem, OrderStatus, OrderType } from "@/types/order";
 import {
   orderStatusLabels,
   orderStatusColors,
+  getOrderStatusChipSx,
   paymentStatusLabels,
   paymentStatusColors,
   orderTypeLabels,
+  orderTypeColors,
 } from "@/utils/orderStatus";
+
+const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
+  { label: "Tất cả", value: "" },
+  { label: orderStatusLabels.Pending, value: "Pending" },
+  { label: orderStatusLabels.Processing, value: "Processing" },
+  { label: orderStatusLabels.Delivering, value: "Delivering" },
+  { label: orderStatusLabels.Delivered, value: "Delivered" },
+  { label: orderStatusLabels.Canceled, value: "Canceled" },
+  { label: orderStatusLabels.Returned, value: "Returned" },
+];
 
 const formatCurrency = (value?: number) => {
   if (!value) return "0đ";
@@ -57,6 +65,8 @@ const formatDate = (dateStr?: string) => {
 };
 
 export const OrderManagementPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,50 +77,46 @@ export const OrderManagementPage = () => {
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [status, setStatus] = useState<OrderStatus | "">("");
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | "">("");
+  const initialStatus =
+    (location.state as { status?: OrderStatus | "" } | null)?.status ?? "";
+  const [status, setStatus] = useState<OrderStatus | "">(initialStatus);
   const [type, setType] = useState<OrderType | "">("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [updateStatusDialogOpen, setUpdateStatusDialogOpen] = useState(false);
-  const [orderToUpdate, setOrderToUpdate] = useState<OrderListItem | null>(
-    null,
-  );
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    page,
-    rowsPerPage,
-    searchTerm,
-    status,
-    paymentStatus,
-    type,
-    fromDate,
-    toDate,
-  ]);
+  }, [page, rowsPerPage, searchTerm, status, type, fromDate, toDate]);
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const response = await orderService.getAllOrders({
-        PageNumber: page + 1,
-        PageSize: rowsPerPage,
-        SearchTerm: searchTerm || undefined,
-        Status: status || undefined,
-        PaymentStatus: paymentStatus || undefined,
-        Type: type || undefined,
-        FromDate: fromDate || undefined,
-        ToDate: toDate || undefined,
-        SortBy: "CreatedAt",
-        SortOrder: "desc",
-      });
+      const [response, pendingResponse] = await Promise.all([
+        orderService.getAllOrders({
+          PageNumber: page + 1,
+          PageSize: rowsPerPage,
+          SearchTerm: searchTerm || undefined,
+          Status: status || undefined,
+          Type: type || undefined,
+          FromDate: fromDate || undefined,
+          ToDate: toDate || undefined,
+          SortBy: "CreatedAt",
+          SortOrder: "desc",
+        }),
+        orderService.getAllOrders({
+          PageNumber: 1,
+          PageSize: 1,
+          Status: "Pending",
+          SortBy: "CreatedAt",
+          SortOrder: "desc",
+        }),
+      ]);
 
       setOrders(response.items);
       setTotalCount(response.totalCount);
+      setPendingCount(pendingResponse.totalCount);
     } catch (error) {
       console.error("Failed to load orders:", error);
       showToast("Không thể tải danh sách đơn hàng. Vui lòng thử lại.", "error");
@@ -128,11 +134,21 @@ export const OrderManagementPage = () => {
     setSearchInput("");
     setSearchTerm("");
     setStatus("");
-    setPaymentStatus("");
     setType("");
     setFromDate("");
     setToDate("");
     setPage(0);
+  };
+
+  const handleCopyOrderId = async (orderId?: string | null) => {
+    if (!orderId) return;
+
+    try {
+      await navigator.clipboard.writeText(orderId);
+      showToast("Đã sao chép mã đơn hàng", "success");
+    } catch {
+      showToast("Không thể sao chép mã đơn hàng", "error");
+    }
   };
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -146,177 +162,180 @@ export const OrderManagementPage = () => {
     setPage(0);
   };
 
-  const handleViewDetail = (orderId: string) => {
-    setSelectedOrderId(orderId);
-    setDetailModalOpen(true);
-  };
+  const handleViewDetail = (orderId?: string | null) => {
+    if (!orderId) return;
 
-  const handleCloseModal = () => {
-    setDetailModalOpen(false);
-    setSelectedOrderId(null);
-  };
+    const basePath = location.pathname.startsWith("/staff")
+      ? "/staff/orders"
+      : "/admin/orders";
 
-  const handleOpenUpdateStatus = (order: OrderListItem) => {
-    setOrderToUpdate(order);
-    setUpdateStatusDialogOpen(true);
-  };
-
-  const handleCloseUpdateStatus = () => {
-    setUpdateStatusDialogOpen(false);
-    setOrderToUpdate(null);
-  };
-
-  const handleConfirmUpdateStatus = async (
-    status: OrderStatus,
-    note?: string,
-  ) => {
-    if (!orderToUpdate?.id) return;
-
-    try {
-      await orderService.updateOrderStatus(orderToUpdate.id, status, note);
-      // Dialog will close itself, then show toast after a small delay
-      setTimeout(() => {
-        showToast("Cập nhật trạng thái đơn hàng thành công", "success");
-      }, 100);
-      await loadOrders();
-    } catch (error) {
-      console.error("Failed to update order status:", error);
-      showToast(
-        error instanceof Error
-          ? error.message
-          : "Không thể cập nhật trạng thái đơn hàng",
-        "error",
-      );
-      throw error;
-    }
+    navigate(`${basePath}/${orderId}`, {
+      state: {
+        status,
+        fromPath: location.pathname,
+      },
+    });
   };
 
   return (
     <AdminLayout>
       <Box>
-        <Typography variant="h4" fontWeight="bold" mb={3}>
-          Quản lý đơn hàng
-        </Typography>
-
         {/* Filters */}
-        <Paper sx={{ p: 3, mb: 3 }}>
+        <Paper sx={{ mb: 3, overflow: "hidden" }}>
           <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, 1fr)",
-                md: "repeat(3, 1fr)",
-                lg: "repeat(4, 1fr)",
-              },
-              gap: 2,
-            }}
+            sx={{ borderBottom: "1px solid", borderColor: "divider", px: 2 }}
           >
-            <TextField
-              fullWidth
-              label="Tìm kiếm"
-              placeholder="Mã đơn, tên khách hàng..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") handleSearch();
-              }}
-              InputProps={{
-                endAdornment: (
-                  <IconButton onClick={handleSearch} edge="end">
-                    <SearchIcon />
-                  </IconButton>
-                ),
-              }}
-            />
-
-            <FormControl fullWidth>
-              <InputLabel>Trạng thái đơn hàng</InputLabel>
-              <Select
-                value={status}
-                label="Trạng thái đơn hàng"
-                onChange={(e) => {
-                  setStatus(e.target.value as OrderStatus | "");
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="">Tất cả</MenuItem>
-                <MenuItem value="Pending">Chờ xử lý</MenuItem>
-                <MenuItem value="Processing">Đang xử lý</MenuItem>
-                <MenuItem value="Delivering">Đang giao</MenuItem>
-                <MenuItem value="Delivered">Đã giao</MenuItem>
-                <MenuItem value="Canceled">Đã hủy</MenuItem>
-                <MenuItem value="Returned">Đã trả</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth>
-              <InputLabel>Trạng thái thanh toán</InputLabel>
-              <Select
-                value={paymentStatus}
-                label="Trạng thái thanh toán"
-                onChange={(e) => {
-                  setPaymentStatus(e.target.value as PaymentStatus | "");
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="">Tất cả</MenuItem>
-                <MenuItem value="Unpaid">Chưa thanh toán</MenuItem>
-                <MenuItem value="Paid">Đã thanh toán</MenuItem>
-                <MenuItem value="Refunded">Đã hoàn tiền</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl fullWidth>
-              <InputLabel>Loại đơn hàng</InputLabel>
-              <Select
-                value={type}
-                label="Loại đơn hàng"
-                onChange={(e) => {
-                  setType(e.target.value as OrderType | "");
-                  setPage(0);
-                }}
-              >
-                <MenuItem value="">Tất cả</MenuItem>
-                <MenuItem value="Online">Online</MenuItem>
-                <MenuItem value="Offline">Offline</MenuItem>
-                <MenuItem value="Shoppe">Shoppe</MenuItem>
-              </Select>
-            </FormControl>
-
-            <TextField
-              fullWidth
-              label="Từ ngày"
-              type="date"
-              value={fromDate}
-              onChange={(e) => {
-                setFromDate(e.target.value);
+            <Tabs
+              value={status}
+              onChange={(_, value: OrderStatus | "") => {
+                setStatus(value);
                 setPage(0);
               }}
-              InputLabelProps={{ shrink: true }}
-            />
-
-            <TextField
-              fullWidth
-              label="Đến ngày"
-              type="date"
-              value={toDate}
-              onChange={(e) => {
-                setToDate(e.target.value);
-                setPage(0);
+              variant="scrollable"
+              scrollButtons="auto"
+              TabIndicatorProps={{ style: { backgroundColor: "#ee4d2d" } }}
+              sx={{
+                "& .MuiTab-root": {
+                  textTransform: "none",
+                  fontWeight: 500,
+                  minWidth: 100,
+                },
+                "& .Mui-selected": { color: "#ee4d2d !important" },
               }}
-              InputLabelProps={{ shrink: true }}
-            />
-
-            <Button
-              fullWidth
-              variant="outlined"
-              startIcon={<ClearIcon />}
-              onClick={handleClearFilters}
-              sx={{ height: 56 }}
             >
-              Xóa bộ lọc
-            </Button>
+              {STATUS_TABS.map((tab) => {
+                const isPendingTab = tab.value === "Pending";
+                return (
+                  <Tab
+                    key={tab.value || "all"}
+                    value={tab.value}
+                    label={
+                      isPendingTab ? (
+                        <Badge
+                          color="error"
+                          badgeContent={
+                            pendingCount > 99 ? "99+" : pendingCount
+                          }
+                          invisible={pendingCount <= 0}
+                        >
+                          <Box component="span" sx={{ pr: 1 }}>
+                            {tab.label}
+                          </Box>
+                        </Badge>
+                      ) : (
+                        tab.label
+                      )
+                    }
+                  />
+                );
+              })}
+            </Tabs>
+          </Box>
+
+          <Box sx={{ p: 3 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "repeat(2, 1fr)",
+                  md: "2fr repeat(2, 1fr)",
+                  lg: "2fr repeat(3, 1fr) auto auto",
+                },
+                gap: 2,
+              }}
+            >
+              <TextField
+                fullWidth
+                label="Tìm kiếm"
+                placeholder="Mã đơn, tên khách hàng..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
+                sx={{
+                  gridColumn: {
+                    xs: "span 1",
+                    sm: "span 2",
+                    md: "span 1",
+                    lg: "span 1",
+                  },
+                }}
+                InputProps={{
+                  endAdornment: (
+                    <IconButton onClick={handleSearch} edge="end">
+                      <SearchIcon />
+                    </IconButton>
+                  ),
+                }}
+              />
+
+              <FormControl fullWidth>
+                <InputLabel>Loại đơn hàng</InputLabel>
+                <Select
+                  value={type}
+                  label="Loại đơn hàng"
+                  onChange={(e) => {
+                    setType(e.target.value as OrderType | "");
+                    setPage(0);
+                  }}
+                >
+                  <MenuItem value="">Tất cả</MenuItem>
+                  <MenuItem value="Online">Online</MenuItem>
+                  <MenuItem value="Offline">In-Store</MenuItem>
+                  <MenuItem value="Shoppe">Shopee</MenuItem>
+                </Select>
+              </FormControl>
+
+              <TextField
+                fullWidth
+                label="Từ ngày"
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setPage(0);
+                }}
+                InputLabelProps={{ shrink: true }}
+              />
+
+              <TextField
+                fullWidth
+                label="Đến ngày"
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setPage(0);
+                }}
+                InputLabelProps={{ shrink: true }}
+              />
+
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={<SearchIcon />}
+                onClick={handleSearch}
+                sx={{
+                  minWidth: 120,
+                  bgcolor: "#ee4d2d",
+                  "&:hover": { bgcolor: "#d03e27" },
+                }}
+              >
+                Tìm
+              </Button>
+
+              <Button
+                fullWidth
+                variant="outlined"
+                startIcon={<ClearIcon />}
+                onClick={handleClearFilters}
+                sx={{ height: 56 }}
+              >
+                Xóa bộ lọc
+              </Button>
+            </Box>
           </Box>
         </Paper>
 
@@ -333,19 +352,18 @@ export const OrderManagementPage = () => {
                 <TableCell align="right">Số lượng</TableCell>
                 <TableCell align="right">Tổng tiền</TableCell>
                 <TableCell>Ngày tạo</TableCell>
-                <TableCell align="center">Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : orders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                     <Typography variant="body2" color="text.secondary">
                       Không có đơn hàng nào
                     </Typography>
@@ -353,11 +371,38 @@ export const OrderManagementPage = () => {
                 </TableRow>
               ) : (
                 orders.map((order) => (
-                  <TableRow key={order.id} hover>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {order.id?.substring(0, 8)}...
-                      </Typography>
+                  <TableRow
+                    key={order.id}
+                    hover
+                    onClick={() => handleViewDetail(order.id)}
+                    sx={{ cursor: "pointer" }}
+                  >
+                    <TableCell sx={{ maxWidth: 260 }}>
+                      <Box display="flex" alignItems="center" gap={0.5}>
+                        <Tooltip title={order.id || ""}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={500}
+                            sx={{ fontFamily: "monospace" }}
+                            noWrap
+                          >
+                            {order.id || "-"}
+                          </Typography>
+                        </Tooltip>
+                        {!!order.id && (
+                          <Tooltip title="Sao chép mã đơn">
+                            <IconButton
+                              size="small"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void handleCopyOrderId(order.id);
+                              }}
+                            >
+                              <ContentCopyIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
@@ -371,6 +416,9 @@ export const OrderManagementPage = () => {
                         }
                         size="small"
                         variant="outlined"
+                        color={
+                          order.type ? orderTypeColors[order.type] : "default"
+                        }
                       />
                     </TableCell>
                     <TableCell>
@@ -382,6 +430,7 @@ export const OrderManagementPage = () => {
                         }
                         size="small"
                         color={orderStatusColors[order.status || "Pending"]}
+                        sx={getOrderStatusChipSx(order.status || "Pending")}
                       />
                     </TableCell>
                     <TableCell>
@@ -410,27 +459,6 @@ export const OrderManagementPage = () => {
                         {formatDate(order.createdAt)}
                       </Typography>
                     </TableCell>
-                    <TableCell align="center">
-                      <Box display="flex" gap={0.5} justifyContent="center">
-                        <Tooltip title="Xem chi tiết">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleViewDetail(order.id || "")}
-                          >
-                            <VisibilityIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Cập nhật trạng thái">
-                          <IconButton
-                            size="small"
-                            onClick={() => handleOpenUpdateStatus(order)}
-                            color="primary"
-                          >
-                            <EditIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -452,24 +480,6 @@ export const OrderManagementPage = () => {
           />
         </TableContainer>
       </Box>
-
-      {/* Order Detail Modal */}
-      <OrderDetailModal
-        open={detailModalOpen}
-        orderId={selectedOrderId}
-        onClose={handleCloseModal}
-      />
-
-      {/* Update Order Status Dialog */}
-      {orderToUpdate && (
-        <UpdateOrderStatusDialog
-          open={updateStatusDialogOpen}
-          currentStatus={orderToUpdate.status || "Pending"}
-          orderId={orderToUpdate.id || ""}
-          onClose={handleCloseUpdateStatus}
-          onConfirm={handleConfirmUpdateStatus}
-        />
-      )}
     </AdminLayout>
   );
 };

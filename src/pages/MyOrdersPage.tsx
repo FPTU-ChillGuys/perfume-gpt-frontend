@@ -18,9 +18,12 @@ import {
   Tab,
   Tabs,
   TextField,
+  Tooltip,
+  IconButton,
   Typography,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
@@ -37,6 +40,7 @@ import type { ReviewDialogTarget, ReviewResponse } from "@/types/review";
 import {
   orderStatusLabels,
   orderStatusColors,
+  getOrderStatusChipSx,
   paymentStatusLabels,
   paymentStatusColors,
   orderTypeLabels,
@@ -64,11 +68,6 @@ const toIsoString = (value: string) => {
   if (!value) return undefined;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-};
-
-const shortenId = (id?: string | null) => {
-  if (!id) return "";
-  return `${id.slice(0, 8)}...${id.slice(-4)}`;
 };
 
 export const MyOrdersPage = () => {
@@ -169,6 +168,17 @@ export const MyOrdersPage = () => {
   const handleOpenDetail = (orderId?: string | null) => {
     if (!orderId) return;
     navigate(`/my-orders/${orderId}`, { state: { status } });
+  };
+
+  const handleCopyOrderId = async (orderId?: string | null) => {
+    if (!orderId) return;
+
+    try {
+      await navigator.clipboard.writeText(orderId);
+      showToast("Đã sao chép mã đơn hàng", "success");
+    } catch {
+      showToast("Không thể sao chép mã đơn hàng", "error");
+    }
   };
 
   const handleReviewSelected = (
@@ -313,9 +323,25 @@ export const MyOrdersPage = () => {
                             spacing={1}
                             alignItems="center"
                           >
-                            <Typography variant="body2" color="text.secondary">
-                              #{order.id}
-                            </Typography>
+                            <Tooltip title={order.id || ""}>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ fontFamily: "monospace" }}
+                              >
+                                #{order.id || "-"}
+                              </Typography>
+                            </Tooltip>
+                            {!!order.id && (
+                              <Tooltip title="Sao chép mã đơn">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleCopyOrderId(order.id)}
+                                >
+                                  <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                             <Typography variant="body2" color="text.secondary">
                               ·
                             </Typography>
@@ -340,18 +366,19 @@ export const MyOrdersPage = () => {
                                 size="small"
                               />
                             )}
-                            {order.paymentStatus && (
-                              <Chip
-                                label={paymentStatusLabels[order.paymentStatus]}
-                                color={paymentStatusColors[order.paymentStatus]}
-                                variant="outlined"
-                                size="small"
-                              />
-                            )}
                             {order.status && (
                               <Chip
                                 label={orderStatusLabels[order.status]}
                                 color={orderStatusColors[order.status]}
+                                variant="filled"
+                                size="small"
+                                sx={getOrderStatusChipSx(order.status)}
+                              />
+                            )}
+                            {order.paymentStatus && (
+                              <Chip
+                                label={paymentStatusLabels[order.paymentStatus]}
+                                color={paymentStatusColors[order.paymentStatus]}
                                 variant="filled"
                                 size="small"
                               />

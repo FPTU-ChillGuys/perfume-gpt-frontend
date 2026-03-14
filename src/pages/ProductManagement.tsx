@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Box,
-  Container,
   Typography,
   Paper,
   Button,
@@ -46,7 +45,9 @@ const ProductManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
-  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(
+    null,
+  );
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
   const [variantProduct, setVariantProduct] = useState<ProductListItem | null>(
     null,
@@ -113,8 +114,7 @@ const ProductManagement = () => {
       open: true,
       productId: product.id ?? null,
       title: "Xoá sản phẩm",
-      description:
-        `Bạn có chắc chắn muốn xoá "${product.name || "sản phẩm"}"? Hành động này không thể hoàn tác.`,
+      description: `Bạn có chắc chắn muốn xoá "${product.name || "sản phẩm"}"? Hành động này không thể hoàn tác.`,
     });
   };
 
@@ -161,9 +161,27 @@ const ProductManagement = () => {
     setVariantProduct(null);
   };
 
+  const getDescriptionPreview = (description?: string | null) => {
+    if (!description) return "Chưa có mô tả";
+
+    const container = document.createElement("div");
+    const normalizedHtml = description
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/(p|div|li)>/gi, "\n");
+
+    container.innerHTML = normalizedHtml;
+
+    const plainText = (container.textContent || "")
+      .replace(/\u00a0/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    return plainText || "Chưa có mô tả";
+  };
+
   return (
     <AdminLayout>
-      <Container maxWidth="xl">
+      <Box>
         <Paper sx={{ width: "100%", overflow: "hidden" }}>
           <Box sx={{ p: 3 }}>
             <Stack
@@ -232,6 +250,7 @@ const ProductManagement = () => {
                         <TableCell>Tên sản phẩm</TableCell>
                         <TableCell>Thương hiệu</TableCell>
                         <TableCell>Danh mục</TableCell>
+                        <TableCell align="center">Số biến thể</TableCell>
                         <TableCell>Mô tả</TableCell>
                         <TableCell align="center">Thao tác</TableCell>
                       </TableRow>
@@ -239,7 +258,7 @@ const ProductManagement = () => {
                     <TableBody>
                       {filteredProducts.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                          <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
                             <Typography variant="body2" color="text.secondary">
                               Không tìm thấy sản phẩm nào
                             </Typography>
@@ -295,6 +314,9 @@ const ProductManagement = () => {
                             <TableCell>
                               {product.categoryName || "N/A"}
                             </TableCell>
+                            <TableCell align="center">
+                              {product.numberOfVariants ?? 0}
+                            </TableCell>
                             <TableCell>
                               <Typography
                                 variant="body2"
@@ -306,7 +328,7 @@ const ProductManagement = () => {
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                {product.description || "Chưa có mô tả"}
+                                {getDescriptionPreview(product.description)}
                               </Typography>
                             </TableCell>
                             <TableCell align="center">
@@ -356,7 +378,7 @@ const ProductManagement = () => {
             )}
           </Box>
         </Paper>
-      </Container>
+      </Box>
 
       <CreateProductDialog
         open={dialogOpen}

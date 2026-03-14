@@ -26,8 +26,8 @@ export const CreateImportStockTab: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [selectedSupplierId, setSelectedSupplierId] = useState<number>(1);
-  const [expectedArrivalDate, setExpectedArrivalDate] = useState<string>(() =>
-    getTodayIsoDate()!,
+  const [expectedArrivalDate, setExpectedArrivalDate] = useState<string>(
+    () => getTodayIsoDate()!,
   );
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState<boolean>(true);
@@ -38,7 +38,8 @@ export const CreateImportStockTab: React.FC = () => {
     severity: "success" | "error" | "warning" | "info";
   }>({ open: false, message: "", severity: "info" });
   const [uploadingExcel, setUploadingExcel] = useState<boolean>(false);
-  const [downloadingTemplate, setDownloadingTemplate] = useState<boolean>(false);
+  const [downloadingTemplate, setDownloadingTemplate] =
+    useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const showToast = (
@@ -216,10 +217,7 @@ export const CreateImportStockTab: React.FC = () => {
       }
 
       if (!expectedArrivalDate) {
-        showToast(
-          "Vui lòng chọn ngày dự kiến nhận hàng",
-          "warning",
-        );
+        showToast("Vui lòng chọn ngày dự kiến nhận hàng", "warning");
         return;
       }
 
@@ -241,10 +239,7 @@ export const CreateImportStockTab: React.FC = () => {
       const importDate = getTodayIsoDate();
 
       if (new Date(expectedArrivalDate) < new Date(importDate!)) {
-        showToast(
-          "Ngày dự kiến nhận không thể trước ngày tạo đơn",
-          "warning",
-        );
+        showToast("Ngày dự kiến nhận không thể trước ngày tạo đơn", "warning");
         return;
       }
 
@@ -342,14 +337,12 @@ export const CreateImportStockTab: React.FC = () => {
               className="w-full sm:w-auto px-4 py-3 rounded-lg border border-red-200 bg-red-50 text-red-600 font-semibold flex items-center justify-center gap-2 hover:bg-red-100 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <CloudUpload fontSize="small" />
-              <span>
-                {uploadingExcel ? "Đang nhập..." : "Nhập từ Excel"}
-              </span>
+              <span>{uploadingExcel ? "Đang nhập..." : "Nhập từ Excel"}</span>
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Sử dụng mẫu Excel để lập danh sách sản phẩm, sau đó tải lên để
-            tạo đơn nhanh chóng.
+            Sử dụng mẫu Excel để lập danh sách sản phẩm, sau đó tải lên để tạo
+            đơn nhanh chóng.
           </p>
         </div>
       </div>
@@ -383,7 +376,7 @@ export const CreateImportStockTab: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+            <div className="overflow-x-auto max-h-125 overflow-y-auto">
               <table className="w-full table-fixed">
                 <thead>
                   <tr className="bg-gray-50 border-b-2 border-gray-200">

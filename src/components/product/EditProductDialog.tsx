@@ -34,6 +34,7 @@ import type { BrandLookupItem } from "@/services/brandService";
 import { categoryService } from "@/services/categoryService";
 import type { CategoryLookupItem } from "@/services/categoryService";
 import { useToast } from "@/hooks/useToast";
+import RichTextEditor from "@/components/common/RichTextEditor";
 import type {
   AttributeLookupItem,
   AttributeValueLookupItem,
@@ -109,6 +110,13 @@ export default function EditProductDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+
+  const normalizeDescription = (input: string) => {
+    const container = document.createElement("div");
+    container.innerHTML = input || "";
+    const text = (container.textContent || "").replace(/\u00a0/g, " ").trim();
+    return text ? container.innerHTML.replace(/[\r\n]+/g, "").trim() : "";
+  };
 
   const resetState = useCallback(() => {
     setName("");
@@ -310,7 +318,6 @@ export default function EditProductDialog({
       setAvailableAttributes(normalizedAttributes);
       setInitialized(true);
     } catch (err: any) {
-      console.error("Error loading product for edit:", err);
       const errorMessage = err.message || "Không thể tải dữ liệu sản phẩm";
       setError(errorMessage);
       showToast(errorMessage, "error");
@@ -377,7 +384,6 @@ export default function EditProductDialog({
       });
       showToast("Đã tải ảnh lên thành công", "success");
     } catch (err: any) {
-      console.error("Error uploading image:", err);
       const errorMessage = err.message || "Không thể tải ảnh lên";
       setError(errorMessage);
       showToast(errorMessage, "error");
@@ -437,7 +443,6 @@ export default function EditProductDialog({
         await productService.setPrimaryProductImage(imageToSetPrimary.id);
         showToast("Đã đặt làm hình chính", "success");
       } catch (err: any) {
-        console.error("Error setting primary image:", err);
         const errorMessage = err.message || "Không thể đặt hình chính";
         setError(errorMessage);
         showToast(errorMessage, "error");
@@ -586,8 +591,7 @@ export default function EditProductDialog({
         .map((img) => img.id!)
         .filter((id) => id && id.trim() !== ""); // Filter out empty strings
 
-      // Normalize description
-      const normalizedDescription = description.trim().replace(/\s+/g, " ");
+      const normalizedDescription = normalizeDescription(description);
 
       const payload: UpdateProductRequest = {
         name: name.trim(),
@@ -613,7 +617,6 @@ export default function EditProductDialog({
       resetState();
       onClose();
     } catch (err: any) {
-      console.error("Error updating product:", err);
       const errorMessage = err.message || "Có lỗi xảy ra khi cập nhật sản phẩm";
       setError(errorMessage);
       showToast(errorMessage, "error");
@@ -1042,14 +1045,13 @@ export default function EditProductDialog({
                     )}
                   />
 
-                  <TextField
+                  <RichTextEditor
                     label="Mô tả"
-                    fullWidth
-                    multiline
-                    rows={4}
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    onChange={setDescription}
                     disabled={saving}
+                    minHeight={140}
+                    placeholder="Nhập mô tả sản phẩm, có thể in đậm và xuống dòng"
                   />
 
                   {/* Attributes section */}

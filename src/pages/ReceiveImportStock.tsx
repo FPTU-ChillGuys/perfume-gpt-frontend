@@ -56,6 +56,11 @@ const ReceiveImportStock: React.FC = () => {
     setToast({ open: true, message, severity });
   };
 
+  const toApiDateTime = (dateValue?: string) => {
+    if (!dateValue) return "";
+    return dateValue.includes("T") ? dateValue : `${dateValue}T00:00:00`;
+  };
+
   // Load tickets on mount
   useEffect(() => {
     const loadTickets = async () => {
@@ -92,8 +97,8 @@ const ReceiveImportStock: React.FC = () => {
         // Use the total pages from pending for pagination (or calculate combined)
         setTotalPages(
           Math.max(
-            pendingResponse.payload!.totalPages,
-            inProgressResponse.payload!.totalPages,
+            pendingResponse.payload!.totalPages ?? 1,
+            inProgressResponse.payload!.totalPages ?? 1,
           ),
         );
       } catch (error: any) {
@@ -318,8 +323,8 @@ const ReceiveImportStock: React.FC = () => {
         note: staffNote || null,
         batches: product.batches.map((b) => ({
           batchCode: b.batchCode,
-          manufactureDate: b.manufactureDate,
-          expiryDate: b.expiryDate,
+          manufactureDate: toApiDateTime(b.manufactureDate),
+          expiryDate: toApiDateTime(b.expiryDate),
           quantity: Number(b.quantity),
         })),
       });

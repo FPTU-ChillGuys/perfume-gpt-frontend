@@ -5,7 +5,6 @@ import {
   Box,
   Breadcrumbs,
   Button,
-  Chip,
   CircularProgress,
   Container,
   Divider,
@@ -13,6 +12,8 @@ import {
   IconButton,
   Link,
   Stack,
+  Tab,
+  Tabs,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -31,8 +32,13 @@ import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { ReviewSection } from "@/components/review/ReviewSection";
+import {
+  productDetailTabsContent,
+  normalizeProductDetailTabContent,
+} from "@/constants/productDetailTabsContent";
 import type {
   MediaResponse,
+  ProductDetail,
   ProductFastLook,
   ProductInformation,
 } from "@/types/product";
@@ -44,6 +50,33 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   maximumFractionDigits: 0,
 });
 
+const sanitizeDescriptionHtml = (html: string) => {
+  const container = document.createElement("div");
+  container.innerHTML = html;
+
+  // Remove unsafe elements.
+  container
+    .querySelectorAll("script,style,iframe,object,embed,link,meta")
+    .forEach((node) => node.remove());
+
+  // Remove inline event handlers and javascript: URLs.
+  container.querySelectorAll("*").forEach((node) => {
+    Array.from(node.attributes).forEach((attr) => {
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim().toLowerCase();
+
+      if (
+        name.startsWith("on") ||
+        ((name === "href" || name === "src") && value.startsWith("javascript:"))
+      ) {
+        node.removeAttribute(attr.name);
+      }
+    });
+  });
+
+  return container.innerHTML;
+};
+
 const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
@@ -52,6 +85,9 @@ const ProductDetailPage = () => {
   const { user, isAuthenticated } = useAuth();
 
   const [information, setInformation] = useState<ProductInformation | null>(
+    null,
+  );
+  const [productDetail, setProductDetail] = useState<ProductDetail | null>(
     null,
   );
   const [fastLook, setFastLook] = useState<ProductFastLook | null>(null);
@@ -88,6 +124,9 @@ const ProductDetailPage = () => {
     null,
   );
   const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
+  const [infoTab, setInfoTab] = useState<"details" | "usage" | "shipping">(
+    "details",
+  );
 
   const fetchMyReviews = useCallback(async () => {
     if (!isAuthenticated) {
@@ -123,9 +162,10 @@ const ProductDetailPage = () => {
 
     const fetchData = async () => {
       try {
-        const [info, fastLookResponse] = await Promise.all([
+        const [info, fastLookResponse, detailResponse] = await Promise.all([
           productService.getProductInformation(productId),
           productService.getProductFastLook(productId),
+          productService.getProductDetail(productId),
         ]);
 
         if (!isMounted) {
@@ -134,7 +174,21 @@ const ProductDetailPage = () => {
 
         setInformation(info);
         setFastLook(fastLookResponse);
-        setSelectedVariantId(fastLookResponse?.variants?.[0]?.id || null);
+        setProductDetail(detailResponse);
+
+        const firstAvailableVariant = detailResponse?.variants?.find(
+          (variant) => {
+            const stockQuantity = variant?.stockQuantity;
+            return typeof stockQuantity !== "number" || stockQuantity > 0;
+          },
+        );
+
+        setSelectedVariantId(
+          firstAvailableVariant?.id ||
+            detailResponse?.variants?.[0]?.id ||
+            fastLookResponse?.variants?.[0]?.id ||
+            null,
+        );
       } catch (err: any) {
         if (!isMounted) {
           return;
@@ -154,48 +208,102 @@ const ProductDetailPage = () => {
     };
   }, [productId]);
 
+  const fastLookDisplayNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (fastLook?.variants || []).forEach((variant) => {
+      if (variant.id && variant.displayName) {
+        map.set(variant.id, variant.displayName);
+      }
+    });
+    return map;
+  }, [fastLook]);
+
+  const displayVariants = useMemo(() => {
+    if (productDetail?.variants?.length) {
+      return productDetail.variants.map((variant) => ({
+        id: variant.id || "",
+        displayName:
+          (variant.id ? fastLookDisplayNameById.get(variant.id) : undefined) ||
+          [
+            variant.concentrationName,
+            variant.volumeMl ? `${variant.volumeMl} ml` : null,
+          ]
+            .filter(Boolean)
+            .join(" - ") ||
+          variant.sku ||
+          "Size",
+        price: variant.basePrice,
+        stockQuantity: variant.stockQuantity,
+        media: variant.media?.[0] || null,
+        mediaList: variant.media || [],
+        sku: variant.sku || null,
+      }));
+    }
+
+    return (fastLook?.variants || []).map((variant) => ({
+      id: variant.id || "",
+      displayName: variant.displayName || "Size",
+      price: variant.price,
+      stockQuantity: variant.stockQuantity,
+      media: variant.media || null,
+      mediaList: variant.media ? [variant.media] : [],
+      sku: null,
+    }));
+  }, [productDetail, fastLook, fastLookDisplayNameById]);
+
   useEffect(() => {
     if (!selectedVariantId) {
       setVariantMediaList([]);
+      setIsLoadingMedia(false);
       return;
     }
 
-    // Cache hit: swap instantly with no loading state
     const cached = variantCacheRef.current.get(selectedVariantId);
     if (cached) {
       setVariantMediaList(cached);
       setActiveSlide(0);
       setThumbnailOffset(0);
+      setIsLoadingMedia(false);
       return;
     }
 
-    let isMounted = true;
-    setIsLoadingMedia(true);
-    // Keep existing variantMediaList visible while fetching (no blank flash)
+    const variant = productDetail?.variants?.find(
+      (item) => item.id === selectedVariantId,
+    );
 
-    productService
-      .getVariantById(selectedVariantId)
-      .then((variant) => {
-        if (!isMounted) return;
-        const sorted = [...(variant.media || [])].sort(
-          (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
-        );
-        variantCacheRef.current.set(selectedVariantId, sorted);
-        setVariantMediaList(sorted);
-        setActiveSlide(0);
-        setThumbnailOffset(0);
-      })
-      .catch(() => {
-        if (isMounted) setVariantMediaList([]);
-      })
-      .finally(() => {
-        if (isMounted) setIsLoadingMedia(false);
-      });
+    if (variant) {
+      const sorted = [...(variant.media || [])].sort(
+        (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+      );
 
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedVariantId]);
+      variantCacheRef.current.set(selectedVariantId, sorted);
+      setVariantMediaList(sorted);
+      setActiveSlide(0);
+      setThumbnailOffset(0);
+      setIsLoadingMedia(false);
+      return;
+    }
+
+    const fallbackVariant = displayVariants.find(
+      (item) => item.id === selectedVariantId,
+    );
+
+    if (!fallbackVariant) {
+      setVariantMediaList([]);
+      setIsLoadingMedia(false);
+      return;
+    }
+
+    const sorted = [...(fallbackVariant.mediaList || [])].sort(
+      (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+    );
+
+    variantCacheRef.current.set(selectedVariantId, sorted);
+    setVariantMediaList(sorted);
+    setActiveSlide(0);
+    setThumbnailOffset(0);
+    setIsLoadingMedia(false);
+  }, [selectedVariantId, productDetail, displayVariants]);
 
   // Effect: Fetch AI Review Summary
   useEffect(() => {
@@ -217,7 +325,9 @@ const ProductDetailPage = () => {
       })
       .catch((err) => {
         if (!isMounted) return;
-        setReviewError(err.message || "Không thể tải tóm tắt đánh giá hiện tại.");
+        setReviewError(
+          err.message || "Không thể tải tóm tắt đánh giá hiện tại.",
+        );
       })
       .finally(() => {
         if (isMounted) setIsReviewLoading(false);
@@ -238,18 +348,41 @@ const ProductDetailPage = () => {
 
   const selectedVariant = useMemo(
     () =>
-      fastLook?.variants?.find((variant) => variant.id === selectedVariantId) ||
+      displayVariants.find((variant) => variant.id === selectedVariantId) ||
       null,
-    [fastLook, selectedVariantId],
+    [displayVariants, selectedVariantId],
   );
+
+  const selectedVariantDetail = useMemo(
+    () =>
+      productDetail?.variants?.find(
+        (variant) => variant.id === selectedVariantId,
+      ) || null,
+    [productDetail, selectedVariantId],
+  );
+
+  type DisplayVariant = (typeof displayVariants)[number];
+
+  const getVariantStockQuantity = (variant?: DisplayVariant | null) => {
+    const rawStock = variant?.stockQuantity;
+    return typeof rawStock === "number" ? rawStock : null;
+  };
+
+  const isVariantOutOfStock = (variant?: DisplayVariant | null) => {
+    const stockQuantity = getVariantStockQuantity(variant);
+    return stockQuantity !== null && stockQuantity <= 0;
+  };
+
+  const selectedVariantStockQuantity = getVariantStockQuantity(selectedVariant);
+  const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
 
   const fallbackReviewThumbnail = useMemo(
     () =>
       selectedVariant?.media?.url ||
       variantMediaList[0]?.url ||
-      fastLook?.variants?.[0]?.media?.url ||
+      displayVariants[0]?.media?.url ||
       null,
-    [selectedVariant, variantMediaList, fastLook],
+    [selectedVariant, variantMediaList, displayVariants],
   );
 
   const existingReviewForVariant = useMemo(
@@ -405,6 +538,12 @@ const ProductDetailPage = () => {
       showToast("Vui lòng chọn size để mua", "warning");
       return;
     }
+
+    if (isSelectedVariantOutOfStock) {
+      showToast("Size này đã hết hàng", "warning");
+      return;
+    }
+
     setIsAdding(true);
     try {
       await cartService.addItem(selectedVariant.id, 1);
@@ -420,88 +559,141 @@ const ProductDetailPage = () => {
     }
   };
 
-  const renderHighlights = () => (
-    <Grid container spacing={2} mt={2}>
-      {["origin", "releaseYear", "scentGroup", "style"].map((key) => {
-        const value = (information as any)?.[key];
-        if (!value) {
-          return null;
-        }
-        const labels: Record<string, string> = {
-          origin: "Xuất xứ",
-          releaseYear: "Năm ra mắt",
-          scentGroup: "Nhóm hương",
-          style: "Phong cách",
-        };
-        return (
-          <Grid size={{ xs: 6, md: 3 }} key={key}>
-            <Typography variant="caption" color="text.secondary">
-              {labels[key]}
-            </Typography>
-            <Typography variant="subtitle2" fontWeight={600}>
-              {value}
-            </Typography>
-          </Grid>
-        );
-      })}
-    </Grid>
+  const productGender = useMemo(() => {
+    const meta = information as Record<string, unknown> | null;
+    return typeof meta?.gender === "string" ? meta.gender : "";
+  }, [information]);
+
+  const detailFields = useMemo(
+    () => [
+      {
+        label: "Thương hiệu",
+        value: information?.brandName || fastLook?.brandName || "",
+      },
+      { label: "Xuất xứ", value: information?.origin || "" },
+      { label: "Năm phát hành", value: information?.releaseYear || "" },
+      { label: "Giới tính", value: productGender },
+      { label: "Phong cách", value: information?.style || "" },
+      { label: "Nhóm hương", value: information?.scentGroup || "" },
+      { label: "Hương đầu", value: information?.topNotes || "" },
+      { label: "Hương giữa", value: information?.middleNotes || "" },
+      { label: "Hương cuối", value: information?.baseNotes || "" },
+    ],
+    [information, fastLook, productGender],
   );
 
-  const renderFragranceNotes = () => {
-    const notes = [
-      { label: "Top Notes", value: information?.topNotes },
-      { label: "Middle Notes", value: information?.middleNotes },
-      { label: "Base Notes", value: information?.baseNotes },
-    ].filter((note) => note.value);
-
-    if (!notes.length) {
-      return null;
-    }
-
-    return (
-      <Box mt={4}>
-        <Typography variant="h6" fontWeight={600} gutterBottom>
-          Hương thơm đặc trưng
-        </Typography>
-        <Grid container spacing={2}>
-          {notes.map((note) => (
-            <Grid size={{ xs: 12, md: 4 }} key={note.label}>
-              <Box
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  minHeight: 120,
-                }}
-              >
-                <Typography variant="subtitle2" color="text.secondary">
-                  {note.label}
-                </Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {note.value}
-                </Typography>
-              </Box>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
+  const renderInformationTabs = () => {
+    const description = information?.description || fastLook?.description || "";
+    const sanitizedDescription = description
+      ? sanitizeDescriptionHtml(description)
+      : "";
+    const usageContent = normalizeProductDetailTabContent(
+      productDetailTabsContent.usageAndStorage,
     );
-  };
+    const shippingContent = normalizeProductDetailTabContent(
+      productDetailTabsContent.shippingAndReturn,
+    );
 
-  const renderDescription = () => {
-    const description = information?.description || fastLook?.description;
-    if (!description) {
-      return null;
-    }
     return (
       <Box mt={4}>
-        <Typography variant="h6" fontWeight={600} gutterBottom>
-          Mô tả sản phẩm
-        </Typography>
-        <Typography color="text.secondary" lineHeight={1.8}>
-          {description}
-        </Typography>
+        <Tabs
+          value={infoTab}
+          onChange={(_, value: "details" | "usage" | "shipping") =>
+            setInfoTab(value)
+          }
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            "& .MuiTab-root": {
+              textTransform: "none",
+              fontWeight: 500,
+            },
+          }}
+        >
+          <Tab value="details" label="Chi tiết sản phẩm" />
+          <Tab value="usage" label="Sử dụng và bảo quản" />
+          <Tab value="shipping" label="Vận chuyển và đổi trả" />
+        </Tabs>
+
+        <Box sx={{ pt: 3 }}>
+          {infoTab === "details" && (
+            <Stack spacing={1.5}>
+              {detailFields.map((field) => (
+                <Box
+                  key={field.label}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "180px 1fr" },
+                    gap: 1,
+                    py: 1,
+                    borderBottom: "1px dashed",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    {field.label}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.primary"
+                    sx={{ minHeight: 22 }}
+                  >
+                    {field.value || ""}
+                  </Typography>
+                </Box>
+              ))}
+
+              <Box mt={2}>
+                <Typography variant="h6" fontWeight={600} gutterBottom>
+                  Mô tả sản phẩm
+                </Typography>
+                {sanitizedDescription ? (
+                  <Typography
+                    component="div"
+                    color="text.secondary"
+                    lineHeight={1.8}
+                    sx={{
+                      "& p": { m: 0, mb: 1.5 },
+                      "& p:last-child": { mb: 0 },
+                    }}
+                    dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+                  />
+                ) : (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  ></Typography>
+                )}
+              </Box>
+            </Stack>
+          )}
+
+          {infoTab === "usage" && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ whiteSpace: "pre-line", lineHeight: 1.8 }}
+            >
+              {usageContent}
+            </Typography>
+          )}
+
+          {infoTab === "shipping" && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ whiteSpace: "pre-line", lineHeight: 1.8 }}
+            >
+              {shippingContent}
+            </Typography>
+          )}
+        </Box>
       </Box>
     );
   };
@@ -513,30 +705,7 @@ const ProductDetailPage = () => {
         spacing={2}
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", md: "center" }}
-      >
-        <Box>
-          <Typography variant="h5" fontWeight={700}>
-            Chia sẻ cảm nhận của bạn
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {existingReviewForVariant
-              ? "Bạn đã từng đánh giá phiên bản này. Có thể cập nhật nếu trải nghiệm thay đổi."
-              : "Đơn hàng đã được giao? Hãy để lại đánh giá để cộng đồng có thêm thông tin."}
-          </Typography>
-        </Box>
-        <Button
-          variant={existingReviewForVariant ? "outlined" : "contained"}
-          color="secondary"
-          onClick={handleOpenReviewDialog}
-          disabled={!selectedVariantId || isFindingReviewTarget}
-        >
-          {isFindingReviewTarget
-            ? "Đang kiểm tra..."
-            : existingReviewForVariant
-              ? "Cập nhật đánh giá"
-              : "Viết đánh giá"}
-        </Button>
-      </Stack>
+      ></Stack>
       {reviewActionError && (
         <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
           {reviewActionError}
@@ -550,7 +719,14 @@ const ProductDetailPage = () => {
 
     if (isReviewLoading) {
       return (
-        <Box mt={4} p={3} borderRadius={2} bgcolor="grey.50" border="1px solid" borderColor="divider">
+        <Box
+          mt={4}
+          p={3}
+          borderRadius={2}
+          bgcolor="grey.50"
+          border="1px solid"
+          borderColor="divider"
+        >
           <Stack direction="row" spacing={2} alignItems="center" mb={2}>
             <CircularProgress size={24} color="secondary" />
             <Typography variant="h6" fontWeight={600} color="secondary.main">
@@ -576,11 +752,26 @@ const ProductDetailPage = () => {
 
     if (reviewSummary) {
       return (
-        <Box mt={4} p={3} borderRadius={2} bgcolor="success.lighter" color="success.darker" border="1px solid" borderColor="success.light">
+        <Box
+          mt={4}
+          p={3}
+          borderRadius={2}
+          bgcolor="success.lighter"
+          color="success.darker"
+          border="1px solid"
+          borderColor="success.light"
+        >
           <Typography variant="h6" fontWeight={600} gutterBottom>
             ✨ Tóm tắt các đánh giá bằng AI
           </Typography>
-          <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.7, color: "text.primary" }}>
+          <Typography
+            variant="body1"
+            sx={{
+              whiteSpace: "pre-wrap",
+              lineHeight: 1.7,
+              color: "text.primary",
+            }}
+          >
             {reviewSummary}
           </Typography>
         </Box>
@@ -623,14 +814,30 @@ const ProductDetailPage = () => {
     }
 
     const fallbackImage =
+      selectedVariantDetail?.media?.[0]?.url ||
       selectedVariant?.media?.url ||
-      fastLook.variants?.[0]?.media?.url ||
+      displayVariants[0]?.media?.url ||
       undefined;
 
     const activeImage = variantMediaList[activeSlide];
 
     return (
       <>
+        <Box mb={2}>
+          <Breadcrumbs separator="/">
+            <Link
+              underline="hover"
+              color="inherit"
+              component="button"
+              onClick={() => navigate("/")}
+              sx={{ cursor: "pointer" }}
+            >
+              Trang chủ
+            </Link>
+            <Typography color="text.primary">{fastLook.name}</Typography>
+          </Breadcrumbs>
+        </Box>
+
         <Grid container spacing={4}>
           <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
             {/* Main image — fixed height so no-image placeholder is same size */}
@@ -818,30 +1025,19 @@ const ProductDetailPage = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <Stack spacing={2}>
-              <Breadcrumbs separator="/">
-                <Link
-                  underline="hover"
-                  color="inherit"
-                  component="button"
-                  onClick={() => navigate("/")}
-                  sx={{ cursor: "pointer" }}
-                >
-                  Trang chủ
-                </Link>
-                <Typography color="text.primary">{fastLook.name}</Typography>
-              </Breadcrumbs>
-
               <Typography variant="h4" fontWeight={700}>
                 {fastLook.name}
               </Typography>
               <Typography color="text.secondary">
                 Thương hiệu: {information?.brandName || fastLook.brandName}
               </Typography>
-              {information?.productCode && (
-                <Typography color="text.secondary">
-                  Mã hàng: {information.productCode}
-                </Typography>
-              )}
+              <Typography color="text.secondary">
+                Mã hàng:{" "}
+                {selectedVariantDetail?.sku ||
+                  selectedVariant?.sku ||
+                  information?.productCode ||
+                  "Đang cập nhật"}
+              </Typography>
 
               <Stack direction="row" spacing={1} alignItems="center">
                 <Rating value={fastLook.rating ?? 0} precision={0.5} readOnly />
@@ -864,49 +1060,76 @@ const ProductDetailPage = () => {
                   onChange={handleVariantChange}
                   size="small"
                   sx={{
-                    display: "flex",
-                    flexWrap: "wrap",
+                    display: "grid",
+                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                     gap: 1,
                     "& .MuiToggleButtonGroup-grouped": {
                       border: "1px solid rgba(0, 0, 0, 0.12) !important",
                       borderRadius: "8px !important",
                       marginLeft: "0 !important",
+                      width: "100%",
+                      minHeight: 40,
                     },
                     "& .MuiToggleButtonGroup-grouped.Mui-selected": {
                       borderColor: "primary.main !important",
                     },
                   }}
                 >
-                  {(fastLook.variants || []).map((variant) => (
-                    <ToggleButton
-                      key={variant.id}
-                      value={variant.id || ""}
-                      sx={{
-                        textTransform: "none",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        px: 1.5,
-                        py: 0.75,
-                      }}
-                    >
-                      {variant.media?.url && (
-                        <Box
-                          component="img"
-                          src={variant.media.url}
-                          alt={variant.displayName || ""}
+                  {displayVariants.map((variant) => {
+                    const outOfStock = isVariantOutOfStock(variant);
+
+                    return (
+                      <ToggleButton
+                        key={variant.id}
+                        value={variant.id || ""}
+                        sx={{
+                          textTransform: "none",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 0.5,
+                          px: 0.5,
+                          py: 0.25,
+                          position: "relative",
+                          opacity: outOfStock ? 0.75 : 1,
+                          minWidth: 0,
+                        }}
+                      >
+                        {variant.media?.url && (
+                          <Box
+                            component="img"
+                            src={variant.media.url}
+                            alt={variant.displayName || ""}
+                            sx={{
+                              width: 22,
+                              height: 22,
+                              objectFit: "cover",
+                              borderRadius: 0.5,
+                              flexShrink: 0,
+                            }}
+                          />
+                        )}
+                        <Typography
+                          variant="body2"
                           sx={{
-                            width: 36,
-                            height: 36,
-                            objectFit: "cover",
-                            borderRadius: 0.5,
-                            flexShrink: 0,
+                            fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            fontSize: { xs: "0.72rem", sm: "0.78rem" },
+                            lineHeight: 1.1,
+                            textAlign: "center",
+                            textDecoration: outOfStock
+                              ? "line-through"
+                              : "none",
+                            textDecorationColor: outOfStock
+                              ? "error.main"
+                              : "inherit",
                           }}
-                        />
-                      )}
-                      {variant.displayName || "Size"}
-                    </ToggleButton>
-                  ))}
+                        >
+                          {variant.displayName || "Size"}
+                        </Typography>
+                      </ToggleButton>
+                    );
+                  })}
                 </ToggleButtonGroup>
               </Box>
 
@@ -922,31 +1145,46 @@ const ProductDetailPage = () => {
                 </Typography>
               </Stack>
 
+              {selectedVariantStockQuantity !== null &&
+                (isSelectedVariantOutOfStock ? (
+                  <Typography variant="h4" color="error.main" fontWeight={700}>
+                    Hết hàng
+                  </Typography>
+                ) : (
+                  <Typography
+                    variant="body2"
+                    color="success.main"
+                    fontWeight={600}
+                  >
+                    {`Còn ${selectedVariantStockQuantity} sản phẩm`}
+                  </Typography>
+                ))}
+
               {/* Action buttons */}
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <Button
-                  variant="outlined"
-                  onClick={() => handleAddToCart(false)}
-                  disabled={isAdding}
-                >
-                  {isAdding ? "Đang thêm..." : "Thêm vào giỏ"}
-                </Button>
-                <Button
-                  variant="contained"
-                  color="error"
-                  onClick={() => handleAddToCart(true)}
-                  disabled={isAdding}
-                >
-                  {isAdding ? "Đang xử lý..." : "Mua ngay"}
-                </Button>
-              </Stack>
+              {!isSelectedVariantOutOfStock && (
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => handleAddToCart(false)}
+                    disabled={isAdding}
+                  >
+                    {isAdding ? "Đang thêm..." : "Thêm vào giỏ"}
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() => handleAddToCart(true)}
+                    disabled={isAdding}
+                  >
+                    {isAdding ? "Đang xử lý..." : "Mua ngay"}
+                  </Button>
+                </Stack>
+              )}
             </Stack>
           </Grid>
         </Grid>
 
-        {renderHighlights()}
-        {renderFragranceNotes()}
-        {renderDescription()}
+        {renderInformationTabs()}
         {renderReviewSummary()}
         {renderReviewCallout()}
         <ReviewSection
@@ -960,15 +1198,7 @@ const ProductDetailPage = () => {
   return (
     <MainLayout>
       <Box py={6}>
-        <Container maxWidth="lg">
-          <Stack direction="row" alignItems="center" spacing={1} mb={3}>
-            <Chip label="BEST CHOICE" color="error" size="small" />
-            <Typography fontWeight={600}>
-              Sản phẩm uy tín - Cam kết chính hãng 100%
-            </Typography>
-          </Stack>
-          {renderContent()}
-        </Container>
+        <Container maxWidth="lg">{renderContent()}</Container>
       </Box>
 
       <ReviewEditorDialog

@@ -29,7 +29,13 @@ import {
   Collapse,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
-import { FilterList, Refresh, Close, ExpandMore, ExpandLess } from "@mui/icons-material";
+import {
+  FilterList,
+  Refresh,
+  Close,
+  ExpandMore,
+  ExpandLess,
+} from "@mui/icons-material";
 import { importStockService } from "../../services/importStockService";
 import type { ImportTicket, ImportTicketDetail } from "@/types/import-ticket";
 import { userService } from "../../services/userService";
@@ -47,9 +53,12 @@ export const ImportHistoryTab: React.FC = () => {
   const [staffList, setStaffList] = useState<StaffUser[]>([]);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState<ImportTicketDetail | null>(null);
+  const [selectedTicket, setSelectedTicket] =
+    useState<ImportTicketDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  const [expandedProducts, setExpandedProducts] = useState<Set<string>>(
+    new Set(),
+  );
 
   // Load staff list on mount
   useEffect(() => {
@@ -68,7 +77,6 @@ export const ImportHistoryTab: React.FC = () => {
     const datePriority = [
       ticket.actualImportDate,
       ticket.expectedArrivalDate,
-      ticket.actualImportDate,
       ticket.createdAt,
     ];
 
@@ -417,7 +425,7 @@ export const ImportHistoryTab: React.FC = () => {
               tickets.map((ticket) => (
                 <TableRow
                   key={ticket.id}
-                  onClick={() => handleViewDetail(ticket.id)}
+                  onClick={() => ticket.id && handleViewDetail(ticket.id)}
                   sx={{
                     "&:hover": { bgcolor: "action.hover", cursor: "pointer" },
                     "&:last-child td": { borderBottom: 0 },
@@ -434,7 +442,7 @@ export const ImportHistoryTab: React.FC = () => {
                           fontWeight: 500,
                         }}
                       >
-                        {ticket.id.substring(0, 8)}...
+                        {(ticket.id || "").substring(0, 8)}...
                       </Typography>
                     </Tooltip>
                   </TableCell>
@@ -450,13 +458,19 @@ export const ImportHistoryTab: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2">
-                      {formatDate(ticket.expectedArrivalDate, { includeTime: false })}
+                      {formatDate(ticket.expectedArrivalDate, {
+                        includeTime: false,
+                      })}
                     </Typography>
                   </TableCell>
                   <TableCell>
                     <Typography
                       variant="body2"
-                      color={ticket.actualImportDate ? "text.primary" : "warning.main"}
+                      color={
+                        ticket.actualImportDate
+                          ? "text.primary"
+                          : "warning.main"
+                      }
                     >
                       {formatDate(ticket.actualImportDate)}
                     </Typography>
@@ -466,7 +480,7 @@ export const ImportHistoryTab: React.FC = () => {
                       variant="body2"
                       sx={{ fontWeight: 600, color: "primary.main" }}
                     >
-                      {formatCurrency(ticket.totalCost)}
+                      {formatCurrency(ticket.totalCost ?? 0)}
                     </Typography>
                   </TableCell>
                   <TableCell align="center">
@@ -542,7 +556,13 @@ export const ImportHistoryTab: React.FC = () => {
       >
         {selectedTicket && (
           <>
-            <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <DialogTitle
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
               <Box>
                 <Typography variant="h6" fontWeight={600}>
                   Chi tiết phiếu nhập - {selectedTicket.id!.substring(0, 8)}...
@@ -552,11 +572,18 @@ export const ImportHistoryTab: React.FC = () => {
                     {selectedTicket.supplierName}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Ngày dự kiến: {formatDate(selectedTicket.expectedArrivalDate, { includeTime: false })}
+                    Ngày dự kiến:{" "}
+                    {formatDate(selectedTicket.expectedArrivalDate, {
+                      includeTime: false,
+                    })}
                   </Typography>
                   <Typography
                     variant="caption"
-                    color={selectedTicket.actualImportDate ? "text.secondary" : "warning.main"}
+                    color={
+                      selectedTicket.actualImportDate
+                        ? "text.secondary"
+                        : "warning.main"
+                    }
                   >
                     Ngày thực tế: {formatDate(selectedTicket.actualImportDate)}
                   </Typography>
@@ -574,8 +601,14 @@ export const ImportHistoryTab: React.FC = () => {
               ) : (
                 <>
                   {/* Summary Info */}
-                  <Box sx={{ mb: 3, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
-                    <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap", rowGap: 2 }}>
+                  <Box
+                    sx={{ mb: 3, p: 2, bgcolor: "grey.50", borderRadius: 1 }}
+                  >
+                    <Stack
+                      direction="row"
+                      spacing={4}
+                      sx={{ flexWrap: "wrap", rowGap: 2 }}
+                    >
                       <Box sx={{ minWidth: 160 }}>
                         <Typography variant="caption" color="text.secondary">
                           Người tạo
@@ -596,7 +629,11 @@ export const ImportHistoryTab: React.FC = () => {
                         <Typography variant="caption" color="text.secondary">
                           Tổng tiền
                         </Typography>
-                        <Typography variant="body2" fontWeight={600} color="primary">
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color="primary"
+                        >
                           {formatCurrency(selectedTicket.totalCost!)}
                         </Typography>
                       </Box>
@@ -617,7 +654,9 @@ export const ImportHistoryTab: React.FC = () => {
                           Ngày dự kiến
                         </Typography>
                         <Typography variant="body2" fontWeight={600}>
-                          {formatDate(selectedTicket.expectedArrivalDate, { includeTime: false })}
+                          {formatDate(selectedTicket.expectedArrivalDate, {
+                            includeTime: false,
+                          })}
                         </Typography>
                       </Box>
                       <Box sx={{ minWidth: 160 }}>
@@ -627,7 +666,11 @@ export const ImportHistoryTab: React.FC = () => {
                         <Typography
                           variant="body2"
                           fontWeight={600}
-                          color={selectedTicket.actualImportDate ? "success.main" : "warning.main"}
+                          color={
+                            selectedTicket.actualImportDate
+                              ? "success.main"
+                              : "warning.main"
+                          }
                         >
                           {formatDate(selectedTicket.actualImportDate)}
                         </Typography>
@@ -667,23 +710,36 @@ export const ImportHistoryTab: React.FC = () => {
                               >
                                 <TableCell>
                                   <IconButton size="small">
-                                    {isExpanded ? <ExpandLess /> : <ExpandMore />}
+                                    {isExpanded ? (
+                                      <ExpandLess />
+                                    ) : (
+                                      <ExpandMore />
+                                    )}
                                   </IconButton>
                                 </TableCell>
                                 <TableCell>
                                   <Typography variant="body2" fontWeight={600}>
                                     {product.variantName}
                                   </Typography>
-                                  <Typography variant="caption" color="text.secondary">
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
                                     {product.variantSku}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="center">{product.quantity}</TableCell>
+                                <TableCell align="center">
+                                  {product.quantity}
+                                </TableCell>
                                 <TableCell align="center">
                                   <Typography
                                     variant="body2"
                                     fontWeight={600}
-                                    color={totalReceived === product.quantity ? "success.main" : "warning.main"}
+                                    color={
+                                      totalReceived === product.quantity
+                                        ? "success.main"
+                                        : "warning.main"
+                                    }
                                   >
                                     {totalReceived}
                                   </Typography>
@@ -692,7 +748,11 @@ export const ImportHistoryTab: React.FC = () => {
                                   <Typography
                                     variant="body2"
                                     fontWeight={600}
-                                    color={product.rejectQuantity! > 0 ? "error.main" : "text.secondary"}
+                                    color={
+                                      product.rejectQuantity! > 0
+                                        ? "error.main"
+                                        : "text.secondary"
+                                    }
                                   >
                                     {product.rejectQuantity}
                                   </Typography>
@@ -709,14 +769,30 @@ export const ImportHistoryTab: React.FC = () => {
 
                               {/* Batches Collapse */}
                               <TableRow>
-                                <TableCell colSpan={7} sx={{ py: 0, border: 0 }}>
-                                  <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                                    <Box sx={{ py: 2, px: 4, bgcolor: "grey.50" }}>
-                                      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1 }}>
+                                <TableCell
+                                  colSpan={7}
+                                  sx={{ py: 0, border: 0 }}
+                                >
+                                  <Collapse
+                                    in={isExpanded}
+                                    timeout="auto"
+                                    unmountOnExit
+                                  >
+                                    <Box
+                                      sx={{ py: 2, px: 4, bgcolor: "grey.50" }}
+                                    >
+                                      <Typography
+                                        variant="subtitle2"
+                                        fontWeight={600}
+                                        sx={{ mb: 1 }}
+                                      >
                                         Danh sách Batch
                                       </Typography>
                                       {product.batches!.length === 0 ? (
-                                        <Typography variant="body2" color="text.secondary">
+                                        <Typography
+                                          variant="body2"
+                                          color="text.secondary"
+                                        >
                                           Chưa có batch nào
                                         </Typography>
                                       ) : (
@@ -724,10 +800,18 @@ export const ImportHistoryTab: React.FC = () => {
                                           <TableHead>
                                             <TableRow>
                                               <TableCell>Mã batch</TableCell>
-                                              <TableCell>Ngày sản xuất</TableCell>
-                                              <TableCell>Ngày hết hạn</TableCell>
-                                              <TableCell align="center">Số lượng nhập</TableCell>
-                                              <TableCell align="center">Còn lại</TableCell>
+                                              <TableCell>
+                                                Ngày sản xuất
+                                              </TableCell>
+                                              <TableCell>
+                                                Ngày hết hạn
+                                              </TableCell>
+                                              <TableCell align="center">
+                                                Số lượng nhập
+                                              </TableCell>
+                                              <TableCell align="center">
+                                                Còn lại
+                                              </TableCell>
                                             </TableRow>
                                           </TableHead>
                                           <TableBody>
@@ -743,10 +827,14 @@ export const ImportHistoryTab: React.FC = () => {
                                                   </Typography>
                                                 </TableCell>
                                                 <TableCell>
-                                                  {new Date(batch.manufactureDate!).toLocaleDateString("vi-VN")}
+                                                  {new Date(
+                                                    batch.manufactureDate!,
+                                                  ).toLocaleDateString("vi-VN")}
                                                 </TableCell>
                                                 <TableCell>
-                                                  {new Date(batch.expiryDate!).toLocaleDateString("vi-VN")}
+                                                  {new Date(
+                                                    batch.expiryDate!,
+                                                  ).toLocaleDateString("vi-VN")}
                                                 </TableCell>
                                                 <TableCell align="center">
                                                   <Chip
@@ -758,9 +846,16 @@ export const ImportHistoryTab: React.FC = () => {
                                                 </TableCell>
                                                 <TableCell align="center">
                                                   <Chip
-                                                    label={batch.remainingQuantity}
+                                                    label={
+                                                      batch.remainingQuantity
+                                                    }
                                                     size="small"
-                                                    color={batch.remainingQuantity! > 0 ? "success" : "default"}
+                                                    color={
+                                                      batch.remainingQuantity! >
+                                                      0
+                                                        ? "success"
+                                                        : "default"
+                                                    }
                                                   />
                                                 </TableCell>
                                               </TableRow>
@@ -769,11 +864,23 @@ export const ImportHistoryTab: React.FC = () => {
                                         </Table>
                                       )}
                                       {product.note && (
-                                        <Box sx={{ mt: 2, p: 1.5, bgcolor: "warning.light", borderRadius: 1 }}>
-                                          <Typography variant="caption" fontWeight={600}>
+                                        <Box
+                                          sx={{
+                                            mt: 2,
+                                            p: 1.5,
+                                            bgcolor: "warning.light",
+                                            borderRadius: 1,
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="caption"
+                                            fontWeight={600}
+                                          >
                                             Ghi chú:
                                           </Typography>
-                                          <Typography variant="body2">{product.note}</Typography>
+                                          <Typography variant="body2">
+                                            {product.note}
+                                          </Typography>
                                         </Box>
                                       )}
                                     </Box>

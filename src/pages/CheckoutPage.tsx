@@ -162,6 +162,7 @@ export const CheckoutPage = () => {
   }, [
     isPickupInStore,
     selectedAddressId,
+    addresses,
     useNewAddress,
     newAddress.districtId,
     newAddress.wardCode,
@@ -326,6 +327,7 @@ export const CheckoutPage = () => {
       // Lấy districtId và wardCode từ địa chỉ hiện tại
       let districtId: number | undefined;
       let wardCode: string | undefined;
+      let savedAddressId: string | undefined;
 
       if (useNewAddress) {
         // Dùng địa chỉ mới đang nhập
@@ -333,6 +335,7 @@ export const CheckoutPage = () => {
         wardCode = newAddress.wardCode;
       } else if (selectedAddressId) {
         // Dùng địa chỉ đã chọn
+        savedAddressId = selectedAddressId;
         const selectedAddr = addresses.find(
           (addr) => addr.id === selectedAddressId,
         );
@@ -342,12 +345,13 @@ export const CheckoutPage = () => {
         }
       }
 
-      // Chỉ call API nếu có đủ thông tin địa chỉ
-      if (districtId && wardCode) {
+      // Call API nếu có địa chỉ đã lưu hoặc có đủ district/ward cho địa chỉ mới
+      if (savedAddressId || (districtId && wardCode)) {
         const totalsData = await cartService.getTotals(
           activeVoucher,
           districtId,
           wardCode,
+          savedAddressId,
         );
         setTotals(totalsData);
       }
@@ -454,7 +458,7 @@ export const CheckoutPage = () => {
       // Build request
       const request: CreateOrderRequest = {
         voucherCode: voucherCode || null,
-        isPickupInStore,
+        deliveryMethod: isPickupInStore ? "PickupInStore" : "Delivery",
         payment: {
           method: paymentMethod,
         },
@@ -464,9 +468,8 @@ export const CheckoutPage = () => {
       if (!isPickupInStore) {
         // Giao hàng tận nơi
         if (useNewAddress) {
-          // Nhập địa chỉ mới -> truyền đầy đủ thông tin, addressId = null
+          // Nhập địa chỉ mới -> truyền đầy đủ thông tin recipient
           request.recipient = {
-            addressId: null,
             fullName: newAddress.fullName,
             phone: newAddress.phone,
             districtId: newAddress.districtId || 0,
@@ -478,25 +481,12 @@ export const CheckoutPage = () => {
             fullAddress: newAddress.street,
           };
         } else {
-          // Chọn địa chỉ có sẵn -> chỉ truyền addressId, các field khác để rỗng
-          // Backend sẽ lấy thông tin địa chỉ từ addressId
-          request.recipient = {
-            addressId: selectedAddressId,
-            fullName: "",
-            phone: "",
-            districtId: 0,
-            districtName: "",
-            wardCode: "",
-            wardName: "",
-            provinceId: 0,
-            provinceName: "",
-            fullAddress: "",
-          };
+          // Chọn địa chỉ có sẵn -> truyền savedAddressId để backend resolve địa chỉ
+          request.savedAddressId = selectedAddressId;
         }
       } else {
         // Nhận tại cửa hàng -> không cần thông tin địa chỉ giao hàng
         request.recipient = {
-          addressId: null,
           fullName: "",
           phone: "",
           districtId: 0,
@@ -1062,14 +1052,12 @@ export const CheckoutPage = () => {
                   {formatCurrency(totals.subtotal)}
                 </Typography>
               </Box>
-              {totals.shippingFee > 0 && (
-                <Box display="flex" justifyContent="space-between" mb={1}>
-                  <Typography>Phí vận chuyển</Typography>
-                  <Typography fontWeight={600}>
-                    {formatCurrency(totals.shippingFee)}
-                  </Typography>
-                </Box>
-              )}
+              <Box display="flex" justifyContent="space-between" mb={1}>
+                <Typography>Phí vận chuyển</Typography>
+                <Typography fontWeight={600}>
+                  {formatCurrency(totals.shippingFee)}
+                </Typography>
+              </Box>
               {totals.discount > 0 && (
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography>Giảm giá</Typography>

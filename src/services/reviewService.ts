@@ -43,9 +43,7 @@ class ProductReviewService {
   }
 
   private extractErrorMessage(error: any, fallback: string) {
-    return (
-      error?.response?.data?.message || error?.message || fallback
-    );
+    return error?.response?.data?.message || error?.message || fallback;
   }
 
   async getMyReviews(): Promise<ReviewResponse[]> {
@@ -53,13 +51,17 @@ class ProductReviewService {
       const response = await apiInstance.GET("/api/reviews/me");
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể tải đánh giá của bạn");
+        throw new Error(
+          response.data?.message || "Không thể tải đánh giá của bạn",
+        );
       }
 
       return response.data.payload || [];
     } catch (error: any) {
       console.error("Error fetching my reviews:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể tải đánh giá của bạn"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể tải đánh giá của bạn"),
+      );
     }
   }
 
@@ -70,68 +72,99 @@ class ProductReviewService {
       });
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể tải danh sách đánh giá");
+        throw new Error(
+          response.data?.message || "Không thể tải danh sách đánh giá",
+        );
       }
 
       return response.data.payload || this.createEmptyPagedResult(query);
     } catch (error: any) {
       console.error("Error fetching reviews:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể tải danh sách đánh giá"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể tải danh sách đánh giá"),
+      );
     }
   }
 
-  async getReviewDetail(reviewId: string): Promise<ReviewDetailResponse | null> {
+  async getReviewDetail(
+    reviewId: string,
+  ): Promise<ReviewDetailResponse | null> {
     try {
       const response = await apiInstance.GET("/api/reviews/{reviewId}", {
         params: { path: { reviewId } },
       });
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể tải chi tiết đánh giá");
+        throw new Error(
+          response.data?.message || "Không thể tải chi tiết đánh giá",
+        );
       }
 
       return response.data.payload || null;
     } catch (error: any) {
       console.error("Error fetching review detail:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể tải chi tiết đánh giá"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể tải chi tiết đánh giá"),
+      );
     }
   }
 
   async getVariantReviews(variantId: string): Promise<ReviewResponse[]> {
     try {
-      const response = await apiInstance.GET("/api/reviews/variant/{variantId}", {
-        params: { path: { variantId } },
-      });
+      const response = await apiInstance.GET(
+        "/api/reviews/variant/{variantId}",
+        {
+          params: { path: { variantId } },
+        },
+      );
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể tải đánh giá cho sản phẩm này");
+        throw new Error(
+          response.data?.message || "Không thể tải đánh giá cho sản phẩm này",
+        );
       }
 
       return response.data.payload || [];
     } catch (error: any) {
       console.error("Error fetching variant reviews:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể tải đánh giá cho sản phẩm này"));
+      throw new Error(
+        this.extractErrorMessage(
+          error,
+          "Không thể tải đánh giá cho sản phẩm này",
+        ),
+      );
     }
   }
 
-  async getVariantStatistics(variantId: string): Promise<ReviewStatisticsResponse | null> {
+  async getVariantStatistics(
+    variantId: string,
+  ): Promise<ReviewStatisticsResponse | null> {
     try {
-      const response = await apiInstance.GET("/api/reviews/variant/{variantId}/statistics", {
-        params: { path: { variantId } },
-      });
+      const response = await apiInstance.GET(
+        "/api/reviews/variant/{variantId}/statistics",
+        {
+          params: { path: { variantId } },
+        },
+      );
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể tải thống kê đánh giá");
+        throw new Error(
+          response.data?.message || "Không thể tải thống kê đánh giá",
+        );
       }
 
       return response.data.payload || null;
     } catch (error: any) {
       console.error("Error fetching review statistics:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể tải thống kê đánh giá"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể tải thống kê đánh giá"),
+      );
     }
   }
 
-  async createReview(payload: CreateReviewRequest): Promise<BulkActionResultOfGuid> {
+  async createReview(
+    payload: CreateReviewRequest,
+  ): Promise<BulkActionResultOfGuid> {
     try {
       const response = await apiInstance.POST("/api/reviews", {
         body: payload,
@@ -144,7 +177,9 @@ class ProductReviewService {
       return response.data.payload as BulkActionResultOfGuid;
     } catch (error: any) {
       console.error("Error creating review:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể gửi đánh giá"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể gửi đánh giá"),
+      );
     }
   }
 
@@ -159,13 +194,17 @@ class ProductReviewService {
       });
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể cập nhật đánh giá");
+        throw new Error(
+          response.data?.message || "Không thể cập nhật đánh giá",
+        );
       }
 
       return response.data.payload as BulkActionResultOfstring;
     } catch (error: any) {
       console.error("Error updating review:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể cập nhật đánh giá"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể cập nhật đánh giá"),
+      );
     }
   }
 
@@ -182,7 +221,9 @@ class ProductReviewService {
       return response.data.message || "Đã xoá đánh giá";
     } catch (error: any) {
       console.error("Error deleting review:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể xoá đánh giá"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể xoá đánh giá"),
+      );
     }
   }
 
@@ -191,9 +232,11 @@ class ProductReviewService {
     payload: ModerateReviewRequest,
   ): Promise<string> {
     try {
-      const response = await apiInstance.POST("/api/reviews/{reviewId}/moderate", {
+      const response = await apiInstance.PUT("/api/reviews/{reviewId}", {
         params: { path: { reviewId } },
-        body: payload,
+        body: {
+          comment: payload.reason || "",
+        },
       });
 
       if (!response.data?.success) {
@@ -203,7 +246,9 @@ class ProductReviewService {
       return response.data.message || "Đã cập nhật trạng thái đánh giá";
     } catch (error: any) {
       console.error("Error moderating review:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể duyệt đánh giá"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể duyệt đánh giá"),
+      );
     }
   }
 
@@ -233,7 +278,9 @@ class ProductReviewService {
       return payload?.data || [];
     } catch (error: any) {
       console.error("Error uploading review images:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể tải ảnh tạm thời"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể tải ảnh tạm thời"),
+      );
     }
   }
 
@@ -250,7 +297,9 @@ class ProductReviewService {
       return response.data.payload || [];
     } catch (error: any) {
       console.error("Error fetching review images:", error);
-      throw new Error(this.extractErrorMessage(error, "Không thể tải ảnh đánh giá"));
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể tải ảnh đánh giá"),
+      );
     }
   }
 }
