@@ -76,6 +76,11 @@ const OrderManagementPage = lazy(() =>
     default: m.OrderManagementPage,
   })),
 );
+const OrderManagementDetailPage = lazy(() =>
+  import("./pages/OrderManagementDetailPage").then((m) => ({
+    default: m.OrderManagementDetailPage,
+  })),
+);
 const ContentManagementPage = lazy(() =>
   import("./pages/ContentManagementPage").then((m) => ({
     default: m.ContentManagementPage,
@@ -274,6 +279,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/orders/:orderId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderManagementDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/content"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -369,6 +382,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
                             <OrderManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/orders/:orderId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderManagementDetailPage />
                           </RoleBasedRoute>
                         }
                       />

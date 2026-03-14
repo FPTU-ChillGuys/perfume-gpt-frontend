@@ -19,8 +19,8 @@ export const paymentStatusLabels: Record<PaymentStatus, string> = {
 
 // Vietnamese labels for order type
 export const orderTypeLabels: Record<OrderType, string> = {
-  Online: "Trực tuyến",
-  Offline: "Tại cửa hàng",
+  Online: "Online",
+  Offline: "In-Store",
   Shoppe: "Shopee",
 };
 
@@ -29,12 +29,25 @@ export const orderStatusColors: Record<
   OrderStatus,
   "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success"
 > = {
-  Pending: "warning",      // 🟠 Cam - Chờ xử lý
+  Pending: "warning", // 🟠 Cam - Chờ xử lý
   Processing: "secondary", // ⚪ Xám/Tím nhạt - Đang xử lý tại kho
-  Delivering: "info",      // 🔵 Xanh dương - Đang giao hàng (VẬN CHUYỂN)
-  Delivered: "success",    // 🟢 Xanh lá - Đã giao hàng
-  Canceled: "error",       // 🔴 Đỏ - Đã hủy
-  Returned: "default",     // ⚪ Xám - Đã trả hàng
+  Delivering: "info", // 🔵 Xanh dương - Đang giao hàng (VẬN CHUYỂN)
+  Delivered: "success", // 🟢 Xanh lá - Đã giao hàng
+  Canceled: "error", // 🔴 Đỏ - Đã hủy
+  Returned: "default", // Hồng sẽ được áp qua sx để đồng nhất mọi màn hình
+};
+
+export const getOrderStatusChipSx = (status?: OrderStatus) => {
+  if (status !== "Returned") return undefined;
+
+  return {
+    bgcolor: "#fce7f3",
+    color: "#be185d",
+    borderColor: "#f9a8d4",
+    "& .MuiChip-label": {
+      fontWeight: 600,
+    },
+  };
 };
 
 // Colors for payment status
@@ -50,9 +63,9 @@ export const paymentStatusColors: Record<
 // Colors for order type
 export const orderTypeColors: Record<
   OrderType,
-  "default" | "primary" | "secondary"
+  "success" | "info" | "secondary"
 > = {
-  Online: "primary",
-  Offline: "secondary",
-  Shoppe: "default",
+  Online: "success", // xanh lá
+  Offline: "info", // màu khác (xanh dương nhạt)
+  Shoppe: "secondary",
 };

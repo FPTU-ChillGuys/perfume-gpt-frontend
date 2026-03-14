@@ -45,8 +45,6 @@ import {
 } from "@/types/review";
 import {
   orderStatusLabels,
-  paymentStatusLabels,
-  paymentStatusColors,
 } from "@/utils/orderStatus";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
@@ -586,17 +584,6 @@ export const MyOrderDetailPage = () => {
                                   <b>{order.shippingInfo.trackingNumber}</b>
                                 </Typography>
                               )}
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <Chip
-                                  label={
-                                    paymentStatusLabels[order.paymentStatus!]
-                                  }
-                                  color={
-                                    paymentStatusColors[order.paymentStatus!]
-                                  }
-                                  size="small"
-                                />
-                              </Box>
                             </Stack>
                           )}
                         </Box>
