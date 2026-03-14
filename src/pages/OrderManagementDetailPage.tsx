@@ -6,7 +6,6 @@ import {
   Button,
   Chip,
   CircularProgress,
-  Container,
   Divider,
   MenuItem,
   Paper,
@@ -351,404 +350,386 @@ export const OrderManagementDetailPage = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ bgcolor: "#f5f5f5", py: 3 }}>
-        <Container maxWidth="xl">
-          <Paper sx={{ overflow: "hidden", borderRadius: 2 }}>
-            {isLoading ? (
+      <Box>
+        <Paper sx={{ overflow: "hidden", borderRadius: 2 }}>
+          {isLoading ? (
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              minHeight={420}
+            >
+              <CircularProgress />
+            </Box>
+          ) : error || !order ? (
+            <Box sx={{ p: 3 }}>
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {error ?? "Không tìm thấy đơn hàng"}
+              </Alert>
+              <Button variant="outlined" onClick={handleBack}>
+                TRỞ LẠI
+              </Button>
+            </Box>
+          ) : (
+            <Box>
               <Box
                 display="flex"
-                justifyContent="center"
+                justifyContent="space-between"
                 alignItems="center"
-                minHeight={420}
+                sx={{
+                  px: 3,
+                  py: 2,
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  gap: 2,
+                  flexWrap: "wrap",
+                }}
               >
-                <CircularProgress />
-              </Box>
-            ) : error || !order ? (
-              <Box sx={{ p: 3 }}>
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error ?? "Không tìm thấy đơn hàng"}
-                </Alert>
-                <Button variant="outlined" onClick={handleBack}>
+                <Button
+                  startIcon={<ArrowBack />}
+                  onClick={handleBack}
+                  sx={{ color: "text.secondary", textTransform: "none" }}
+                >
                   TRỞ LẠI
                 </Button>
-              </Box>
-            ) : (
-              <Box>
-                <Box
-                  display="flex"
-                  justifyContent="space-between"
+
+                <Stack
+                  direction="row"
+                  spacing={1}
                   alignItems="center"
-                  sx={{
-                    px: 3,
-                    py: 2,
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    gap: 2,
-                    flexWrap: "wrap",
-                  }}
+                  flexWrap="wrap"
                 >
-                  <Button
-                    startIcon={<ArrowBack />}
-                    onClick={handleBack}
-                    sx={{ color: "text.secondary", textTransform: "none" }}
-                  >
-                    TRỞ LẠI
-                  </Button>
+                  <Typography variant="body2" color="text.secondary">
+                    Mã đơn: <b>{(order.id ?? "").toUpperCase()}</b>
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    |
+                  </Typography>
+                  {order.type && (
+                    <Chip
+                      label={orderTypeLabels[order.type]}
+                      color={orderTypeColors[order.type]}
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
+                  {order.status && (
+                    <Chip
+                      label={orderStatusLabels[order.status]}
+                      color={orderStatusColors[order.status]}
+                      size="small"
+                      sx={getOrderStatusChipSx(order.status)}
+                    />
+                  )}
+                  {order.paymentStatus && (
+                    <Chip
+                      label={paymentStatusLabels[order.paymentStatus]}
+                      color={paymentStatusColors[order.paymentStatus]}
+                      size="small"
+                    />
+                  )}
+                </Stack>
+              </Box>
 
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    flexWrap="wrap"
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      Mã đơn: <b>{(order.id ?? "").toUpperCase()}</b>
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      |
-                    </Typography>
-                    {order.type && (
-                      <Chip
-                        label={orderTypeLabels[order.type]}
-                        color={orderTypeColors[order.type]}
-                        size="small"
-                        variant="outlined"
-                      />
-                    )}
-                    {order.status && (
-                      <Chip
-                        label={orderStatusLabels[order.status]}
-                        color={orderStatusColors[order.status]}
-                        size="small"
-                        sx={getOrderStatusChipSx(order.status)}
-                      />
-                    )}
-                    {order.paymentStatus && (
-                      <Chip
-                        label={paymentStatusLabels[order.paymentStatus]}
-                        color={paymentStatusColors[order.paymentStatus]}
-                        size="small"
-                      />
-                    )}
-                  </Stack>
-                </Box>
+              <Box sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
+                <OrderStepper
+                  status={order.status!}
+                  createdAt={order.createdAt}
+                  paidAt={order.paidAt}
+                  updatedAt={order.updatedAt}
+                  totalAmount={order.totalAmount}
+                />
+              </Box>
 
-                <Box sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
-                  <OrderStepper
-                    status={order.status!}
-                    createdAt={order.createdAt}
-                    paidAt={order.paidAt}
-                    updatedAt={order.updatedAt}
-                    totalAmount={order.totalAmount}
-                  />
-                </Box>
-
-                <Box
-                  sx={{
-                    p: 3,
-                    display: "grid",
-                    gap: 3,
-                    gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" },
-                  }}
-                >
-                  <Stack spacing={3}>
-                    {(order.recipientInfo || order.shippingInfo) && (
-                      <Paper
-                        variant="outlined"
-                        sx={{ p: 2.5, borderRadius: 2 }}
+              <Box
+                sx={{
+                  p: 3,
+                  display: "grid",
+                  gap: 3,
+                  gridTemplateColumns: { xs: "1fr", lg: "2fr 1fr" },
+                }}
+              >
+                <Stack spacing={3}>
+                  {(order.recipientInfo || order.shippingInfo) && (
+                    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={700}
+                        mb={2}
+                        color="#ee4d2d"
                       >
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={700}
-                          mb={2}
-                          color="#ee4d2d"
-                        >
-                          Địa chỉ nhận hàng
-                        </Typography>
-                        <Box
-                          display="grid"
-                          gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }}
-                          gap={2}
-                        >
-                          {order.recipientInfo && (
-                            <Stack spacing={1}>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <Person
-                                  fontSize="small"
-                                  sx={{ color: "text.secondary" }}
-                                />
-                                <Typography variant="body2" fontWeight={600}>
-                                  {order.recipientInfo.fullName}
-                                </Typography>
-                              </Box>
-                              <Box display="flex" alignItems="center" gap={1}>
-                                <Phone
-                                  fontSize="small"
-                                  sx={{ color: "text.secondary" }}
-                                />
-                                <Typography variant="body2">
-                                  {order.recipientInfo.phone}
-                                </Typography>
-                              </Box>
-                              <Box
-                                display="flex"
-                                alignItems="flex-start"
-                                gap={1}
-                              >
-                                <LocationOn
-                                  fontSize="small"
-                                  sx={{ color: "text.secondary", mt: 0.2 }}
-                                />
-                                <Typography variant="body2">
-                                  {order.recipientInfo.fullAddress},{" "}
-                                  {order.recipientInfo.wardName},{" "}
-                                  {order.recipientInfo.districtName},{" "}
-                                  {order.recipientInfo.provinceName}
-                                </Typography>
-                              </Box>
-                            </Stack>
-                          )}
+                        Địa chỉ nhận hàng
+                      </Typography>
+                      <Box
+                        display="grid"
+                        gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }}
+                        gap={2}
+                      >
+                        {order.recipientInfo && (
+                          <Stack spacing={1}>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Person
+                                fontSize="small"
+                                sx={{ color: "text.secondary" }}
+                              />
+                              <Typography variant="body2" fontWeight={600}>
+                                {order.recipientInfo.fullName}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Phone
+                                fontSize="small"
+                                sx={{ color: "text.secondary" }}
+                              />
+                              <Typography variant="body2">
+                                {order.recipientInfo.phone}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" alignItems="flex-start" gap={1}>
+                              <LocationOn
+                                fontSize="small"
+                                sx={{ color: "text.secondary", mt: 0.2 }}
+                              />
+                              <Typography variant="body2">
+                                {order.recipientInfo.fullAddress},{" "}
+                                {order.recipientInfo.wardName},{" "}
+                                {order.recipientInfo.districtName},{" "}
+                                {order.recipientInfo.provinceName}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        )}
 
-                          {order.shippingInfo && (
-                            <Stack spacing={1}>
+                        {order.shippingInfo && (
+                          <Stack spacing={1}>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              fontWeight={600}
+                            >
+                              Đơn vị vận chuyển
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {order.shippingInfo.carrierName
+                                ? (CARRIER_LABELS[
+                                    order.shippingInfo.carrierName
+                                  ] ?? order.shippingInfo.carrierName)
+                                : "N/A"}
+                            </Typography>
+                            {order.shippingInfo.trackingNumber && (
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
-                                fontWeight={600}
                               >
-                                Đơn vị vận chuyển
+                                Mã vận đơn:{" "}
+                                <b>{order.shippingInfo.trackingNumber}</b>
                               </Typography>
-                              <Typography variant="body2" fontWeight={600}>
-                                {order.shippingInfo.carrierName
-                                  ? (CARRIER_LABELS[
-                                      order.shippingInfo.carrierName
-                                    ] ?? order.shippingInfo.carrierName)
-                                  : "N/A"}
-                              </Typography>
-                              {order.shippingInfo.trackingNumber && (
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  Mã vận đơn:{" "}
-                                  <b>{order.shippingInfo.trackingNumber}</b>
-                                </Typography>
-                              )}
-                            </Stack>
-                          )}
-                        </Box>
-                      </Paper>
-                    )}
+                            )}
+                          </Stack>
+                        )}
+                      </Box>
+                    </Paper>
+                  )}
 
-                    <Paper variant="outlined" sx={{ borderRadius: 2 }}>
-                      <Box
-                        sx={{
-                          px: 2.5,
-                          py: 1.5,
-                          borderBottom: "1px solid",
-                          borderColor: "divider",
-                        }}
-                      >
-                        <Typography variant="subtitle1" fontWeight={700}>
-                          Sản phẩm
+                  <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+                    <Box
+                      sx={{
+                        px: 2.5,
+                        py: 1.5,
+                        borderBottom: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Typography variant="subtitle1" fontWeight={700}>
+                        Sản phẩm
+                      </Typography>
+                    </Box>
+                    <TableContainer>
+                      <Table>
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: "#fafafa" }}>
+                            <TableCell>Sản phẩm</TableCell>
+                            <TableCell align="center">Số lượng</TableCell>
+                            <TableCell align="right">Đơn giá</TableCell>
+                            <TableCell align="right">Thành tiền</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {order.orderDetails?.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <Box
+                                  display="flex"
+                                  alignItems="center"
+                                  gap={1.5}
+                                >
+                                  {item.imageUrl ? (
+                                    <Box
+                                      component="img"
+                                      src={item.imageUrl}
+                                      alt={item.variantName}
+                                      sx={{
+                                        width: 56,
+                                        height: 56,
+                                        objectFit: "cover",
+                                        borderRadius: 1,
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  ) : (
+                                    <Box
+                                      sx={{
+                                        width: 56,
+                                        height: 56,
+                                        bgcolor: "grey.100",
+                                        borderRadius: 1,
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  )}
+                                  <Typography variant="body2" fontWeight={500}>
+                                    {item.variantName}
+                                  </Typography>
+                                </Box>
+                              </TableCell>
+                              <TableCell align="center">
+                                x{item.quantity}
+                              </TableCell>
+                              <TableCell align="right">
+                                {fmt(item.unitPrice)}
+                              </TableCell>
+                              <TableCell align="right" sx={{ fontWeight: 600 }}>
+                                {fmt(item.total)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </Paper>
+                </Stack>
+
+                <Stack spacing={3}>
+                  <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                    <Typography variant="subtitle1" fontWeight={700} mb={2}>
+                      Cập nhật trạng thái
+                    </Typography>
+
+                    {availableStatuses.length === 0 ? (
+                      <Alert severity="info">
+                        Đơn hàng đã ở trạng thái cuối, không thể cập nhật thêm.
+                      </Alert>
+                    ) : (
+                      <Stack spacing={2}>
+                        <Select
+                          value={selectedStatus}
+                          displayEmpty
+                          onChange={(e) =>
+                            setSelectedStatus(e.target.value as OrderStatus)
+                          }
+                          size="small"
+                          disabled={isUpdating}
+                        >
+                          <MenuItem value="">
+                            <em>Chọn trạng thái mới</em>
+                          </MenuItem>
+                          {availableStatuses.map((next) => (
+                            <MenuItem key={next} value={next}>
+                              {orderStatusLabels[next]}
+                            </MenuItem>
+                          ))}
+                        </Select>
+
+                        <TextField
+                          label="Ghi chú"
+                          placeholder="Nhập ghi chú (không bắt buộc)"
+                          multiline
+                          rows={3}
+                          value={note}
+                          onChange={(e) => setNote(e.target.value)}
+                          disabled={isUpdating}
+                        />
+
+                        <Button
+                          variant="contained"
+                          disabled={!selectedStatus || isUpdating}
+                          onClick={handleUpdateStatus}
+                          sx={{
+                            bgcolor: "#ee4d2d",
+                            "&:hover": { bgcolor: "#d03e27" },
+                          }}
+                        >
+                          {isUpdating
+                            ? "Đang cập nhật..."
+                            : "Cập nhật trạng thái"}
+                        </Button>
+                      </Stack>
+                    )}
+                  </Paper>
+
+                  <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                    <Typography variant="subtitle1" fontWeight={700} mb={2}>
+                      Chi tiết thanh toán
+                    </Typography>
+
+                    <Stack spacing={1}>
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography variant="body2" color="text.secondary">
+                          Tổng tiền hàng
+                        </Typography>
+                        <Typography variant="body2">{fmt(subtotal)}</Typography>
+                      </Box>
+
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography variant="body2" color="text.secondary">
+                          Phí vận chuyển
+                        </Typography>
+                        <Typography variant="body2">
+                          {fmt(shippingFee)}
                         </Typography>
                       </Box>
-                      <TableContainer>
-                        <Table>
-                          <TableHead>
-                            <TableRow sx={{ bgcolor: "#fafafa" }}>
-                              <TableCell>Sản phẩm</TableCell>
-                              <TableCell align="center">Số lượng</TableCell>
-                              <TableCell align="right">Đơn giá</TableCell>
-                              <TableCell align="right">Thành tiền</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {order.orderDetails?.map((item) => (
-                              <TableRow key={item.id}>
-                                <TableCell>
-                                  <Box
-                                    display="flex"
-                                    alignItems="center"
-                                    gap={1.5}
-                                  >
-                                    {item.imageUrl ? (
-                                      <Box
-                                        component="img"
-                                        src={item.imageUrl}
-                                        alt={item.variantName}
-                                        sx={{
-                                          width: 56,
-                                          height: 56,
-                                          objectFit: "cover",
-                                          borderRadius: 1,
-                                          border: "1px solid",
-                                          borderColor: "divider",
-                                          flexShrink: 0,
-                                        }}
-                                      />
-                                    ) : (
-                                      <Box
-                                        sx={{
-                                          width: 56,
-                                          height: 56,
-                                          bgcolor: "grey.100",
-                                          borderRadius: 1,
-                                          flexShrink: 0,
-                                        }}
-                                      />
-                                    )}
-                                    <Typography
-                                      variant="body2"
-                                      fontWeight={500}
-                                    >
-                                      {item.variantName}
-                                    </Typography>
-                                  </Box>
-                                </TableCell>
-                                <TableCell align="center">
-                                  x{item.quantity}
-                                </TableCell>
-                                <TableCell align="right">
-                                  {fmt(item.unitPrice)}
-                                </TableCell>
-                                <TableCell
-                                  align="right"
-                                  sx={{ fontWeight: 600 }}
-                                >
-                                  {fmt(item.total)}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
-                    </Paper>
-                  </Stack>
 
-                  <Stack spacing={3}>
-                    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
-                      <Typography variant="subtitle1" fontWeight={700} mb={2}>
-                        Cập nhật trạng thái
-                      </Typography>
-
-                      {availableStatuses.length === 0 ? (
-                        <Alert severity="info">
-                          Đơn hàng đã ở trạng thái cuối, không thể cập nhật
-                          thêm.
-                        </Alert>
-                      ) : (
-                        <Stack spacing={2}>
-                          <Select
-                            value={selectedStatus}
-                            displayEmpty
-                            onChange={(e) =>
-                              setSelectedStatus(e.target.value as OrderStatus)
-                            }
-                            size="small"
-                            disabled={isUpdating}
-                          >
-                            <MenuItem value="">
-                              <em>Chọn trạng thái mới</em>
-                            </MenuItem>
-                            {availableStatuses.map((next) => (
-                              <MenuItem key={next} value={next}>
-                                {orderStatusLabels[next]}
-                              </MenuItem>
-                            ))}
-                          </Select>
-
-                          <TextField
-                            label="Ghi chú"
-                            placeholder="Nhập ghi chú (không bắt buộc)"
-                            multiline
-                            rows={3}
-                            value={note}
-                            onChange={(e) => setNote(e.target.value)}
-                            disabled={isUpdating}
-                          />
-
-                          <Button
-                            variant="contained"
-                            disabled={!selectedStatus || isUpdating}
-                            onClick={handleUpdateStatus}
-                            sx={{
-                              bgcolor: "#ee4d2d",
-                              "&:hover": { bgcolor: "#d03e27" },
-                            }}
-                          >
-                            {isUpdating
-                              ? "Đang cập nhật..."
-                              : "Cập nhật trạng thái"}
-                          </Button>
-                        </Stack>
+                      {voucherDiscount > 0 && (
+                        <Box display="flex" justifyContent="space-between">
+                          <Typography variant="body2" color="text.secondary">
+                            Giảm giá voucher
+                            {order.voucherCode ? (
+                              <Chip
+                                label={order.voucherCode}
+                                size="small"
+                                sx={{ ml: 1, fontSize: 11 }}
+                              />
+                            ) : null}
+                          </Typography>
+                          <Typography variant="body2" color="success.main">
+                            -{fmt(voucherDiscount)}
+                          </Typography>
+                        </Box>
                       )}
-                    </Paper>
 
-                    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
-                      <Typography variant="subtitle1" fontWeight={700} mb={2}>
-                        Chi tiết thanh toán
-                      </Typography>
+                      <Divider />
 
-                      <Stack spacing={1}>
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="body2" color="text.secondary">
-                            Tổng tiền hàng
-                          </Typography>
-                          <Typography variant="body2">
-                            {fmt(subtotal)}
-                          </Typography>
-                        </Box>
-
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="body2" color="text.secondary">
-                            Phí vận chuyển
-                          </Typography>
-                          <Typography variant="body2">
-                            {fmt(shippingFee)}
-                          </Typography>
-                        </Box>
-
-                        {voucherDiscount > 0 && (
-                          <Box display="flex" justifyContent="space-between">
-                            <Typography variant="body2" color="text.secondary">
-                              Giảm giá voucher
-                              {order.voucherCode ? (
-                                <Chip
-                                  label={order.voucherCode}
-                                  size="small"
-                                  sx={{ ml: 1, fontSize: 11 }}
-                                />
-                              ) : null}
-                            </Typography>
-                            <Typography variant="body2" color="success.main">
-                              -{fmt(voucherDiscount)}
-                            </Typography>
-                          </Box>
-                        )}
-
-                        <Divider />
-
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="subtitle1" fontWeight={700}>
-                            Tổng thanh toán
-                          </Typography>
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight={700}
-                            sx={{ color: "#ee4d2d" }}
-                          >
-                            {fmt(total)}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    </Paper>
-                  </Stack>
-                </Box>
+                      <Box display="flex" justifyContent="space-between">
+                        <Typography variant="subtitle1" fontWeight={700}>
+                          Tổng thanh toán
+                        </Typography>
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight={700}
+                          sx={{ color: "#ee4d2d" }}
+                        >
+                          {fmt(total)}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Paper>
+                </Stack>
               </Box>
-            )}
-          </Paper>
-        </Container>
+            </Box>
+          )}
+        </Paper>
       </Box>
     </AdminLayout>
   );

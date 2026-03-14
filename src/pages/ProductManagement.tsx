@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Box,
-  Container,
   Typography,
   Paper,
   Button,
@@ -46,7 +45,9 @@ const ProductManagement = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
-  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(
+    null,
+  );
   const [variantDialogOpen, setVariantDialogOpen] = useState(false);
   const [variantProduct, setVariantProduct] = useState<ProductListItem | null>(
     null,
@@ -113,8 +114,7 @@ const ProductManagement = () => {
       open: true,
       productId: product.id ?? null,
       title: "Xoá sản phẩm",
-      description:
-        `Bạn có chắc chắn muốn xoá "${product.name || "sản phẩm"}"? Hành động này không thể hoàn tác.`,
+      description: `Bạn có chắc chắn muốn xoá "${product.name || "sản phẩm"}"? Hành động này không thể hoàn tác.`,
     });
   };
 
@@ -181,7 +181,7 @@ const ProductManagement = () => {
 
   return (
     <AdminLayout>
-      <Container maxWidth="xl">
+      <Box>
         <Paper sx={{ width: "100%", overflow: "hidden" }}>
           <Box sx={{ p: 3 }}>
             <Stack
@@ -378,7 +378,7 @@ const ProductManagement = () => {
             )}
           </Box>
         </Paper>
-      </Container>
+      </Box>
 
       <CreateProductDialog
         open={dialogOpen}
