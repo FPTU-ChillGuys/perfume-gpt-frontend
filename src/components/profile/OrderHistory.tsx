@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import type { OrderListItem } from "@/types/order";
-import { MyOrderDetailModal } from "@/components/order/MyOrderDetailModal";
+import { OrderDetailModal } from "@/components/order/OrderDetailModal";
 import {
   orderStatusLabels,
   orderStatusColors,
@@ -205,12 +205,10 @@ const OrderHistory = ({
       )}
 
       {/* Order Detail Modal */}
-      <MyOrderDetailModal
+      <OrderDetailModal
         open={isModalOpen}
         orderId={selectedOrderId}
         onClose={handleCloseModal}
-        reviewsIndex={reviewsByOrderDetailId}
-        onReview={(target, existing) => onReviewSelected(target, existing)}
       />
     </>
   );

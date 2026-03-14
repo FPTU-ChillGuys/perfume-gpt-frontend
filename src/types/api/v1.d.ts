@@ -5504,6 +5504,7 @@ export interface paths {
       parameters: {
         query?: {
           GenderValueId?: null | number;
+          IsAvailable?: boolean;
           PageNumber?: number;
           PageSize?: number;
           SortBy?: string;
@@ -6160,6 +6161,7 @@ export interface paths {
         query?: {
           searchText?: string;
           GenderValueId?: null | number;
+          IsAvailable?: boolean;
           PageNumber?: number;
           PageSize?: number;
           SortBy?: string;
@@ -6204,6 +6206,7 @@ export interface paths {
       parameters: {
         query?: {
           GenderValueId?: null | number;
+          IsAvailable?: boolean;
           PageNumber?: number;
           PageSize?: number;
           SortBy?: string;
@@ -6259,6 +6262,7 @@ export interface paths {
       parameters: {
         query?: {
           GenderValueId?: null | number;
+          IsAvailable?: boolean;
           PageNumber?: number;
           PageSize?: number;
           SortBy?: string;
@@ -9658,6 +9662,8 @@ export interface components {
       /** Format: decimal */
       basePrice?: number;
       status?: components["schemas"]["VariantStatus"];
+      /** Format: int32 */
+      lowStockThreshold?: number;
       attributes?: null | components["schemas"]["ProductAttributeDto"][];
       temporaryMediaIds?: null | string[];
     };
@@ -10822,6 +10828,8 @@ export interface components {
       displayName?: string;
       /** Format: decimal */
       price?: number;
+      /** Format: int32 */
+      stockQuantity?: number;
       media?: null | components["schemas"]["MediaResponse"];
     };
     VariantImageUploadItem: {

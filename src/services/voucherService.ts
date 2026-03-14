@@ -8,7 +8,6 @@ type VoucherListResponse =
 
 class VoucherService {
   private readonly BASE_ENDPOINT = "/api/vouchers";
-  private readonly APPLY_ENDPOINT = "/api/vouchers/apply";
 
   async findVoucherByCode(code: string): Promise<VoucherResponse | null> {
     try {
@@ -45,24 +44,40 @@ class VoucherService {
     request: ApplyVoucherRequest,
   ): Promise<ApplyVoucherResponse> {
     try {
-      const response = await apiInstance.POST(this.APPLY_ENDPOINT, {
-        body: request,
-      });
-
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to apply voucher");
+      const voucher = await this.findVoucherByCode(request.voucherCode);
+      if (!voucher) {
+        throw new Error("Voucher không tồn tại hoặc đã hết hiệu lực");
       }
 
-      const payload = response.data.payload;
-      if (!payload) {
-        throw new Error("Invalid response from apply voucher API");
+      const minOrderValue = Number(voucher.minOrderValue ?? 0);
+      if (request.orderAmount < minOrderValue) {
+        throw new Error(
+          "Đơn hàng chưa đạt giá trị tối thiểu để áp dụng voucher",
+        );
+      }
+
+      const discountValue = Number(voucher.discountValue ?? 0);
+      const discountType = voucher.discountType;
+      const discountAmount =
+        discountType === "Percentage"
+          ? Math.floor((request.orderAmount * discountValue) / 100)
+          : discountValue;
+
+      const boundedDiscount = Math.max(
+        0,
+        Math.min(request.orderAmount, discountAmount),
+      );
+      const finalAmount = Math.max(0, request.orderAmount - boundedDiscount);
+
+      if (boundedDiscount <= 0) {
+        throw new Error("Voucher không hợp lệ cho đơn hàng hiện tại");
       }
 
       return {
-        voucherCode: payload.voucherCode || request.voucherCode,
-        discountAmount: Number(payload.discountAmount ?? 0),
-        finalAmount: Number(payload.finalAmount ?? request.orderAmount),
-        message: payload.message,
+        voucherCode: voucher.code || request.voucherCode,
+        discountAmount: boundedDiscount,
+        finalAmount,
+        message: "Áp dụng voucher thành công",
       };
     } catch (error: any) {
       console.error("Error applying voucher:", error);

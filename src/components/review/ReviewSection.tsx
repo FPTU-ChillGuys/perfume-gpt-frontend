@@ -15,7 +15,11 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import CelebrationIcon from "@mui/icons-material/Celebration";
 import { ReviewCard } from "@/components/review/ReviewCard";
 import { productReviewService } from "@/services/reviewService";
-import type { ReviewResponse, ReviewStatisticsResponse } from "@/types/review";
+import {
+  getReviewStatus,
+  type ReviewResponse,
+  type ReviewStatisticsResponse,
+} from "@/types/review";
 
 interface ReviewSectionProps {
   variantId: string | null;
@@ -32,27 +36,51 @@ const gradientCardSx = {
   background: "linear-gradient(135deg, #f8f1ff 0%, #fdecef 55%, #fff8ec 100%)",
 };
 
-const ReviewStatistics = ({ stats }: { stats: ReviewStatisticsResponse | null }) => {
+const ReviewStatistics = ({
+  stats,
+}: {
+  stats: ReviewStatisticsResponse | null;
+}) => {
   const total = stats?.totalReviews ?? 0;
   const average = stats?.averageRating ?? 0;
 
   return (
     <Box sx={gradientCardSx}>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems="center">
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={3}
+        alignItems="center"
+      >
         <Box textAlign="center" flex={1}>
-          <Typography variant="subtitle2" color="text.secondary">Điểm trung bình</Typography>
-          <Stack direction="row" spacing={1} justifyContent="center" alignItems="flex-end" mt={1}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Điểm trung bình
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={1}
+            justifyContent="center"
+            alignItems="flex-end"
+            mt={1}
+          >
             <Typography variant="h2" fontWeight={800} color="#ff7a18">
               {average.toFixed(1)}
             </Typography>
-            <Typography variant="h6" color="text.secondary">/5</Typography>
+            <Typography variant="h6" color="text.secondary">
+              /5
+            </Typography>
           </Stack>
           <Typography variant="body2" color="text.secondary">
             Dựa trên {total} lượt đánh giá
           </Typography>
           <Chip
             icon={<CelebrationIcon fontSize="small" />}
-            label={average >= 4.8 ? "Tuyệt phẩm" : average >= 4.2 ? "Được yêu thích" : "Đáng cân nhắc"}
+            label={
+              average >= 4.8
+                ? "Tuyệt phẩm"
+                : average >= 4.2
+                  ? "Được yêu thích"
+                  : "Đáng cân nhắc"
+            }
             color="warning"
             sx={{ mt: 1.5, bgcolor: "rgba(255, 143, 66, 0.15)" }}
           />
@@ -62,20 +90,33 @@ const ReviewStatistics = ({ stats }: { stats: ReviewStatisticsResponse | null })
             {ratingLabels.map((score) => {
               const count =
                 score === 5
-                  ? stats?.fiveStarCount ?? 0
+                  ? (stats?.fiveStarCount ?? 0)
                   : score === 4
-                    ? stats?.fourStarCount ?? 0
+                    ? (stats?.fourStarCount ?? 0)
                     : score === 3
-                      ? stats?.threeStarCount ?? 0
+                      ? (stats?.threeStarCount ?? 0)
                       : score === 2
-                        ? stats?.twoStarCount ?? 0
-                        : stats?.oneStarCount ?? 0;
+                        ? (stats?.twoStarCount ?? 0)
+                        : (stats?.oneStarCount ?? 0);
               const percentage = total ? Math.round((count / total) * 100) : 0;
               return (
-                <Stack key={score} direction="row" spacing={2} alignItems="center">
-                  <Stack direction="row" spacing={0.5} alignItems="center" width={92}>
+                <Stack
+                  key={score}
+                  direction="row"
+                  spacing={2}
+                  alignItems="center"
+                >
+                  <Stack
+                    direction="row"
+                    spacing={0.5}
+                    alignItems="center"
+                    width={92}
+                  >
                     <Typography fontWeight={700}>{score}</Typography>
-                    <StarRoundedIcon sx={{ color: "#ffb347" }} fontSize="small" />
+                    <StarRoundedIcon
+                      sx={{ color: "#ffb347" }}
+                      fontSize="small"
+                    />
                   </Stack>
                   <LinearProgress
                     variant="determinate"
@@ -91,7 +132,12 @@ const ReviewStatistics = ({ stats }: { stats: ReviewStatisticsResponse | null })
                       },
                     }}
                   />
-                  <Typography width={56} textAlign="right" fontWeight={600} color="text.secondary">
+                  <Typography
+                    width={56}
+                    textAlign="right"
+                    fontWeight={600}
+                    color="text.secondary"
+                  >
                     {count}
                   </Typography>
                 </Stack>
@@ -100,8 +146,16 @@ const ReviewStatistics = ({ stats }: { stats: ReviewStatisticsResponse | null })
           </Stack>
         </Box>
         <Box textAlign="center" flex={1}>
-          <Typography variant="subtitle2" color="text.secondary">Tỷ lệ giới thiệu</Typography>
-          <Stack direction="row" spacing={1} justifyContent="center" alignItems="center" mt={1}>
+          <Typography variant="subtitle2" color="text.secondary">
+            Tỷ lệ giới thiệu
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={1}
+            justifyContent="center"
+            alignItems="center"
+            mt={1}
+          >
             <InsightsIcon sx={{ color: "#845EF7" }} />
             <Typography variant="h4" fontWeight={700} color="#845EF7">
               {total ? Math.min(99, Math.round((average / 5) * 100)) : 0}%
@@ -116,7 +170,10 @@ const ReviewStatistics = ({ stats }: { stats: ReviewStatisticsResponse | null })
   );
 };
 
-export const ReviewSection = ({ variantId, refreshToken = 0 }: ReviewSectionProps) => {
+export const ReviewSection = ({
+  variantId,
+  refreshToken = 0,
+}: ReviewSectionProps) => {
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [stats, setStats] = useState<ReviewStatisticsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -158,7 +215,7 @@ export const ReviewSection = ({ variantId, refreshToken = 0 }: ReviewSectionProp
   }, [variantId, refreshToken]);
 
   const approvedReviews = useMemo(
-    () => reviews.filter((review) => review.status === "Approved"),
+    () => reviews.filter((review) => getReviewStatus(review) === "Approved"),
     [reviews],
   );
 
@@ -169,11 +226,19 @@ export const ReviewSection = ({ variantId, refreshToken = 0 }: ReviewSectionProp
   if (isLoading) {
     return (
       <Box mt={4}>
-        <Skeleton variant="rounded" height={220} sx={{ mb: 3, borderRadius: 3 }} />
+        <Skeleton
+          variant="rounded"
+          height={220}
+          sx={{ mb: 3, borderRadius: 3 }}
+        />
         <Grid container spacing={2}>
           {Array.from({ length: 2 }).map((_, idx) => (
             <Grid key={idx} size={{ xs: 12, md: 6 }}>
-              <Skeleton variant="rounded" height={200} sx={{ borderRadius: 3 }} />
+              <Skeleton
+                variant="rounded"
+                height={200}
+                sx={{ borderRadius: 3 }}
+              />
             </Grid>
           ))}
         </Grid>
@@ -205,7 +270,8 @@ export const ReviewSection = ({ variantId, refreshToken = 0 }: ReviewSectionProp
       <Box mt={4}>
         {approvedReviews.length === 0 ? (
           <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
-            Chưa có đánh giá nào cho phiên bản này. Hãy là người đầu tiên chia sẻ cảm nhận của bạn!
+            Chưa có đánh giá nào cho phiên bản này. Hãy là người đầu tiên chia
+            sẻ cảm nhận của bạn!
           </Alert>
         ) : (
           <Grid container spacing={2.5}>

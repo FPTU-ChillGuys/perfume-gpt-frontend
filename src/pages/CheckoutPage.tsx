@@ -454,7 +454,7 @@ export const CheckoutPage = () => {
       // Build request
       const request: CreateOrderRequest = {
         voucherCode: voucherCode || null,
-        isPickupInStore,
+        deliveryMethod: isPickupInStore ? "PickupInStore" : "Delivery",
         payment: {
           method: paymentMethod,
         },
@@ -464,9 +464,8 @@ export const CheckoutPage = () => {
       if (!isPickupInStore) {
         // Giao hàng tận nơi
         if (useNewAddress) {
-          // Nhập địa chỉ mới -> truyền đầy đủ thông tin, addressId = null
+          // Nhập địa chỉ mới -> truyền đầy đủ thông tin recipient
           request.recipient = {
-            addressId: null,
             fullName: newAddress.fullName,
             phone: newAddress.phone,
             districtId: newAddress.districtId || 0,
@@ -478,25 +477,12 @@ export const CheckoutPage = () => {
             fullAddress: newAddress.street,
           };
         } else {
-          // Chọn địa chỉ có sẵn -> chỉ truyền addressId, các field khác để rỗng
-          // Backend sẽ lấy thông tin địa chỉ từ addressId
-          request.recipient = {
-            addressId: selectedAddressId,
-            fullName: "",
-            phone: "",
-            districtId: 0,
-            districtName: "",
-            wardCode: "",
-            wardName: "",
-            provinceId: 0,
-            provinceName: "",
-            fullAddress: "",
-          };
+          // Chọn địa chỉ có sẵn -> truyền savedAddressId để backend resolve địa chỉ
+          request.savedAddressId = selectedAddressId;
         }
       } else {
         // Nhận tại cửa hàng -> không cần thông tin địa chỉ giao hàng
         request.recipient = {
-          addressId: null,
           fullName: "",
           phone: "",
           districtId: 0,

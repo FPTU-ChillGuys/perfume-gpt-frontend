@@ -39,6 +39,7 @@ import {
 import type { Banner, BannerPayload } from "@/types/banner";
 import type {
   MediaResponse,
+  ProductDetail,
   ProductFastLook,
   ProductInformation,
   ProductListItem,
@@ -90,7 +91,8 @@ export const ContentManagementPage = () => {
   const [totalProducts, setTotalProducts] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [selectedProduct, setSelectedProduct] = useState<ProductListItem | null>(null);
+  const [selectedProduct, setSelectedProduct] =
+    useState<ProductListItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [productImages, setProductImages] = useState<MediaResponse[]>([]);
   const [imagesLoading, setImagesLoading] = useState(false);
@@ -114,12 +116,13 @@ export const ContentManagementPage = () => {
         throw new Error("Sản phẩm thiếu thông tin brand hoặc category");
       }
 
-      const attributePayload = product.attributes
-        ?.filter((attr) => attr.attributeId && attr.valueId)
-        .map((attr) => ({
-          attributeId: attr.attributeId!,
-          valueId: attr.valueId!,
-        })) || [];
+      const attributePayload =
+        product.attributes
+          ?.filter((attr) => attr.attributeId && attr.valueId)
+          .map((attr) => ({
+            attributeId: attr.attributeId!,
+            valueId: attr.valueId!,
+          })) || [];
 
       return {
         name: product.name || "",
@@ -144,6 +147,9 @@ export const ContentManagementPage = () => {
     useState<ProductInformation | null>(null);
   const [productFastLook, setProductFastLook] =
     useState<ProductFastLook | null>(null);
+  const [productDetail, setProductDetail] = useState<ProductDetail | null>(
+    null,
+  );
   const [insightsLoading, setInsightsLoading] = useState(false);
   const currencyFormatter = useMemo(() => {
     return new Intl.NumberFormat("vi-VN", {
@@ -254,7 +260,11 @@ export const ContentManagementPage = () => {
     try {
       const reordered = [...banners];
       const temp = reordered[currentIndex];
-      reordered[currentIndex] = reordered[swapIndex];
+      const swapValue = reordered[swapIndex];
+      if (!temp || !swapValue) {
+        return;
+      }
+      reordered[currentIndex] = swapValue;
       reordered[swapIndex] = temp;
       const orderedIds = reordered.map((banner) => banner.id);
       const persisted = await bannerService.reorder(orderedIds);
@@ -382,7 +392,9 @@ export const ContentManagementPage = () => {
     try {
       setImagesLoading(true);
       const images = await productService.getProductImages(productId);
-      setProductImages(images.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
+      setProductImages(
+        images.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)),
+      );
     } catch (error) {
       console.error(error);
       showToast("Không thể tải hình sản phẩm", "error");
@@ -397,12 +409,14 @@ export const ContentManagementPage = () => {
     }
     try {
       setInsightsLoading(true);
-      const [info, fastLook] = await Promise.all([
+      const [info, fastLook, detail] = await Promise.all([
         productService.getProductInformation(productId),
         productService.getProductFastLook(productId),
+        productService.getProductDetail(productId),
       ]);
       setProductInformation(info);
       setProductFastLook(fastLook);
+      setProductDetail(detail);
     } catch (error) {
       console.error(error);
       showToast("Không thể tải thông tin sản phẩm", "error");
@@ -418,6 +432,7 @@ export const ContentManagementPage = () => {
     } else {
       setProductInformation(null);
       setProductFastLook(null);
+      setProductDetail(null);
     }
   }, [drawerOpen, loadProductInsights, refreshProductImages]);
 
@@ -500,9 +515,11 @@ export const ContentManagementPage = () => {
       const heroImage =
         (targetProduct.id === selectedProduct?.id
           ? productImages[0]?.url || selectedProduct?.primaryImage?.url
-          : targetProduct.primaryImage?.url) ||
-        FALLBACK_BANNER_IMAGE;
-      const metadataNotes = [targetProduct.brandName, targetProduct.categoryName];
+          : targetProduct.primaryImage?.url) || FALLBACK_BANNER_IMAGE;
+      const metadataNotes = [
+        targetProduct.brandName,
+        targetProduct.categoryName,
+      ];
 
       if (targetProduct.id === selectedProduct?.id && productInformation) {
         metadataNotes.push(
@@ -510,7 +527,7 @@ export const ContentManagementPage = () => {
           productInformation.productCode,
           productInformation.releaseYear
             ? `Ra mắt ${productInformation.releaseYear}`
-            : null,
+            : undefined,
         );
       }
 
@@ -569,8 +586,7 @@ export const ContentManagementPage = () => {
       { type: "deleteProduct", product },
       {
         title: "Xóa sản phẩm",
-        description:
-          `Bạn có chắc chắn muốn xóa sản phẩm "${product.name || ""}"? Thao tác này không thể hoàn tác.`,
+        description: `Bạn có chắc chắn muốn xóa sản phẩm "${product.name || ""}"? Thao tác này không thể hoàn tác.`,
         confirmText: "Xóa",
       },
     );
@@ -656,7 +672,8 @@ export const ContentManagementPage = () => {
               Quản lý banner & sản phẩm
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Điều phối nội dung hero banner và tài sản hình ảnh sản phẩm trong cùng một bảng điều khiển.
+              Điều phối nội dung hero banner và tài sản hình ảnh sản phẩm trong
+              cùng một bảng điều khiển.
             </Typography>
           </Box>
 
@@ -671,7 +688,8 @@ export const ContentManagementPage = () => {
               <Box>
                 <Typography variant="h6">Banner hero</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Kiểm soát thứ tự hiển thị, trạng thái và nội dung CTA của các banner.
+                  Kiểm soát thứ tự hiển thị, trạng thái và nội dung CTA của các
+                  banner.
                 </Typography>
               </Box>
               <Stack direction="row" spacing={1}>
@@ -701,7 +719,7 @@ export const ContentManagementPage = () => {
             ) : (
               <Grid container spacing={2}>
                 {banners.map((banner, index) => (
-                  <Grid item xs={12} md={4} key={banner.id}>
+                  <Grid size={{ xs: 12, md: 4 }} key={banner.id}>
                     <Paper
                       elevation={0}
                       sx={{
@@ -754,8 +772,19 @@ export const ContentManagementPage = () => {
                           />
                         )}
                       </Box>
-                      <Box sx={{ p: 2, flexGrow: 1, display: "flex", flexDirection: "column" }}>
-                        <Typography variant="subtitle2" color="text.secondary" fontWeight={600}>
+                      <Box
+                        sx={{
+                          p: 2,
+                          flexGrow: 1,
+                          display: "flex",
+                          flexDirection: "column",
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          color="text.secondary"
+                          fontWeight={600}
+                        >
                           {banner.tagline}
                         </Typography>
                         <Typography variant="h6">{banner.name}</Typography>
@@ -767,9 +796,19 @@ export const ContentManagementPage = () => {
                           {banner.description}
                         </Typography>
                         {banner.notes && banner.notes.length > 0 && (
-                          <Stack direction="row" flexWrap="wrap" spacing={1} sx={{ mt: 1 }}>
+                          <Stack
+                            direction="row"
+                            flexWrap="wrap"
+                            spacing={1}
+                            sx={{ mt: 1 }}
+                          >
                             {banner.notes.map((note) => (
-                              <Chip key={`${banner.id}-${note}`} label={note} size="small" variant="outlined" />
+                              <Chip
+                                key={`${banner.id}-${note}`}
+                                label={note}
+                                size="small"
+                                variant="outlined"
+                              />
                             ))}
                           </Stack>
                         )}
@@ -798,7 +837,10 @@ export const ContentManagementPage = () => {
                           </Tooltip>
                           <Box sx={{ flexGrow: 1 }} />
                           <Tooltip title="Chỉnh sửa">
-                            <IconButton size="small" onClick={() => handleOpenBannerDialog(banner)}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleOpenBannerDialog(banner)}
+                            >
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -831,7 +873,8 @@ export const ContentManagementPage = () => {
               <Box>
                 <Typography variant="h6">Quản lý sản phẩm</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Tải hình, chỉnh sửa mô tả và loại bỏ các sản phẩm không còn kinh doanh.
+                  Tải hình, chỉnh sửa mô tả và loại bỏ các sản phẩm không còn
+                  kinh doanh.
                 </Typography>
               </Box>
               <Stack spacing={1} sx={{ width: { xs: "100%", md: 360 } }}>
@@ -843,7 +886,8 @@ export const ContentManagementPage = () => {
                 />
                 <Stack direction="row" spacing={1} alignItems="center">
                   <Typography variant="caption" color="text.secondary">
-                    Nhập tối thiểu {SEMANTIC_MIN_CHARS} ký tự để bật semantic search.
+                    Nhập tối thiểu {SEMANTIC_MIN_CHARS} ký tự để bật semantic
+                    search.
                   </Typography>
                   {semanticActive && (
                     <Chip
@@ -905,7 +949,12 @@ export const ContentManagementPage = () => {
                               component="img"
                               src={product.primaryImage.url}
                               alt={product.name ?? "product"}
-                              sx={{ width: 56, height: 56, objectFit: "cover", borderRadius: 1 }}
+                              sx={{
+                                width: 56,
+                                height: 56,
+                                objectFit: "cover",
+                                borderRadius: 1,
+                              }}
                             />
                           ) : (
                             <Box
@@ -926,7 +975,9 @@ export const ContentManagementPage = () => {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Typography variant="subtitle2">{product.name}</Typography>
+                          <Typography variant="subtitle2">
+                            {product.name}
+                          </Typography>
                         </TableCell>
                         <TableCell>{product.brandName}</TableCell>
                         <TableCell>{product.categoryName}</TableCell>
@@ -980,7 +1031,8 @@ export const ContentManagementPage = () => {
               />
             ) : (
               <Typography variant="caption" color="text.secondary">
-                Đang hiển thị {semanticResults.length} kết quả semantic. Xóa ô tìm kiếm để quay lại danh sách chuẩn.
+                Đang hiển thị {semanticResults.length} kết quả semantic. Xóa ô
+                tìm kiếm để quay lại danh sách chuẩn.
               </Typography>
             )}
             <Divider sx={{ my: 3 }} />
@@ -1014,7 +1066,7 @@ export const ContentManagementPage = () => {
               ) : (
                 <Grid container spacing={2}>
                   {bestSellers.map((product) => (
-                    <Grid item xs={12} md={6} key={`best-${product.id}`}>
+                    <Grid size={{ xs: 12, md: 6 }} key={`best-${product.id}`}>
                       <Paper
                         variant="outlined"
                         sx={{
@@ -1083,7 +1135,7 @@ export const ContentManagementPage = () => {
                     </Grid>
                   ))}
                   {bestSellers.length === 0 && (
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                       <Alert severity="info">
                         Chưa có dữ liệu best seller từ API.
                       </Alert>
@@ -1112,7 +1164,11 @@ export const ContentManagementPage = () => {
       >
         {selectedProduct ? (
           <Stack spacing={3} sx={{ p: 3, height: "100%" }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+            >
               <Box>
                 <Typography variant="h6">{selectedProduct.name}</Typography>
                 <Typography variant="body2" color="text.secondary">
@@ -1149,12 +1205,15 @@ export const ContentManagementPage = () => {
                 Banner best seller
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Gắn sản phẩm này lên hero banner trang chủ và giữ trạng thái best seller.
+                Gắn sản phẩm này lên hero banner trang chủ và giữ trạng thái
+                best seller.
               </Typography>
               <Button
                 variant="outlined"
                 startIcon={<StarIcon fontSize="small" />}
-                onClick={handlePromoteProduct}
+                onClick={() => {
+                  void handlePromoteProduct();
+                }}
                 disabled={promotingProduct}
               >
                 {promotingProduct ? "Đang cập nhật..." : "Đẩy lên banner"}
@@ -1199,20 +1258,22 @@ export const ContentManagementPage = () => {
                         </Typography>
                       </Stack>
                     ))}
-                  {([
-                    {
-                      label: "Tầng hương đầu",
-                      value: productInformation.topNotes,
-                    },
-                    {
-                      label: "Tầng hương giữa",
-                      value: productInformation.middleNotes,
-                    },
-                    {
-                      label: "Tầng hương cuối",
-                      value: productInformation.baseNotes,
-                    },
-                  ] as const)
+                  {(
+                    [
+                      {
+                        label: "Tầng hương đầu",
+                        value: productInformation.topNotes,
+                      },
+                      {
+                        label: "Tầng hương giữa",
+                        value: productInformation.middleNotes,
+                      },
+                      {
+                        label: "Tầng hương cuối",
+                        value: productInformation.baseNotes,
+                      },
+                    ] as const
+                  )
                     .filter((item) => item.value)
                     .map((item) => (
                       <Box key={item.label}>
@@ -1240,20 +1301,32 @@ export const ContentManagementPage = () => {
               </Typography>
               {insightsLoading ? (
                 <LinearProgress sx={{ height: 4, borderRadius: 99 }} />
-              ) : productFastLook?.variants && productFastLook.variants.length > 0 ? (
+              ) : productDetail?.variants &&
+                productDetail.variants.length > 0 ? (
                 <Stack spacing={1.5}>
-                  {productFastLook.variants.map((variant) => (
+                  {productDetail.variants.map((variant) => (
                     <Paper key={variant.id} variant="outlined" sx={{ p: 1.5 }}>
-                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                      >
                         <Typography variant="body2" fontWeight={600}>
                           {variant.sku}
                         </Typography>
                         {variant.status && (
-                          <Chip label={variant.status} size="small" color="primary" />
+                          <Chip
+                            label={variant.status}
+                            size="small"
+                            color="primary"
+                          />
                         )}
                       </Stack>
                       <Typography variant="caption" color="text.secondary">
-                        {[variant.volumeMl ? `${variant.volumeMl}ml` : null, variant.concentrationName]
+                        {[
+                          variant.volumeMl ? `${variant.volumeMl}ml` : null,
+                          variant.concentrationName,
+                        ]
                           .filter(Boolean)
                           .join(" · ")}
                       </Typography>
@@ -1273,7 +1346,12 @@ export const ContentManagementPage = () => {
             </Box>
             <Divider />
             <Box>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{ mb: 1 }}
+              >
                 <Typography variant="subtitle2">Thư viện hình ảnh</Typography>
                 <Button
                   size="small"
@@ -1300,7 +1378,7 @@ export const ContentManagementPage = () => {
               ) : (
                 <Grid container spacing={2}>
                   {productImages.map((image) => (
-                    <Grid item xs={6} key={image.id}>
+                    <Grid size={{ xs: 6 }} key={image.id}>
                       <Box sx={{ position: "relative" }}>
                         <Box
                           component="img"
@@ -1318,15 +1396,30 @@ export const ContentManagementPage = () => {
                           spacing={0.5}
                           sx={{ position: "absolute", top: 8, left: 8 }}
                         >
-                          {image.isPrimary && <Chip label="Primary" size="small" color="primary" />}
+                          {image.isPrimary && (
+                            <Chip
+                              label="Primary"
+                              size="small"
+                              color="primary"
+                            />
+                          )}
                           {typeof image.displayOrder === "number" && (
-                            <Chip label={`#${image.displayOrder}`} size="small" />
+                            <Chip
+                              label={`#${image.displayOrder}`}
+                              size="small"
+                            />
                           )}
                         </Stack>
                         <IconButton
                           size="small"
                           color="error"
-                          sx={{ position: "absolute", top: 8, right: 8, bgcolor: "rgba(0,0,0,0.4)", color: "white" }}
+                          sx={{
+                            position: "absolute",
+                            top: 8,
+                            right: 8,
+                            bgcolor: "rgba(0,0,0,0.4)",
+                            color: "white",
+                          }}
                           onClick={() => requestDeleteImage(image.id)}
                         >
                           <DeleteIcon fontSize="small" />
