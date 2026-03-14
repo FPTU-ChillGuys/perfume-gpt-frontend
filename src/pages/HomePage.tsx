@@ -96,18 +96,7 @@ export const HomePage = () => {
     const fetchTrending = async () => {
       setIsTrendingLoading(true);
       try {
-        // Always use the most recent Sunday as endDate (cached weekly).
-        // e.g. Monday 9/3 → endDate = Sunday 8/3; Sunday 15/3 → endDate = 15/3
-        const lastSunday = dayjs(getLastSunday()).format("YYYY-MM-DD");
-        const prevSunday = dayjs(getPrevSunday()).format("YYYY-MM-DD");
-
-        // Try the most recent Sunday first
-        let products = await trendService.getTrendingProducts("weekly", lastSunday).catch(() => null);
-
-        // If still generating (null), fall back to the previous Sunday
-        if (products === null) {
-          products = await trendService.getTrendingProducts("weekly", prevSunday).catch(() => null);
-        }
+        let products = await trendService.getCurrentOrPreviousWeeklyTrend(false);
 
         if (!isMounted) return;
 

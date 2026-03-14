@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from "react";
-import { trendService, getLastSunday, getPrevSunday } from "@/services/ai/trendService";
+import { trendService } from "@/services/ai/trendService";
 import type { ProductCardProps } from "@/components/product/ProductCard";
 import { normalizeTrendProducts } from "@/utils/productCardMapper";
-import dayjs from "dayjs";
 import { useToast } from "@/hooks/useToast";
 
 export const useAdminTrend = () => {
@@ -24,17 +23,7 @@ export const useAdminTrend = () => {
 
             setError(null);
 
-            const lastSunday = dayjs(getLastSunday()).format("YYYY-MM-DD");
-            const prevSunday = dayjs(getPrevSunday()).format("YYYY-MM-DD");
-
-            let products = await trendService.getTrendingProducts("weekly", lastSunday, undefined, forceRefresh).catch((e) => {
-                if (!forceRefresh) console.warn(e);
-                return null;
-            });
-
-            if (products === null && !forceRefresh) {
-                products = await trendService.getTrendingProducts("weekly", prevSunday).catch(() => null);
-            }
+            let products = await trendService.getCurrentOrPreviousWeeklyTrend(forceRefresh);
 
             if (products === null) {
                 setIsPolling(true);
