@@ -5,7 +5,6 @@ import {
   Box,
   Breadcrumbs,
   Button,
-  Chip,
   CircularProgress,
   Container,
   Divider,
@@ -13,6 +12,8 @@ import {
   IconButton,
   Link,
   Stack,
+  Tab,
+  Tabs,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -31,6 +32,10 @@ import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { ReviewSection } from "@/components/review/ReviewSection";
+import {
+  productDetailTabsContent,
+  normalizeProductDetailTabContent,
+} from "@/constants/productDetailTabsContent";
 import type {
   MediaResponse,
   ProductDetail,
@@ -119,6 +124,9 @@ const ProductDetailPage = () => {
     null,
   );
   const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
+  const [infoTab, setInfoTab] = useState<"details" | "usage" | "shipping">(
+    "details",
+  );
 
   const fetchMyReviews = useCallback(async () => {
     if (!isAuthenticated) {
@@ -551,98 +559,141 @@ const ProductDetailPage = () => {
     }
   };
 
-  const renderHighlights = () => (
-    <Grid container spacing={2} mt={2}>
-      {["origin", "releaseYear", "scentGroup", "style"].map((key) => {
-        const value = (information as any)?.[key];
-        if (!value) {
-          return null;
-        }
-        const labels: Record<string, string> = {
-          origin: "Xuất xứ",
-          releaseYear: "Năm ra mắt",
-          scentGroup: "Nhóm hương",
-          style: "Phong cách",
-        };
-        return (
-          <Grid size={{ xs: 6, md: 3 }} key={key}>
-            <Typography variant="caption" color="text.secondary">
-              {labels[key]}
-            </Typography>
-            <Typography variant="subtitle2" fontWeight={600}>
-              {value}
-            </Typography>
-          </Grid>
-        );
-      })}
-    </Grid>
+  const productGender = useMemo(() => {
+    const meta = information as Record<string, unknown> | null;
+    return typeof meta?.gender === "string" ? meta.gender : "";
+  }, [information]);
+
+  const detailFields = useMemo(
+    () => [
+      {
+        label: "Thương hiệu",
+        value: information?.brandName || fastLook?.brandName || "",
+      },
+      { label: "Xuất xứ", value: information?.origin || "" },
+      { label: "Năm phát hành", value: information?.releaseYear || "" },
+      { label: "Giới tính", value: productGender },
+      { label: "Phong cách", value: information?.style || "" },
+      { label: "Nhóm hương", value: information?.scentGroup || "" },
+      { label: "Hương đầu", value: information?.topNotes || "" },
+      { label: "Hương giữa", value: information?.middleNotes || "" },
+      { label: "Hương cuối", value: information?.baseNotes || "" },
+    ],
+    [information, fastLook, productGender],
   );
 
-  const renderFragranceNotes = () => {
-    const notes = [
-      { label: "Top Notes", value: information?.topNotes },
-      { label: "Middle Notes", value: information?.middleNotes },
-      { label: "Base Notes", value: information?.baseNotes },
-    ].filter((note) => note.value);
-
-    if (!notes.length) {
-      return null;
-    }
-
-    return (
-      <Box mt={4}>
-        <Typography variant="h6" fontWeight={600} gutterBottom>
-          Hương thơm đặc trưng
-        </Typography>
-        <Grid container spacing={2}>
-          {notes.map((note) => (
-            <Grid size={{ xs: 12, md: 4 }} key={note.label}>
-              <Box
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  minHeight: 120,
-                }}
-              >
-                <Typography variant="subtitle2" color="text.secondary">
-                  {note.label}
-                </Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {note.value}
-                </Typography>
-              </Box>
-            </Grid>
-          ))}
-        </Grid>
-      </Box>
+  const renderInformationTabs = () => {
+    const description = information?.description || fastLook?.description || "";
+    const sanitizedDescription = description
+      ? sanitizeDescriptionHtml(description)
+      : "";
+    const usageContent = normalizeProductDetailTabContent(
+      productDetailTabsContent.usageAndStorage,
     );
-  };
-
-  const renderDescription = () => {
-    const description = information?.description || fastLook?.description;
-    if (!description) {
-      return null;
-    }
-
-    const sanitizedDescription = sanitizeDescriptionHtml(description);
+    const shippingContent = normalizeProductDetailTabContent(
+      productDetailTabsContent.shippingAndReturn,
+    );
 
     return (
       <Box mt={4}>
-        <Typography variant="h6" fontWeight={600} gutterBottom>
-          Mô tả sản phẩm
-        </Typography>
-        <Typography
-          component="div"
-          color="text.secondary"
-          lineHeight={1.8}
+        <Tabs
+          value={infoTab}
+          onChange={(_, value: "details" | "usage" | "shipping") =>
+            setInfoTab(value)
+          }
+          variant="scrollable"
+          scrollButtons="auto"
           sx={{
-            "& p": { m: 0, mb: 1.5 },
-            "& p:last-child": { mb: 0 },
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            "& .MuiTab-root": {
+              textTransform: "none",
+              fontWeight: 500,
+            },
           }}
-          dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-        />
+        >
+          <Tab value="details" label="Chi tiết sản phẩm" />
+          <Tab value="usage" label="Sử dụng và bảo quản" />
+          <Tab value="shipping" label="Vận chuyển và đổi trả" />
+        </Tabs>
+
+        <Box sx={{ pt: 3 }}>
+          {infoTab === "details" && (
+            <Stack spacing={1.5}>
+              {detailFields.map((field) => (
+                <Box
+                  key={field.label}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", sm: "180px 1fr" },
+                    gap: 1,
+                    py: 1,
+                    borderBottom: "1px dashed",
+                    borderColor: "divider",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    {field.label}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.primary"
+                    sx={{ minHeight: 22 }}
+                  >
+                    {field.value || ""}
+                  </Typography>
+                </Box>
+              ))}
+
+              <Box mt={2}>
+                <Typography variant="h6" fontWeight={600} gutterBottom>
+                  Mô tả sản phẩm
+                </Typography>
+                {sanitizedDescription ? (
+                  <Typography
+                    component="div"
+                    color="text.secondary"
+                    lineHeight={1.8}
+                    sx={{
+                      "& p": { m: 0, mb: 1.5 },
+                      "& p:last-child": { mb: 0 },
+                    }}
+                    dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+                  />
+                ) : (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                  ></Typography>
+                )}
+              </Box>
+            </Stack>
+          )}
+
+          {infoTab === "usage" && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ whiteSpace: "pre-line", lineHeight: 1.8 }}
+            >
+              {usageContent}
+            </Typography>
+          )}
+
+          {infoTab === "shipping" && (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ whiteSpace: "pre-line", lineHeight: 1.8 }}
+            >
+              {shippingContent}
+            </Typography>
+          )}
+        </Box>
       </Box>
     );
   };
@@ -654,30 +705,7 @@ const ProductDetailPage = () => {
         spacing={2}
         justifyContent="space-between"
         alignItems={{ xs: "flex-start", md: "center" }}
-      >
-        <Box>
-          <Typography variant="h5" fontWeight={700}>
-            Chia sẻ cảm nhận của bạn
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {existingReviewForVariant
-              ? "Bạn đã từng đánh giá phiên bản này. Có thể cập nhật nếu trải nghiệm thay đổi."
-              : "Đơn hàng đã được giao? Hãy để lại đánh giá để cộng đồng có thêm thông tin."}
-          </Typography>
-        </Box>
-        <Button
-          variant={existingReviewForVariant ? "outlined" : "contained"}
-          color="secondary"
-          onClick={handleOpenReviewDialog}
-          disabled={!selectedVariantId || isFindingReviewTarget}
-        >
-          {isFindingReviewTarget
-            ? "Đang kiểm tra..."
-            : existingReviewForVariant
-              ? "Cập nhật đánh giá"
-              : "Viết đánh giá"}
-        </Button>
-      </Stack>
+      ></Stack>
       {reviewActionError && (
         <Alert severity="info" sx={{ mt: 2, borderRadius: 2 }}>
           {reviewActionError}
@@ -795,6 +823,21 @@ const ProductDetailPage = () => {
 
     return (
       <>
+        <Box mb={2}>
+          <Breadcrumbs separator="/">
+            <Link
+              underline="hover"
+              color="inherit"
+              component="button"
+              onClick={() => navigate("/")}
+              sx={{ cursor: "pointer" }}
+            >
+              Trang chủ
+            </Link>
+            <Typography color="text.primary">{fastLook.name}</Typography>
+          </Breadcrumbs>
+        </Box>
+
         <Grid container spacing={4}>
           <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
             {/* Main image — fixed height so no-image placeholder is same size */}
@@ -982,19 +1025,6 @@ const ProductDetailPage = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <Stack spacing={2}>
-              <Breadcrumbs separator="/">
-                <Link
-                  underline="hover"
-                  color="inherit"
-                  component="button"
-                  onClick={() => navigate("/")}
-                  sx={{ cursor: "pointer" }}
-                >
-                  Trang chủ
-                </Link>
-                <Typography color="text.primary">{fastLook.name}</Typography>
-              </Breadcrumbs>
-
               <Typography variant="h4" fontWeight={700}>
                 {fastLook.name}
               </Typography>
@@ -1121,7 +1151,11 @@ const ProductDetailPage = () => {
                     Hết hàng
                   </Typography>
                 ) : (
-                  <Typography variant="body2" color="success.main" fontWeight={600}>
+                  <Typography
+                    variant="body2"
+                    color="success.main"
+                    fontWeight={600}
+                  >
                     {`Còn ${selectedVariantStockQuantity} sản phẩm`}
                   </Typography>
                 ))}
@@ -1150,9 +1184,7 @@ const ProductDetailPage = () => {
           </Grid>
         </Grid>
 
-        {renderHighlights()}
-        {renderFragranceNotes()}
-        {renderDescription()}
+        {renderInformationTabs()}
         {renderReviewSummary()}
         {renderReviewCallout()}
         <ReviewSection
@@ -1166,15 +1198,7 @@ const ProductDetailPage = () => {
   return (
     <MainLayout>
       <Box py={6}>
-        <Container maxWidth="lg">
-          <Stack direction="row" alignItems="center" spacing={1} mb={3}>
-            <Chip label="BEST CHOICE" color="error" size="small" />
-            <Typography fontWeight={600}>
-              Sản phẩm uy tín - Cam kết chính hãng 100%
-            </Typography>
-          </Stack>
-          {renderContent()}
-        </Container>
+        <Container maxWidth="lg">{renderContent()}</Container>
       </Box>
 
       <ReviewEditorDialog
