@@ -57,6 +57,25 @@ class ProductService {
     };
   }
 
+  private extractApiErrorMessage(
+    apiResult: unknown,
+    fallbackMessage: string,
+  ): string {
+    const payload = apiResult as {
+      message?: string;
+      errors?: string[] | null;
+      error?: { message?: string; errors?: string[] | null };
+    };
+
+    return (
+      payload?.message ||
+      payload?.error?.message ||
+      payload?.errors?.join(", ") ||
+      payload?.error?.errors?.join(", ") ||
+      fallbackMessage
+    );
+  }
+
   async getSuppliers(): Promise<Supplier[]> {
     try {
       const response = await apiInstance.GET(this.SUPPLIERS_ENDPOINT);
@@ -291,13 +310,26 @@ class ProductService {
         body: request,
       });
 
+      if (response.error) {
+        throw new Error(
+          this.extractApiErrorMessage(
+            response.error,
+            "Failed to create product",
+          ),
+        );
+      }
+
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to create product");
+        throw new Error(
+          this.extractApiErrorMessage(
+            response.data,
+            "Failed to create product",
+          ),
+        );
       }
 
       return response.data.message || "Product created successfully";
     } catch (error: any) {
-      console.error("Error creating product:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||
@@ -441,13 +473,26 @@ class ProductService {
         body: payload,
       });
 
+      if (response.error) {
+        throw new Error(
+          this.extractApiErrorMessage(
+            response.error,
+            "Failed to update product",
+          ),
+        );
+      }
+
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to update product");
+        throw new Error(
+          this.extractApiErrorMessage(
+            response.data,
+            "Failed to update product",
+          ),
+        );
       }
 
       return response.data.message || "Product updated successfully";
     } catch (error: any) {
-      console.error("Error updating product:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||

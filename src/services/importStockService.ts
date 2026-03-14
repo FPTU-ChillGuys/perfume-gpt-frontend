@@ -4,6 +4,25 @@ import type { ImportDetail, ImportTicketResponse, ImportTicketsResponse, ImportT
 class ImportStockService {
   private readonly IMPORT_ENDPOINT = "/api/importtickets";
 
+  private extractApiErrorMessage(
+    apiResult: unknown,
+    fallbackMessage: string,
+  ): string {
+    const payload = apiResult as {
+      message?: string;
+      error?: { message?: string; errors?: string[] | null };
+      errors?: string[] | null;
+    };
+
+    return (
+      payload?.message ||
+      payload?.error?.message ||
+      payload?.errors?.join(", ") ||
+      payload?.error?.errors?.join(", ") ||
+      fallbackMessage
+    );
+  }
+
   async createImportTicket(
     supplierId: number,
     importDate: string,
@@ -203,17 +222,27 @@ class ImportStockService {
           },
         },
         body: verifyData,
-      })
+      });
+
+      if (response.error) {
+        throw new Error(
+          this.extractApiErrorMessage(response.error, "Failed to verify ticket"),
+        );
+      }
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to verify ticket");
+        throw new Error(
+          this.extractApiErrorMessage(response.data, "Failed to verify ticket"),
+        );
       }
 
       return response.data.payload!;
     } catch (error: any) {
       console.error("Verify ticket error:", error);
       const errorMessage =
+        error?.response?.data?.errors?.join(", ") ||
         error.response?.data?.message ||
+        error?.errors?.join(", ") ||
         error.message ||
         "Failed to verify ticket";
       throw new Error(errorMessage);

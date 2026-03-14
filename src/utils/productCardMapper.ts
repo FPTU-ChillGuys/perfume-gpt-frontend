@@ -55,6 +55,7 @@ export const mapProductToCard = (
     imageUrl:
       product.primaryImage?.url ?? getVariantImageUrl(variant) ?? undefined,
     variantId: variant?.id,
+    numberOfVariants: product.numberOfVariants ?? 0,
   };
 };
 
@@ -84,7 +85,9 @@ export const mapProductWithVariantsToCard = (
   product: ProductListItemWithVariants & { id: string },
 ): ProductCardProps => {
   const firstVariant = product.variants?.[0];
-  const price = Number(firstVariant?.basePrice ?? 0);
+  const price = Number(
+    (firstVariant as { basePrice?: number } | undefined)?.basePrice ?? 0,
+  );
 
   return {
     id: product.id,
@@ -93,5 +96,6 @@ export const mapProductWithVariantsToCard = (
     salePrice: Number.isFinite(price) ? price : 0,
     imageUrl: product.primaryImage?.url ?? undefined,
     variantId: firstVariant?.id,
+    numberOfVariants: product.numberOfVariants ?? product.variants?.length ?? 0,
   };
 };

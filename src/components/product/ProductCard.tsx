@@ -16,6 +16,7 @@ export interface ProductCardProps {
   isNew?: boolean;
   discount?: number;
   variantId?: string;
+  numberOfVariants?: number;
 }
 
 export const ProductCard = ({
@@ -28,6 +29,7 @@ export const ProductCard = ({
   isNew,
   discount,
   variantId,
+  numberOfVariants,
 }: ProductCardProps) => {
   const { showToast } = useToast();
   const { refreshCart } = useCart();
@@ -122,20 +124,20 @@ export const ProductCard = ({
       </div>
 
       {/* Info */}
-      <div className="p-4">
+      <div className="p-4 ">
         <p
-          className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer"
+          className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer text-center"
           onClick={handleNavigateDetail}
         >
           {brand}
         </p>
         <h3
-          className="text-sm font-medium text-gray-800 mb-2 line-clamp-2  min-h-10 cursor-pointer"
+          className="text-sm font-medium text-gray-800 mb-2 line-clamp-2  min-h-10 cursor-pointer text-center"
           onClick={handleNavigateDetail}
         >
           {name}
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-center">
           {originalPrice && (
             <span className="text-xs text-gray-400 line-through">
               {formatPrice(originalPrice)}
@@ -145,6 +147,13 @@ export const ProductCard = ({
             {formatPrice(salePrice)}
           </span>
         </div>
+        <p className="mt-1 text-xs text-gray-500 text-center">
+          {(numberOfVariants ?? 0) > 0
+            ? (numberOfVariants ?? 0) > 1
+              ? `${numberOfVariants} Sizes`
+              : `${numberOfVariants} Size`
+            : "Chưa có size"}
+        </p>
       </div>
     </div>
   );
