@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -24,6 +24,8 @@ import {
   ArrowBack,
   AssignmentReturn,
   CancelOutlined,
+  ExpandLess,
+  ExpandMore,
   LocalShipping,
   MoveToInbox,
   Payments,
@@ -80,6 +82,12 @@ const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
 
 const fmt = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))}đ`;
+
+const fmtDateShort = (value?: string | null) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("vi-VN");
+};
 
 const fmtDate = (s?: string | null) => {
   if (!s) return null;
@@ -278,6 +286,9 @@ export const OrderManagementDetailPage = () => {
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | "">("");
   const [note, setNote] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [expandedBatches, setExpandedBatches] = useState<
+    Record<string, boolean>
+  >({});
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -346,6 +357,14 @@ export const OrderManagementDetailPage = () => {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const toggleBatchDetails = (detailId?: string) => {
+    if (!detailId) return;
+    setExpandedBatches((prev) => ({
+      ...prev,
+      [detailId]: !prev[detailId],
+    }));
   };
 
   return (
@@ -552,59 +571,219 @@ export const OrderManagementDetailPage = () => {
                             <TableCell align="center">Số lượng</TableCell>
                             <TableCell align="right">Đơn giá</TableCell>
                             <TableCell align="right">Thành tiền</TableCell>
+                            <TableCell align="left">Batch giữ hàng</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {order.orderDetails?.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
-                                <Box
-                                  display="flex"
-                                  alignItems="center"
-                                  gap={1.5}
-                                >
-                                  {item.imageUrl ? (
+                          {order.orderDetails?.map((item, index) => {
+                            const batches = item.reservedBatches || [];
+                            const rowKey =
+                              item.id || `${item.variantName}-${index}`;
+                            const isExpandable =
+                              Boolean(item.id) && batches.length > 0;
+                            const isExpanded = item.id
+                              ? Boolean(expandedBatches[item.id])
+                              : false;
+
+                            return (
+                              <Fragment key={rowKey}>
+                                <TableRow hover>
+                                  <TableCell>
                                     <Box
-                                      component="img"
-                                      src={item.imageUrl}
-                                      alt={item.variantName}
-                                      sx={{
-                                        width: 56,
-                                        height: 56,
-                                        objectFit: "cover",
-                                        borderRadius: 1,
-                                        border: "1px solid",
-                                        borderColor: "divider",
-                                        flexShrink: 0,
-                                      }}
-                                    />
-                                  ) : (
-                                    <Box
-                                      sx={{
-                                        width: 56,
-                                        height: 56,
-                                        bgcolor: "grey.100",
-                                        borderRadius: 1,
-                                        flexShrink: 0,
-                                      }}
-                                    />
-                                  )}
-                                  <Typography variant="body2" fontWeight={500}>
-                                    {item.variantName}
-                                  </Typography>
-                                </Box>
-                              </TableCell>
-                              <TableCell align="center">
-                                x{item.quantity}
-                              </TableCell>
-                              <TableCell align="right">
-                                {fmt(item.unitPrice)}
-                              </TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>
-                                {fmt(item.total)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                                      display="flex"
+                                      alignItems="center"
+                                      gap={1.5}
+                                    >
+                                      {item.imageUrl ? (
+                                        <Box
+                                          component="img"
+                                          src={item.imageUrl}
+                                          alt={item.variantName}
+                                          sx={{
+                                            width: 56,
+                                            height: 56,
+                                            objectFit: "cover",
+                                            borderRadius: 1,
+                                            border: "1px solid",
+                                            borderColor: "divider",
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      ) : (
+                                        <Box
+                                          sx={{
+                                            width: 56,
+                                            height: 56,
+                                            bgcolor: "grey.100",
+                                            borderRadius: 1,
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      )}
+                                      <Typography
+                                        variant="body2"
+                                        fontWeight={500}
+                                      >
+                                        {item.variantName}
+                                      </Typography>
+                                    </Box>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    x{item.quantity}
+                                  </TableCell>
+                                  <TableCell align="right">
+                                    {fmt(item.unitPrice)}
+                                  </TableCell>
+                                  <TableCell
+                                    align="right"
+                                    sx={{ fontWeight: 600 }}
+                                  >
+                                    {fmt(item.total)}
+                                  </TableCell>
+                                  <TableCell
+                                    align="left"
+                                    sx={{ minWidth: 280 }}
+                                  >
+                                    {batches.length === 0 ? (
+                                      <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        Không có dữ liệu batch
+                                      </Typography>
+                                    ) : (
+                                      <Stack
+                                        direction="row"
+                                        spacing={1}
+                                        alignItems="center"
+                                        flexWrap="wrap"
+                                      >
+                                        <Chip
+                                          size="small"
+                                          label={`${batches.length} Batch`}
+                                          color="info"
+                                          variant={
+                                            batches.length > 1
+                                              ? "filled"
+                                              : "outlined"
+                                          }
+                                        />
+                                        {isExpandable ? (
+                                          <Button
+                                            size="small"
+                                            variant="text"
+                                            onClick={() =>
+                                              toggleBatchDetails(item.id)
+                                            }
+                                            endIcon={
+                                              isExpanded ? (
+                                                <ExpandLess />
+                                              ) : (
+                                                <ExpandMore />
+                                              )
+                                            }
+                                            sx={{
+                                              px: 0,
+                                              minWidth: 0,
+                                              textTransform: "none",
+                                            }}
+                                          >
+                                            {isExpanded
+                                              ? "Ẩn chi tiết"
+                                              : "Xem chi tiết"}
+                                          </Button>
+                                        ) : null}
+                                      </Stack>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+
+                                {isExpanded && (
+                                  <TableRow>
+                                    <TableCell
+                                      colSpan={5}
+                                      sx={{ py: 0, px: 0 }}
+                                    >
+                                      <Box
+                                        sx={{
+                                          mx: 2,
+                                          mb: 2,
+                                          mt: 0.5,
+                                          border: "1px solid",
+                                          borderColor: "divider",
+                                          borderRadius: 1.5,
+                                          overflow: "hidden",
+                                        }}
+                                      >
+                                        <Box
+                                          sx={{
+                                            px: 2,
+                                            py: 1,
+                                            bgcolor: "grey.50",
+                                            borderBottom: "1px solid",
+                                            borderColor: "divider",
+                                          }}
+                                        >
+                                          <Typography
+                                            variant="body2"
+                                            fontWeight={600}
+                                          >
+                                            Chi tiết batch giữ hàng
+                                          </Typography>
+                                        </Box>
+                                        <Table size="small">
+                                          <TableHead>
+                                            <TableRow
+                                              sx={{ bgcolor: "#fcfcfc" }}
+                                            >
+                                              <TableCell>Mã batch</TableCell>
+                                              <TableCell align="right">
+                                                SL giữ
+                                              </TableCell>
+                                              <TableCell align="right">
+                                                Hạn sử dụng
+                                              </TableCell>
+                                            </TableRow>
+                                          </TableHead>
+                                          <TableBody>
+                                            {batches.map(
+                                              (batch, batchIndex) => (
+                                                <TableRow
+                                                  key={
+                                                    batch.batchId ||
+                                                    batch.batchCode ||
+                                                    `${rowKey}-batch-${batchIndex}`
+                                                  }
+                                                >
+                                                  <TableCell>
+                                                    <Typography
+                                                      variant="body2"
+                                                      fontWeight={500}
+                                                    >
+                                                      {batch.batchCode || "-"}
+                                                    </Typography>
+                                                  </TableCell>
+                                                  <TableCell align="right">
+                                                    {batch.reservedQuantity ??
+                                                      0}
+                                                  </TableCell>
+                                                  <TableCell align="right">
+                                                    {fmtDateShort(
+                                                      batch.expiryDate,
+                                                    )}
+                                                  </TableCell>
+                                                </TableRow>
+                                              ),
+                                            )}
+                                          </TableBody>
+                                        </Table>
+                                      </Box>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </Fragment>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </TableContainer>
