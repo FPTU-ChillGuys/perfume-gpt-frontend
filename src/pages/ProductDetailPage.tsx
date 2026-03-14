@@ -200,12 +200,28 @@ const ProductDetailPage = () => {
     };
   }, [productId]);
 
+  const fastLookDisplayNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    (fastLook?.variants || []).forEach((variant) => {
+      if (variant.id && variant.displayName) {
+        map.set(variant.id, variant.displayName);
+      }
+    });
+    return map;
+  }, [fastLook]);
+
   const displayVariants = useMemo(() => {
     if (productDetail?.variants?.length) {
       return productDetail.variants.map((variant) => ({
         id: variant.id || "",
         displayName:
-          (variant.volumeMl ? `${variant.volumeMl} ml` : "") ||
+          (variant.id ? fastLookDisplayNameById.get(variant.id) : undefined) ||
+          [
+            variant.concentrationName,
+            variant.volumeMl ? `${variant.volumeMl} ml` : null,
+          ]
+            .filter(Boolean)
+            .join(" - ") ||
           variant.sku ||
           "Size",
         price: variant.basePrice,
@@ -225,7 +241,7 @@ const ProductDetailPage = () => {
       mediaList: variant.media ? [variant.media] : [],
       sku: null,
     }));
-  }, [productDetail, fastLook]);
+  }, [productDetail, fastLook, fastLookDisplayNameById]);
 
   useEffect(() => {
     if (!selectedVariantId) {
@@ -1022,6 +1038,7 @@ const ProductDetailPage = () => {
                       borderRadius: "8px !important",
                       marginLeft: "0 !important",
                       width: "100%",
+                      minHeight: 40,
                     },
                     "& .MuiToggleButtonGroup-grouped.Mui-selected": {
                       borderColor: "primary.main !important",
@@ -1039,25 +1056,13 @@ const ProductDetailPage = () => {
                           textTransform: "none",
                           display: "flex",
                           alignItems: "center",
-                          justifyContent: "flex-start",
-                          gap: 0.75,
-                          px: 1,
-                          py: 0.5,
+                          justifyContent: "center",
+                          gap: 0.5,
+                          px: 0.5,
+                          py: 0.25,
                           position: "relative",
                           opacity: outOfStock ? 0.75 : 1,
                           minWidth: 0,
-                          "&::after": outOfStock
-                            ? {
-                                content: '""',
-                                position: "absolute",
-                                left: 10,
-                                right: 10,
-                                top: "50%",
-                                borderTop: "2px solid",
-                                borderColor: "error.main",
-                                transform: "translateY(-50%)",
-                              }
-                            : {},
                         }}
                       >
                         {variant.media?.url && (
@@ -1066,8 +1071,8 @@ const ProductDetailPage = () => {
                             src={variant.media.url}
                             alt={variant.displayName || ""}
                             sx={{
-                              width: 28,
-                              height: 28,
+                              width: 22,
+                              height: 22,
                               objectFit: "cover",
                               borderRadius: 0.5,
                               flexShrink: 0,
@@ -1079,8 +1084,15 @@ const ProductDetailPage = () => {
                           sx={{
                             fontWeight: 600,
                             whiteSpace: "nowrap",
-                            fontSize: "0.9rem",
-                            lineHeight: 1.2,
+                            fontSize: { xs: "0.72rem", sm: "0.78rem" },
+                            lineHeight: 1.1,
+                            textAlign: "center",
+                            textDecoration: outOfStock
+                              ? "line-through"
+                              : "none",
+                            textDecorationColor: outOfStock
+                              ? "error.main"
+                              : "inherit",
                           }}
                         >
                           {variant.displayName || "Size"}
@@ -1103,26 +1115,19 @@ const ProductDetailPage = () => {
                 </Typography>
               </Stack>
 
-              {selectedVariantStockQuantity !== null && (
-                <Typography
-                  variant="body2"
-                  color={
-                    isSelectedVariantOutOfStock ? "error.main" : "success.main"
-                  }
-                  fontWeight={600}
-                >
-                  {isSelectedVariantOutOfStock
-                    ? "Hết hàng"
-                    : `Còn ${selectedVariantStockQuantity} sản phẩm`}
-                </Typography>
-              )}
+              {selectedVariantStockQuantity !== null &&
+                (isSelectedVariantOutOfStock ? (
+                  <Typography variant="h4" color="error.main" fontWeight={700}>
+                    Hết hàng
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" color="success.main" fontWeight={600}>
+                    {`Còn ${selectedVariantStockQuantity} sản phẩm`}
+                  </Typography>
+                ))}
 
               {/* Action buttons */}
-              {isSelectedVariantOutOfStock ? (
-                <Typography variant="h6" color="error" fontWeight={700}>
-                  Hết hàng
-                </Typography>
-              ) : (
+              {!isSelectedVariantOutOfStock && (
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <Button
                     variant="outlined"

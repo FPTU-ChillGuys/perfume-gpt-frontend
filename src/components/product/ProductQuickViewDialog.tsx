@@ -320,18 +320,6 @@ const ProductQuickViewDialog = ({
                         fontSize: "0.8rem",
                         position: "relative",
                         opacity: outOfStock ? 0.75 : 1,
-                        "&::after": outOfStock
-                          ? {
-                              content: '""',
-                              position: "absolute",
-                              left: 10,
-                              right: 10,
-                              top: "50%",
-                              borderTop: "2px solid",
-                              borderColor: "error.main",
-                              transform: "translateY(-50%)",
-                            }
-                          : {},
                       }}
                     >
                       {variant.media?.url && (
@@ -348,7 +336,16 @@ const ProductQuickViewDialog = ({
                           }}
                         />
                       )}
-                      <Box component="span" sx={{ whiteSpace: "nowrap" }}>
+                      <Box
+                        component="span"
+                        sx={{
+                          whiteSpace: "nowrap",
+                          textDecoration: outOfStock ? "line-through" : "none",
+                          textDecorationColor: outOfStock
+                            ? "error.main"
+                            : "inherit",
+                        }}
+                      >
                         {variant.displayName || "Size"}
                       </Box>
                     </ToggleButton>
@@ -380,7 +377,7 @@ const ProductQuickViewDialog = ({
             </Stack>
 
             {isSelectedVariantOutOfStock ? (
-              <Typography variant="h6" color="error" fontWeight={700} mt={3}>
+              <Typography variant="h4" color="error" fontWeight={700} mt={3}>
                 Hết hàng
               </Typography>
             ) : (
