@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { reviewService } from "@/services/ai/reviewService";
+import { productActivityLogService } from "@/services/ai/productActivityLogService";
 import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
@@ -394,6 +395,11 @@ const ProductDetailPage = () => {
 
   const handleVariantChange = (_: unknown, value: string | null) => {
     if (value) {
+      productActivityLogService
+        .logProductView(productId, value)
+        .catch((error) => {
+          console.error("Failed to log variant click", error);
+        });
       setSelectedVariantId(value);
     }
   };

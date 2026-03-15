@@ -18,6 +18,7 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import { productService } from "../../services/productService";
+import { productActivityLogService } from "@/services/ai/productActivityLogService";
 import type { ProductListItemWithVariants } from "../../types/product";
 
 export const HeaderSearch = () => {
@@ -70,13 +71,21 @@ export const HeaderSearch = () => {
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" && searchTerm.trim()) {
+            void productActivityLogService.logSearch(searchTerm).catch((error) => {
+                console.error("Failed to log search text", error);
+            });
             setShowDropdown(false);
             navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
         }
     };
 
-    const handleSuggestionClick = (productId?: string) => {
+    const handleSuggestionClick = (product?: ProductListItemWithVariants) => {
+        const productId = product?.id;
         if (productId) {
+            const variantId = product?.variants?.[0]?.id ?? null;
+            void productActivityLogService.logProductView(productId, variantId).catch((error) => {
+                console.error("Failed to log product click from search", error);
+            });
             setShowDropdown(false);
             navigate(`/products/${productId}`);
         }
@@ -163,7 +172,7 @@ export const HeaderSearch = () => {
                                     return (
                                         <ListItem
                                             key={product.id}
-                                            onClick={() => handleSuggestionClick(product.id)}
+                                            onClick={() => handleSuggestionClick(product)}
                                             sx={{
                                                 cursor: "pointer",
                                                 "&:hover": {
@@ -218,6 +227,9 @@ export const HeaderSearch = () => {
                         <Divider />
                         <Box
                             onClick={() => {
+                                void productActivityLogService.logSearch(searchTerm).catch((error) => {
+                                    console.error("Failed to log search text", error);
+                                });
                                 setShowDropdown(false);
                                 navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
                             }}

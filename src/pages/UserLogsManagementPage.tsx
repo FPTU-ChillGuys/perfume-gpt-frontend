@@ -21,6 +21,7 @@ import { LogDetailModal } from "@/components/log/LogDetailModal";
 import { logService } from "@/services/ai/logService";
 import { useToast } from "@/hooks/useToast";
 import type { UserLog } from "@/types/log";
+import { getUserLogEventTypeLabel } from "@/utils/userLogLabels";
 
 const formatDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
@@ -88,13 +89,6 @@ export const UserLogsManagementPage = () => {
 
     const handleViewDetail = (log: UserLog) => {
         setSelectedLog(log);
-    };
-
-    const getEventTypeLabel = (eventType?: UserLog["eventType"]) => {
-        if (eventType === "message") return "Tin nhan";
-        if (eventType === "search") return "Tim kiem";
-        if (eventType === "quiz") return "Quiz";
-        return "N/A";
     };
 
     const handleCloseDetail = () => {
@@ -262,7 +256,7 @@ export const UserLogsManagementPage = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell align="center">
-                                            {getEventTypeLabel(log.eventType)}
+                                            {getUserLogEventTypeLabel(log.eventType)}
                                         </TableCell>
                                         <TableCell align="center">
                                             {log.entityType || "N/A"}

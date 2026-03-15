@@ -52,8 +52,8 @@ export interface UserLog {
     isDeleted?: boolean;
     isActive?: boolean;
     userId?: string | null;
-    eventType?: "message" | "search" | "quiz";
-    entityType?: "conversation" | "search" | "quiz";
+    eventType?: "message" | "search" | "quiz" | "product" | null;
+    entityType?: "conversation" | "search" | "quiz" | "product" | null;
     entityId?: string | null;
     contentText?: string | null;
     metadata?: Record<string, any> | null;

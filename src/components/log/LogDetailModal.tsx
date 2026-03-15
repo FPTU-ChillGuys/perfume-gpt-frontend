@@ -9,6 +9,7 @@ import {
     Divider,
 } from "@mui/material";
 import type { UserLog } from "@/types/log";
+import { getUserLogEventTypeLabel } from "@/utils/userLogLabels";
 
 interface LogDetailModalProps {
     open: boolean;
@@ -23,15 +24,7 @@ const formatDate = (dateStr?: string) => {
 
 export const LogDetailModal = ({ open, onClose, selectedLog }: LogDetailModalProps) => {
     if (!selectedLog) return null;
-
-    const eventTypeLabel =
-        selectedLog.eventType === "message"
-            ? "Tin nhan"
-            : selectedLog.eventType === "search"
-              ? "Tim kiem"
-              : selectedLog.eventType === "quiz"
-                ? "Quiz"
-                : "N/A";
+        const eventTypeLabel = getUserLogEventTypeLabel(selectedLog.eventType);
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>

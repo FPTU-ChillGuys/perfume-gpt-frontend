@@ -16,6 +16,7 @@ import {
 } from "../utils/productCardMapper";
 import { dexieCache } from "../utils/dexieCache";
 import { CACHE_KEYS, CACHE_TTL } from "../constants/cache";
+import { productActivityLogService } from "@/services/ai/productActivityLogService";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 36];
 
@@ -329,6 +330,9 @@ export const ProductListPage = () => {
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
                       if (searchTerm.trim()) {
+                        productActivityLogService.logSearch(searchTerm).catch((error) => {
+                          console.error("Failed to log search text", error);
+                        });
                         setSearchParams({ search: searchTerm.trim() });
                       } else {
                         searchParams.delete("search");
