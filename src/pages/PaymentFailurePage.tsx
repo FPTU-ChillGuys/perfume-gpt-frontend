@@ -96,7 +96,7 @@ export const PaymentFailurePage = () => {
     }, 500);
   }, []);
 
-  const orderId = searchParams.get("vnp_TxnRef") || searchParams.get("orderId");
+  const orderId = searchParams.get("orderId") || searchParams.get("orderId");
   const paymentId = searchParams.get("paymentId"); // Get paymentId from URL params
   const amount = searchParams.get("vnp_Amount");
   const bankCode = searchParams.get("vnp_BankCode");
