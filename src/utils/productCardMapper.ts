@@ -110,6 +110,8 @@ export const normalizeTrendProducts = (products: ProductListItem[]): ProductCard
         typeof product.primaryImage === "string"
           ? product.primaryImage
           : mapped.imageUrl;
-      return { ...mapped, imageUrl, isTrending: true };
+      const numberOfVariants =
+        product.variants?.length ?? product.numberOfVariants ?? 0;
+      return { ...mapped, imageUrl, numberOfVariants, isTrending: true };
     });
 
