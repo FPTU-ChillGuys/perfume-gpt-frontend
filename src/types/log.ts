@@ -49,8 +49,14 @@ export interface UserLog {
     id: string;
     createdAt: string;
     updatedAt: string;
-    isDeleted: boolean;
+    isDeleted?: boolean;
+    isActive?: boolean;
     userId?: string | null;
+    eventType?: "message" | "search" | "quiz";
+    entityType?: "conversation" | "search" | "quiz";
+    entityId?: string | null;
+    contentText?: string | null;
+    metadata?: Record<string, any> | null;
     userMessageLogs?: UserMessageLog[];
     userQuizLogs?: UserQuizLog[];
     userSearchLogs?: UserSearchLog[];

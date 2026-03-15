@@ -23,7 +23,7 @@ export const useAdminTrend = () => {
 
             setError(null);
 
-            let products = await trendService.getCurrentOrPreviousWeeklyTrend(forceRefresh);
+            const products = await trendService.getCurrentOrPreviousWeeklyTrend(forceRefresh);
 
             if (products === null) {
                 setIsPolling(true);

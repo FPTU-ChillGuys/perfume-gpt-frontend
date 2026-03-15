@@ -90,6 +90,13 @@ export const UserLogsManagementPage = () => {
         setSelectedLog(log);
     };
 
+    const getEventTypeLabel = (eventType?: UserLog["eventType"]) => {
+        if (eventType === "message") return "Tin nhan";
+        if (eventType === "search") return "Tim kiem";
+        if (eventType === "quiz") return "Quiz";
+        return "N/A";
+    };
+
     const handleCloseDetail = () => {
         setSelectedLog(null);
     };
@@ -99,10 +106,15 @@ export const UserLogsManagementPage = () => {
         return logs.filter((log) => {
             let matchesSearch = true;
             if (searchTerm) {
-                // We only really have userId to search by since they are logs
+                // Support searching by ids, event type, content, and metadata payload.
                 const idMatches = log.userId?.toLowerCase().includes(searchTerm.toLowerCase());
                 const logIdMatches = log.id?.toLowerCase().includes(searchTerm.toLowerCase());
-                matchesSearch = !!(idMatches || logIdMatches);
+                const eventTypeMatches = log.eventType?.toLowerCase().includes(searchTerm.toLowerCase());
+                const contentMatches = log.contentText?.toLowerCase().includes(searchTerm.toLowerCase());
+                const metadataMatches = JSON.stringify(log.metadata || {})
+                    .toLowerCase()
+                    .includes(searchTerm.toLowerCase());
+                matchesSearch = !!(idMatches || logIdMatches || eventTypeMatches || contentMatches || metadataMatches);
             }
 
             let matchesFromDate = true;
@@ -213,9 +225,9 @@ export const UserLogsManagementPage = () => {
                             <TableRow sx={{ bgcolor: "grey.50" }}>
                                 <TableCell>Log ID</TableCell>
                                 <TableCell>User ID</TableCell>
-                                <TableCell align="center">Message Logs</TableCell>
-                                <TableCell align="center">Quiz Logs</TableCell>
-                                <TableCell align="center">Search Logs</TableCell>
+                                <TableCell align="center">Loai su kien</TableCell>
+                                <TableCell align="center">Entity</TableCell>
+                                <TableCell>Noi dung</TableCell>
                                 <TableCell>Ngày tạo log</TableCell>
                                 <TableCell>Cập nhật cuối</TableCell>
                                 <TableCell align="center">Thao tác</TableCell>
@@ -250,13 +262,15 @@ export const UserLogsManagementPage = () => {
                                             </Typography>
                                         </TableCell>
                                         <TableCell align="center">
-                                            {log.userMessageLogs?.length || 0}
+                                            {getEventTypeLabel(log.eventType)}
                                         </TableCell>
                                         <TableCell align="center">
-                                            {log.userQuizLogs?.length || 0}
+                                            {log.entityType || "N/A"}
                                         </TableCell>
-                                        <TableCell align="center">
-                                            {log.userSearchLogs?.length || 0}
+                                        <TableCell>
+                                            <Typography variant="body2" noWrap>
+                                                {log.contentText || "-"}
+                                            </Typography>
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" noWrap>

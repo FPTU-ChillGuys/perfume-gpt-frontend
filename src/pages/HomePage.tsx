@@ -96,7 +96,7 @@ export const HomePage = () => {
     const fetchTrending = async () => {
       setIsTrendingLoading(true);
       try {
-        let products = await trendService.getCurrentOrPreviousWeeklyTrend(false);
+        const products = await trendService.getCurrentOrPreviousWeeklyTrend(false);
 
         if (!isMounted) return;
 
