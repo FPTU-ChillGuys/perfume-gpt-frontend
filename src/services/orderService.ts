@@ -95,11 +95,30 @@ class OrderService {
         throw new Error(response.data?.message || "Checkout failed");
       }
 
-      // If payment is VnPay or Momo, response.data.payload will be the payment URL
-      // If payment is CashOnDelivery or CashInStore, payload might be orderId
+      const payload = response.data.payload as
+        | string
+        | { url?: string; orderId?: string }
+        | null
+        | undefined;
+
+      if (typeof payload === "string") {
+        const isRedirectUrl = /^https?:\/\//i.test(payload);
+        return {
+          url: isRedirectUrl ? payload : undefined,
+          orderId: isRedirectUrl ? undefined : payload,
+        };
+      }
+
+      if (payload && typeof payload === "object") {
+        return {
+          url: payload.url,
+          orderId: payload.orderId,
+        };
+      }
+
       return {
-        url: response.data.payload ?? undefined,
-        orderId: response.data.payload ?? undefined,
+        url: undefined,
+        orderId: undefined,
       };
     } catch (error: any) {
       console.error("Error during checkout:", error);

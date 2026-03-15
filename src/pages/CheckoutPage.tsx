@@ -532,8 +532,12 @@ export const CheckoutPage = () => {
           showToast("Không thể chuyển đến trang thanh toán", "error");
         }
       } else {
-        showToast("Đặt hàng thành công!", "success");
-        navigate("/");
+        const successParams = new URLSearchParams();
+        if (response.orderId) {
+          successParams.set("orderId", response.orderId);
+        }
+        successParams.set("source", "checkout");
+        navigate(`/payment/success?${successParams.toString()}`);
       }
     } catch (error) {
       showToast(

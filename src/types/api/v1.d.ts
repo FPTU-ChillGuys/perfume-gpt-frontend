@@ -2060,7 +2060,9 @@ export interface paths {
     };
     get: {
       parameters: {
-        query?: never;
+        query?: {
+          itemIds?: string[];
+        };
         header?: never;
         path?: never;
         cookie?: never;
@@ -2121,6 +2123,7 @@ export interface paths {
       parameters: {
         query?: {
           VoucherCode?: string;
+          ItemIds?: string[];
           SavedAddressId?: string;
           "Recipient.FullName"?: string;
           "Recipient.Phone"?: string;
@@ -8800,6 +8803,60 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/vouchers/available": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: {
+      parameters: {
+        query?: {
+          PageNumber?: number;
+          PageSize?: number;
+          SortBy?: string;
+          SortOrder?: string;
+          IsDescending?: boolean;
+        };
+        header?: never;
+        path?: never;
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
+            "application/json": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
+            "text/json": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            "text/plain": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
+            "application/json": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
+            "text/json": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
+          };
+        };
+      };
+    };
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/vouchers/my-vouchers": {
     parameters: {
       query?: never;
@@ -8893,6 +8950,20 @@ export interface components {
       /** Format: int32 */
       id?: number;
       value?: string;
+    };
+    AvailableVoucherResponse: {
+      /** Format: uuid */
+      id?: string;
+      code?: string;
+      /** Format: decimal */
+      discountValue?: number;
+      discountType?: components["schemas"]["DiscountType"];
+      /** Format: decimal */
+      minOrderValue?: number;
+      /** Format: date-time */
+      expiryDate?: string;
+      /** Format: int32 */
+      remainingQuantity?: number;
     };
     BaseResponse: {
       success?: boolean;
@@ -9163,6 +9234,15 @@ export interface components {
     };
     BaseResponseOfOrderResponse: {
       payload?: null | components["schemas"]["OrderResponse"];
+      success?: boolean;
+      message?: string;
+      errors?: null | string[];
+      errorType?: components["schemas"]["ResponseErrorType"];
+    };
+    BaseResponseOfPagedResultOfAvailableVoucherResponse: {
+      payload?:
+        | null
+        | components["schemas"]["PagedResultOfAvailableVoucherResponse"];
       success?: boolean;
       message?: string;
       errors?: null | string[];
@@ -9608,6 +9688,7 @@ export interface components {
     };
     CreateOrderRequest: {
       voucherCode?: null | string;
+      itemIds?: string[];
       deliveryMethod?: components["schemas"]["DeliveryMethod"];
       guestEmail?: null | string;
       /** Format: uuid */
@@ -9751,6 +9832,7 @@ export interface components {
       variantPrice?: number;
       /** Format: int32 */
       quantity?: number;
+      isAvailable?: boolean;
       /** Format: decimal */
       subTotal?: number;
     };
@@ -9957,6 +10039,19 @@ export interface components {
       | "Returned";
     /** @enum {string} */
     OrderType: "Online" | "Offline" | "Shoppe";
+    PagedResultOfAvailableVoucherResponse: {
+      items: components["schemas"]["AvailableVoucherResponse"][];
+      /** Format: int32 */
+      pageNumber: number;
+      /** Format: int32 */
+      pageSize: number;
+      /** Format: int32 */
+      totalCount: number;
+      /** Format: int32 */
+      totalPages?: number;
+      hasPreviousPage?: boolean;
+      hasNextPage?: boolean;
+    };
     PagedResultOfBatchDetailResponse: {
       items: components["schemas"]["BatchDetailResponse"][];
       /** Format: int32 */

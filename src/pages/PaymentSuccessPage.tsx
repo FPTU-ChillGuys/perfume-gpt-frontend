@@ -8,6 +8,8 @@ import {
   Paper,
   Divider,
   CircularProgress,
+  Stack,
+  Chip,
 } from "@mui/material";
 import { CheckCircle } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -44,7 +46,9 @@ export const PaymentSuccessPage = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const orderId = searchParams.get("vnp_TxnRef") || searchParams.get("orderId");
+  const orderId = searchParams.get("orderId") || searchParams.get("orderId");
+  const source = searchParams.get("source");
+  const isCheckoutSuccess = source === "checkout";
   const amount = searchParams.get("vnp_Amount");
   const bankCode = searchParams.get("vnp_BankCode");
   const cardType = searchParams.get("vnp_CardType");
@@ -55,12 +59,12 @@ export const PaymentSuccessPage = () => {
   if (isLoading) {
     return (
       <MainLayout>
-        <Container maxWidth="md" sx={{ py: 8 }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
           <Box
             display="flex"
             justifyContent="center"
             alignItems="center"
-            minHeight="50vh"
+            minHeight="60vh"
           >
             <CircularProgress />
           </Box>
@@ -71,64 +75,114 @@ export const PaymentSuccessPage = () => {
 
   return (
     <MainLayout>
-      <Container maxWidth="md" sx={{ py: 8 }}>
+      <Container
+        maxWidth="lg"
+        sx={{
+          py: { xs: 2, md: 3 },
+          minHeight: { md: "calc(100vh - 104px)" },
+          display: "flex",
+          alignItems: { md: "flex-start" },
+          justifyContent: "center",
+        }}
+      >
         <Paper
           sx={{
-            p: 4,
-            textAlign: "center",
+            p: { xs: 2, sm: 3 },
+            textAlign: "left",
             boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+            width: "100%",
+            maxWidth: 760,
           }}
         >
-          {/* Success Icon */}
-          <Box
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 80,
-              height: 80,
-              borderRadius: "50%",
-              bgcolor: "success.main",
-              mb: 3,
-            }}
-          >
-            <CheckCircle sx={{ fontSize: 50, color: "white" }} />
-          </Box>
+          <Stack spacing={2} alignItems="stretch">
+            <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  bgcolor: "success.main",
+                  flexShrink: 0,
+                  position: "relative",
+                  animation: "successPop 520ms ease-out",
+                  "@keyframes successPop": {
+                    "0%": {
+                      transform: "scale(0.5)",
+                      opacity: 0,
+                    },
+                    "65%": {
+                      transform: "scale(1.08)",
+                      opacity: 1,
+                    },
+                    "100%": {
+                      transform: "scale(1)",
+                    },
+                  },
+                  "&::after": {
+                    content: '""',
+                    position: "absolute",
+                    inset: -6,
+                    borderRadius: "50%",
+                    border: "2px solid",
+                    borderColor: "success.light",
+                    opacity: 0,
+                    animation: "successPulse 900ms ease-out 220ms",
+                  },
+                  "@keyframes successPulse": {
+                    "0%": {
+                      transform: "scale(0.75)",
+                      opacity: 0.6,
+                    },
+                    "100%": {
+                      transform: "scale(1.35)",
+                      opacity: 0,
+                    },
+                  },
+                }}
+              >
+                <CheckCircle sx={{ fontSize: 32, color: "white" }} />
+              </Box>
+              <Box>
+                <Typography variant="h5" fontWeight={700} color="success.main">
+                  {isCheckoutSuccess
+                    ? "Đặt hàng thành công"
+                    : "Thanh toán thành công"}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Đơn hàng đã được ghi nhận và đang được xử lý.
+                </Typography>
+              </Box>
+            </Box>
 
-          {/* Success Message */}
-          <Typography variant="h4" fontWeight={700} color="success.main" mb={1}>
-            Thanh toán thành công!
-          </Typography>
-          <Typography variant="body1" color="text.secondary" mb={4}>
-            Cảm ơn bạn đã đặt hàng. Đơn hàng của bạn đã được xử lý thành công.
-          </Typography>
+            <Divider sx={{ mb: 2 }} />
 
-          <Divider sx={{ my: 3 }} />
-
-          {/* Payment Details */}
-          <Box sx={{ textAlign: "left", maxWidth: 500, mx: "auto" }}>
-            <Typography variant="h6" fontWeight={600} mb={2}>
-              Thông tin thanh toán
+            <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+              {isCheckoutSuccess
+                ? "Thông tin đơn hàng"
+                : "Thông tin thanh toán"}
             </Typography>
 
             {orderId && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
+              <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography color="text.secondary">Mã đơn hàng:</Typography>
                 <Typography fontWeight={600}>{orderId}</Typography>
               </Box>
             )}
 
             {amount && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
+              <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography color="text.secondary">Số tiền:</Typography>
-                <Typography fontWeight={600} color="error">
+                <Typography fontWeight={700} color="error">
                   {formatCurrency(amount)}
                 </Typography>
               </Box>
             )}
 
             {payDate && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
+              <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography color="text.secondary">Thời gian:</Typography>
                 <Typography fontWeight={600}>
                   {formatDateTime(payDate)}
@@ -137,28 +191,28 @@ export const PaymentSuccessPage = () => {
             )}
 
             {bankCode && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
+              <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography color="text.secondary">Ngân hàng:</Typography>
                 <Typography fontWeight={600}>{bankCode}</Typography>
               </Box>
             )}
 
             {cardType && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
+              <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography color="text.secondary">Loại thẻ:</Typography>
                 <Typography fontWeight={600}>{cardType}</Typography>
               </Box>
             )}
 
             {transactionNo && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
+              <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography color="text.secondary">Mã giao dịch:</Typography>
                 <Typography fontWeight={600}>{transactionNo}</Typography>
               </Box>
             )}
 
             {orderInfo && (
-              <Box display="flex" mb={1.5} gap={2}>
+              <Box display="flex" mb={1} gap={1.5}>
                 <Typography
                   color="text.secondary"
                   sx={{
@@ -175,46 +229,58 @@ export const PaymentSuccessPage = () => {
                     whiteSpace: "normal",
                     textAlign: "right",
                     flex: 1,
+                    fontSize: 14,
                   }}
                 >
                   {decodeURIComponent(orderInfo)}
                 </Typography>
               </Box>
             )}
-          </Box>
 
-          <Divider sx={{ my: 3 }} />
-
-          {/* Action Buttons */}
-          <Box display="flex" gap={2} justifyContent="center" flexWrap="wrap">
-            <Button
-              variant="contained"
-              color="error"
-              size="large"
-              onClick={() => navigate("/")}
-              sx={{ minWidth: 180 }}
+            <Box
+              sx={{
+                p: 2,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 2,
+                bgcolor: "grey.50",
+                mb: 2,
+              }}
             >
-              Về trang chủ
-            </Button>
-            <Button
-              variant="outlined"
-              color="primary"
-              size="large"
-              onClick={() => navigate("/profile")}
-              sx={{ minWidth: 180 }}
-            >
-              Xem đơn hàng
-            </Button>
-          </Box>
+              <Typography variant="subtitle2" fontWeight={700} mb={0.75}>
+                Xác nhận thành công
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Vui lòng theo dõi trạng thái đơn hàng tại trang đơn mua để cập
+                nhật tiến trình giao hàng.
+              </Typography>
+            </Box>
 
-          {/* Additional Info */}
-          <Box mt={4} p={2} bgcolor="grey.50" borderRadius={1}>
-            <Typography variant="body2" color="text.secondary">
-              Chúng tôi đã gửi email xác nhận đến địa chỉ email của bạn.
-              <br />
-              Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi.
-            </Typography>
-          </Box>
+            <Stack spacing={1.25}>
+              <Button
+                variant="contained"
+                color="error"
+                size="large"
+                onClick={() => navigate("/")}
+                fullWidth
+                sx={{ minHeight: 44 }}
+              >
+                Tiếp tục mua sắm
+              </Button>
+              <Button
+                variant="outlined"
+                color="primary"
+                size="large"
+                onClick={() =>
+                  navigate(orderId ? `/my-orders/${orderId}` : "/my-orders")
+                }
+                fullWidth
+                sx={{ minHeight: 44 }}
+              >
+                Xem chi tiết đơn hàng
+              </Button>
+            </Stack>
+          </Stack>
         </Paper>
       </Container>
     </MainLayout>
