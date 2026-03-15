@@ -14,6 +14,8 @@ import {
   Radio,
   FormControl,
   FormLabel,
+  Stack,
+  Chip,
 } from "@mui/material";
 import { Cancel } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -131,7 +133,10 @@ export const PaymentFailurePage = () => {
       }
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : "Không thể thử lại thanh toán",
+        error instanceof Error
+          ? "Đơn hàng đã hết hạn chờ thanh toán hoặc đã được xử lí thanh toán. Vui lòng đặt hàng mới."
+          : (error as { message?: string }).message ||
+              "Đơn hàng đã hết hạn chờ thanh toán hoặc đã được xử lí thanh toán. Vui lòng đặt hàng mới.",
         "error",
       );
     } finally {
@@ -142,12 +147,12 @@ export const PaymentFailurePage = () => {
   if (isLoading) {
     return (
       <MainLayout>
-        <Container maxWidth="md" sx={{ py: 8 }}>
+        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
           <Box
             display="flex"
             justifyContent="center"
             alignItems="center"
-            minHeight="50vh"
+            minHeight="60vh"
           >
             <CircularProgress />
           </Box>
@@ -158,223 +163,250 @@ export const PaymentFailurePage = () => {
 
   return (
     <MainLayout>
-      <Container maxWidth="md" sx={{ py: 8 }}>
+      <Container
+        maxWidth="lg"
+        sx={{
+          py: { xs: 2, md: 3 },
+          minHeight: { md: "calc(100vh - 112px)" },
+          display: "flex",
+          alignItems: { md: "center" },
+        }}
+      >
         <Paper
           sx={{
-            p: 4,
-            textAlign: "center",
+            p: { xs: 2, sm: 3 },
+            textAlign: "left",
             boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+            width: "100%",
           }}
         >
-          {/* Error Icon */}
-          <Box
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 80,
-              height: 80,
-              borderRadius: "50%",
-              bgcolor: "error.main",
-              mb: 3,
-            }}
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={{ xs: 2, md: 3 }}
+            alignItems={{ xs: "stretch", md: "flex-start" }}
           >
-            <Cancel sx={{ fontSize: 50, color: "white" }} />
-          </Box>
-
-          {/* Error Message */}
-          <Typography variant="h4" fontWeight={700} color="error.main" mb={1}>
-            Thanh toán thất bại
-          </Typography>
-          <Typography variant="body1" color="text.secondary" mb={2}>
-            {errorMessage}
-          </Typography>
-
-          {/* Error Alert */}
-          <Alert severity="error" sx={{ mb: 4, textAlign: "left" }}>
-            <Typography variant="body2" fontWeight={500}>
-              Mã lỗi: {responseCode || "Không xác định"}
-            </Typography>
-            <Typography variant="body2" mt={1}>
-              Đơn hàng của bạn chưa được thanh toán. Vui lòng thử lại hoặc chọn
-              phương thức thanh toán khác.
-            </Typography>
-          </Alert>
-
-          <Divider sx={{ my: 3 }} />
-
-          {/* Payment Details */}
-          <Box sx={{ textAlign: "left", maxWidth: 500, mx: "auto" }}>
-            <Typography variant="h6" fontWeight={600} mb={2}>
-              Thông tin giao dịch
-            </Typography>
-
-            {orderId && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
-                <Typography color="text.secondary">Mã đơn hàng:</Typography>
-                <Typography fontWeight={600}>{orderId}</Typography>
-              </Box>
-            )}
-
-            {amount && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
-                <Typography color="text.secondary">Số tiền:</Typography>
-                <Typography fontWeight={600} color="error">
-                  {formatCurrency(amount)}
-                </Typography>
-              </Box>
-            )}
-
-            {payDate && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
-                <Typography color="text.secondary">Thời gian:</Typography>
-                <Typography fontWeight={600}>
-                  {formatDateTime(payDate)}
-                </Typography>
-              </Box>
-            )}
-
-            {bankCode && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
-                <Typography color="text.secondary">Ngân hàng:</Typography>
-                <Typography fontWeight={600}>{bankCode}</Typography>
-              </Box>
-            )}
-
-            {transactionNo && (
-              <Box display="flex" justifyContent="space-between" mb={1.5}>
-                <Typography color="text.secondary">Mã giao dịch:</Typography>
-                <Typography fontWeight={600}>{transactionNo}</Typography>
-              </Box>
-            )}
-
-            {orderInfo && (
-              <Box display="flex" mb={1.5} gap={2}>
-                <Typography
-                  color="text.secondary"
+            <Box sx={{ flex: 1.05 }}>
+              <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
+                <Box
                   sx={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    bgcolor: "error.main",
                     flexShrink: 0,
-                    whiteSpace: "nowrap",
                   }}
                 >
-                  Nội dung:
+                  <Cancel sx={{ fontSize: 32, color: "white" }} />
+                </Box>
+                <Box>
+                  <Typography variant="h5" fontWeight={700} color="error.main">
+                    Thanh toán thất bại
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {errorMessage}
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Chip
+                size="small"
+                color="error"
+                variant="outlined"
+                label={`Mã lỗi: ${responseCode || "Không xác định"}`}
+                sx={{ mb: 1.5 }}
+              />
+
+              <Alert severity="error" sx={{ mb: 2, textAlign: "left" }}>
+                <Typography variant="body2">
+                  Đơn hàng chưa được thanh toán. Vui lòng thử lại hoặc đổi
+                  phương thức thanh toán.
                 </Typography>
-                <Typography
-                  fontWeight={600}
+              </Alert>
+
+              <Divider sx={{ mb: 2 }} />
+
+              <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+                Thông tin giao dịch
+              </Typography>
+
+              {orderId && (
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography color="text.secondary">Mã đơn hàng:</Typography>
+                  <Typography fontWeight={600}>{orderId}</Typography>
+                </Box>
+              )}
+
+              {amount && (
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography color="text.secondary">Số tiền:</Typography>
+                  <Typography fontWeight={700} color="error">
+                    {formatCurrency(amount)}
+                  </Typography>
+                </Box>
+              )}
+
+              {payDate && (
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography color="text.secondary">Thời gian:</Typography>
+                  <Typography fontWeight={600}>
+                    {formatDateTime(payDate)}
+                  </Typography>
+                </Box>
+              )}
+
+              {bankCode && (
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography color="text.secondary">Ngân hàng:</Typography>
+                  <Typography fontWeight={600}>{bankCode}</Typography>
+                </Box>
+              )}
+
+              {transactionNo && (
+                <Box display="flex" justifyContent="space-between" mb={1}>
+                  <Typography color="text.secondary">Mã giao dịch:</Typography>
+                  <Typography fontWeight={600}>{transactionNo}</Typography>
+                </Box>
+              )}
+
+              {orderInfo && (
+                <Box display="flex" mb={1} gap={1.5}>
+                  <Typography
+                    color="text.secondary"
+                    sx={{
+                      flexShrink: 0,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Nội dung:
+                  </Typography>
+                  <Typography
+                    fontWeight={600}
+                    sx={{
+                      wordBreak: "break-word",
+                      whiteSpace: "normal",
+                      textAlign: "right",
+                      flex: 1,
+                      fontSize: 14,
+                    }}
+                  >
+                    {decodeURIComponent(orderInfo)}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            <Box sx={{ flex: 0.95 }}>
+              {paymentId && (
+                <Box
                   sx={{
-                    wordBreak: "break-word",
-                    whiteSpace: "normal",
-                    textAlign: "right",
-                    flex: 1,
+                    p: 2,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    mb: 2,
                   }}
                 >
-                  {decodeURIComponent(orderInfo)}
+                  <FormControl component="fieldset" fullWidth>
+                    <FormLabel
+                      component="legend"
+                      sx={{ mb: 1, fontWeight: 700 }}
+                    >
+                      Chọn phương thức thanh toán mới
+                    </FormLabel>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onChange={(e) =>
+                        setPaymentMethod(e.target.value as PaymentMethod)
+                      }
+                    >
+                      {PAYMENT_METHODS.map((method) => (
+                        <FormControlLabel
+                          key={method.value}
+                          value={method.value}
+                          control={<Radio size="small" />}
+                          label={
+                            <Box>
+                              <Typography variant="body2" fontWeight={600}>
+                                {method.label}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {method.description}
+                              </Typography>
+                            </Box>
+                          }
+                          sx={{
+                            mb: 0.75,
+                            border: 1,
+                            borderColor: "divider",
+                            borderRadius: 1,
+                            px: 1.25,
+                            py: 0.25,
+                            mx: 0,
+                            "&:hover": {
+                              bgcolor: "action.hover",
+                            },
+                          }}
+                        />
+                      ))}
+                    </RadioGroup>
+                  </FormControl>
+                </Box>
+              )}
+
+              <Stack spacing={1.25}>
+                {paymentId ? (
+                  <Button
+                    variant="contained"
+                    color="error"
+                    size="large"
+                    onClick={handleRetryPayment}
+                    disabled={isRetrying}
+                    sx={{ minHeight: 44 }}
+                  >
+                    {isRetrying ? <CircularProgress size={24} /> : "Thử lại"}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="contained"
+                    color="error"
+                    size="large"
+                    onClick={() => navigate("/checkout")}
+                    sx={{ minHeight: 44 }}
+                  >
+                    Về trang thanh toán
+                  </Button>
+                )}
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size="large"
+                  onClick={() => navigate("/")}
+                  sx={{ minHeight: 44 }}
+                >
+                  Về trang chủ
+                </Button>
+              </Stack>
+
+              <Box mt={2} p={1.5} bgcolor="grey.50" borderRadius={1.5}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  fontWeight={600}
+                >
+                  Cần hỗ trợ?
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Liên hệ hotline hoặc email để được hỗ trợ thanh toán nhanh.
                 </Typography>
               </Box>
-            )}
-          </Box>
-
-          <Divider sx={{ my: 3 }} />
-
-          {/* Payment Method Selection */}
-          {paymentId && (
-            <Box sx={{ textAlign: "left", maxWidth: 500, mx: "auto", mb: 3 }}>
-              <FormControl component="fieldset" fullWidth>
-                <FormLabel component="legend" sx={{ mb: 2, fontWeight: 600 }}>
-                  Chọn phương thức thanh toán mới
-                </FormLabel>
-                <RadioGroup
-                  value={paymentMethod}
-                  onChange={(e) =>
-                    setPaymentMethod(e.target.value as PaymentMethod)
-                  }
-                >
-                  {PAYMENT_METHODS.map((method) => (
-                    <FormControlLabel
-                      key={method.value}
-                      value={method.value}
-                      control={<Radio />}
-                      label={
-                        <Box>
-                          <Typography variant="body1" fontWeight={500}>
-                            {method.label}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {method.description}
-                          </Typography>
-                        </Box>
-                      }
-                      sx={{
-                        mb: 1,
-                        border: 1,
-                        borderColor: "divider",
-                        borderRadius: 1,
-                        px: 2,
-                        py: 1,
-                        mx: 0,
-                        "&:hover": {
-                          bgcolor: "action.hover",
-                        },
-                      }}
-                    />
-                  ))}
-                </RadioGroup>
-              </FormControl>
             </Box>
-          )}
-
-          <Divider sx={{ my: 3 }} />
-
-          {/* Action Buttons */}
-          <Box display="flex" gap={2} justifyContent="center" flexWrap="wrap">
-            {paymentId ? (
-              <Button
-                variant="contained"
-                color="error"
-                size="large"
-                onClick={handleRetryPayment}
-                disabled={isRetrying}
-                sx={{ minWidth: 180 }}
-              >
-                {isRetrying ? <CircularProgress size={24} /> : "Thử lại"}
-              </Button>
-            ) : (
-              <Button
-                variant="contained"
-                color="error"
-                size="large"
-                onClick={() => navigate("/checkout")}
-                sx={{ minWidth: 180 }}
-              >
-                Về trang thanh toán
-              </Button>
-            )}
-            <Button
-              variant="outlined"
-              color="primary"
-              size="large"
-              onClick={() => navigate("/")}
-              sx={{ minWidth: 180 }}
-            >
-              Về trang chủ
-            </Button>
-          </Box>
-
-          {/* Support Info */}
-          <Box mt={4} p={2} bgcolor="grey.50" borderRadius={1}>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              fontWeight={500}
-              mb={1}
-            >
-              Cần hỗ trợ?
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Nếu bạn gặp vấn đề trong quá trình thanh toán, vui lòng liên hệ
-              với chúng tôi qua hotline hoặc email để được hỗ trợ.
-            </Typography>
-          </Box>
+          </Stack>
         </Paper>
       </Container>
     </MainLayout>
