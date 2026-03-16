@@ -78,7 +78,9 @@ export interface UserLogSummaryResponse {
     userId: string;
     logSummary: string;
     featureSnapshot?: Record<string, unknown>;
-    totalEvents?: number;
+    dailyLogSummary?: Record<string, string>;
+    dailyFeatureSnapshot?: Record<string, unknown>;
+    totalEvents: number;
     startDate?: string;
     endDate?: string;
 }
