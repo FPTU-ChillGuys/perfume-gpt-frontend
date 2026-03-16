@@ -73,10 +73,14 @@ export interface UserLogSummaryResponse {
     id: string;
     createdAt: string;
     updatedAt: string;
+    isActive?: boolean;
+    isDeleted?: boolean;
     userId: string;
-    startDate: string;
-    endDate: string;
     logSummary: string;
+    featureSnapshot?: Record<string, unknown>;
+    totalEvents?: number;
+    startDate?: string;
+    endDate?: string;
 }
 
 export type LogPeriod = "weekly" | "monthly" | "yearly";

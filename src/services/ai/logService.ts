@@ -31,6 +31,15 @@ export class LogService {
     }
 
     /**
+     * Lấy tất cả bản tóm tắt log người dùng
+     */
+    async getAllUserLogsSummaries(): Promise<UserLogSummaryResponse[]> {
+        const { data, error } = await aiApiInstance.GET("/logs/summaries", {});
+        if (error) throw new Error(error.message || "Failed to fetch user log summaries");
+        return (data as BaseResponse<UserLogSummaryResponse[]>).data;
+    }
+
+    /**
      * Xem chi tiết các bản tóm tắt log người dùng theo ID và khoảng thời gian
      */
     async getUserLogsSummariesById(
