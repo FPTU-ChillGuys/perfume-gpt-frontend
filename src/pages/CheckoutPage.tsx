@@ -103,8 +103,8 @@ export const CheckoutPage = () => {
 
   // New address form
   const [newAddress, setNewAddress] = useState({
-    fullName: "",
-    phone: "",
+    recipientName: "",
+    recipientPhoneNumber: "",
     street: "",
     provinceId: undefined as number | undefined,
     provinceName: "",
@@ -444,8 +444,8 @@ export const CheckoutPage = () => {
 
       if (
         useNewAddress &&
-        (!newAddress.fullName ||
-          !newAddress.phone ||
+        (!newAddress.recipientName ||
+          !newAddress.recipientPhoneNumber ||
           !newAddress.street ||
           !newAddress.provinceId ||
           !newAddress.districtId ||
@@ -470,8 +470,8 @@ export const CheckoutPage = () => {
         if (useNewAddress) {
           // Nhập địa chỉ mới -> truyền đầy đủ thông tin recipient
           request.recipient = {
-            fullName: newAddress.fullName,
-            phone: newAddress.phone,
+            recipientName: newAddress.recipientName,
+            recipientPhoneNumber: newAddress.recipientPhoneNumber,
             districtId: newAddress.districtId || 0,
             districtName: newAddress.districtName,
             wardCode: newAddress.wardCode,
@@ -487,8 +487,8 @@ export const CheckoutPage = () => {
       } else {
         // Nhận tại cửa hàng -> không cần thông tin địa chỉ giao hàng
         request.recipient = {
-          fullName: "",
-          phone: "",
+          recipientName: "",
+          recipientPhoneNumber: "",
           districtId: 0,
           districtName: "",
           wardCode: "",
@@ -749,11 +749,11 @@ export const CheckoutPage = () => {
                   <Stack spacing={2}>
                     <TextField
                       label="Tên người nhận *"
-                      value={newAddress.fullName}
+                      value={newAddress.recipientName}
                       onChange={(e) =>
                         setNewAddress({
                           ...newAddress,
-                          fullName: e.target.value,
+                          recipientName: e.target.value,
                         })
                       }
                       required
@@ -762,9 +762,12 @@ export const CheckoutPage = () => {
 
                     <TextField
                       label="Số điện thoại *"
-                      value={newAddress.phone}
+                      value={newAddress.recipientPhoneNumber}
                       onChange={(e) =>
-                        setNewAddress({ ...newAddress, phone: e.target.value })
+                        setNewAddress({
+                          ...newAddress,
+                          recipientPhoneNumber: e.target.value,
+                        })
                       }
                       required
                       fullWidth

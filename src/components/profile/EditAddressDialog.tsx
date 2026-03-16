@@ -34,8 +34,8 @@ const EditAddressDialog = ({
   onSuccess,
 }: EditAddressDialogProps) => {
   const [formData, setFormData] = useState<UpdateAddressRequest>({
-    receiverName: "",
-    phone: "",
+    recipientName: "",
+    recipientPhoneNumber: "",
     street: "",
     ward: "",
     district: "",
@@ -73,8 +73,8 @@ const EditAddressDialog = ({
   useEffect(() => {
     if (address) {
       setFormData({
-        receiverName: address.receiverName || "",
-        phone: address.phone || "",
+        recipientName: address.recipientName || "",
+        recipientPhoneNumber: address.recipientPhoneNumber || "",
         street: address.street || "",
         ward: address.ward || "",
         district: address.district || "",
@@ -245,8 +245,8 @@ const EditAddressDialog = ({
 
     // Validation
     if (
-      !formData.receiverName ||
-      !formData.phone ||
+      !formData.recipientName ||
+      !formData.recipientPhoneNumber ||
       !formData.street ||
       !formData.provinceId ||
       !formData.districtId ||
@@ -271,8 +271,8 @@ const EditAddressDialog = ({
   const handleClose = () => {
     // Reset form
     setFormData({
-      receiverName: "",
-      phone: "",
+      recipientName: "",
+      recipientPhoneNumber: "",
       street: "",
       ward: "",
       district: "",
@@ -303,9 +303,12 @@ const EditAddressDialog = ({
         <Stack spacing={2} sx={{ mt: 2 }}>
           <TextField
             label="Tên người nhận *"
-            value={formData.receiverName}
+            value={formData.recipientName}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, receiverName: e.target.value }))
+              setFormData((prev) => ({
+                ...prev,
+                recipientName: e.target.value,
+              }))
             }
             fullWidth
             required
@@ -313,9 +316,12 @@ const EditAddressDialog = ({
 
           <TextField
             label="Số điện thoại *"
-            value={formData.phone}
+            value={formData.recipientPhoneNumber}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, phone: e.target.value }))
+              setFormData((prev) => ({
+                ...prev,
+                recipientPhoneNumber: e.target.value,
+              }))
             }
             fullWidth
             required
