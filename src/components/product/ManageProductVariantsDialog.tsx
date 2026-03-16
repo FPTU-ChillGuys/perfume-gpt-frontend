@@ -28,7 +28,6 @@ import {
   Image as ImageIcon,
   Refresh as RefreshIcon,
   Save as SaveIcon,
-  Edit as EditIcon,
   Star as StarIcon,
   ChevronLeft,
   ChevronRight,
@@ -71,6 +70,8 @@ interface UploadedVariantImage {
   altText: string;
   isPrimary: boolean;
 }
+
+type VariantFormMode = "create" | "edit";
 
 const VARIANT_TYPES: { value: VariantType; label: string }[] = [
   { value: "FullBox", label: "Full box" },
@@ -237,6 +238,7 @@ const createInitialFormValues = () => ({
   barCode: "",
   volumeMl: "",
   basePrice: "",
+  lowStockThreshold: "",
   type: VARIANT_TYPES[0]?.value ?? "FullBox",
   status: VARIANT_STATUS[0]?.value ?? "Active",
 });
@@ -278,6 +280,8 @@ export default function ManageProductVariantsDialog({
   const [editingVariant, setEditingVariant] = useState<ProductVariant | null>(
     null,
   );
+  const [variantFormMode, setVariantFormMode] =
+    useState<VariantFormMode | null>(null);
   const [existingVariantMedia, setExistingVariantMedia] = useState<
     MediaResponse[]
   >([]);
@@ -290,6 +294,7 @@ export default function ManageProductVariantsDialog({
     null,
   );
   const isEditMode = Boolean(editingVariant?.id);
+  const isFormVisible = variantFormMode !== null;
 
   const revokePreviewUrls = useCallback((images: UploadedVariantImage[]) => {
     images.forEach((image) => {
@@ -299,6 +304,7 @@ export default function ManageProductVariantsDialog({
 
   const resetFormToCreateMode = useCallback(() => {
     setEditingVariant(null);
+    setVariantFormMode(null);
     setExistingVariantMedia([]);
     setMediaIdsToDelete([]);
     setAttributeSelections([createEmptyAttributeSelection()]);
@@ -484,6 +490,7 @@ export default function ManageProductVariantsDialog({
       }
 
       setEditingVariant(variant);
+      setVariantFormMode("edit");
       setExistingVariantMedia(variant.media ?? []);
       setMediaIdsToDelete([]);
       setIsSkuDirty(true);
@@ -501,6 +508,13 @@ export default function ManageProductVariantsDialog({
           "",
         volumeMl: variant.volumeMl ? String(variant.volumeMl) : "",
         basePrice: variant.basePrice ? String(variant.basePrice) : "",
+        lowStockThreshold:
+          typeof (variant as { lowStockThreshold?: number })
+            .lowStockThreshold === "number"
+            ? String(
+                (variant as { lowStockThreshold?: number }).lowStockThreshold,
+              )
+            : "",
         type:
           (variant.type as VariantType) ||
           (VARIANT_TYPES[0]?.value ?? "FullBox"),
@@ -614,6 +628,26 @@ export default function ManageProductVariantsDialog({
     resetFormToCreateMode();
   };
 
+  const handleStartCreateVariant = () => {
+    if (saving || uploadingImage || Boolean(deletingVariantId)) {
+      return;
+    }
+    setVariantFormMode("create");
+    setEditingVariant(null);
+    setExistingVariantMedia([]);
+    setMediaIdsToDelete([]);
+    setSelectedConcentration(null);
+    setAttributeSelections([createEmptyAttributeSelection()]);
+    setIsSkuDirty(false);
+    setFormValues(createInitialFormValues());
+    setUploadedImages((prev) => {
+      revokePreviewUrls(prev);
+      return [];
+    });
+    setCurrentImageIndex(0);
+    setError(null);
+  };
+
   const handleInputChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -629,6 +663,9 @@ export default function ManageProductVariantsDialog({
     } else if (name === "volumeMl") {
       // For volumeMl, allow only digits and decimal point
       const cleanValue = value.replace(/[^\d.]/g, "");
+      setFormValues((prev) => ({ ...prev, [name]: cleanValue }));
+    } else if (name === "lowStockThreshold") {
+      const cleanValue = value.replace(/\D/g, "");
       setFormValues((prev) => ({ ...prev, [name]: cleanValue }));
     } else {
       setFormValues((prev) => ({ ...prev, [name]: value }));
@@ -711,37 +748,50 @@ export default function ManageProductVariantsDialog({
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0];
-    if (!file) return;
+    const filesToUpload = Array.from(files);
 
     try {
       setUploadingImage(true);
       const isFirstImage =
         existingVariantMedia.length === 0 && uploadedImages.length === 0;
-      const payload = [
-        {
-          file,
-          altText: file.name,
-          displayOrder: uploadedImages.length,
-          isPrimary: isFirstImage,
-        },
-      ];
+      const payload = filesToUpload.map((file, index) => ({
+        file,
+        altText: file.name,
+        displayOrder: uploadedImages.length + index,
+        isPrimary: isFirstImage && index === 0,
+      }));
 
       const uploadedMedia = await productService.uploadVariantImages(payload);
-      if (!uploadedMedia.length || !uploadedMedia[0]?.id) {
+      if (!uploadedMedia.length) {
         throw new Error("Không nhận được ID ảnh");
       }
 
-      const previewUrl = URL.createObjectURL(file);
-      const newImage: UploadedVariantImage = {
-        temporaryMediaId: uploadedMedia[0].id,
-        previewUrl,
-        altText: file.name,
-        isPrimary: isFirstImage,
-      };
+      const newImages: UploadedVariantImage[] = uploadedMedia
+        .map((media, index) => {
+          const file = filesToUpload[index];
+          if (!media?.id || !file) {
+            return null;
+          }
 
-      setUploadedImages((prev) => [...prev, newImage]);
-      showToast("Đã tải ảnh biến thể", "success");
+          return {
+            temporaryMediaId: media.id,
+            previewUrl: URL.createObjectURL(file),
+            altText: file.name,
+            isPrimary: isFirstImage && index === 0,
+          };
+        })
+        .filter((item): item is UploadedVariantImage => Boolean(item));
+
+      if (newImages.length === 0) {
+        throw new Error("Không nhận được ID ảnh hợp lệ");
+      }
+
+      setUploadedImages((prev) => {
+        const updated = [...prev, ...newImages];
+        setCurrentImageIndex(updated.length - newImages.length);
+        return updated;
+      });
+      showToast(`Đã tải ${newImages.length} ảnh biến thể`, "success");
     } catch (err: any) {
       console.error("Error uploading variant image:", err);
       const message = err.message || "Không thể tải ảnh variant";
@@ -811,17 +861,6 @@ export default function ManageProductVariantsDialog({
     }
   };
 
-  const handleImageAltTextChange = (
-    temporaryMediaId: string,
-    altText: string,
-  ) => {
-    setUploadedImages((prev) =>
-      prev.map((img) =>
-        img.temporaryMediaId === temporaryMediaId ? { ...img, altText } : img,
-      ),
-    );
-  };
-
   const getValidationError = () => {
     if (!product?.id) {
       return "Không xác định được sản phẩm";
@@ -829,7 +868,7 @@ export default function ManageProductVariantsDialog({
     if (!formValues.sku.trim()) {
       return "SKU là bắt buộc";
     }
-    if (!isEditMode && !formValues.barCode.trim()) {
+    if (!formValues.barCode.trim()) {
       return "Barcode là bắt buộc";
     }
     if (!formValues.volumeMl || Number(formValues.volumeMl) <= 0) {
@@ -840,6 +879,15 @@ export default function ManageProductVariantsDialog({
     }
     if (!formValues.basePrice || Number(formValues.basePrice) <= 0) {
       return "Giá cơ bản phải lớn hơn 0";
+    }
+    if (!isEditMode && !formValues.lowStockThreshold) {
+      return "Mức cảnh báo tồn kho phải lớn hơn 0";
+    }
+    if (
+      formValues.lowStockThreshold &&
+      Number(formValues.lowStockThreshold) <= 0
+    ) {
+      return "Mức cảnh báo tồn kho phải lớn hơn 0";
     }
     return null;
   };
@@ -874,6 +922,7 @@ export default function ManageProductVariantsDialog({
       type: formValues.type as VariantType,
       basePrice: Number(formValues.basePrice),
       status: formValues.status as VariantStatus,
+      lowStockThreshold: Number(formValues.lowStockThreshold),
       temporaryMediaIds: buildOrderedTemporaryMediaIds(),
       attributes: buildAttributePayload(),
     };
@@ -904,6 +953,7 @@ export default function ManageProductVariantsDialog({
       barcode?: string;
       mediaIdsToDelete?: string[] | null;
       temporaryMediaIdsToAdd?: string[] | null;
+      lowStockThreshold?: number;
     } = {
       sku: formValues.sku.trim(),
       ...(trimmedBarcode ? { barcode: trimmedBarcode } : {}),
@@ -912,6 +962,9 @@ export default function ManageProductVariantsDialog({
       type: formValues.type as VariantType,
       basePrice: Number(formValues.basePrice),
       status: formValues.status as VariantStatus,
+      ...(formValues.lowStockThreshold
+        ? { lowStockThreshold: Number(formValues.lowStockThreshold) }
+        : {}),
       mediaIdsToDelete: mediaIdsToDelete.length ? mediaIdsToDelete : null,
       temporaryMediaIdsToAdd: (() => {
         const ids = buildOrderedTemporaryMediaIds();
@@ -983,12 +1036,16 @@ export default function ManageProductVariantsDialog({
             ]
               .filter(Boolean)
               .join(" · ") || "Không có thông tin dung tích";
-          const isActive = editingVariant?.id === variant.id;
+          const isActive =
+            variantFormMode === "edit" && editingVariant?.id === variant.id;
 
           return (
             <Paper
               key={variant.id}
               variant="outlined"
+              onClick={() => {
+                void handleEditVariant(variant);
+              }}
               sx={{
                 p: 2,
                 display: "flex",
@@ -997,6 +1054,11 @@ export default function ManageProductVariantsDialog({
                 alignItems: "center",
                 borderColor: isActive ? "primary.main" : "grey.200",
                 boxShadow: isActive ? 3 : undefined,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                "&:hover": {
+                  borderColor: "primary.light",
+                },
               }}
             >
               <Box
@@ -1100,29 +1162,13 @@ export default function ManageProductVariantsDialog({
                 <Stack direction="row" spacing={1}>
                   <Button
                     size="small"
-                    variant={isActive ? "contained" : "outlined"}
-                    color={isActive ? "primary" : "inherit"}
-                    startIcon={<EditIcon fontSize="small" />}
-                    onClick={() => {
-                      void handleEditVariant(variant);
-                    }}
-                    disabled={
-                      saving || uploadingImage || Boolean(deletingVariantId)
-                    }
-                    sx={{
-                      minWidth: 160,
-                      fontWeight: 600,
-                      textTransform: "none",
-                    }}
-                  >
-                    {isActive ? "Đang chỉnh sửa" : "Chỉnh sửa variant"}
-                  </Button>
-                  <Button
-                    size="small"
                     variant="outlined"
                     color="error"
                     startIcon={<DeleteIcon fontSize="small" />}
-                    onClick={() => handleRequestDeleteVariant(variant)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleRequestDeleteVariant(variant);
+                    }}
                     disabled={
                       saving || uploadingImage || Boolean(deletingVariantId)
                     }
@@ -1196,382 +1242,399 @@ export default function ManageProductVariantsDialog({
                     Tổng cộng {variants.length} biến thể
                   </Typography>
                   <Typography variant="caption" color="primary.main">
-                    Chọn biến thể và bấm "Chỉnh sửa biến thể" để bắt đầu chỉnh
-                    sửa
+                    Chọn trực tiếp một variant để chỉnh sửa
                   </Typography>
                 </Box>
-                <Button
-                  variant="outlined"
-                  startIcon={<RefreshIcon />}
-                  onClick={fetchVariants}
-                  disabled={loadingVariants}
-                >
-                  Làm mới
-                </Button>
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={handleStartCreateVariant}
+                    disabled={
+                      saving || uploadingImage || Boolean(deletingVariantId)
+                    }
+                  >
+                    Thêm variant
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={fetchVariants}
+                    disabled={loadingVariants}
+                  >
+                    Làm mới
+                  </Button>
+                </Stack>
               </Box>
               {renderVariantList()}
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 3 }}>
-              <Box
-                mb={2}
-                display="flex"
-                justifyContent="space-between"
-                alignItems={{ xs: "stretch", sm: "center" }}
-                flexWrap="wrap"
-                gap={1}
-              >
-                <Box>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {isEditMode ? "Chỉnh sửa variant" : "Thêm variant mới"}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {isEditMode
-                      ? `Đang chỉnh: ${editingVariant?.sku || editingVariant?.id || ""}`
-                      : "Điền thông tin chi tiết và tải ảnh (tuỳ chọn)"}
-                  </Typography>
-                </Box>
-                {isEditMode && (
+            {isFormVisible ? (
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Box
+                  mb={2}
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems={{ xs: "stretch", sm: "center" }}
+                  flexWrap="wrap"
+                  gap={1}
+                >
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {isEditMode ? "Chỉnh sửa variant" : "Thêm variant mới"}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {isEditMode
+                        ? `Đang chỉnh: ${editingVariant?.sku || editingVariant?.id || ""}`
+                        : "Điền thông tin chi tiết và tải ảnh"}
+                    </Typography>
+                  </Box>
                   <Button
                     size="small"
                     color="inherit"
                     onClick={handleCancelEdit}
                     disabled={saving || uploadingImage}
                   >
-                    Hủy chỉnh sửa
+                    Đóng chi tiết
                   </Button>
-                )}
-              </Box>
+                </Box>
 
-              {/* Two column layout: Images on left, Form inputs on right */}
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: "400px 1fr",
-                  },
-                  gap: 3,
-                }}
-              >
-                {/* Left column: Image upload and carousel */}
-                <Box>
-                  <Box mb={2}>
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Ảnh variant
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Thêm ảnh cho variant này
-                    </Typography>
-                  </Box>
+                {/* Two column layout: Images on left, Form inputs on right */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      md: "400px 1fr",
+                    },
+                    gap: 3,
+                  }}
+                >
+                  {/* Left column: Image upload and carousel */}
+                  <Box>
+                    <Box mb={2}>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Ảnh variant
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Thêm ảnh cho variant này
+                      </Typography>
+                    </Box>
 
-                  <Stack
-                    direction={{ xs: "column", sm: "row" }}
-                    spacing={2}
-                    mb={2}
-                  >
-                    <Button
-                      variant="outlined"
-                      component="label"
-                      startIcon={
-                        uploadingImage ? (
-                          <CircularProgress size={18} />
-                        ) : (
-                          <AddIcon />
-                        )
-                      }
-                      disabled={saving || uploadingImage}
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={2}
+                      mb={2}
                     >
-                      {uploadingImage ? "Đang tải ảnh..." : "Tải ảnh"}
-                      <input
-                        type="file"
-                        accept="image/*"
-                        hidden
-                        onChange={handleImageUpload}
-                        disabled={saving || uploadingImage}
-                      />
-                    </Button>
-                    {!!uploadedImages.length && (
-                      <Chip
-                        icon={<StarIcon fontSize="small" />}
-                        label={`${uploadedImages.length} ảnh tạm`}
-                        color="primary"
+                      <Button
                         variant="outlined"
-                      />
-                    )}
-                  </Stack>
+                        component="label"
+                        startIcon={
+                          uploadingImage ? (
+                            <CircularProgress size={18} />
+                          ) : (
+                            <AddIcon />
+                          )
+                        }
+                        disabled={saving || uploadingImage}
+                      >
+                        {uploadingImage ? "Đang tải ảnh..." : "Tải ảnh"}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          hidden
+                          onChange={handleImageUpload}
+                          disabled={saving || uploadingImage}
+                        />
+                      </Button>
+                      {!!uploadedImages.length && (
+                        <Chip
+                          icon={<StarIcon fontSize="small" />}
+                          label={`${uploadedImages.length} ảnh tạm`}
+                          color="primary"
+                          variant="outlined"
+                        />
+                      )}
+                    </Stack>
 
-                  {/* Unified Image Carousel: existing + newly uploaded */}
-                  {(() => {
-                    type CarouselItem =
-                      | { kind: "existing"; media: MediaResponse }
-                      | { kind: "uploaded"; image: UploadedVariantImage };
+                    {/* Unified Image Carousel: existing + newly uploaded */}
+                    {(() => {
+                      type CarouselItem =
+                        | { kind: "existing"; media: MediaResponse }
+                        | { kind: "uploaded"; image: UploadedVariantImage };
 
-                    const allItems: CarouselItem[] = [
-                      ...existingVariantMedia.map(
-                        (m): CarouselItem => ({ kind: "existing", media: m }),
-                      ),
-                      ...uploadedImages.map(
-                        (i): CarouselItem => ({ kind: "uploaded", image: i }),
-                      ),
-                    ];
+                      const allItems: CarouselItem[] = [
+                        ...existingVariantMedia.map(
+                          (m): CarouselItem => ({ kind: "existing", media: m }),
+                        ),
+                        ...uploadedImages.map(
+                          (i): CarouselItem => ({ kind: "uploaded", image: i }),
+                        ),
+                      ];
 
-                    const safeIndex = Math.min(
-                      currentImageIndex,
-                      Math.max(allItems.length - 1, 0),
-                    );
-                    const current = allItems[safeIndex];
-
-                    const goNext = () =>
-                      setCurrentImageIndex((p) =>
-                        p < allItems.length - 1 ? p + 1 : 0,
+                      const safeIndex = Math.min(
+                        currentImageIndex,
+                        Math.max(allItems.length - 1, 0),
                       );
-                    const goPrev = () =>
-                      setCurrentImageIndex((p) =>
-                        p > 0 ? p - 1 : allItems.length - 1,
-                      );
+                      const current = allItems[safeIndex];
 
-                    const onTouchStart = (e: React.TouchEvent) => {
-                      setTouchEnd(null);
-                      const t = e.targetTouches[0];
-                      if (t) setTouchStart(t.clientX);
-                    };
-                    const onTouchMove = (e: React.TouchEvent) => {
-                      const t = e.targetTouches[0];
-                      if (t) setTouchEnd(t.clientX);
-                    };
-                    const onTouchEnd = () => {
-                      if (!touchStart || !touchEnd) return;
-                      const d = touchStart - touchEnd;
-                      if (d > 50) goNext();
-                      if (d < -50) goPrev();
-                    };
+                      const goNext = () =>
+                        setCurrentImageIndex((p) =>
+                          p < allItems.length - 1 ? p + 1 : 0,
+                        );
+                      const goPrev = () =>
+                        setCurrentImageIndex((p) =>
+                          p > 0 ? p - 1 : allItems.length - 1,
+                        );
 
-                    if (allItems.length === 0) {
-                      return (
-                        <Box
-                          sx={{
-                            border: 1,
-                            borderStyle: "dashed",
-                            borderColor: "divider",
-                            borderRadius: 1,
-                            p: 3,
-                            textAlign: "center",
-                            minHeight: 200,
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          <Box>
-                            <ImageIcon
-                              style={{
-                                fontSize: 40,
-                                color: "#9e9e9e",
-                                marginBottom: 8,
-                              }}
-                            />
-                            <Typography variant="body2" color="text.secondary">
-                              Chưa có ảnh nào
-                            </Typography>
+                      const onTouchStart = (e: React.TouchEvent) => {
+                        setTouchEnd(null);
+                        const t = e.targetTouches[0];
+                        if (t) setTouchStart(t.clientX);
+                      };
+                      const onTouchMove = (e: React.TouchEvent) => {
+                        const t = e.targetTouches[0];
+                        if (t) setTouchEnd(t.clientX);
+                      };
+                      const onTouchEnd = () => {
+                        if (!touchStart || !touchEnd) return;
+                        const d = touchStart - touchEnd;
+                        if (d > 50) goNext();
+                        if (d < -50) goPrev();
+                      };
+
+                      if (allItems.length === 0) {
+                        return (
+                          <Box
+                            sx={{
+                              border: 1,
+                              borderStyle: "dashed",
+                              borderColor: "divider",
+                              borderRadius: 1,
+                              p: 3,
+                              textAlign: "center",
+                              minHeight: 200,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                            }}
+                          >
+                            <Box>
+                              <ImageIcon
+                                style={{
+                                  fontSize: 40,
+                                  color: "#9e9e9e",
+                                  marginBottom: 8,
+                                }}
+                              />
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Chưa có ảnh nào
+                              </Typography>
+                            </Box>
                           </Box>
-                        </Box>
-                      );
-                    }
+                        );
+                      }
 
-                    const currentUrl =
-                      current?.kind === "existing"
-                        ? current.media.url
-                        : current?.kind === "uploaded"
-                          ? current.image.previewUrl
-                          : undefined;
+                      const currentUrl =
+                        current?.kind === "existing"
+                          ? current.media.url
+                          : current?.kind === "uploaded"
+                            ? current.image.previewUrl
+                            : undefined;
 
-                    const currentAlt =
-                      current?.kind === "existing"
-                        ? current.media.altText || ""
-                        : current?.kind === "uploaded"
-                          ? current.image.altText
-                          : "";
+                      const currentAlt =
+                        current?.kind === "existing"
+                          ? current.media.altText || ""
+                          : current?.kind === "uploaded"
+                            ? current.image.altText
+                            : "";
 
-                    const isPrimaryFlag =
-                      current?.kind === "existing"
-                        ? !!current.media.isPrimary
-                        : current?.kind === "uploaded"
-                          ? !!current.image.isPrimary
+                      const isPrimaryFlag =
+                        current?.kind === "existing"
+                          ? !!current.media.isPrimary
+                          : current?.kind === "uploaded"
+                            ? !!current.image.isPrimary
+                            : false;
+
+                      const isMarkedDelete =
+                        current?.kind === "existing" && current.media.id
+                          ? mediaIdsToDelete.includes(current.media.id)
                           : false;
 
-                    const isMarkedDelete =
-                      current?.kind === "existing" && current.media.id
-                        ? mediaIdsToDelete.includes(current.media.id)
-                        : false;
-
-                    return (
-                      <Box>
-                        {/* Main carousel image */}
-                        <Card
-                          sx={{
-                            position: "relative",
-                            mb: 1.5,
-                            cursor: allItems.length > 1 ? "grab" : "default",
-                            userSelect: "none",
-                            border: isMarkedDelete ? 2 : 0,
-                            borderColor: isMarkedDelete
-                              ? "error.main"
-                              : "transparent",
-                            "&:active": {
-                              cursor:
-                                allItems.length > 1 ? "grabbing" : "default",
-                            },
-                          }}
-                          onTouchStart={onTouchStart}
-                          onTouchMove={onTouchMove}
-                          onTouchEnd={onTouchEnd}
-                        >
-                          {currentUrl ? (
-                            <CardMedia
-                              component="img"
-                              height="220"
-                              image={currentUrl}
-                              alt={currentAlt}
-                              sx={{
-                                objectFit: "contain",
-                                bgcolor: "grey.50",
-                                pointerEvents: "none",
-                                opacity: isMarkedDelete ? 0.4 : 1,
-                              }}
-                            />
-                          ) : (
-                            <Box
-                              sx={{
-                                height: 220,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                bgcolor: "grey.100",
-                              }}
-                            >
-                              <ImageIcon
-                                style={{ fontSize: 48, color: "#bdbdbd" }}
-                              />
-                            </Box>
-                          )}
-
-                          {/* Prev/Next arrows */}
-                          {allItems.length > 1 && (
-                            <>
-                              <IconButton
-                                onClick={goPrev}
-                                disabled={saving}
-                                size="small"
-                                sx={{
-                                  position: "absolute",
-                                  left: 6,
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  bgcolor: "rgba(255,255,255,0.9)",
-                                  "&:hover": { bgcolor: "#fff" },
-                                }}
-                              >
-                                <ChevronLeft />
-                              </IconButton>
-                              <IconButton
-                                onClick={goNext}
-                                disabled={saving}
-                                size="small"
-                                sx={{
-                                  position: "absolute",
-                                  right: 6,
-                                  top: "50%",
-                                  transform: "translateY(-50%)",
-                                  bgcolor: "rgba(255,255,255,0.9)",
-                                  "&:hover": { bgcolor: "#fff" },
-                                }}
-                              >
-                                <ChevronRight />
-                              </IconButton>
-                            </>
-                          )}
-
-                          {/* Counter */}
-                          <Chip
-                            label={`${safeIndex + 1} / ${allItems.length}`}
-                            size="small"
+                      return (
+                        <Box>
+                          {/* Main carousel image */}
+                          <Card
                             sx={{
-                              position: "absolute",
-                              top: 8,
-                              right: 8,
-                              bgcolor: "rgba(0,0,0,0.6)",
-                              color: "white",
+                              position: "relative",
+                              mb: 1.5,
+                              cursor: allItems.length > 1 ? "grab" : "default",
+                              userSelect: "none",
+                              border: isMarkedDelete ? 2 : 0,
+                              borderColor: isMarkedDelete
+                                ? "error.main"
+                                : "transparent",
+                              "&:active": {
+                                cursor:
+                                  allItems.length > 1 ? "grabbing" : "default",
+                              },
                             }}
-                          />
+                            onTouchStart={onTouchStart}
+                            onTouchMove={onTouchMove}
+                            onTouchEnd={onTouchEnd}
+                          >
+                            {currentUrl ? (
+                              <CardMedia
+                                component="img"
+                                height="220"
+                                image={currentUrl}
+                                alt={currentAlt}
+                                sx={{
+                                  objectFit: "contain",
+                                  bgcolor: "grey.50",
+                                  pointerEvents: "none",
+                                  opacity: isMarkedDelete ? 0.4 : 1,
+                                }}
+                              />
+                            ) : (
+                              <Box
+                                sx={{
+                                  height: 220,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  bgcolor: "grey.100",
+                                }}
+                              >
+                                <ImageIcon
+                                  style={{ fontSize: 48, color: "#bdbdbd" }}
+                                />
+                              </Box>
+                            )}
 
-                          {/* Primary badge */}
-                          {isPrimaryFlag && (
-                            <Chip
-                              label="Hình chính"
-                              color="primary"
-                              size="small"
-                              sx={{ position: "absolute", top: 8, left: 8 }}
-                            />
-                          )}
+                            {/* Prev/Next arrows */}
+                            {allItems.length > 1 && (
+                              <>
+                                <IconButton
+                                  onClick={goPrev}
+                                  disabled={saving}
+                                  size="small"
+                                  sx={{
+                                    position: "absolute",
+                                    left: 6,
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    bgcolor: "rgba(255,255,255,0.9)",
+                                    "&:hover": { bgcolor: "#fff" },
+                                  }}
+                                >
+                                  <ChevronLeft />
+                                </IconButton>
+                                <IconButton
+                                  onClick={goNext}
+                                  disabled={saving}
+                                  size="small"
+                                  sx={{
+                                    position: "absolute",
+                                    right: 6,
+                                    top: "50%",
+                                    transform: "translateY(-50%)",
+                                    bgcolor: "rgba(255,255,255,0.9)",
+                                    "&:hover": { bgcolor: "#fff" },
+                                  }}
+                                >
+                                  <ChevronRight />
+                                </IconButton>
+                              </>
+                            )}
 
-                          {/* Deleted overlay label */}
-                          {isMarkedDelete && (
+                            {/* Counter */}
                             <Chip
-                              label="Sẽ bị xoá"
-                              color="error"
+                              label={`${safeIndex + 1} / ${allItems.length}`}
                               size="small"
                               sx={{
                                 position: "absolute",
-                                bottom: 8,
-                                left: "50%",
-                                transform: "translateX(-50%)",
+                                top: 8,
+                                right: 8,
+                                bgcolor: "rgba(0,0,0,0.6)",
+                                color: "white",
                               }}
                             />
-                          )}
-                        </Card>
 
-                        {/* Controls for current image */}
-                        <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
-                          {current?.kind === "existing" && current.media.id && (
-                            <Box display="flex" gap={1}>
-                              {!current.media.isPrimary && !isMarkedDelete && (
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  startIcon={
-                                    <StarIcon style={{ fontSize: 14 }} />
-                                  }
-                                  onClick={() =>
-                                    handleSetPrimaryExistingImage(
-                                      current.media.id!,
-                                    )
-                                  }
-                                  disabled={saving}
-                                  fullWidth
-                                >
-                                  Đặt làm chính
-                                </Button>
-                              )}
-                              <Button
+                            {/* Primary badge */}
+                            {isPrimaryFlag && (
+                              <Chip
+                                label="Hình chính"
+                                color="primary"
                                 size="small"
-                                variant={
-                                  isMarkedDelete ? "contained" : "outlined"
-                                }
-                                color={isMarkedDelete ? "error" : "inherit"}
-                                fullWidth
-                                onClick={() =>
-                                  handleToggleExistingMedia(current.media.id)
-                                }
-                                disabled={saving}
-                              >
-                                {isMarkedDelete ? "Bỏ xoá" : "Xoá ảnh này"}
-                              </Button>
-                            </Box>
-                          )}
+                                sx={{ position: "absolute", top: 8, left: 8 }}
+                              />
+                            )}
 
-                          {current?.kind === "uploaded" && (
-                            <Stack spacing={1}>
+                            {/* Deleted overlay label */}
+                            {isMarkedDelete && (
+                              <Chip
+                                label="Sẽ bị xoá"
+                                color="error"
+                                size="small"
+                                sx={{
+                                  position: "absolute",
+                                  bottom: 8,
+                                  left: "50%",
+                                  transform: "translateX(-50%)",
+                                }}
+                              />
+                            )}
+                          </Card>
+
+                          {/* Controls for current image */}
+                          <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }}>
+                            {current?.kind === "existing" &&
+                              current.media.id && (
+                                <Box display="flex" gap={1}>
+                                  {!current.media.isPrimary &&
+                                    !isMarkedDelete && (
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={
+                                          <StarIcon style={{ fontSize: 14 }} />
+                                        }
+                                        onClick={() =>
+                                          handleSetPrimaryExistingImage(
+                                            current.media.id!,
+                                          )
+                                        }
+                                        disabled={saving}
+                                        fullWidth
+                                      >
+                                        Đặt làm chính
+                                      </Button>
+                                    )}
+                                  <Button
+                                    size="small"
+                                    variant={
+                                      isMarkedDelete ? "contained" : "outlined"
+                                    }
+                                    color={isMarkedDelete ? "error" : "inherit"}
+                                    fullWidth
+                                    onClick={() =>
+                                      handleToggleExistingMedia(
+                                        current.media.id,
+                                      )
+                                    }
+                                    disabled={saving}
+                                  >
+                                    {isMarkedDelete ? "Bỏ xoá" : "Xoá ảnh này"}
+                                  </Button>
+                                </Box>
+                              )}
+
+                            {current?.kind === "uploaded" && (
                               <Box display="flex" gap={1}>
                                 {!current.image.isPrimary && (
                                   <Button
@@ -1609,306 +1672,172 @@ export default function ManageProductVariantsDialog({
                                   Xóa
                                 </Button>
                               </Box>
-                              <TextField
-                                label="Alt text"
-                                fullWidth
-                                size="small"
-                                value={current.image.altText || ""}
-                                onChange={(e) =>
-                                  handleImageAltTextChange(
-                                    current.image.temporaryMediaId,
-                                    e.target.value,
-                                  )
-                                }
-                                disabled={saving}
-                                placeholder="Mô tả hình ảnh"
-                              />
-                            </Stack>
+                            )}
+                          </Paper>
+
+                          {/* Thumbnail strip */}
+                          {allItems.length > 1 && (
+                            <Box
+                              sx={{
+                                display: "flex",
+                                gap: 1,
+                                overflowX: "auto",
+                                pb: 0.5,
+                              }}
+                            >
+                              {allItems.map((item, idx) => {
+                                const thumbUrl =
+                                  item.kind === "existing"
+                                    ? item.media.url
+                                    : item.image.previewUrl;
+                                const isSelected = idx === safeIndex;
+                                const isDeleted =
+                                  item.kind === "existing" && item.media.id
+                                    ? mediaIdsToDelete.includes(item.media.id)
+                                    : false;
+                                return (
+                                  <Box
+                                    key={
+                                      item.kind === "existing"
+                                        ? item.media.id
+                                        : item.image.temporaryMediaId
+                                    }
+                                    onClick={() => setCurrentImageIndex(idx)}
+                                    sx={{
+                                      width: 52,
+                                      height: 52,
+                                      flexShrink: 0,
+                                      cursor: "pointer",
+                                      border: 2,
+                                      borderColor: isSelected
+                                        ? "primary.main"
+                                        : "divider",
+                                      borderRadius: 1,
+                                      overflow: "hidden",
+                                      opacity: isDeleted
+                                        ? 0.3
+                                        : isSelected
+                                          ? 1
+                                          : 0.65,
+                                      transition: "all 0.15s",
+                                      bgcolor: "grey.100",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      "&:hover": { opacity: 1 },
+                                    }}
+                                  >
+                                    {thumbUrl ? (
+                                      <Box
+                                        component="img"
+                                        src={thumbUrl}
+                                        sx={{
+                                          width: "100%",
+                                          height: "100%",
+                                          objectFit: "cover",
+                                          pointerEvents: "none",
+                                        }}
+                                      />
+                                    ) : (
+                                      <ImageIcon
+                                        style={{
+                                          fontSize: 20,
+                                          color: "#bdbdbd",
+                                        }}
+                                      />
+                                    )}
+                                  </Box>
+                                );
+                              })}
+                            </Box>
                           )}
-                        </Paper>
-
-                        {/* Thumbnail strip */}
-                        {allItems.length > 1 && (
-                          <Box
-                            sx={{
-                              display: "flex",
-                              gap: 1,
-                              overflowX: "auto",
-                              pb: 0.5,
-                            }}
-                          >
-                            {allItems.map((item, idx) => {
-                              const thumbUrl =
-                                item.kind === "existing"
-                                  ? item.media.url
-                                  : item.image.previewUrl;
-                              const isSelected = idx === safeIndex;
-                              const isDeleted =
-                                item.kind === "existing" && item.media.id
-                                  ? mediaIdsToDelete.includes(item.media.id)
-                                  : false;
-                              return (
-                                <Box
-                                  key={
-                                    item.kind === "existing"
-                                      ? item.media.id
-                                      : item.image.temporaryMediaId
-                                  }
-                                  onClick={() => setCurrentImageIndex(idx)}
-                                  sx={{
-                                    width: 52,
-                                    height: 52,
-                                    flexShrink: 0,
-                                    cursor: "pointer",
-                                    border: 2,
-                                    borderColor: isSelected
-                                      ? "primary.main"
-                                      : "divider",
-                                    borderRadius: 1,
-                                    overflow: "hidden",
-                                    opacity: isDeleted
-                                      ? 0.3
-                                      : isSelected
-                                        ? 1
-                                        : 0.65,
-                                    transition: "all 0.15s",
-                                    bgcolor: "grey.100",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    "&:hover": { opacity: 1 },
-                                  }}
-                                >
-                                  {thumbUrl ? (
-                                    <Box
-                                      component="img"
-                                      src={thumbUrl}
-                                      sx={{
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit: "cover",
-                                        pointerEvents: "none",
-                                      }}
-                                    />
-                                  ) : (
-                                    <ImageIcon
-                                      style={{ fontSize: 20, color: "#bdbdbd" }}
-                                    />
-                                  )}
-                                </Box>
-                              );
-                            })}
-                          </Box>
-                        )}
-                      </Box>
-                    );
-                  })()}
-                </Box>
-
-                {/* Right column: Form inputs */}
-                <Box>
-                  <Box mb={2}>
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      Thông tin variant
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Điền thông tin chi tiết
-                    </Typography>
+                        </Box>
+                      );
+                    })()}
                   </Box>
 
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(2, 1fr)",
-                      gap: 2,
-                    }}
-                  >
-                    <Box>
-                      <TextField
-                        label="SKU"
-                        name="sku"
-                        value={formValues.sku}
-                        onChange={handleInputChange}
-                        fullWidth
-                        required
-                        disabled={saving}
-                        helperText={
-                          skuSeed
-                            ? `Tự động gợi ý: ${skuSeed}-[dung tích]-[nồng độ]`
-                            : "SKU sẽ được gợi ý theo sản phẩm chính"
-                        }
-                      />
+                  {/* Right column: Form inputs */}
+                  <Box>
+                    <Box mb={2}>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Thông tin variant
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Điền thông tin chi tiết
+                      </Typography>
                     </Box>
-                    <Box>
-                      <TextField
-                        label="Barcode"
-                        name="barCode"
-                        value={formValues.barCode}
-                        onChange={handleInputChange}
-                        fullWidth
-                        required
-                        disabled={saving}
-                      />
-                    </Box>
-                    <Box>
-                      <TextField
-                        label="Dung tích (ml)"
-                        name="volumeMl"
-                        type="number"
-                        value={formValues.volumeMl}
-                        onChange={handleInputChange}
-                        fullWidth
-                        required
-                        disabled={saving}
-                        inputProps={{ min: 0, step: "any" }}
-                        helperText="Phải lớn hơn 0"
-                      />
-                    </Box>
-                    <Box>
-                      <Autocomplete
-                        options={concentrations}
-                        getOptionLabel={(option) => option.name || ""}
-                        value={selectedConcentration}
-                        onChange={(_, newValue) =>
-                          setSelectedConcentration(newValue)
-                        }
-                        disabled={saving || loadingConcentrations}
-                        loading={loadingConcentrations}
-                        renderInput={(params) => (
-                          <TextField
-                            {...params}
-                            label="Nồng độ"
-                            required
-                            helperText="Ví dụ: Eau de Parfum"
-                            InputProps={{
-                              ...params.InputProps,
-                              endAdornment: (
-                                <>
-                                  {loadingConcentrations ? (
-                                    <CircularProgress size={20} />
-                                  ) : null}
-                                  {params.InputProps.endAdornment}
-                                </>
-                              ),
-                            }}
-                          />
-                        )}
-                      />
-                    </Box>
-                    <Box>
-                      <TextField
-                        label="Giá cơ bản (VND)"
-                        name="basePrice"
-                        value={
-                          formValues.basePrice
-                            ? parseInt(formValues.basePrice).toLocaleString(
-                                "vi-VN",
-                              )
-                            : ""
-                        }
-                        onChange={handleInputChange}
-                        fullWidth
-                        required
-                        disabled={saving}
-                        helperText="Phải lớn hơn 0"
-                      />
-                    </Box>
-                    <Box>
-                      <TextField
-                        label="Loại variant"
-                        name="type"
-                        select
-                        value={formValues.type}
-                        onChange={handleInputChange}
-                        fullWidth
-                        disabled={saving}
-                      >
-                        {VARIANT_TYPES.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Box>
-                    <Box sx={{ gridColumn: "span 2" }}>
-                      <TextField
-                        label="Trạng thái"
-                        name="status"
-                        select
-                        value={formValues.status}
-                        onChange={handleInputChange}
-                        fullWidth
-                        disabled={saving}
-                      >
-                        {VARIANT_STATUS.map((option) => (
-                          <MenuItem key={option.value} value={option.value}>
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
-                    </Box>
-                  </Box>
-                </Box>
-              </Box>
 
-              <Divider sx={{ my: 3 }} />
-
-              <Box
-                mb={1}
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-              >
-                <Typography variant="subtitle2" fontWeight={600}>
-                  Thuộc tính (tuỳ chọn)
-                </Typography>
-                <Button
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={handleAddAttribute}
-                  disabled={loadingAttributes || saving}
-                >
-                  Thêm thuộc tính
-                </Button>
-              </Box>
-
-              <Stack spacing={2}>
-                {attributeSelections.map((selection, index) => (
-                  <Paper key={`attr-${index}`} variant="outlined" sx={{ p: 2 }}>
                     <Box
                       sx={{
                         display: "grid",
-                        gridTemplateColumns: {
-                          xs: "1fr",
-                          sm: "repeat(12, 1fr)",
-                        },
+                        gridTemplateColumns: "repeat(2, 1fr)",
                         gap: 2,
-                        alignItems: "center",
                       }}
                     >
-                      <Box sx={{ gridColumn: { xs: "span 1", sm: "span 5" } }}>
+                      <Box>
+                        <TextField
+                          label="SKU"
+                          name="sku"
+                          value={formValues.sku}
+                          onChange={handleInputChange}
+                          fullWidth
+                          required
+                          disabled={saving}
+                          helperText={
+                            skuSeed
+                              ? `Tự động gợi ý: ${skuSeed}-[dung tích]-[nồng độ]`
+                              : "SKU sẽ được gợi ý theo sản phẩm chính"
+                          }
+                        />
+                      </Box>
+                      <Box>
+                        <TextField
+                          label="Barcode"
+                          name="barCode"
+                          value={formValues.barCode}
+                          onChange={handleInputChange}
+                          fullWidth
+                          required
+                          disabled={saving}
+                        />
+                      </Box>
+                      <Box>
+                        <TextField
+                          label="Dung tích (ml)"
+                          name="volumeMl"
+                          type="number"
+                          value={formValues.volumeMl}
+                          onChange={handleInputChange}
+                          fullWidth
+                          required
+                          disabled={saving}
+                          inputProps={{ min: 1, step: "any" }}
+                          helperText="Phải lớn hơn 0"
+                        />
+                      </Box>
+                      <Box>
                         <Autocomplete
-                          options={availableAttributes}
+                          options={concentrations}
                           getOptionLabel={(option) => option.name || ""}
-                          value={selection.attribute}
+                          value={selectedConcentration}
                           onChange={(_, newValue) =>
-                            handleAttributeChange(index, newValue)
+                            setSelectedConcentration(newValue)
                           }
-                          loading={loadingAttributes}
-                          isOptionEqualToValue={(option, value) =>
-                            option?.id === value?.id
-                          }
+                          disabled={saving || loadingConcentrations}
+                          loading={loadingConcentrations}
                           renderInput={(params) => (
                             <TextField
                               {...params}
-                              label="Thuộc tính"
+                              label="Nồng độ"
+                              required
+                              helperText="Ví dụ: Eau de Parfum"
                               InputProps={{
                                 ...params.InputProps,
                                 endAdornment: (
                                   <>
-                                    {selection.loadingValues && (
-                                      <CircularProgress size={18} />
-                                    )}
+                                    {loadingConcentrations ? (
+                                      <CircularProgress size={20} />
+                                    ) : null}
                                     {params.InputProps.endAdornment}
                                   </>
                                 ),
@@ -1917,71 +1846,232 @@ export default function ManageProductVariantsDialog({
                           )}
                         />
                       </Box>
-                      <Box sx={{ gridColumn: { xs: "span 1", sm: "span 5" } }}>
-                        <Autocomplete
-                          multiple
-                          options={selection.valueOptions}
-                          getOptionLabel={(option) => option.value || ""}
-                          value={selection.values}
-                          onChange={(_, newValue) =>
-                            handleValueChange(index, newValue)
+                      <Box>
+                        <TextField
+                          label="Giá cơ bản (VND)"
+                          name="basePrice"
+                          value={
+                            formValues.basePrice
+                              ? parseInt(formValues.basePrice).toLocaleString(
+                                  "vi-VN",
+                                )
+                              : ""
                           }
-                          loading={selection.loadingValues}
-                          isOptionEqualToValue={(option, value) =>
-                            option?.id === value?.id
-                          }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              label="Giá trị"
-                              placeholder="Chọn một hoặc nhiều giá trị"
-                              InputProps={{
-                                ...params.InputProps,
-                                endAdornment: (
-                                  <>
-                                    {selection.loadingValues && (
-                                      <CircularProgress size={18} />
-                                    )}
-                                    {params.InputProps.endAdornment}
-                                  </>
-                                ),
-                              }}
-                            />
-                          )}
+                          onChange={handleInputChange}
+                          fullWidth
+                          required
+                          disabled={saving}
+                          helperText="Phải lớn hơn 0"
                         />
                       </Box>
-                      <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}>
-                        <IconButton
-                          color="error"
-                          onClick={() => handleRemoveAttribute(index)}
+                      {!isEditMode && (
+                        <Box>
+                          <TextField
+                            label="Mức cảnh báo tồn kho"
+                            name="lowStockThreshold"
+                            type="number"
+                            value={formValues.lowStockThreshold}
+                            onChange={handleInputChange}
+                            fullWidth
+                            required
+                            disabled={saving}
+                            inputProps={{ min: 1, step: 1 }}
+                            helperText="Phải lớn hơn 0"
+                          />
+                        </Box>
+                      )}
+                      <Box>
+                        <TextField
+                          label="Loại variant"
+                          name="type"
+                          select
+                          value={formValues.type}
+                          onChange={handleInputChange}
+                          fullWidth
+                          required
+                          disabled={saving}
                         >
-                          <DeleteIcon />
-                        </IconButton>
+                          {VARIANT_TYPES.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {option.label}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </Box>
+                      <Box>
+                        <TextField
+                          label="Trạng thái"
+                          name="status"
+                          select
+                          value={formValues.status}
+                          onChange={handleInputChange}
+                          fullWidth
+                          required
+                          disabled={saving}
+                        >
+                          {VARIANT_STATUS.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {option.label}
+                            </MenuItem>
+                          ))}
+                        </TextField>
                       </Box>
                     </Box>
-                  </Paper>
-                ))}
-              </Stack>
+                  </Box>
+                </Box>
 
-              <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
-                <Button
-                  variant="contained"
-                  onClick={handleSubmit}
-                  startIcon={
-                    saving ? (
-                      <CircularProgress size={18} color="inherit" />
-                    ) : isEditMode ? (
-                      <SaveIcon />
-                    ) : (
-                      <AddIcon />
-                    )
-                  }
-                  disabled={saving}
+                <Divider sx={{ my: 3 }} />
+
+                <Box
+                  mb={1}
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
                 >
-                  {isEditMode ? "Lưu thay đổi" : "Thêm variant"}
-                </Button>
-              </Box>
-            </Paper>
+                  <Typography variant="subtitle2" fontWeight={600}>
+                    Thuộc tính (tuỳ chọn)
+                  </Typography>
+                  <Button
+                    size="small"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddAttribute}
+                    disabled={loadingAttributes || saving}
+                  >
+                    Thêm thuộc tính
+                  </Button>
+                </Box>
+
+                <Stack spacing={2}>
+                  {attributeSelections.map((selection, index) => (
+                    <Paper
+                      key={`attr-${index}`}
+                      variant="outlined"
+                      sx={{ p: 2 }}
+                    >
+                      <Box
+                        sx={{
+                          display: "grid",
+                          gridTemplateColumns: {
+                            xs: "1fr",
+                            sm: "repeat(12, 1fr)",
+                          },
+                          gap: 2,
+                          alignItems: "center",
+                        }}
+                      >
+                        <Box
+                          sx={{ gridColumn: { xs: "span 1", sm: "span 5" } }}
+                        >
+                          <Autocomplete
+                            options={availableAttributes}
+                            getOptionLabel={(option) => option.name || ""}
+                            value={selection.attribute}
+                            onChange={(_, newValue) =>
+                              handleAttributeChange(index, newValue)
+                            }
+                            loading={loadingAttributes}
+                            isOptionEqualToValue={(option, value) =>
+                              option?.id === value?.id
+                            }
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label="Thuộc tính"
+                                InputProps={{
+                                  ...params.InputProps,
+                                  endAdornment: (
+                                    <>
+                                      {selection.loadingValues && (
+                                        <CircularProgress size={18} />
+                                      )}
+                                      {params.InputProps.endAdornment}
+                                    </>
+                                  ),
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                        <Box
+                          sx={{ gridColumn: { xs: "span 1", sm: "span 5" } }}
+                        >
+                          <Autocomplete
+                            multiple
+                            options={selection.valueOptions}
+                            getOptionLabel={(option) => option.value || ""}
+                            value={selection.values}
+                            onChange={(_, newValue) =>
+                              handleValueChange(index, newValue)
+                            }
+                            loading={selection.loadingValues}
+                            isOptionEqualToValue={(option, value) =>
+                              option?.id === value?.id
+                            }
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                label="Giá trị"
+                                placeholder="Chọn một hoặc nhiều giá trị"
+                                InputProps={{
+                                  ...params.InputProps,
+                                  endAdornment: (
+                                    <>
+                                      {selection.loadingValues && (
+                                        <CircularProgress size={18} />
+                                      )}
+                                      {params.InputProps.endAdornment}
+                                    </>
+                                  ),
+                                }}
+                              />
+                            )}
+                          />
+                        </Box>
+                        <Box
+                          sx={{ gridColumn: { xs: "span 1", sm: "span 2" } }}
+                        >
+                          <IconButton
+                            color="error"
+                            onClick={() => handleRemoveAttribute(index)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Stack>
+
+                <Box mt={3} display="flex" justifyContent="flex-end" gap={2}>
+                  <Button
+                    variant="contained"
+                    onClick={handleSubmit}
+                    startIcon={
+                      saving ? (
+                        <CircularProgress size={18} color="inherit" />
+                      ) : isEditMode ? (
+                        <SaveIcon />
+                      ) : (
+                        <AddIcon />
+                      )
+                    }
+                    disabled={saving}
+                  >
+                    {isEditMode ? "Lưu thay đổi" : "Thêm variant"}
+                  </Button>
+                </Box>
+              </Paper>
+            ) : (
+              <Paper variant="outlined" sx={{ p: 3 }}>
+                <Typography variant="subtitle1" fontWeight={600} mb={1}>
+                  Chi tiết variant
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Chọn một variant trong danh sách để chỉnh sửa, hoặc bấm "Thêm
+                  variant" để tạo mới.
+                </Typography>
+              </Paper>
+            )}
           </Stack>
         )}
       </DialogContent>

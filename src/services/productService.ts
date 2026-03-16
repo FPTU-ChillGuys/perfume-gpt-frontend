@@ -389,6 +389,7 @@ class ProductService {
       barcode?: string;
       mediaIdsToDelete?: string[] | null;
       temporaryMediaIdsToAdd?: string[] | null;
+      lowStockThreshold?: number;
     },
   ): Promise<string> {
     try {
