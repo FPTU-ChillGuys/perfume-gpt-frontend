@@ -38,6 +38,19 @@ import {
 
 const MAX_VISIBLE_CATEGORIES = 5;
 
+const CATEGORY_NAME_VI: Record<string, string> = {
+  "for women": "Nước hoa cho Nữ",
+  "for men": "Nước hoa cho Nam",
+  unisex: "Nước hoa Unisex",
+  "niche & artisan": "Niche và Artisan",
+  "gift sets": "Gift Sets",
+};
+
+const toVietnameseCategoryName = (name?: string | null) => {
+  if (!name) return "";
+  return CATEGORY_NAME_VI[name.trim().toLowerCase()] ?? name;
+};
+
 export const Header = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
@@ -427,7 +440,7 @@ export const Header = () => {
                 "&:hover": { color: "primary.main" },
               }}
             >
-              {cat.name}
+              {toVietnameseCategoryName(cat.name)}
             </Button>
           ))}
 
@@ -464,7 +477,7 @@ export const Header = () => {
                       );
                     }}
                   >
-                    {cat.name}
+                    {toVietnameseCategoryName(cat.name)}
                   </MenuItem>
                 ))}
               </Menu>
