@@ -541,7 +541,7 @@ export const MyOrderDetailPage = () => {
                                   sx={{ color: "text.secondary" }}
                                 />
                                 <Typography variant="body2" fontWeight={600}>
-                                  {order.recipientInfo.fullName}
+                                  {order.recipientInfo.recipientName}
                                 </Typography>
                               </Box>
                               <Box display="flex" alignItems="center" gap={1}>
@@ -550,7 +550,7 @@ export const MyOrderDetailPage = () => {
                                   sx={{ color: "text.secondary" }}
                                 />
                                 <Typography variant="body2">
-                                  {order.recipientInfo.phone}
+                                  {order.recipientInfo.recipientPhoneNumber}
                                 </Typography>
                               </Box>
                               <Box

@@ -1525,6 +1525,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auths/forgot-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ForgotPasswordRequest"];
+                    "text/json": components["schemas"]["ForgotPasswordRequest"];
+                    "application/*+json": components["schemas"]["ForgotPasswordRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auths/reset-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ResetPasswordRequest"];
+                    "text/json": components["schemas"]["ResetPasswordRequest"];
+                    "application/*+json": components["schemas"]["ResetPasswordRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/batches": {
         parameters: {
             query?: never;
@@ -1993,8 +2112,8 @@ export interface paths {
                     VoucherCode?: string;
                     ItemIds?: string[];
                     SavedAddressId?: string;
-                    "Recipient.FullName"?: string;
-                    "Recipient.Phone"?: string;
+                    "Recipient.RecipientName"?: string;
+                    "Recipient.RecipientPhoneNumber"?: string;
                     "Recipient.DistrictId"?: number;
                     "Recipient.DistrictName"?: string;
                     "Recipient.WardCode"?: string;
@@ -3871,6 +3990,54 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/olfactoryfamilies/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -7451,6 +7618,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/scentnotes/lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shippings/calculate-fee": {
         parameters: {
             query?: never;
@@ -8758,6 +8973,8 @@ export interface components {
         AddressResponse: {
             /** Format: uuid */
             id?: string;
+            recipientName?: string;
+            recipientPhoneNumber?: string;
             street?: string;
             ward?: string;
             district?: string;
@@ -9004,6 +9221,13 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfListOfOlfactoryLookupResponse: {
+            payload?: null | components["schemas"]["OlfactoryLookupResponse"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfListOfProductLookupItem: {
             payload?: null | components["schemas"]["ProductLookupItem"][];
             success?: boolean;
@@ -9020,6 +9244,13 @@ export interface components {
         };
         BaseResponseOfListOfReviewResponse: {
             payload?: null | components["schemas"]["ReviewResponse"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfListOfScentNoteLookupResponse: {
+            payload?: null | components["schemas"]["ScentNoteLookupResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -9428,6 +9659,8 @@ export interface components {
             name?: string;
         };
         CreateAddressRequest: {
+            recipientName?: string;
+            recipientPhoneNumber?: string;
             street?: string;
             ward?: string;
             district?: string;
@@ -9651,6 +9884,10 @@ export interface components {
             entityTag?: null | components["schemas"]["EntityTagHeaderValue"];
             enableRangeProcessing?: boolean;
         };
+        ForgotPasswordRequest: {
+            email?: string;
+            clientUri?: string;
+        };
         FulfillOrderItemRequest: {
             /** Format: uuid */
             orderDetailId?: string;
@@ -9794,6 +10031,11 @@ export interface components {
         };
         /** @enum {string} */
         NoteType: "Top" | "Heart" | "Base";
+        OlfactoryLookupResponse: {
+            /** Format: int32 */
+            id?: number;
+            name?: string;
+        };
         OrderDetailListItems: {
             /** Format: uuid */
             variantId?: string;
@@ -10141,6 +10383,7 @@ export interface components {
             origin?: string;
             /** Format: int32 */
             releaseYear?: number;
+            gender?: components["schemas"]["Gender"];
             scentGroup?: string;
             style?: string;
             topNotes?: string;
@@ -10287,16 +10530,16 @@ export interface components {
         RecipientInfoResponse: {
             /** Format: uuid */
             id?: string;
-            fullName?: null | string;
-            phone?: null | string;
+            recipientName?: null | string;
+            recipientPhoneNumber?: null | string;
             districtName?: string;
             wardName?: string;
             provinceName?: string;
             fullAddress?: string;
         };
         RecipientInformation: {
-            fullName?: string;
-            phone?: string;
+            recipientName?: string;
+            recipientPhoneNumber?: string;
             /** Format: int32 */
             districtId?: number;
             districtName?: string;
@@ -10327,6 +10570,12 @@ export interface components {
             reservedQuantity?: number;
             /** Format: date-time */
             expiryDate?: string;
+        };
+        ResetPasswordRequest: {
+            password?: string;
+            confirmPassword?: string;
+            email?: string;
+            token?: string;
         };
         /** @enum {string} */
         ResponseErrorType: "None" | "BadRequest" | "Unauthorized" | "Forbidden" | "NotFound" | "Conflict" | "InternalError";
@@ -10430,6 +10679,11 @@ export interface components {
             /** Format: int32 */
             noteId?: number;
             type?: components["schemas"]["NoteType"];
+        };
+        ScentNoteLookupResponse: {
+            /** Format: int32 */
+            id?: number;
+            name?: string;
         };
         ShippingInfoResponse: {
             /** Format: uuid */
@@ -10578,6 +10832,8 @@ export interface components {
         /** @enum {string} */
         TransactionStatus: "Pending" | "Success" | "Failed" | "Cancelled" | "Refunded";
         UpdateAddressRequest: {
+            recipientName?: string;
+            recipientPhoneNumber?: string;
             street?: string;
             ward?: string;
             district?: string;

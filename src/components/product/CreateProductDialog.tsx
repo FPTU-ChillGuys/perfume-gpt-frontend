@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { ChangeEvent } from "react";
 import {
   Dialog,
@@ -16,6 +16,13 @@ import {
   Card,
   CardMedia,
   Chip,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import {
   X,
@@ -31,10 +38,16 @@ import type {
   AttributeLookupItem,
   AttributeValueLookupItem,
   ProductImageUploadPayload,
+  Gender,
+  NoteType,
+  OlfactoryLookupItem,
+  ScentNoteLookupItem,
 } from "@/types/product";
 import { productService } from "@/services/productService";
 import { attributeService } from "@/services/attributeService";
 import { brandService, type BrandLookupItem } from "@/services/brandService";
+import { olfactoryService } from "@/services/olfactoryService";
+import { scentNoteService } from "@/services/scentNoteService";
 import {
   categoryService,
   type CategoryLookupItem,
@@ -64,6 +77,28 @@ interface CreateProductDialogProps {
   onSuccess: () => void;
 }
 
+const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: "Male", label: "Nam" },
+  { value: "Female", label: "Nữ" },
+  { value: "Unisex", label: "Unisex" },
+];
+
+const SCENT_NOTE_ROWS: {
+  type: NoteType;
+  label: string;
+}[] = [
+  { type: "Top", label: "Hương đầu" },
+  { type: "Heart", label: "Hương giữa" },
+  { type: "Base", label: "Hương cuối" },
+];
+
+const normalizeSearchText = (value?: string | null) =>
+  (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
 export default function CreateProductDialog({
   open,
   onClose,
@@ -77,6 +112,15 @@ export default function CreateProductDialog({
   const [selectedCategory, setSelectedCategory] =
     useState<CategoryLookupItem | null>(null);
   const [description, setDescription] = useState("");
+  const [gender, setGender] = useState<Gender | "">("");
+  const [origin, setOrigin] = useState("");
+  const [releaseYear, setReleaseYear] = useState("");
+  const [selectedOlfactoryFamilies, setSelectedOlfactoryFamilies] = useState<
+    OlfactoryLookupItem[]
+  >([]);
+  const [topNotes, setTopNotes] = useState<ScentNoteLookupItem[]>([]);
+  const [heartNotes, setHeartNotes] = useState<ScentNoteLookupItem[]>([]);
+  const [baseNotes, setBaseNotes] = useState<ScentNoteLookupItem[]>([]);
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [attributeSelections, setAttributeSelections] = useState<
     AttributeSelection[]
@@ -94,10 +138,25 @@ export default function CreateProductDialog({
   const [availableAttributes, setAvailableAttributes] = useState<
     AttributeLookupItem[]
   >([]);
+  const [styleValueOptions, setStyleValueOptions] = useState<
+    AttributeValueLookupItem[]
+  >([]);
+  const [selectedStyleValues, setSelectedStyleValues] = useState<
+    AttributeValueLookupItem[]
+  >([]);
+  const [olfactoryOptions, setOlfactoryOptions] = useState<
+    OlfactoryLookupItem[]
+  >([]);
+  const [scentNoteOptions, setScentNoteOptions] = useState<
+    ScentNoteLookupItem[]
+  >([]);
 
   const [loadingBrands, setLoadingBrands] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingAttributes, setLoadingAttributes] = useState(false);
+  const [loadingStyleValues, setLoadingStyleValues] = useState(false);
+  const [loadingOlfactory, setLoadingOlfactory] = useState(false);
+  const [loadingScentNotes, setLoadingScentNotes] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,13 +169,54 @@ export default function CreateProductDialog({
     return text ? container.innerHTML.replace(/[\r\n]+/g, "").trim() : "";
   };
 
+  const styleAttribute = useMemo(
+    () =>
+      availableAttributes.find((attribute) => {
+        const name = normalizeSearchText(attribute.name);
+        const description = normalizeSearchText(attribute.description);
+        const searchable = `${name} ${description}`;
+        return (
+          searchable.includes("phong cach") || searchable.includes("style")
+        );
+      }) || null,
+    [availableAttributes],
+  );
+
   useEffect(() => {
     if (open) {
       fetchBrands();
       fetchCategories();
       fetchAttributes();
+      fetchOlfactoryFamilies();
+      fetchScentNotes();
     }
   }, [open]);
+
+  useEffect(() => {
+    const styleAttributeId = styleAttribute?.id;
+
+    if (!open || !styleAttributeId) {
+      setStyleValueOptions([]);
+      setSelectedStyleValues([]);
+      return;
+    }
+
+    const loadStyleValues = async () => {
+      try {
+        setLoadingStyleValues(true);
+        const values =
+          await attributeService.getAttributeValues(styleAttributeId);
+        setStyleValueOptions(values);
+      } catch (err: any) {
+        console.error("Error fetching style values:", err);
+        setStyleValueOptions([]);
+      } finally {
+        setLoadingStyleValues(false);
+      }
+    };
+
+    void loadStyleValues();
+  }, [open, styleAttribute?.id]);
 
   const fetchBrands = async () => {
     try {
@@ -157,53 +257,79 @@ export default function CreateProductDialog({
     }
   };
 
+  const fetchOlfactoryFamilies = async () => {
+    try {
+      setLoadingOlfactory(true);
+      const options = await olfactoryService.getOlfactoryLookup();
+      setOlfactoryOptions(options);
+    } catch (err: any) {
+      console.error("Error fetching olfactory families:", err);
+      setError("Không thể tải nhóm hương");
+    } finally {
+      setLoadingOlfactory(false);
+    }
+  };
+
+  const fetchScentNotes = async () => {
+    try {
+      setLoadingScentNotes(true);
+      const options = await scentNoteService.getScentNotesLookup();
+      setScentNoteOptions(options);
+    } catch (err: any) {
+      console.error("Error fetching scent notes:", err);
+      setError("Không thể tải danh sách nốt hương");
+    } finally {
+      setLoadingScentNotes(false);
+    }
+  };
+
   const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0];
-    if (!file) return;
+    const filesToUpload = Array.from(files);
 
     try {
       setUploadingImage(true);
       setError(null);
 
-      // Prepare payload for upload
-      const payload: ProductImageUploadPayload[] = [
-        {
+      const payload: ProductImageUploadPayload[] = filesToUpload.map(
+        (file, index) => ({
           file,
           altText: file.name,
-          displayOrder: uploadedImages.length,
-          isPrimary: uploadedImages.length === 0, // First image is primary
-        },
-      ];
+          displayOrder: uploadedImages.length + index,
+          isPrimary: uploadedImages.length === 0 && index === 0,
+        }),
+      );
 
-      // Upload to temporary storage
       const uploadedMedia = await productService.uploadProductImages(payload);
 
-      if (uploadedMedia.length === 0 || !uploadedMedia[0]?.id) {
-        throw new Error("Không nhận được ID ảnh từ server");
+      const newImages: UploadedImage[] = uploadedMedia
+        .map((media, index) => {
+          const file = filesToUpload[index];
+          if (!media?.id || !file) return null;
+
+          return {
+            temporaryMediaId: media.id,
+            file,
+            previewUrl: URL.createObjectURL(file),
+            altText: file.name,
+            displayOrder: uploadedImages.length + index,
+            isPrimary: uploadedImages.length === 0 && index === 0,
+          };
+        })
+        .filter((item): item is UploadedImage => Boolean(item));
+
+      if (newImages.length === 0) {
+        throw new Error("Không nhận được ID ảnh hợp lệ từ server");
       }
 
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-
-      // Add to uploaded images list
-      const newImage: UploadedImage = {
-        temporaryMediaId: uploadedMedia[0].id,
-        file,
-        previewUrl,
-        altText: file.name,
-        displayOrder: uploadedImages.length,
-        isPrimary: uploadedImages.length === 0,
-      };
-
       setUploadedImages((prev) => {
-        const updated = [...prev, newImage];
-        setCurrentImageIndex(updated.length - 1); // Navigate to newly uploaded image
+        const updated = [...prev, ...newImages];
+        setCurrentImageIndex(updated.length - newImages.length);
         return updated;
       });
-      showToast("Đã tải ảnh lên thành công", "success");
+      showToast(`Đã tải lên ${newImages.length} ảnh thành công`, "success");
     } catch (err: any) {
       const errorMessage = err.message || "Không thể tải ảnh lên";
       setError(errorMessage);
@@ -264,17 +390,6 @@ export default function CreateProductDialog({
         ...img,
         isPrimary: img.temporaryMediaId === temporaryMediaId,
       })),
-    );
-  };
-
-  const handleImageAltTextChange = (
-    temporaryMediaId: string,
-    altText: string,
-  ) => {
-    setUploadedImages((prev) =>
-      prev.map((img) =>
-        img.temporaryMediaId === temporaryMediaId ? { ...img, altText } : img,
-      ),
     );
   };
 
@@ -365,17 +480,29 @@ export default function CreateProductDialog({
     setError(null);
 
     if (!name.trim()) {
-      setError("Tên sản phẩm là bắt buộc");
+      showToast("Tên sản phẩm là bắt buộc", "error");
       return;
     }
 
     if (!selectedBrand?.id) {
-      setError("Vui lòng chọn thương hiệu");
+      showToast("Vui lòng chọn thương hiệu", "error");
       return;
     }
 
     if (!selectedCategory?.id) {
-      setError("Vui lòng chọn danh mục");
+      showToast("Vui lòng chọn danh mục", "error");
+      return;
+    }
+
+    const releaseYearInput = releaseYear.trim();
+    const parsedReleaseYear =
+      releaseYearInput === "" ? undefined : Number(releaseYearInput);
+
+    if (
+      releaseYearInput !== "" &&
+      (!Number.isInteger(parsedReleaseYear) || (parsedReleaseYear ?? 0) <= 0)
+    ) {
+      showToast("Năm phát hành phải là số nguyên dương", "error");
       return;
     }
 
@@ -387,22 +514,62 @@ export default function CreateProductDialog({
         (img) => img.temporaryMediaId,
       );
 
+      const parsedOlfactoryFamilyIds = selectedOlfactoryFamilies
+        .map((item) => item.id)
+        .filter((id): id is number => typeof id === "number");
+      const scentNotes = [
+        ...topNotes
+          .map((item) => item.id)
+          .filter((id): id is number => typeof id === "number")
+          .map((noteId) => ({ noteId, type: "Top" as NoteType })),
+        ...heartNotes
+          .map((item) => item.id)
+          .filter((id): id is number => typeof id === "number")
+          .map((noteId) => ({ noteId, type: "Heart" as NoteType })),
+        ...baseNotes
+          .map((item) => item.id)
+          .filter((id): id is number => typeof id === "number")
+          .map((noteId) => ({ noteId, type: "Base" as NoteType })),
+      ];
+
       const normalizedDescription = normalizeDescription(description);
+
+      const aiAttributes = attributeSelections
+        .filter(
+          (sel) =>
+            sel.attribute?.id &&
+            sel.values.length > 0 &&
+            sel.attribute.id !== styleAttribute?.id,
+        )
+        .flatMap((sel) =>
+          sel.values.map((value) => ({
+            attributeId: sel.attribute!.id,
+            valueId: value.id,
+          })),
+        );
+
+      const styleAttributePayload = styleAttribute?.id
+        ? selectedStyleValues
+            .map((value) => value.id)
+            .filter((id): id is number => typeof id === "number")
+            .map((valueId) => ({
+              attributeId: styleAttribute.id,
+              valueId,
+            }))
+        : [];
 
       const request: CreateProductRequest = {
         name: name.trim(),
         brandId: selectedBrand.id,
         categoryId: selectedCategory.id,
+        gender: gender || undefined,
+        origin: origin.trim(),
+        releaseYear: parsedReleaseYear,
         description: normalizedDescription || null,
+        olfactoryFamilyIds: parsedOlfactoryFamilyIds,
         temporaryMediaIds,
-        attributes: attributeSelections
-          .filter((sel) => sel.attribute?.id && sel.values.length > 0)
-          .flatMap((sel) =>
-            sel.values.map((value) => ({
-              attributeId: sel.attribute!.id,
-              valueId: value.id,
-            })),
-          ),
+        scentNotes,
+        attributes: [...styleAttributePayload, ...aiAttributes],
       };
 
       await productService.createProduct(request);
@@ -424,6 +591,14 @@ export default function CreateProductDialog({
     setSelectedBrand(null);
     setSelectedCategory(null);
     setDescription("");
+    setGender("");
+    setOrigin("");
+    setReleaseYear("");
+    setSelectedOlfactoryFamilies([]);
+    setTopNotes([]);
+    setHeartNotes([]);
+    setBaseNotes([]);
+    setSelectedStyleValues([]);
 
     // Clean up image preview URLs
     uploadedImages.forEach((img) => {
@@ -506,6 +681,7 @@ export default function CreateProductDialog({
                 <input
                   hidden
                   type="file"
+                  multiple
                   accept="image/*"
                   onChange={handleImageUpload}
                   disabled={loading || uploadingImage}
@@ -658,19 +834,6 @@ export default function CreateProductDialog({
                           </Button>
                         </Box>
                       </Box>
-                      <TextField
-                        label="Alt text"
-                        fullWidth
-                        size="small"
-                        value={uploadedImages[currentImageIndex]?.altText || ""}
-                        onChange={(e) =>
-                          handleImageAltTextChange(
-                            uploadedImages[currentImageIndex]!.temporaryMediaId,
-                            e.target.value,
-                          )
-                        }
-                        disabled={loading}
-                      />
                     </Box>
 
                     {/* Thumbnail navigation */}
@@ -814,10 +977,215 @@ export default function CreateProductDialog({
                 placeholder="Nhập mô tả sản phẩm, có thể in đậm và xuống dòng"
               />
 
+              <Box>
+                <Typography variant="subtitle2" fontWeight={600} mb={1.5}>
+                  Thông tin hiển thị cho khách hàng
+                </Typography>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small" sx={{ tableLayout: "fixed" }}>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell sx={{ width: 180, fontWeight: 600 }}>
+                          Giới tính
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            select
+                            fullWidth
+                            size="small"
+                            value={gender}
+                            onChange={(e) =>
+                              setGender(e.target.value as Gender)
+                            }
+                            disabled={loading}
+                          >
+                            <MenuItem value="">
+                              <em>Chưa chọn</em>
+                            </MenuItem>
+                            {GENDER_OPTIONS.map((option) => (
+                              <MenuItem key={option.value} value={option.value}>
+                                {option.label}
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        </TableCell>
+                      </TableRow>
+
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>Xuất xứ</TableCell>
+                        <TableCell>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            value={origin}
+                            onChange={(e) => setOrigin(e.target.value)}
+                            placeholder="VD: France"
+                            disabled={loading}
+                          />
+                        </TableCell>
+                      </TableRow>
+
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>
+                          Năm phát hành
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            fullWidth
+                            size="small"
+                            type="number"
+                            value={releaseYear}
+                            onChange={(e) =>
+                              setReleaseYear(
+                                e.target.value.replace(/[^\d]/g, ""),
+                              )
+                            }
+                            placeholder="VD: 2024"
+                            disabled={loading}
+                            inputProps={{ min: 1, step: 1 }}
+                          />
+                        </TableCell>
+                      </TableRow>
+
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>
+                          Nhóm hương
+                        </TableCell>
+                        <TableCell>
+                          <Autocomplete
+                            multiple
+                            options={olfactoryOptions}
+                            getOptionLabel={(option) => option.name || ""}
+                            value={selectedOlfactoryFamilies}
+                            onChange={(_, value) =>
+                              setSelectedOlfactoryFamilies(value)
+                            }
+                            loading={loadingOlfactory}
+                            disabled={loading}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                size="small"
+                                placeholder="Chọn nhóm hương"
+                                InputProps={{
+                                  ...params.InputProps,
+                                  endAdornment: (
+                                    <>
+                                      {loadingOlfactory ? (
+                                        <CircularProgress size={18} />
+                                      ) : null}
+                                      {params.InputProps.endAdornment}
+                                    </>
+                                  ),
+                                }}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>
+                          Phong cách
+                        </TableCell>
+                        <TableCell>
+                          <Autocomplete
+                            multiple
+                            options={styleValueOptions}
+                            getOptionLabel={(option) => option.value || ""}
+                            value={selectedStyleValues}
+                            onChange={(_, value) =>
+                              setSelectedStyleValues(value)
+                            }
+                            loading={loadingStyleValues}
+                            disabled={loading || !styleAttribute}
+                            renderInput={(params) => (
+                              <TextField
+                                {...params}
+                                size="small"
+                                placeholder={
+                                  styleAttribute
+                                    ? "Chọn phong cách"
+                                    : "Chưa tìm thấy attribute Phong cách"
+                                }
+                                InputProps={{
+                                  ...params.InputProps,
+                                  endAdornment: (
+                                    <>
+                                      {loadingStyleValues ? (
+                                        <CircularProgress size={18} />
+                                      ) : null}
+                                      {params.InputProps.endAdornment}
+                                    </>
+                                  ),
+                                }}
+                              />
+                            )}
+                          />
+                        </TableCell>
+                      </TableRow>
+
+                      {SCENT_NOTE_ROWS.map((row) => (
+                        <TableRow key={row.type}>
+                          <TableCell sx={{ fontWeight: 600 }}>
+                            {row.label}
+                          </TableCell>
+                          <TableCell>
+                            <Autocomplete
+                              multiple
+                              options={scentNoteOptions}
+                              getOptionLabel={(option) => option.name || ""}
+                              value={
+                                row.type === "Top"
+                                  ? topNotes
+                                  : row.type === "Heart"
+                                    ? heartNotes
+                                    : baseNotes
+                              }
+                              onChange={(_, value) => {
+                                if (row.type === "Top") {
+                                  setTopNotes(value);
+                                  return;
+                                }
+                                if (row.type === "Heart") {
+                                  setHeartNotes(value);
+                                  return;
+                                }
+                                setBaseNotes(value);
+                              }}
+                              loading={loadingScentNotes}
+                              disabled={loading}
+                              renderInput={(params) => (
+                                <TextField
+                                  {...params}
+                                  size="small"
+                                  placeholder={`Chọn ${row.label.toLowerCase()}`}
+                                  InputProps={{
+                                    ...params.InputProps,
+                                    endAdornment: (
+                                      <>
+                                        {loadingScentNotes ? (
+                                          <CircularProgress size={18} />
+                                        ) : null}
+                                        {params.InputProps.endAdornment}
+                                      </>
+                                    ),
+                                  }}
+                                />
+                              )}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Box>
+
               {/* Attributes section */}
               <Box>
                 <Typography variant="subtitle2" fontWeight={600} mb={1.5}>
-                  Attributes
+                  Thuộc tính mở rộng cho AI
                 </Typography>
 
                 {loadingAttributes ? (

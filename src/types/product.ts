@@ -18,6 +18,12 @@ export type PagedVariantList =
 export type CreateProductRequest =
   components["schemas"]["CreateProductRequest"];
 export type ProductAttributeDto = components["schemas"]["ProductAttributeDto"];
+export type Gender = components["schemas"]["Gender"];
+export type NoteType = components["schemas"]["NoteType"];
+export type OlfactoryLookupItem =
+  components["schemas"]["OlfactoryLookupResponse"];
+export type ScentNoteLookupItem =
+  components["schemas"]["ScentNoteLookupResponse"];
 
 export type AttributeLookupItem = components["schemas"]["AttributeLookupItem"];
 export type AttributeValueLookupItem =
@@ -37,18 +43,14 @@ export interface ProductImageUploadPayload {
   isPrimary?: boolean;
 }
 
-export type ProductInformation =
-  components["schemas"]["ProductInforResponse"];
-export type ProductFastLook =
-  components["schemas"]["ProductFastLookResponse"];
-export type VariantFastLook =
-  components["schemas"]["VariantFastLookResponse"];
+export type ProductInformation = components["schemas"]["ProductInforResponse"];
+export type ProductFastLook = components["schemas"]["ProductFastLookResponse"];
+export type VariantFastLook = components["schemas"]["VariantFastLookResponse"];
 export type ProductListItemWithVariants =
   components["schemas"]["ProductListItemWithVariants"];
 export type PagedProductListWithVariants =
   components["schemas"]["PagedResultOfProductListItemWithVariants"];
-export type ProductLookupItem =
-  components["schemas"]["ProductLookupItem"];
+export type ProductLookupItem = components["schemas"]["ProductLookupItem"];
 export type CreateVariantRequest =
   components["schemas"]["CreateVariantRequest"];
 export type VariantStatus = components["schemas"]["VariantStatus"];

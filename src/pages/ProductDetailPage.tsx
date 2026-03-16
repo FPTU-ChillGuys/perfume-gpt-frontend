@@ -558,6 +558,18 @@ const ProductDetailPage = () => {
       setIsAdding(false);
     }
   };
+  const convertProductGenderToVietnamese = (gender: string) => {
+    switch (gender) {
+      case "Male":
+        return "Nam";
+      case "Female":
+        return "Nữ";
+      case "Unisex":
+        return "Unisex";
+      default:
+        return gender;
+    }
+  };
 
   const productGender = useMemo(() => {
     const meta = information as Record<string, unknown> | null;
@@ -572,11 +584,14 @@ const ProductDetailPage = () => {
       },
       { label: "Xuất xứ", value: information?.origin || "" },
       { label: "Năm phát hành", value: information?.releaseYear || "" },
-      { label: "Giới tính", value: productGender },
+      {
+        label: "Giới tính",
+        value: convertProductGenderToVietnamese(productGender),
+      },
       { label: "Phong cách", value: information?.style || "" },
       { label: "Nhóm hương", value: information?.scentGroup || "" },
       { label: "Hương đầu", value: information?.topNotes || "" },
-      { label: "Hương giữa", value: information?.middleNotes || "" },
+      { label: "Hương giữa", value: information?.heartNotes || "" },
       { label: "Hương cuối", value: information?.baseNotes || "" },
     ],
     [information, fastLook, productGender],
