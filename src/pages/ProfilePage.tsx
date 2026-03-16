@@ -56,11 +56,8 @@ const ProfilePage = () => {
   const [success, setSuccess] = useState("");
 
   const [formData, setFormData] = useState<UpdateProfileRequest>({
-    scentPreference: "",
     minBudget: undefined,
     maxBudget: undefined,
-    preferredStyle: "",
-    favoriteNotes: "",
   });
 
   const Layout =
@@ -103,11 +100,8 @@ const ProfilePage = () => {
       const data = await profileService.getMyProfile();
       setProfile(data);
       setFormData({
-        scentPreference: data.scentPreference || "",
         minBudget: data.minBudget || undefined,
         maxBudget: data.maxBudget || undefined,
-        preferredStyle: data.preferredStyle || "",
-        favoriteNotes: data.favoriteNotes || "",
       });
     } catch (err: any) {
       setError(err.message || "Không thể tải thông tin profile");
@@ -150,11 +144,8 @@ const ProfilePage = () => {
     setIsEditing(false);
     if (profile) {
       setFormData({
-        scentPreference: profile.scentPreference || "",
         minBudget: profile.minBudget || undefined,
         maxBudget: profile.maxBudget || undefined,
-        preferredStyle: profile.preferredStyle || "",
-        favoriteNotes: profile.favoriteNotes || "",
       });
     }
     setError("");

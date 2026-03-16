@@ -269,8 +269,8 @@ export const CounterCheckoutStaffPage = () => {
       isPickupInStore: true,
       orderDetails: validOrderDetails,
       recipient: {
-        fullName: recipientName,
-        phone: recipientPhone,
+        recipientName,
+        recipientPhoneNumber: recipientPhone,
         districtId: 0,
         districtName: "",
         wardCode: "",

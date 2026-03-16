@@ -127,7 +127,7 @@ const ReceiveImportStock: React.FC = () => {
           variantSku: detail.variantSku!,
           unitPrice: Number(detail.unitPrice!),
           totalPrice: Number(detail.totalPrice!),
-          quantity: Number(detail.quantity!),
+          quantity: Number(detail.expectedQuantity!),
           rejectQuantity: 0,
           note: null,
           batches: detail.batches!.map((batch, idx) => ({

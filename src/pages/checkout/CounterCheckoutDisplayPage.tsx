@@ -348,7 +348,7 @@ export const CounterCheckoutDisplayPage = () => {
                       Khách hàng
                     </Typography>
                     <Typography fontWeight={600}>
-                      {order.recipientInfo?.fullName || order.customerName || "Khách hàng"}
+                      {order.recipientInfo?.recipientName || order.customerName || "Khách hàng"}
                     </Typography>
                     <Typography color="text.secondary">
                       {order.recipientInfo?.fullAddress || "Nhận tại quầy"}
