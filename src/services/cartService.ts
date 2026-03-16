@@ -3,6 +3,7 @@ import type { CartItem, CartTotals } from "@/types/cart";
 
 interface VoucherQuery {
   VoucherCode?: string;
+  ItemIds?: string[];
   SavedAddressId?: string;
   "Recipient.DistrictId"?: number;
   "Recipient.WardCode"?: string;
@@ -23,6 +24,7 @@ class CartService {
 
   async getCartWithTotals(
     voucherId?: string,
+    itemIds?: string[],
     districtId?: number,
     wardCode?: string,
     savedAddressId?: string,
@@ -35,6 +37,7 @@ class CartService {
       const items = await this.getItems();
       const totals = await this.getTotals(
         voucherId,
+        itemIds,
         districtId,
         wardCode,
         savedAddressId,
@@ -88,6 +91,7 @@ class CartService {
 
   async getTotals(
     voucherId?: string,
+    itemIds?: string[],
     districtId?: number,
     wardCode?: string,
     savedAddressId?: string,
@@ -95,6 +99,7 @@ class CartService {
     try {
       const query = this.buildQuery(
         voucherId,
+        itemIds,
         districtId,
         wardCode,
         savedAddressId,
@@ -220,6 +225,7 @@ class CartService {
 
   private buildQuery(
     voucherId?: string,
+    itemIds?: string[],
     districtId?: number,
     wardCode?: string,
     savedAddressId?: string,
@@ -228,6 +234,10 @@ class CartService {
 
     if (voucherId) {
       query.VoucherCode = voucherId;
+    }
+
+    if (itemIds && itemIds.length > 0) {
+      query.ItemIds = itemIds;
     }
 
     if (savedAddressId) {

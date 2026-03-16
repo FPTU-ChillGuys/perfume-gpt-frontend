@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
@@ -86,9 +86,19 @@ const PAYMENT_METHODS: {
 
 export const CheckoutPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
   const { user } = useAuth();
+
+  const selectedFromCart =
+    (
+      location.state as
+        | {
+            selectedCartItemIds?: string[];
+          }
+        | undefined
+    )?.selectedCartItemIds || [];
 
   // State
   const [isPickupInStore, setIsPickupInStore] = useState(false);
@@ -126,6 +136,8 @@ export const CheckoutPage = () => {
 
   // Cart data
   const [items, setItems] = useState<CartItem[]>([]);
+  const [allCartItemIds, setAllCartItemIds] = useState<string[]>([]);
+  const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[]>([]);
   const [totals, setTotals] = useState<CartTotals>({
     subtotal: 0,
     shippingFee: 0,
@@ -166,7 +178,13 @@ export const CheckoutPage = () => {
     useNewAddress,
     newAddress.districtId,
     newAddress.wardCode,
+    selectedCartItemIds,
   ]);
+
+  const shouldQuerySelectedItems = (
+    allItemIds: string[],
+    selectedIds: string[],
+  ) => selectedIds.length > 0 && selectedIds.length < allItemIds.length;
 
   const loadProvinces = async () => {
     setIsLoadingProvinces(true);
@@ -287,14 +305,33 @@ export const CheckoutPage = () => {
       setIsLoading(true);
 
       // Load addresses and cart
-      const [addressList, cartData] = await Promise.all([
+      const [addressList, cartItems] = await Promise.all([
         addressService.getAddresses().catch(() => [] as AddressResponse[]),
-        cartService.getCartWithTotals(),
+        cartService.getItems(),
       ]);
 
+      const allItemIds = cartItems
+        .map((item) => item.cartItemId)
+        .filter(Boolean) as string[];
+      const validSelectedIds = selectedFromCart.filter((id) =>
+        allItemIds.includes(id),
+      );
+      const effectiveSelectedIds =
+        validSelectedIds.length > 0 ? validSelectedIds : allItemIds;
+      const visibleItems = cartItems.filter((item) =>
+        item.cartItemId ? effectiveSelectedIds.includes(item.cartItemId) : false,
+      );
+
+      const totalsData =
+        shouldQuerySelectedItems(allItemIds, effectiveSelectedIds)
+          ? await cartService.getTotals(undefined, effectiveSelectedIds)
+          : await cartService.getTotals();
+
       setAddresses(addressList);
-      setItems(cartData.items);
-      setTotals(cartData.totals);
+      setAllCartItemIds(allItemIds);
+      setItems(visibleItems);
+      setSelectedCartItemIds(effectiveSelectedIds);
+      setTotals(totalsData);
 
       // Set default address if exists
       const defaultAddr = addressList.find((addr) => addr.isDefault);
@@ -317,9 +354,24 @@ export const CheckoutPage = () => {
         ? voucherCodeOverride || undefined
         : appliedVoucher?.voucherCode || undefined;
     try {
+      if (selectedCartItemIds.length === 0) {
+        setTotals({ subtotal: 0, shippingFee: 0, discount: 0, totalPrice: 0 });
+        return;
+      }
+
+      const itemIdsForQuery = shouldQuerySelectedItems(
+        allCartItemIds,
+        selectedCartItemIds,
+      )
+        ? selectedCartItemIds
+        : undefined;
+
       // Nếu là pickup in store, không cần địa chỉ
       if (isPickupInStore) {
-        const totalsData = await cartService.getTotals(activeVoucher);
+        const totalsData = await cartService.getTotals(
+          activeVoucher,
+          itemIdsForQuery,
+        );
         setTotals(totalsData);
         return;
       }
@@ -349,6 +401,7 @@ export const CheckoutPage = () => {
       if (savedAddressId || (districtId && wardCode)) {
         const totalsData = await cartService.getTotals(
           activeVoucher,
+          itemIdsForQuery,
           districtId,
           wardCode,
           savedAddressId,
@@ -458,11 +511,18 @@ export const CheckoutPage = () => {
       // Build request
       const request: CreateOrderRequest = {
         voucherCode: voucherCode || null,
+        itemIds: selectedCartItemIds,
         deliveryMethod: isPickupInStore ? "PickupInStore" : "Delivery",
+        guestEmail: "",
         payment: {
           method: paymentMethod,
         },
       };
+
+      if (selectedCartItemIds.length === 0) {
+        showToast("Vui lòng chọn sản phẩm để thanh toán", "warning");
+        return;
+      }
 
       // Add recipient info based on delivery method
       if (!isPickupInStore) {

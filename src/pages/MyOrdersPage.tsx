@@ -6,6 +6,11 @@ import {
   Chip,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   FormControl,
   Grid,
@@ -100,6 +105,8 @@ export const MyOrdersPage = () => {
   const [selectedReview, setSelectedReview] = useState<ReviewResponse | null>(
     null,
   );
+  const [actionOrderId, setActionOrderId] = useState<string | null>(null);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
@@ -199,6 +206,33 @@ export const MyOrdersPage = () => {
 
   const handleReviewSuccess = () => {
     // reviews are loaded fresh on detail page
+  };
+
+  const handleConfirmCancelOrder = async () => {
+    if (!cancelOrderId) return;
+
+    try {
+      setActionOrderId(cancelOrderId);
+      await orderService.cancelOrder(cancelOrderId);
+      showToast("Đã hủy đơn hàng", "success");
+      await loadOrders();
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể hủy đơn hàng",
+        "error",
+      );
+    } finally {
+      setActionOrderId(null);
+      setCancelOrderId(null);
+    }
+  };
+
+  const handleRequestCancelOrder = (orderId?: string | null) => {
+    if (!orderId) return;
+    showToast(
+      "Yêu cầu hủy đã được ghi nhận. Vui lòng chờ Staff xác nhận.",
+      "info",
+    );
   };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -424,6 +458,29 @@ export const MyOrdersPage = () => {
                           justifyContent="flex-end"
                           spacing={1}
                         >
+                          {order.status === "Pending" && (
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              disabled={actionOrderId === order.id}
+                              onClick={() => setCancelOrderId(order.id ?? null)}
+                            >
+                              {actionOrderId === order.id
+                                ? "Đang hủy..."
+                                : "Hủy đơn hàng"}
+                            </Button>
+                          )}
+                          {order.status === "Processing" && (
+                            <Button
+                              size="small"
+                              color="warning"
+                              variant="outlined"
+                              onClick={() => handleRequestCancelOrder(order.id)}
+                            >
+                              Yêu cầu hủy đơn
+                            </Button>
+                          )}
                           <Button
                             size="small"
                             variant="outlined"
@@ -518,6 +575,31 @@ export const MyOrdersPage = () => {
         onClose={handleReviewDialogClose}
         onSuccess={handleReviewSuccess}
       />
+
+      <Dialog
+        open={Boolean(cancelOrderId)}
+        onClose={() => setCancelOrderId(null)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn có chắc chắn muốn hủy đơn hàng này không?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelOrderId(null)}>Đóng</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleConfirmCancelOrder}
+            disabled={!cancelOrderId || actionOrderId === cancelOrderId}
+          >
+            {actionOrderId === cancelOrderId ? "Đang hủy..." : "Xác nhận hủy"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </MainLayout>
   );
 };
