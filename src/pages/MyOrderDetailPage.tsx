@@ -36,6 +36,7 @@ import { productReviewService } from "@/services/reviewService";
 import { productService } from "@/services/productService";
 import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
+import type { PaymentMethod } from "@/types/checkout";
 import type { OrderResponse, CarrierName, OrderStatus } from "@/types/order";
 import {
   getReviewStatus,
@@ -43,9 +44,7 @@ import {
   type ReviewStatus,
   type ReviewDialogTarget,
 } from "@/types/review";
-import {
-  orderStatusLabels,
-} from "@/utils/orderStatus";
+import { orderStatusLabels } from "@/utils/orderStatus";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 
@@ -54,6 +53,13 @@ import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 const CARRIER_LABELS: Record<CarrierName, string> = {
   GHN: "Giao Hàng Nhanh",
   GHTK: "Giao Hàng Tiết Kiệm",
+};
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CashOnDelivery: "Thanh toán khi nhận hàng",
+  CashInStore: "Thanh toán tiền mặt tại quầy",
+  VnPay: "Thanh toán qua VNPay",
+  Momo: "Thanh toán qua MoMo",
 };
 
 const REVIEW_STATUS_CHIP: Record<
@@ -383,6 +389,13 @@ export const MyOrderDetailPage = () => {
   const shippingFee = order?.shippingInfo?.shippingFee ?? 0;
   const total = order?.totalAmount ?? 0;
   const voucherDiscount = subtotal + shippingFee - total;
+  const paymentMethodLabel = useMemo(() => {
+    const paymentMethod = [...(order?.paymentTransactions ?? [])]
+      .reverse()
+      .find((transaction) => transaction?.paymentMethod)?.paymentMethod;
+
+    return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
+  }, [order?.paymentTransactions]);
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
@@ -802,6 +815,25 @@ export const MyOrderDetailPage = () => {
                             sx={{ color: "#ee4d2d" }}
                           >
                             {fmt(total)}
+                          </Typography>
+                        </Box>
+
+                        <Divider />
+
+                        <Box
+                          display="flex"
+                          justifyContent="space-between"
+                          gap={2}
+                        >
+                          <Typography variant="body2" color="text.secondary">
+                            Phương thức thanh toán
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            textAlign="right"
+                          >
+                            {paymentMethodLabel}
                           </Typography>
                         </Box>
                       </Stack>

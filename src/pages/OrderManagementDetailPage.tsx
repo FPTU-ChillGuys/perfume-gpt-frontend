@@ -38,6 +38,7 @@ import {
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
+import type { PaymentMethod } from "@/types/checkout";
 import type { CarrierName, OrderResponse, OrderStatus } from "@/types/order";
 import {
   getOrderStatusChipSx,
@@ -52,6 +53,13 @@ import {
 const CARRIER_LABELS: Record<CarrierName, string> = {
   GHN: "Giao Hàng Nhanh",
   GHTK: "Giao Hàng Tiết Kiệm",
+};
+
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CashOnDelivery: "Thanh toán khi nhận hàng",
+  CashInStore: "Thanh toán tiền mặt tại quầy",
+  VnPay: "Thanh toán qua VNPay",
+  Momo: "Thanh toán qua MoMo",
 };
 
 const STATUS_TO_STEP: Record<OrderStatus, number> = {
@@ -328,6 +336,13 @@ export const OrderManagementDetailPage = () => {
   const shippingFee = order?.shippingInfo?.shippingFee ?? 0;
   const total = order?.totalAmount ?? 0;
   const voucherDiscount = subtotal + shippingFee - total;
+  const paymentMethodLabel = useMemo(() => {
+    const paymentMethod = [...(order?.paymentTransactions ?? [])]
+      .reverse()
+      .find((transaction) => transaction?.paymentMethod)?.paymentMethod;
+
+    return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
+  }, [order?.paymentTransactions]);
 
   const handleBack = () => {
     navigate(backPath, {
@@ -900,6 +915,25 @@ export const OrderManagementDetailPage = () => {
                           sx={{ color: "#ee4d2d" }}
                         >
                           {fmt(total)}
+                        </Typography>
+                      </Box>
+
+                      <Divider />
+
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        gap={2}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          Phương thức thanh toán
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          textAlign="right"
+                        >
+                          {paymentMethodLabel}
                         </Typography>
                       </Box>
                     </Stack>

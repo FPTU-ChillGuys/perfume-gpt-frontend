@@ -337,7 +337,7 @@ export const Header = () => {
                       <ListItemIcon>
                         <ShoppingBagIcon fontSize="small" />
                       </ListItemIcon>
-                      <Typography variant="body2">Đơn hàng của tôi</Typography>
+                      <Typography variant="body2">Đơn mua</Typography>
                     </MenuItem>
                   )}
                   {(user.role === "admin" || user.role === "staff") && (
