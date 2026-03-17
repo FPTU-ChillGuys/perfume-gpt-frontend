@@ -85,9 +85,24 @@ export const mapProductWithVariantsToCard = (
   product: ProductListItemWithVariants & { id: string },
 ): ProductCardProps => {
   const firstVariant = product.variants?.[0];
-  const price = Number(
-    (firstVariant as { basePrice?: number } | undefined)?.basePrice ?? 0,
+  const productSource = product as Record<string, unknown>;
+  const variantSource = firstVariant as Record<string, unknown> | undefined;
+  const priceCandidates = [
+    variantSource?.basePrice,
+    variantSource?.price,
+    variantSource?.salePrice,
+    variantSource?.variantPrice,
+    productSource.basePrice,
+    productSource.price,
+    productSource.salePrice,
+    productSource.variantPrice,
+    productSource.minPrice,
+    productSource.lowestPrice,
+  ];
+  const resolvedPrice = priceCandidates.find(
+    (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
   );
+  const price = typeof resolvedPrice === "number" ? resolvedPrice : 0;
 
   return {
     id: product.id,
