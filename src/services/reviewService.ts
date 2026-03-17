@@ -258,24 +258,83 @@ class ProductReviewService {
     }
 
     try {
-      const formData = new FormData();
-      files.forEach((file) => formData.append("Images", file));
+      const accessToken = localStorage.getItem("accessToken");
+      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/reviews/images/temporary`;
 
-      const response = await apiInstance.POST("/api/reviews/images/temporary", {
-        body: { Images: [] },
-        bodySerializer() {
-          return formData;
-        },
+      let lastErrorMessage = "Không thể tải ảnh tạm thời";
+
+      const attemptUpload = async (
+        buildFormData: (fileList: File[]) => FormData,
+      ): Promise<TemporaryReviewMedia[] | null> => {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+              }
+            : undefined,
+          body: buildFormData(files),
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data?.success) {
+          lastErrorMessage =
+            data?.message ||
+            (Array.isArray(data?.errors) ? data.errors.join("; ") : "") ||
+            lastErrorMessage;
+          return null;
+        }
+
+        const payload = data.payload as
+          | BulkActionResultOfListOfTemporaryMediaResponse
+          | TemporaryReviewMedia[]
+          | null;
+
+        if (Array.isArray(payload)) {
+          return payload;
+        }
+
+        return payload?.data || [];
+      };
+
+      const strategyA = await attemptUpload((fileList) => {
+        const formData = new FormData();
+        fileList.forEach((file) => {
+          formData.append("Images", file);
+        });
+        return formData;
       });
 
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể tải ảnh tạm thời");
+      if (strategyA) {
+        return strategyA;
       }
 
-      const payload = response.data
-        .payload as BulkActionResultOfListOfTemporaryMediaResponse;
+      const strategyB = await attemptUpload((fileList) => {
+        const formData = new FormData();
+        fileList.forEach((file, index) => {
+          formData.append(`Images[${index}]`, file);
+        });
+        return formData;
+      });
 
-      return payload?.data || [];
+      if (strategyB) {
+        return strategyB;
+      }
+
+      const strategyC = await attemptUpload((fileList) => {
+        const formData = new FormData();
+        fileList.forEach((file, index) => {
+          formData.append(`Images[${index}].ImageFile`, file);
+        });
+        return formData;
+      });
+
+      if (strategyC) {
+        return strategyC;
+      }
+
+      throw new Error(lastErrorMessage);
     } catch (error: any) {
       console.error("Error uploading review images:", error);
       throw new Error(

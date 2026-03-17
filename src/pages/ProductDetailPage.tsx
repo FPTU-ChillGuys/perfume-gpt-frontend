@@ -41,10 +41,13 @@ import {
 import type {
   MediaResponse,
   ProductDetail,
-  ProductFastLook,
   ProductInformation,
 } from "@/types/product";
-import type { ReviewDialogTarget, ReviewResponse } from "@/types/review";
+import type {
+  ReviewDialogTarget,
+  ReviewResponse,
+  ReviewStatisticsResponse,
+} from "@/types/review";
 
 const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   style: "currency",
@@ -79,6 +82,24 @@ const sanitizeDescriptionHtml = (html: string) => {
   return container.innerHTML;
 };
 
+const sortVariantMediaWithPrimaryFirst = (mediaList: MediaResponse[]) => {
+  const isPrimary = (media?: MediaResponse | null) => {
+    const meta = media as MediaResponse & {
+      isPrimary?: boolean;
+      isMain?: boolean;
+    };
+    return meta?.isPrimary === true || meta?.isMain === true;
+  };
+
+  return [...mediaList].sort((a, b) => {
+    if (isPrimary(a) !== isPrimary(b)) {
+      return isPrimary(a) ? -1 : 1;
+    }
+
+    return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
+  });
+};
+
 const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
@@ -92,7 +113,6 @@ const ProductDetailPage = () => {
   const [productDetail, setProductDetail] = useState<ProductDetail | null>(
     null,
   );
-  const [fastLook, setFastLook] = useState<ProductFastLook | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
@@ -129,22 +149,30 @@ const ProductDetailPage = () => {
     null,
   );
   const [reviewRefreshToken, setReviewRefreshToken] = useState(0);
+  const [reviewStats, setReviewStats] =
+    useState<ReviewStatisticsResponse | null>(null);
+  const [shouldLoadReviewSummary, setShouldLoadReviewSummary] = useState(false);
+  const [shouldRenderReviewSection, setShouldRenderReviewSection] =
+    useState(false);
+  const reviewSectionAnchorRef = useRef<HTMLDivElement | null>(null);
   const [infoTab, setInfoTab] = useState<"details" | "usage" | "shipping">(
     "details",
   );
 
-  const fetchMyReviews = useCallback(async () => {
+  const fetchMyReviews = useCallback(async (): Promise<ReviewResponse[]> => {
     if (!isAuthenticated) {
       setMyReviews([]);
-      return;
+      return [];
     }
 
     setIsLoadingMyReviews(true);
     try {
       const data = await productReviewService.getMyReviews();
       setMyReviews(data);
+      return data;
     } catch (error) {
       console.error("Error loading personal reviews:", error);
+      return [];
     } finally {
       setIsLoadingMyReviews(false);
     }
@@ -169,50 +197,14 @@ const ProductDetailPage = () => {
     setError(null);
 
     const fetchData = async () => {
-      try {
-        const detailResponse = await productService.getProductDetail(productId);
-
-        if (!isMounted) {
+      const applyDetail = (detailResponse: ProductDetail | null) => {
+        if (!detailResponse) {
           return;
         }
 
         setProductDetail(detailResponse);
 
-        if (detailResponse) {
-          setFastLook(
-            (current) =>
-              current ?? {
-                id: detailResponse.id,
-                name: detailResponse.name || "Sản phẩm",
-                description: detailResponse.description ?? null,
-                brandName: detailResponse.brandName || "",
-                gender: detailResponse.gender,
-                variants:
-                  detailResponse.variants?.map((variant) => ({
-                    id: variant.id,
-                    displayName:
-                      [
-                        variant.concentrationName,
-                        variant.volumeMl ? `${variant.volumeMl} ml` : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" - ") ||
-                      variant.sku ||
-                      "Size",
-                    price: variant.basePrice,
-                    stockQuantity: variant.stockQuantity,
-                    media:
-                      variant.media?.find((media) => media?.isPrimary) ||
-                      variant.media?.[0] ||
-                      null,
-                  })) || [],
-                rating: 0,
-                reviewCount: 0,
-              },
-          );
-        }
-
-        const firstAvailableVariant = detailResponse?.variants?.find(
+        const firstAvailableVariant = detailResponse.variants?.find(
           (variant) => {
             const stockQuantity = variant?.stockQuantity;
             return typeof stockQuantity !== "number" || stockQuantity > 0;
@@ -220,37 +212,38 @@ const ProductDetailPage = () => {
         );
 
         setSelectedVariantId(
-          firstAvailableVariant?.id ||
-            detailResponse?.variants?.[0]?.id ||
+          (current) =>
+            current ||
+            firstAvailableVariant?.id ||
+            detailResponse.variants?.[0]?.id ||
             null,
         );
+      };
 
-        setLoading(false);
+      try {
+        const detailPromise = productService.getProductDetail(productId);
+        const infoPromise = productService.getProductInformation(productId);
 
-        const [infoResult, fastLookResult] = await Promise.allSettled([
-          productService.getProductInformation(productId),
-          productService.getProductFastLook(productId),
-        ]);
+        const detailFirst = await detailPromise;
 
         if (!isMounted) {
           return;
         }
 
-        if (infoResult.status === "fulfilled") {
-          setInformation(infoResult.value);
+        applyDetail(detailFirst);
+        setLoading(false);
+
+        const infoResult = await Promise.allSettled([infoPromise]);
+
+        if (!isMounted) {
+          return;
         }
 
-        if (fastLookResult.status === "fulfilled") {
-          setFastLook(fastLookResult.value);
-
-          setSelectedVariantId((currentSelected) => {
-            if (currentSelected) {
-              return currentSelected;
-            }
-
-            return fastLookResult.value?.variants?.[0]?.id || null;
-          });
+        if (infoResult[0]?.status === "fulfilled") {
+          setInformation(infoResult[0].value);
         }
+
+        setLoading(false);
       } catch (err: any) {
         if (!isMounted) {
           return;
@@ -286,48 +279,25 @@ const ProductDetailPage = () => {
     };
   }, []);
 
-  const fastLookDisplayNameById = useMemo(() => {
-    const map = new Map<string, string>();
-    (fastLook?.variants || []).forEach((variant) => {
-      if (variant.id && variant.displayName) {
-        map.set(variant.id, variant.displayName);
-      }
-    });
-    return map;
-  }, [fastLook]);
-
   const displayVariants = useMemo(() => {
-    if (productDetail?.variants?.length) {
-      return productDetail.variants.map((variant) => ({
-        id: variant.id || "",
-        displayName:
-          (variant.id ? fastLookDisplayNameById.get(variant.id) : undefined) ||
-          [
-            variant.concentrationName,
-            variant.volumeMl ? `${variant.volumeMl} ml` : null,
-          ]
-            .filter(Boolean)
-            .join(" - ") ||
-          variant.sku ||
-          "Size",
-        price: variant.basePrice,
-        stockQuantity: variant.stockQuantity,
-        media: variant.media?.[0] || null,
-        mediaList: variant.media || [],
-        sku: variant.sku || null,
-      }));
-    }
-
-    return (fastLook?.variants || []).map((variant) => ({
+    return (productDetail?.variants || []).map((variant) => ({
       id: variant.id || "",
-      displayName: variant.displayName || "Size",
-      price: variant.price,
+      displayName:
+        [
+          variant.concentrationName,
+          variant.volumeMl ? `${variant.volumeMl} ml` : null,
+        ]
+          .filter(Boolean)
+          .join(" - ") ||
+        variant.sku ||
+        "Size",
+      price: variant.basePrice,
       stockQuantity: variant.stockQuantity,
-      media: variant.media || null,
-      mediaList: variant.media ? [variant.media] : [],
-      sku: null,
+      media: variant.media?.[0] || null,
+      mediaList: variant.media || [],
+      sku: variant.sku || null,
     }));
-  }, [productDetail, fastLook, fastLookDisplayNameById]);
+  }, [productDetail]);
 
   useEffect(() => {
     if (!selectedVariantId) {
@@ -350,9 +320,7 @@ const ProductDetailPage = () => {
     );
 
     if (variant) {
-      const sorted = [...(variant.media || [])].sort(
-        (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
-      );
+      const sorted = sortVariantMediaWithPrimaryFirst(variant.media || []);
 
       variantCacheRef.current.set(selectedVariantId, sorted);
       setVariantMediaList(sorted);
@@ -372,8 +340,8 @@ const ProductDetailPage = () => {
       return;
     }
 
-    const sorted = [...(fallbackVariant.mediaList || [])].sort(
-      (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+    const sorted = sortVariantMediaWithPrimaryFirst(
+      fallbackVariant.mediaList || [],
     );
 
     variantCacheRef.current.set(selectedVariantId, sorted);
@@ -387,6 +355,13 @@ const ProductDetailPage = () => {
   useEffect(() => {
     if (!selectedVariantId || loading) {
       setReviewSummary(null);
+      return;
+    }
+
+    if (!shouldLoadReviewSummary) {
+      setReviewSummary(null);
+      setReviewError(null);
+      setIsReviewLoading(false);
       return;
     }
 
@@ -426,15 +401,39 @@ const ProductDetailPage = () => {
       isMounted = false;
       window.clearTimeout(timer);
     };
-  }, [selectedVariantId, loading]);
-
-  useEffect(() => {
-    void fetchMyReviews();
-  }, [fetchMyReviews]);
+  }, [selectedVariantId, loading, shouldLoadReviewSummary]);
 
   useEffect(() => {
     setReviewActionError(null);
+    setReviewStats(null);
+    setShouldLoadReviewSummary(false);
   }, [selectedVariantId]);
+
+  useEffect(() => {
+    if (shouldRenderReviewSection) {
+      return;
+    }
+
+    const anchor = reviewSectionAnchorRef.current;
+    if (!anchor || typeof IntersectionObserver === "undefined") {
+      setShouldRenderReviewSection(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry?.isIntersecting) {
+          setShouldRenderReviewSection(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "240px 0px" },
+    );
+
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, [shouldRenderReviewSection, selectedVariantId]);
 
   const selectedVariant = useMemo(
     () =>
@@ -465,6 +464,7 @@ const ProductDetailPage = () => {
 
   const selectedVariantStockQuantity = getVariantStockQuantity(selectedVariant);
   const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
+  const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
 
   const fallbackReviewThumbnail = useMemo(
     () =>
@@ -535,8 +535,9 @@ const ProductDetailPage = () => {
             variantName:
               match.variantName ||
               selectedVariant?.displayName ||
-              fastLook?.name,
-            productName: fastLook?.name || match.variantName || undefined,
+              productDetail?.name ||
+              undefined,
+            productName: productDetail?.name || match.variantName || undefined,
             thumbnailUrl: match.imageUrl || fallbackReviewThumbnail || null,
           };
           reviewTargetCacheRef.current[variantId] = target;
@@ -567,22 +568,30 @@ const ProductDetailPage = () => {
       return;
     }
 
-    if (existingReviewForVariant) {
+    let currentReviews = myReviews;
+    if (!currentReviews.length && !isLoadingMyReviews) {
+      currentReviews = await fetchMyReviews();
+    }
+
+    const existingReview =
+      currentReviews.find((review) => review.variantId === selectedVariantId) ||
+      null;
+
+    if (existingReview) {
       setReviewDialogMode("edit");
       setReviewDialogTarget({
-        orderDetailId: existingReviewForVariant.orderDetailId || "",
-        variantId: existingReviewForVariant.variantId || selectedVariantId,
+        orderDetailId: existingReview.orderDetailId || "",
+        variantId: existingReview.variantId || selectedVariantId,
         variantName:
-          existingReviewForVariant.variantName ||
+          existingReview.variantName ||
           selectedVariant?.displayName ||
-          fastLook?.name,
-        productName: fastLook?.name || existingReviewForVariant.variantName,
+          productDetail?.name ||
+          undefined,
+        productName: productDetail?.name || existingReview.variantName,
         thumbnailUrl:
-          existingReviewForVariant.images?.[0]?.url ||
-          fallbackReviewThumbnail ||
-          null,
+          existingReview.images?.[0]?.url || fallbackReviewThumbnail || null,
       });
-      setSelectedReview(existingReviewForVariant);
+      setSelectedReview(existingReview);
       setIsReviewDialogOpen(true);
       setReviewActionError(null);
       return;
@@ -629,6 +638,14 @@ const ProductDetailPage = () => {
   };
 
   const handleAddToCart = async (redirectToCheckout = false) => {
+    if (isBackOfficeRole) {
+      showToast(
+        "Tài khoản admin/staff không thể thêm giỏ hàng hoặc thanh toán online",
+        "info",
+      );
+      return;
+    }
+
     if (!selectedVariant?.id) {
       showToast("Vui lòng chọn size để mua", "warning");
       return;
@@ -675,7 +692,7 @@ const ProductDetailPage = () => {
     () => [
       {
         label: "Thương hiệu",
-        value: information?.brandName || fastLook?.brandName || "",
+        value: information?.brandName || productDetail?.brandName || "",
       },
       { label: "Xuất xứ", value: information?.origin || "" },
       { label: "Năm phát hành", value: information?.releaseYear || "" },
@@ -689,10 +706,11 @@ const ProductDetailPage = () => {
       { label: "Hương giữa", value: information?.heartNotes || "" },
       { label: "Hương cuối", value: information?.baseNotes || "" },
     ],
-    [information, fastLook, productGender],
+    [information, productDetail, productGender],
   );
 
-  const description = information?.description || fastLook?.description || "";
+  const description =
+    information?.description || productDetail?.description || "";
   const sanitizedDescription = useMemo(
     () => (description ? sanitizeDescriptionHtml(description) : ""),
     [description],
@@ -829,6 +847,21 @@ const ProductDetailPage = () => {
   const renderReviewSummary = () => {
     if (!selectedVariantId) return null;
 
+    if (!shouldLoadReviewSummary) {
+      return (
+        <Box mt={4}>
+          <Button
+            variant="outlined"
+            color="secondary"
+            onClick={() => setShouldLoadReviewSummary(true)}
+            sx={{ textTransform: "none", borderRadius: 999, px: 2.5 }}
+          >
+            Xem tóm tắt đánh giá bằng AI
+          </Button>
+        </Box>
+      );
+    }
+
     if (isReviewLoading) {
       return (
         <Box
@@ -915,7 +948,7 @@ const ProductDetailPage = () => {
       );
     }
 
-    if (!fastLook && !productDetail) {
+    if (!productDetail) {
       return (
         <Box py={6}>
           <Alert severity="info">
@@ -925,12 +958,9 @@ const ProductDetailPage = () => {
       );
     }
 
-    const productName = fastLook?.name || productDetail?.name || "Sản phẩm";
+    const productName = productDetail?.name || "Sản phẩm";
     const productBrand =
-      information?.brandName ||
-      fastLook?.brandName ||
-      productDetail?.brandName ||
-      "";
+      information?.brandName || productDetail?.brandName || "";
 
     const fallbackImage =
       selectedVariantDetail?.media?.[0]?.url ||
@@ -939,6 +969,10 @@ const ProductDetailPage = () => {
       undefined;
 
     const activeImage = variantMediaList[activeSlide];
+    const canPrevImage = activeSlide > 0;
+    const canNextImage = activeSlide < variantMediaList.length - 1;
+    const averageRating = reviewStats?.averageRating ?? 0;
+    const totalReviews = reviewStats?.totalReviews ?? 0;
 
     return (
       <>
@@ -976,6 +1010,50 @@ const ProductDetailPage = () => {
             >
               {activeImage ? (
                 <>
+                  {variantMediaList.length > 1 && (
+                    <>
+                      <IconButton
+                        onClick={() =>
+                          setActiveSlide((prev) => Math.max(0, prev - 1))
+                        }
+                        disabled={!canPrevImage}
+                        sx={{
+                          position: "absolute",
+                          left: 10,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          bgcolor: "rgba(255,255,255,0.85)",
+                          border: "1px solid",
+                          borderColor: "divider",
+                          zIndex: 2,
+                          "&:hover": { bgcolor: "rgba(255,255,255,1)" },
+                        }}
+                      >
+                        <ChevronLeftIcon />
+                      </IconButton>
+                      <IconButton
+                        onClick={() =>
+                          setActiveSlide((prev) =>
+                            Math.min(variantMediaList.length - 1, prev + 1),
+                          )
+                        }
+                        disabled={!canNextImage}
+                        sx={{
+                          position: "absolute",
+                          right: 10,
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          bgcolor: "rgba(255,255,255,0.85)",
+                          border: "1px solid",
+                          borderColor: "divider",
+                          zIndex: 2,
+                          "&:hover": { bgcolor: "rgba(255,255,255,1)" },
+                        }}
+                      >
+                        <ChevronRightIcon />
+                      </IconButton>
+                    </>
+                  )}
                   <img
                     key={activeImage.id}
                     src={activeImage.url || ""}
@@ -1159,14 +1237,9 @@ const ProductDetailPage = () => {
               </Typography>
 
               <Stack direction="row" spacing={1} alignItems="center">
-                <Rating
-                  value={fastLook?.rating ?? 0}
-                  precision={0.5}
-                  readOnly
-                />
+                <Rating value={averageRating} precision={0.1} readOnly />
                 <Typography variant="body2" color="text.secondary">
-                  {fastLook?.rating ?? 0}/5 ({fastLook?.reviewCount ?? 0} đánh
-                  giá)
+                  {`${averageRating.toFixed(1)}/5 (${totalReviews} đánh giá)`}
                 </Typography>
               </Stack>
 
@@ -1284,7 +1357,7 @@ const ProductDetailPage = () => {
                 ))}
 
               {/* Action buttons */}
-              {!isSelectedVariantOutOfStock && (
+              {!isSelectedVariantOutOfStock && !isBackOfficeRole && (
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <Button
                     variant="outlined"
@@ -1303,6 +1376,13 @@ const ProductDetailPage = () => {
                   </Button>
                 </Stack>
               )}
+
+              {isBackOfficeRole && (
+                <Typography variant="body2" color="text.secondary">
+                  Tài khoản admin/staff chỉ có quyền xem sản phẩm, không hỗ trợ
+                  mua hàng online.
+                </Typography>
+              )}
             </Stack>
           </Grid>
         </Grid>
@@ -1310,10 +1390,19 @@ const ProductDetailPage = () => {
         {renderInformationTabs()}
         {renderReviewSummary()}
         {renderReviewCallout()}
-        <ReviewSection
-          variantId={selectedVariantId}
-          refreshToken={reviewRefreshToken}
-        />
+        <Box ref={reviewSectionAnchorRef} mt={2}>
+          {shouldRenderReviewSection ? (
+            <ReviewSection
+              variantId={selectedVariantId}
+              refreshToken={reviewRefreshToken}
+              onStatisticsChange={setReviewStats}
+            />
+          ) : (
+            <Box py={4} display="flex" justifyContent="center">
+              <CircularProgress size={24} />
+            </Box>
+          )}
+        </Box>
       </>
     );
   };

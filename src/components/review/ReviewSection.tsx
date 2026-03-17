@@ -17,7 +17,6 @@ import { ReviewCard } from "@/components/review/ReviewCard";
 import { productReviewService } from "@/services/reviewService";
 import { markRenderMetric } from "@/utils/perfMetrics";
 import {
-  getReviewStatus,
   type ReviewResponse,
   type ReviewStatisticsResponse,
 } from "@/types/review";
@@ -25,6 +24,7 @@ import {
 interface ReviewSectionProps {
   variantId: string | null;
   refreshToken?: number;
+  onStatisticsChange?: (stats: ReviewStatisticsResponse | null) => void;
 }
 
 const ratingLabels = [5, 4, 3, 2, 1] as const;
@@ -174,6 +174,7 @@ const ReviewStatistics = ({
 export const ReviewSection = ({
   variantId,
   refreshToken = 0,
+  onStatisticsChange,
 }: ReviewSectionProps) => {
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [stats, setStats] = useState<ReviewStatisticsResponse | null>(null);
@@ -181,7 +182,10 @@ export const ReviewSection = ({
   const [error, setError] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(4);
   const variantCacheRef = useRef<
-    Map<string, { reviews: ReviewResponse[]; stats: ReviewStatisticsResponse | null }>
+    Map<
+      string,
+      { reviews: ReviewResponse[]; stats: ReviewStatisticsResponse | null }
+    >
   >(new Map());
 
   useEffect(() => {
@@ -190,6 +194,7 @@ export const ReviewSection = ({
 
   useEffect(() => {
     if (!variantId) {
+      onStatisticsChange?.(null);
       return;
     }
 
@@ -197,6 +202,7 @@ export const ReviewSection = ({
     if (cached) {
       setReviews(cached.reviews);
       setStats(cached.stats);
+      onStatisticsChange?.(cached.stats);
       setError(null);
       setVisibleCount(4);
       setIsLoading(false);
@@ -208,13 +214,27 @@ export const ReviewSection = ({
     setIsLoading(true);
     setError(null);
     setVisibleCount(4);
+    setStats(null);
+    onStatisticsChange?.(null);
 
-    Promise.all([
+    Promise.allSettled([
       productReviewService.getVariantReviews(variantId),
       productReviewService.getVariantStatistics(variantId),
     ])
-      .then(([variantReviews, statistics]) => {
+      .then(([reviewsResult, statsResult]) => {
         if (!isMounted) return;
+
+        if (reviewsResult.status === "rejected") {
+          setError(reviewsResult.reason?.message || "Không thể tải đánh giá");
+          setReviews([]);
+          setStats(null);
+          onStatisticsChange?.(null);
+          return;
+        }
+
+        const variantReviews = reviewsResult.value || [];
+        const statistics =
+          statsResult.status === "fulfilled" ? statsResult.value : null;
 
         variantCacheRef.current.set(variantId, {
           reviews: variantReviews,
@@ -222,10 +242,11 @@ export const ReviewSection = ({
         });
         setReviews(variantReviews);
         setStats(statistics);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setError(err.message || "Không thể tải đánh giá");
+        onStatisticsChange?.(statistics);
+
+        if (statsResult.status === "rejected") {
+          console.warn("Failed to load review statistics:", statsResult.reason);
+        }
       })
       .finally(() => {
         if (isMounted) {
@@ -241,12 +262,9 @@ export const ReviewSection = ({
     return () => {
       isMounted = false;
     };
-  }, [variantId, refreshToken]);
+  }, [variantId, refreshToken, onStatisticsChange]);
 
-  const approvedReviews = useMemo(
-    () => reviews.filter((review) => getReviewStatus(review) === "Approved"),
-    [reviews],
-  );
+  const visibleReviews = useMemo(() => reviews, [reviews]);
 
   if (!variantId) {
     return null;
@@ -297,14 +315,14 @@ export const ReviewSection = ({
       <ReviewStatistics stats={stats} />
 
       <Box mt={4}>
-        {approvedReviews.length === 0 ? (
+        {visibleReviews.length === 0 ? (
           <Alert severity="info" variant="outlined" sx={{ borderRadius: 2 }}>
             Chưa có đánh giá nào cho phiên bản này. Hãy là người đầu tiên chia
             sẻ cảm nhận của bạn!
           </Alert>
         ) : (
           <Grid container spacing={2.5}>
-            {approvedReviews.slice(0, visibleCount).map((review) => (
+            {visibleReviews.slice(0, visibleCount).map((review) => (
               <Grid key={review.id} size={{ xs: 12, md: 6 }}>
                 <ReviewCard review={review} clampLines={5} />
               </Grid>
@@ -312,7 +330,7 @@ export const ReviewSection = ({
           </Grid>
         )}
 
-        {approvedReviews.length > visibleCount && (
+        {visibleReviews.length > visibleCount && (
           <Box textAlign="center" mt={4}>
             <Button
               variant="contained"

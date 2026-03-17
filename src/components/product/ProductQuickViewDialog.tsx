@@ -22,6 +22,7 @@ import Rating from "@mui/material/Rating";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import type { ProductFastLook, ProductInformation } from "@/types/product";
 
 interface ProductQuickViewDialogProps {
@@ -76,10 +77,12 @@ const ProductQuickViewDialog = ({
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
+  const { user } = useAuth();
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     null,
   );
   const [isAdding, setIsAdding] = useState(false);
+  const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
 
   type FastLookVariant = NonNullable<ProductFastLook["variants"]>[number];
 
@@ -130,6 +133,63 @@ const ProductQuickViewDialog = ({
     fastLook?.variants?.[0]?.media?.url ||
     undefined;
 
+  const normalizedRating = useMemo(() => {
+    if (!fastLook) {
+      return 0;
+    }
+
+    const source = fastLook as ProductFastLook & {
+      averageRating?: number | string | null;
+      avgRating?: number | string | null;
+      AverageRating?: number | string | null;
+      Rating?: number | string | null;
+    };
+
+    const rawRating =
+      source.rating ??
+      source.averageRating ??
+      source.avgRating ??
+      source.AverageRating ??
+      source.Rating;
+
+    const parsedRating = Number(rawRating);
+    if (!Number.isFinite(parsedRating)) {
+      return 0;
+    }
+
+    return Math.max(0, Math.min(5, parsedRating));
+  }, [fastLook]);
+
+  const normalizedReviewCount = useMemo(() => {
+    if (!fastLook) {
+      return 0;
+    }
+
+    const source = fastLook as ProductFastLook & {
+      reviewsCount?: number | string | null;
+      ReviewsCount?: number | string | null;
+      totalReviews?: number | string | null;
+      TotalReviews?: number | string | null;
+      reviewCount?: number | string | null;
+      ReviewCount?: number | string | null;
+    };
+
+    const rawCount =
+      source.reviewCount ??
+      source.reviewsCount ??
+      source.ReviewCount ??
+      source.ReviewsCount ??
+      source.totalReviews ??
+      source.TotalReviews;
+
+    const parsedCount = Number(rawCount);
+    if (!Number.isFinite(parsedCount) || parsedCount < 0) {
+      return 0;
+    }
+
+    return Math.floor(parsedCount);
+  }, [fastLook]);
+
   const handleClose = () => {
     if (isAdding) {
       return;
@@ -144,6 +204,14 @@ const ProductQuickViewDialog = ({
   };
 
   const handleAddToCart = async (navigateAfterAdd = false) => {
+    if (isBackOfficeRole) {
+      showToast(
+        "Tài khoản admin/staff không thể thêm giỏ hàng hoặc thanh toán online",
+        "info",
+      );
+      return;
+    }
+
     if (!selectedVariant?.id) {
       showToast("Vui lòng chọn size để mua", "warning");
       return;
@@ -265,13 +333,14 @@ const ProductQuickViewDialog = ({
 
             <Stack direction="row" spacing={1} alignItems="center" mt={1}>
               <Rating
-                value={fastLook.rating ?? 0}
+                value={normalizedRating}
                 precision={0.5}
                 readOnly
                 size="small"
               />
               <Typography variant="body2" color="text.secondary">
-                {fastLook.rating ?? 0}/5 ({fastLook.reviewCount ?? 0} đánh giá)
+                {normalizedRating.toFixed(1)}/5 ({normalizedReviewCount} đánh
+                giá)
               </Typography>
             </Stack>
 
@@ -376,7 +445,12 @@ const ProductQuickViewDialog = ({
               </Button>
             </Stack>
 
-            {isSelectedVariantOutOfStock ? (
+            {isBackOfficeRole ? (
+              <Typography variant="body2" color="text.secondary" mt={3}>
+                Tài khoản admin/staff chỉ có quyền xem sản phẩm, không hỗ trợ
+                mua hàng online.
+              </Typography>
+            ) : isSelectedVariantOutOfStock ? (
               <Typography variant="h4" color="error" fontWeight={700} mt={3}>
                 Hết hàng
               </Typography>

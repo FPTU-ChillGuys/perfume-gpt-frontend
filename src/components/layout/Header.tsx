@@ -72,6 +72,7 @@ export const Header = () => {
 
   const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
   const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
+  const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -147,11 +148,7 @@ export const Header = () => {
   };
 
   const handleProfile = () => {
-    if (user?.role === "admin") {
-      navigate("/admin/profile");
-    } else if (user?.role === "staff") {
-      navigate("/staff/profile");
-    } else {
+    if (user?.role === "user") {
       navigate("/profile");
     }
     handleMenuClose();
@@ -236,28 +233,32 @@ export const Header = () => {
             <IconButton color="default" aria-label="Thông báo">
               <NotificationsNone />
             </IconButton>
-            <IconButton
-              onClick={handleCartClick}
-              onMouseEnter={handleCartHover}
-              onMouseLeave={handleCartLeave}
-              aria-label="Giỏ hàng"
-              color="default"
-              sx={{
-                transition: "all 0.2s ease",
-                "&:hover": {
-                  color: "primary.main",
-                },
-              }}
-            >
-              <Badge badgeContent={cartCount} color="error" max={99}>
-                <ShoppingCartOutlined fontSize="medium" />
-              </Badge>
-            </IconButton>
-            <CartDropdown
-              anchorEl={cartAnchorEl}
-              open={Boolean(cartAnchorEl)}
-              onClose={handleCartClose}
-            />
+            {!isBackOfficeRole && (
+              <>
+                <IconButton
+                  onClick={handleCartClick}
+                  onMouseEnter={handleCartHover}
+                  onMouseLeave={handleCartLeave}
+                  aria-label="Giỏ hàng"
+                  color="default"
+                  sx={{
+                    transition: "all 0.2s ease",
+                    "&:hover": {
+                      color: "primary.main",
+                    },
+                  }}
+                >
+                  <Badge badgeContent={cartCount} color="error" max={99}>
+                    <ShoppingCartOutlined fontSize="medium" />
+                  </Badge>
+                </IconButton>
+                <CartDropdown
+                  anchorEl={cartAnchorEl}
+                  open={Boolean(cartAnchorEl)}
+                  onClose={handleCartClose}
+                />
+              </>
+            )}
 
             {isAuthenticated && user ? (
               <>
@@ -273,11 +274,12 @@ export const Header = () => {
                   }}
                 >
                   <Avatar
+                    src={user.avatarUrl || undefined}
                     sx={{
                       width: 32,
                       height: 32,
                       mr: 1,
-                      bgcolor: "primary.main",
+                      bgcolor: user.avatarUrl ? undefined : "primary.main",
                       fontSize: "0.875rem",
                     }}
                   >
@@ -306,14 +308,18 @@ export const Header = () => {
                   }}
                 >
                   <MenuItem
-                    onClick={handleProfile}
+                    onClick={user.role === "user" ? handleProfile : undefined}
                     sx={{
                       px: 2,
                       py: 1.5,
                       flexDirection: "column",
                       alignItems: "flex-start",
+                      cursor: user.role === "user" ? "pointer" : "default",
                       "&:hover": {
-                        bgcolor: "action.hover",
+                        bgcolor:
+                          user.role === "user"
+                            ? "action.hover"
+                            : "transparent",
                       },
                     }}
                   >

@@ -49,5 +49,6 @@ export const getUserFromToken = (token: string): User | null => {
     name: decoded.name || decoded.email,
     email: decoded.email,
     role: decoded.role,
+    avatarUrl: decoded.avatarUrl || decoded.avatar || decoded.picture,
   };
 };
