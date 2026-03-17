@@ -6,7 +6,11 @@ import type {
     AIInventoryReportLogPagedResponse,
     AIInventoryReportLogResponse,
     InventoryReportJobCreatedResponse,
-    InventoryReportJobResultResponse
+    InventoryReportJobResultResponse,
+    RestockAIPredictionResponse,
+    RestockLogPagedResponse,
+    RestockJobCreatedResponse,
+    RestockJobResultResponse
 } from "@/types/inventory";
 
 class InventoryService {
@@ -81,6 +85,44 @@ class InventoryService {
     async getInventoryReportJobResult(jobId: string): Promise<InventoryReportJobResultResponse> {
         return this.handleResponse(
             await aiApiInstance.GET("/inventory/report/ai/job/result/{jobId}" as any, {
+                params: { path: { jobId } }
+            })
+        );
+    }
+
+    /**
+     * Lấy dự đoán nhập hàng từ AI (Restock Prediction)
+     */
+    async getRestockAIPrediction(): Promise<RestockAIPredictionResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/restock/ai" as any, {})
+        );
+    }
+
+    /**
+     * Lấy danh sách lịch sử log dự đoán nhập hàng (Restock Logs)
+     */
+    async getRestockLogsPaged(): Promise<RestockLogPagedResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/restock/logs" as any, {})
+        );
+    }
+
+    /**
+     * Khởi tạo job dự đoán nhập hàng (background job)
+     */
+    async createRestockJob(): Promise<RestockJobCreatedResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/restock/job" as any, {})
+        );
+    }
+
+    /**
+     * Kiểm tra trạng thái job dự đoán nhập hàng
+     */
+    async getRestockJobResult(jobId: string): Promise<RestockJobResultResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/inventory/restock/job/result/{jobId}" as any, {
                 params: { path: { jobId } }
             })
         );

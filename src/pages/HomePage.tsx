@@ -8,7 +8,7 @@ import { productService } from "../services/productService";
 import { trendService, getLastSunday, getPrevSunday } from "../services/ai/trendService";
 import type { ProductListItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
-import { buildVariantMap, mapProductToCard } from "../utils/productCardMapper";
+import { buildVariantMap, mapProductToCard, normalizeTrendProducts } from "../utils/productCardMapper";
 import dayjs from "dayjs";
 
 export const HomePage = () => {
@@ -93,34 +93,10 @@ export const HomePage = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const normalizeTrendProducts = (products: ProductListItem[]): ProductCardProps[] =>
-      products
-        .filter((product): product is ProductListItem & { id: string } => Boolean(product.id))
-        .map((product: any) => {
-          const firstVariant = product.variants?.[0];
-          const mapped = mapProductToCard(product, firstVariant);
-          const imageUrl =
-            typeof product.primaryImage === "string"
-              ? product.primaryImage
-              : mapped.imageUrl;
-          return { ...mapped, imageUrl, isTrending: true };
-        });
-
     const fetchTrending = async () => {
       setIsTrendingLoading(true);
       try {
-        // Always use the most recent Sunday as endDate (cached weekly).
-        // e.g. Monday 9/3 → endDate = Sunday 8/3; Sunday 15/3 → endDate = 15/3
-        const lastSunday = dayjs(getLastSunday()).format("YYYY-MM-DD");
-        const prevSunday = dayjs(getPrevSunday()).format("YYYY-MM-DD");
-
-        // Try the most recent Sunday first
-        let products = await trendService.getTrendingProducts("weekly", lastSunday).catch(() => null);
-
-        // If still generating (null), fall back to the previous Sunday
-        if (products === null) {
-          products = await trendService.getTrendingProducts("weekly", prevSunday).catch(() => null);
-        }
+        const products = await trendService.getCurrentOrPreviousWeeklyTrend(false);
 
         if (!isMounted) return;
 

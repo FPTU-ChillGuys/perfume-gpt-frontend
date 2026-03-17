@@ -5,6 +5,7 @@ import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import { useProductQuickView } from "@/hooks/useProductQuickView";
+import { productActivityLogService } from "@/services/ai/productActivityLogService";
 
 export interface ProductCardProps {
   id: string;
@@ -45,6 +46,11 @@ export const ProductCard = ({
     if (!id) {
       return;
     }
+
+    productActivityLogService.logProductView(id, variantId ?? null).catch((error) => {
+      console.error("Failed to log product click", error);
+    });
+
     navigate(`/products/${id}`);
   };
 
@@ -96,6 +102,9 @@ export const ProductCard = ({
           onTouchStart={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
+            void productActivityLogService.logProductView(id, variantId ?? null).catch((error) => {
+              console.error("Failed to log quick view click", error);
+            });
             openQuickView(id);
           }}
           className="p-2 bg-white rounded-full shadow hover:bg-gray-100"

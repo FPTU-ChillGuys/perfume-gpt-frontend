@@ -18,13 +18,20 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import { productService } from "../../services/productService";
+import { productActivityLogService } from "@/services/ai/productActivityLogService";
 import type { ProductListItemWithVariants } from "../../types/product";
+import {
+    extractSuggestionGender,
+    extractSuggestionPrice,
+    formatSuggestionPrice,
+} from "@/utils/searchSuggestionDisplay";
 
 export const HeaderSearch = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<ProductListItemWithVariants[]>([]);
+    const [fallbackPricesByProductId, setFallbackPricesByProductId] = useState<Record<string, number>>({});
     const [showDropdown, setShowDropdown] = useState(false);
 
     const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -62,6 +69,79 @@ export const HeaderSearch = () => {
         };
     }, [searchTerm, debouncedSearch]);
 
+    useEffect(() => {
+        const missingPriceProducts = suggestions.filter((product) => {
+            const productId = product.id;
+            if (!productId) {
+                return false;
+            }
+
+            const hasPriceFromSemantic = extractSuggestionPrice(product) !== null;
+            const hasCachedPrice = typeof fallbackPricesByProductId[productId] === "number";
+            return !hasPriceFromSemantic && !hasCachedPrice;
+        });
+
+        if (missingPriceProducts.length === 0) {
+            return;
+        }
+
+        let disposed = false;
+
+        void (async () => {
+            const resolvedPrices = await Promise.all(
+                missingPriceProducts.map(async (product) => {
+                    const productId = product.id;
+                    if (!productId) {
+                        return null;
+                    }
+
+                    try {
+                        const variants = await productService.getProductVariants(productId);
+                        const validPrices = (variants || [])
+                            .map((variant) => {
+                                const value = variant.basePrice;
+                                return typeof value === "number" && Number.isFinite(value) && value > 0
+                                    ? value
+                                    : null;
+                            })
+                            .filter((value): value is number => value !== null);
+
+                        if (validPrices.length === 0) {
+                            return null;
+                        }
+
+                        return {
+                            productId,
+                            price: Math.min(...validPrices),
+                        };
+                    } catch {
+                        return null;
+                    }
+                })
+            );
+
+            if (disposed) {
+                return;
+            }
+
+            setFallbackPricesByProductId((prev) => {
+                const next = { ...prev };
+                resolvedPrices.forEach((item) => {
+                    if (!item) {
+                        return;
+                    }
+
+                    next[item.productId] = item.price;
+                });
+                return next;
+            });
+        })();
+
+        return () => {
+            disposed = true;
+        };
+    }, [suggestions, fallbackPricesByProductId]);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setSearchTerm(value);
@@ -70,24 +150,24 @@ export const HeaderSearch = () => {
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === "Enter" && searchTerm.trim()) {
+            void productActivityLogService.logSearch(searchTerm).catch((error) => {
+                console.error("Failed to log search text", error);
+            });
             setShowDropdown(false);
             navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
         }
     };
 
-    const handleSuggestionClick = (productId?: string) => {
+    const handleSuggestionClick = (product?: ProductListItemWithVariants) => {
+        const productId = product?.id;
         if (productId) {
+            const variantId = product?.variants?.[0]?.id ?? null;
+            void productActivityLogService.logProductView(productId, variantId).catch((error) => {
+                console.error("Failed to log product click from search", error);
+            });
             setShowDropdown(false);
             navigate(`/products/${productId}`);
         }
-    };
-
-    const formatPrice = (price?: number) => {
-        if (!price) return "0đ";
-        return new Intl.NumberFormat("vi-VN", {
-            style: "currency",
-            currency: "VND",
-        }).format(price);
     };
 
     return (
@@ -158,12 +238,17 @@ export const HeaderSearch = () => {
                             <List sx={{ p: 0 }}>
                                 {suggestions.map((product) => {
                                     const imageUrl = product.primaryImage?.url || "https://placehold.co/400x400?text=No+Image";
-                                    const variantInfo = product.variants?.[0];
+                                    const displayGender = extractSuggestionGender(product);
+                                    const semanticPrice = extractSuggestionPrice(product);
+                                    const fallbackPrice = product.id
+                                        ? fallbackPricesByProductId[product.id]
+                                        : undefined;
+                                    const displayPrice = semanticPrice ?? fallbackPrice ?? null;
 
                                     return (
                                         <ListItem
                                             key={product.id}
-                                            onClick={() => handleSuggestionClick(product.id)}
+                                            onClick={() => handleSuggestionClick(product)}
                                             sx={{
                                                 cursor: "pointer",
                                                 "&:hover": {
@@ -192,13 +277,18 @@ export const HeaderSearch = () => {
                                                                 Thương hiệu: {product.brandName}
                                                             </Typography>
                                                         )}
-                                                        {product.categoryName && (
+                                                        {displayGender && (
+                                                            <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                                Giới tính: {displayGender}
+                                                            </Typography>
+                                                        )}
+                                                        {!displayGender && product.categoryName && (
                                                             <Typography variant="caption" color="text.secondary" display="block" noWrap>
                                                                 Nhóm hương: {product.categoryName}
                                                             </Typography>
                                                         )}
                                                         <Typography variant="body2" color="error.main" fontWeight={600} sx={{ mt: 0.5 }}>
-                                                            {formatPrice((variantInfo as any)?.price || (variantInfo as any)?.salePrice || (variantInfo as any)?.basePrice)}
+                                                            {formatSuggestionPrice(displayPrice)}
                                                         </Typography>
                                                     </Box>
                                                 }
@@ -218,6 +308,9 @@ export const HeaderSearch = () => {
                         <Divider />
                         <Box
                             onClick={() => {
+                                void productActivityLogService.logSearch(searchTerm).catch((error) => {
+                                    console.error("Failed to log search text", error);
+                                });
                                 setShowDropdown(false);
                                 navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
                             }}

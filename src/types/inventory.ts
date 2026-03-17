@@ -38,3 +38,38 @@ export type AIInventoryReportLogPagedResponse = ApiResponse<InventoryLogPagedRes
 export type AIInventoryReportLogResponse = ApiResponse<AIInventoryReportLog>;
 export type InventoryReportJobCreatedResponse = ApiResponse<InventoryReportJobCreated>;
 export type InventoryReportJobResultResponse = ApiResponse<InventoryReportJobResult>;
+
+// Restock Types
+export interface RestockAIVariant {
+    id: string;
+    sku: string;
+    volumeMl: number;
+    type: string;
+    basePrice: number;
+    status: string;
+    concentrationName: string;
+    totalQuantity: number;
+    reservedQuantity: number;
+    suggestedRestockQuantity: number;
+}
+
+export interface RestockAIPredictionData {
+    variants: RestockAIVariant[];
+}
+
+export interface RestockLog extends BaseEntity {
+    inventoryLog: string;
+    type: string; // usually 'RESTOCK'
+}
+
+export interface RestockLogPagedResult {
+    items: RestockLog[];
+    totalCount: number;
+}
+
+export type RestockAIPredictionResponse = ApiResponse<string>; // Data is JSON string
+export type RestockLogPagedResponse = ApiResponse<RestockLogPagedResult>;
+
+// Job Responses
+export type RestockJobCreatedResponse = ApiResponse<InventoryReportJobCreated>;
+export type RestockJobResultResponse = ApiResponse<InventoryReportJobResult>;

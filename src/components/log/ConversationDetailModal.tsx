@@ -52,7 +52,11 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                     }}
                 >
                     {selectedConversation.messages && selectedConversation.messages.length > 0 ? (
-                        selectedConversation.messages.map((msgRef) => {
+                        [...selectedConversation.messages].sort((a: any, b: any) => {
+                            const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                            const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                            return timeA - timeB;
+                        }).map((msgRef) => {
                             let parsedMessage = msgRef.message;
                             try {
                                 const parsed = JSON.parse(parsedMessage);

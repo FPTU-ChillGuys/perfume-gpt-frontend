@@ -31,6 +31,7 @@ class TrendService {
         period: "weekly" | "monthly" | "yearly" = "weekly",
         endDate?: string,
         startDate?: string,
+        forceRefresh?: boolean,
     ): Promise<ProductListItem[] | null> {
         try {
             const finalEndDate = endDate
@@ -47,6 +48,7 @@ class TrendService {
                         period,
                         endDate: finalEndDate,
                         ...(finalStartDate ? { startDate: finalStartDate } : {}),
+                        ...(forceRefresh ? { forceRefresh } : {}),
                     },
                 },
             });
@@ -80,6 +82,27 @@ class TrendService {
             console.warn("Error fetching trending products:", error);
             throw error;
         }
+    }
+
+    /**
+     * Helper function: Cố gắng lấy xu hướng cho tuần hiện tại (Chủ nhật gần nhất).
+     * Nếu backend báo pending (về null), và không yêu cầu forceRefresh, thì lấy fallback (Chủ nhật trước đó)
+     * Trả về kết quả (hoặc empty array, hoặc null nếu cả 2 tuần đều đang processing).
+     */
+    async getCurrentOrPreviousWeeklyTrend(forceRefresh?: boolean): Promise<ProductListItem[] | null> {
+        const lastSunday = dayjs(getLastSunday()).format("YYYY-MM-DD");
+        const prevSunday = dayjs(getPrevSunday()).format("YYYY-MM-DD");
+
+        let products = await this.getTrendingProducts("weekly", lastSunday, undefined, forceRefresh).catch((e) => {
+            if (!forceRefresh) console.warn(e);
+            return null;
+        });
+
+        if (products === null && !forceRefresh) {
+            products = await this.getTrendingProducts("weekly", prevSunday).catch(() => null);
+        }
+
+        return products;
     }
 }
 

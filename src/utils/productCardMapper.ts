@@ -9,8 +9,8 @@ import type {
 export type VariantCardSource =
   | VariantPagedItem
   | (ProductVariant & {
-      primaryImage?: VariantPagedItem["primaryImage"] | null;
-    });
+    primaryImage?: VariantPagedItem["primaryImage"] | null;
+  });
 
 const getVariantImageUrl = (variant?: VariantCardSource) => {
   if (!variant) {
@@ -85,9 +85,24 @@ export const mapProductWithVariantsToCard = (
   product: ProductListItemWithVariants & { id: string },
 ): ProductCardProps => {
   const firstVariant = product.variants?.[0];
-  const price = Number(
-    (firstVariant as { basePrice?: number } | undefined)?.basePrice ?? 0,
+  const productSource = product as Record<string, unknown>;
+  const variantSource = firstVariant as Record<string, unknown> | undefined;
+  const priceCandidates = [
+    variantSource?.basePrice,
+    variantSource?.price,
+    variantSource?.salePrice,
+    variantSource?.variantPrice,
+    productSource.basePrice,
+    productSource.price,
+    productSource.salePrice,
+    productSource.variantPrice,
+    productSource.minPrice,
+    productSource.lowestPrice,
+  ];
+  const resolvedPrice = priceCandidates.find(
+    (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
   );
+  const price = typeof resolvedPrice === "number" ? resolvedPrice : 0;
 
   return {
     id: product.id,
@@ -99,3 +114,19 @@ export const mapProductWithVariantsToCard = (
     numberOfVariants: product.numberOfVariants ?? product.variants?.length ?? 0,
   };
 };
+
+export const normalizeTrendProducts = (products: ProductListItem[]): ProductCardProps[] =>
+  products
+    .filter((product): product is ProductListItem & { id: string } => Boolean(product.id))
+    .map((product: any) => {
+      const firstVariant = product.variants?.[0];
+      const mapped = mapProductToCard(product, firstVariant);
+      const imageUrl =
+        typeof product.primaryImage === "string"
+          ? product.primaryImage
+          : mapped.imageUrl;
+      const numberOfVariants =
+        product.variants?.length ?? product.numberOfVariants ?? 0;
+      return { ...mapped, imageUrl, numberOfVariants, isTrending: true };
+    });
+

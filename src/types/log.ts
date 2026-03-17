@@ -49,8 +49,14 @@ export interface UserLog {
     id: string;
     createdAt: string;
     updatedAt: string;
-    isDeleted: boolean;
+    isDeleted?: boolean;
+    isActive?: boolean;
     userId?: string | null;
+    eventType?: "message" | "search" | "quiz" | "product" | null;
+    entityType?: "conversation" | "search" | "quiz" | "product" | null;
+    entityId?: string | null;
+    contentText?: string | null;
+    metadata?: Record<string, any> | null;
     userMessageLogs?: UserMessageLog[];
     userQuizLogs?: UserQuizLog[];
     userSearchLogs?: UserSearchLog[];
@@ -67,10 +73,16 @@ export interface UserLogSummaryResponse {
     id: string;
     createdAt: string;
     updatedAt: string;
+    isActive?: boolean;
+    isDeleted?: boolean;
     userId: string;
-    startDate: string;
-    endDate: string;
     logSummary: string;
+    featureSnapshot?: Record<string, unknown>;
+    dailyLogSummary?: Record<string, string>;
+    dailyFeatureSnapshot?: Record<string, unknown>;
+    totalEvents: number;
+    startDate?: string;
+    endDate?: string;
 }
 
 export type LogPeriod = "weekly" | "monthly" | "yearly";

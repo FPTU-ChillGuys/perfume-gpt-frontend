@@ -9,6 +9,7 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "../layouts/AdminLayout";
+import { AdminTrendSection } from "../components/admin/AdminTrendSection";
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -59,6 +60,9 @@ const AdminDashboard = () => {
               </Typography>
             </Paper>
           </Box>
+
+          {/* New Admin Trend Section */}
+          <AdminTrendSection />
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
