@@ -108,22 +108,23 @@ const UnauthorizedPage = () => {
               >
                 Về trang chủ
               </Button>
-              <Button
-                variant="outlined"
-                startIcon={<ArrowBackOutlinedIcon />}
-                onClick={() => navigate(-1)}
-              >
-                Quay lại
-              </Button>
+
               {!isAuthenticated && (
                 <Button
-                  variant="text"
+                  variant="contained"
                   startIcon={<LoginOutlinedIcon />}
                   onClick={() => navigate("/login")}
                 >
                   Đăng nhập
                 </Button>
               )}
+              <Button
+                variant="contained"
+                startIcon={<ArrowBackOutlinedIcon />}
+                onClick={() => navigate(-1)}
+              >
+                Quay lại
+              </Button>
             </Stack>
           </Stack>
         </Paper>

@@ -81,6 +81,24 @@ const sanitizeDescriptionHtml = (html: string) => {
   return container.innerHTML;
 };
 
+const sortVariantMediaWithPrimaryFirst = (mediaList: MediaResponse[]) => {
+  const isPrimary = (media?: MediaResponse | null) => {
+    const meta = media as MediaResponse & {
+      isPrimary?: boolean;
+      isMain?: boolean;
+    };
+    return meta?.isPrimary === true || meta?.isMain === true;
+  };
+
+  return [...mediaList].sort((a, b) => {
+    if (isPrimary(a) !== isPrimary(b)) {
+      return isPrimary(a) ? -1 : 1;
+    }
+
+    return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
+  });
+};
+
 const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
@@ -301,9 +319,7 @@ const ProductDetailPage = () => {
     );
 
     if (variant) {
-      const sorted = [...(variant.media || [])].sort(
-        (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
-      );
+      const sorted = sortVariantMediaWithPrimaryFirst(variant.media || []);
 
       variantCacheRef.current.set(selectedVariantId, sorted);
       setVariantMediaList(sorted);
@@ -323,8 +339,8 @@ const ProductDetailPage = () => {
       return;
     }
 
-    const sorted = [...(fallbackVariant.mediaList || [])].sort(
-      (a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0),
+    const sorted = sortVariantMediaWithPrimaryFirst(
+      fallbackVariant.mediaList || [],
     );
 
     variantCacheRef.current.set(selectedVariantId, sorted);
