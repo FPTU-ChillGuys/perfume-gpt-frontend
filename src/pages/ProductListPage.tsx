@@ -12,7 +12,6 @@ import {
   buildVariantMap,
   mapProductToCard,
   mapProductWithVariantsToCard,
-  withVariantPrimaryImage,
 } from "../utils/productCardMapper";
 import { dexieCache } from "../utils/dexieCache";
 import { CACHE_KEYS, CACHE_TTL } from "../constants/cache";
@@ -28,6 +27,11 @@ const sortOptions = [
 ] as const;
 
 type SortValue = (typeof sortOptions)[number]["value"];
+
+type CachedCatalogProduct = {
+  card: ProductCardProps;
+  categoryId?: number;
+};
 
 export const ProductListPage = () => {
   const [products, setProducts] = useState<ProductCardProps[]>([]);
@@ -67,7 +71,8 @@ export const ProductListPage = () => {
           if (!isMounted) return;
 
           const items = (searchResult?.items ?? []).filter(
-            (product): product is typeof product & { id: string } => Boolean(product.id),
+            (product): product is typeof product & { id: string } =>
+              Boolean(product.id),
           );
 
           const mapped = items.map(mapProductWithVariantsToCard);
@@ -77,12 +82,22 @@ export const ProductListPage = () => {
           return;
         } else if (categoryIdParam) {
           // Category filter: fetch all products client-side, cache for 5 min
-          const allMapped = await dexieCache.getOrFetch<ProductCardProps[]>(
+          const cachedCatalog = await dexieCache.getOrFetch<
+            CachedCatalogProduct[]
+          >(
             CACHE_KEYS.ALL_PRODUCTS_FOR_CATEGORY_FILTER,
             async () => {
               const [pPage, vPage] = await Promise.all([
-                productService.getProducts({ PageNumber: 1, PageSize: 500, IsDescending: true }),
-                productService.getProductVariantsPaged({ PageNumber: 1, PageSize: 2000, IsDescending: true }),
+                productService.getProducts({
+                  PageNumber: 1,
+                  PageSize: 500,
+                  IsDescending: true,
+                }),
+                productService.getProductVariantsPaged({
+                  PageNumber: 1,
+                  PageSize: 2000,
+                  IsDescending: true,
+                }),
               ]);
               const allItems = (pPage?.items ?? []).filter(
                 (p): p is ProductListItem & { id: string } => Boolean(p.id),
@@ -93,7 +108,10 @@ export const ProductListPage = () => {
                   Boolean(v.productId && idSet.has(v.productId)),
               );
               const vMap = buildVariantMap(relevantVariants);
-              return allItems.map((p) => mapProductToCard(p, vMap.get(p.id)));
+              return allItems.map((p) => ({
+                card: mapProductToCard(p, vMap.get(p.id)),
+                categoryId: p.categoryId,
+              }));
             },
             CACHE_TTL.FIVE_MINUTES,
           );
@@ -101,15 +119,9 @@ export const ProductListPage = () => {
           if (!isMounted) return;
 
           const categoryId = Number(categoryIdParam);
-          // Re-fetch raw items to get categoryId for filtering (mapped cards don't carry it)
-          const rawPage = await productService.getProducts({ PageNumber: 1, PageSize: 500, IsDescending: true });
-          const rawItems = (rawPage?.items ?? []).filter(
-            (p): p is ProductListItem & { id: string } => Boolean(p.id),
-          );
-          const filteredIds = new Set(
-            rawItems.filter((p) => p.categoryId === categoryId).map((p) => p.id),
-          );
-          const filtered = allMapped.filter((p) => filteredIds.has(p.id));
+          const filtered = cachedCatalog
+            .filter((item) => item.categoryId === categoryId)
+            .map((item) => item.card);
 
           // Client-side pagination
           const start = (page - 1) * pageSize;
@@ -152,37 +164,6 @@ export const ProductListPage = () => {
         );
 
         const variantMap = buildVariantMap(relevantVariants);
-        const missingVariantProducts = items.filter(
-          (product) => !variantMap.has(product.id),
-        );
-
-        if (missingVariantProducts.length) {
-          await Promise.allSettled(
-            missingVariantProducts.map(async (product) => {
-              try {
-                const variants = await productService.getProductVariants(
-                  product.id,
-                );
-                const normalized = withVariantPrimaryImage(variants[0]);
-                if (normalized) {
-                  variantMap.set(product.id, {
-                    ...normalized,
-                    productId: product.id,
-                  });
-                }
-              } catch (variantError) {
-                console.error(
-                  `Không thể tải biến thể cho sản phẩm ${product.id}`,
-                  variantError,
-                );
-              }
-            }),
-          );
-
-          if (!isMounted) {
-            return;
-          }
-        }
 
         const mapped = items.map((product) =>
           mapProductToCard(product, variantMap.get(product.id)),
@@ -231,14 +212,15 @@ export const ProductListPage = () => {
     const normalizedUrlSearch = searchParamValue.trim().toLowerCase();
 
     // Only apply local filter if the local search term is different from the URL parameter
-    const shouldFilterLocally = normalizedLocalSearch && normalizedLocalSearch !== normalizedUrlSearch;
+    const shouldFilterLocally =
+      normalizedLocalSearch && normalizedLocalSearch !== normalizedUrlSearch;
 
     const filtered = shouldFilterLocally
       ? products.filter(
-        (product) =>
-          product.name.toLowerCase().includes(normalizedLocalSearch) ||
-          product.brand.toLowerCase().includes(normalizedLocalSearch),
-      )
+          (product) =>
+            product.name.toLowerCase().includes(normalizedLocalSearch) ||
+            product.brand.toLowerCase().includes(normalizedLocalSearch),
+        )
       : products;
 
     const sorted = [...filtered];
@@ -291,7 +273,9 @@ export const ProductListPage = () => {
             Curated Catalog 2026
           </p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight md:text-5xl">
-            {categoryNameParam ? `Danh sách nước hoa — ${categoryNameParam}` : "Danh sách nước hoa"}
+            {categoryNameParam
+              ? `Danh sách nước hoa — ${categoryNameParam}`
+              : "Danh sách nước hoa"}
           </h1>
           <p className="mt-4 max-w-3xl text-base text-white/70 md:text-lg">
             Lọc theo thương hiệu, tìm kiếm nốt hương yêu thích và đặt giữ chỗ

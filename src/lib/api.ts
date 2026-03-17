@@ -1,8 +1,11 @@
 import type { paths } from "../types/api/v1";
 import createFetchClient, { type Middleware } from "openapi-fetch";
+import { markApiRequestEnd, markApiRequestStart } from "@/utils/perfMetrics";
 
 const middleware: Middleware = {
   async onRequest({ request }) {
+    markApiRequestStart(request);
+
     const accessToken = localStorage.getItem("accessToken");
     // (optional) add logic here to refresh token when it expires
 
@@ -13,7 +16,9 @@ const middleware: Middleware = {
     }
     return request;
   },
-  onResponse({ response }) {
+  onResponse({ request, response }) {
+    markApiRequestEnd(request, response?.status);
+
     if (response?.status === 401) {
       // Handle unauthorized - but skip redirect if already on login page
       localStorage.removeItem("accessToken");
@@ -22,7 +27,11 @@ const middleware: Middleware = {
       }
     }
   },
-  onError({ error }) {
+  onError({ error, request }) {
+    if (request) {
+      markApiRequestEnd(request);
+    }
+
     return Promise.reject(error);
   },
 };
@@ -33,7 +42,6 @@ export const apiInstance = createFetchClient<paths>({
 apiInstance.use(middleware);
 
 // AI backend (separate server — paths not in the main OpenAPI schema)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const aiApiInstance = createFetchClient<Record<string, any>>({
   baseUrl: import.meta.env.VITE_CHATBOT_BASE_URL,
 });
