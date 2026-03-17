@@ -105,6 +105,11 @@ const InventoryReportLogsPage = lazy(() =>
     default: m.InventoryReportLogsPage,
   })),
 );
+const InventoryManagementPage = lazy(() =>
+  import("./pages/InventoryManagementPage").then((m) => ({
+    default: m.InventoryManagementPage,
+  })),
+);
 const AIAcceptancePage = lazy(() =>
   import("./pages/AIAcceptancePage").then((m) => ({
     default: m.AIAcceptancePage,
@@ -335,6 +340,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/inventory"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <InventoryManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/inventory-report-logs"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -393,6 +406,15 @@ function App() {
                           </RoleBasedRoute>
                         }
                       />
+                      <Route
+                        path="/staff/inventory"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <InventoryManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+
                       <Route
                         path="/staff/profile"
                         element={

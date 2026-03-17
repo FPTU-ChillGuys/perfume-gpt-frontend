@@ -97,12 +97,6 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
-    text: "Quản lý vận chuyển",
-    icon: <ShipmentIcon />,
-    path: "#",
-    roles: ["admin"],
-  },
-  {
     text: "Quản lý sản phẩm",
     icon: <CategoryIcon />,
     path: "/staff/products",
@@ -120,11 +114,16 @@ const menuItems: MenuItem[] = [
     path: "/staff/orders",
     roles: ["staff"],
   },
-  { text: "Quản lý kho", icon: <InventoryIcon />, path: "#", roles: ["admin"] },
   {
     text: "Quản lý kho",
     icon: <InventoryIcon />,
-    path: "#",
+    path: "/admin/inventory",
+    roles: ["admin"],
+  },
+  {
+    text: "Quản lý kho",
+    icon: <InventoryIcon />,
+    path: "/staff/inventory",
     roles: ["staff"],
   },
   {
@@ -283,9 +282,9 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               >
                 <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
                   {item.text === "Đợt nhập hàng" &&
-                    user?.role === "staff" &&
-                    pendingCount > 0 &&
-                    collapsed ? (
+                  user?.role === "staff" &&
+                  pendingCount > 0 &&
+                  collapsed ? (
                     <Badge badgeContent={pendingCount} color="error" max={99}>
                       {item.icon}
                     </Badge>
