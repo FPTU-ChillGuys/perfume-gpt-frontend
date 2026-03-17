@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -15,6 +15,7 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import CelebrationIcon from "@mui/icons-material/Celebration";
 import { ReviewCard } from "@/components/review/ReviewCard";
 import { productReviewService } from "@/services/reviewService";
+import { markRenderMetric } from "@/utils/perfMetrics";
 import {
   getReviewStatus,
   type ReviewResponse,
@@ -179,15 +180,31 @@ export const ReviewSection = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(4);
+  const variantCacheRef = useRef<
+    Map<string, { reviews: ReviewResponse[]; stats: ReviewStatisticsResponse | null }>
+  >(new Map());
+
+  useEffect(() => {
+    variantCacheRef.current.clear();
+  }, [refreshToken]);
 
   useEffect(() => {
     if (!variantId) {
-      setReviews([]);
-      setStats(null);
+      return;
+    }
+
+    const cached = variantCacheRef.current.get(variantId);
+    if (cached) {
+      setReviews(cached.reviews);
+      setStats(cached.stats);
+      setError(null);
+      setVisibleCount(4);
+      setIsLoading(false);
       return;
     }
 
     let isMounted = true;
+    const startedAt = performance.now();
     setIsLoading(true);
     setError(null);
     setVisibleCount(4);
@@ -198,6 +215,11 @@ export const ReviewSection = ({
     ])
       .then(([variantReviews, statistics]) => {
         if (!isMounted) return;
+
+        variantCacheRef.current.set(variantId, {
+          reviews: variantReviews,
+          stats: statistics,
+        });
         setReviews(variantReviews);
         setStats(statistics);
       })
@@ -206,7 +228,14 @@ export const ReviewSection = ({
         setError(err.message || "Không thể tải đánh giá");
       })
       .finally(() => {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+          markRenderMetric(
+            "/products/:productId",
+            "review-section-fetch",
+            performance.now() - startedAt,
+          );
+        }
       });
 
     return () => {

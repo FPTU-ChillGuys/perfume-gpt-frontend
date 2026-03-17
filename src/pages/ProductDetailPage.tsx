@@ -33,6 +33,7 @@ import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { ReviewSection } from "@/components/review/ReviewSection";
+import { markRenderMetric, printPagePerfSummary } from "@/utils/perfMetrics";
 import {
   productDetailTabsContent,
   normalizeProductDetailTabContent,
@@ -104,6 +105,9 @@ const ProductDetailPage = () => {
   const [thumbnailOffset, setThumbnailOffset] = useState(0);
   const variantCacheRef = useRef<Map<string, MediaResponse[]>>(new Map());
   const reviewTargetCacheRef = useRef<Record<string, ReviewDialogTarget>>({});
+  const reviewSummaryCacheRef = useRef<Map<string, string>>(new Map());
+  const pageLoadStartedAtRef = useRef(0);
+  const hasMarkedInitialRenderRef = useRef(false);
 
   // States: AI Review Summary
   const [reviewSummary, setReviewSummary] = useState<string | null>(null);
@@ -157,25 +161,56 @@ const ProductDetailPage = () => {
       return;
     }
 
+    pageLoadStartedAtRef.current = performance.now();
+    hasMarkedInitialRenderRef.current = false;
+
     let isMounted = true;
     setLoading(true);
     setError(null);
 
     const fetchData = async () => {
       try {
-        const [info, fastLookResponse, detailResponse] = await Promise.all([
-          productService.getProductInformation(productId),
-          productService.getProductFastLook(productId),
-          productService.getProductDetail(productId),
-        ]);
+        const detailResponse = await productService.getProductDetail(productId);
 
         if (!isMounted) {
           return;
         }
 
-        setInformation(info);
-        setFastLook(fastLookResponse);
         setProductDetail(detailResponse);
+
+        if (detailResponse) {
+          setFastLook(
+            (current) =>
+              current ?? {
+                id: detailResponse.id,
+                name: detailResponse.name || "Sản phẩm",
+                description: detailResponse.description ?? null,
+                brandName: detailResponse.brandName || "",
+                gender: detailResponse.gender,
+                variants:
+                  detailResponse.variants?.map((variant) => ({
+                    id: variant.id,
+                    displayName:
+                      [
+                        variant.concentrationName,
+                        variant.volumeMl ? `${variant.volumeMl} ml` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" - ") ||
+                      variant.sku ||
+                      "Size",
+                    price: variant.basePrice,
+                    stockQuantity: variant.stockQuantity,
+                    media:
+                      variant.media?.find((media) => media?.isPrimary) ||
+                      variant.media?.[0] ||
+                      null,
+                  })) || [],
+                rating: 0,
+                reviewCount: 0,
+              },
+          );
+        }
 
         const firstAvailableVariant = detailResponse?.variants?.find(
           (variant) => {
@@ -187,9 +222,35 @@ const ProductDetailPage = () => {
         setSelectedVariantId(
           firstAvailableVariant?.id ||
             detailResponse?.variants?.[0]?.id ||
-            fastLookResponse?.variants?.[0]?.id ||
             null,
         );
+
+        setLoading(false);
+
+        const [infoResult, fastLookResult] = await Promise.allSettled([
+          productService.getProductInformation(productId),
+          productService.getProductFastLook(productId),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (infoResult.status === "fulfilled") {
+          setInformation(infoResult.value);
+        }
+
+        if (fastLookResult.status === "fulfilled") {
+          setFastLook(fastLookResult.value);
+
+          setSelectedVariantId((currentSelected) => {
+            if (currentSelected) {
+              return currentSelected;
+            }
+
+            return fastLookResult.value?.variants?.[0]?.id || null;
+          });
+        }
       } catch (err: any) {
         if (!isMounted) {
           return;
@@ -208,6 +269,22 @@ const ProductDetailPage = () => {
       isMounted = false;
     };
   }, [productId]);
+
+  useEffect(() => {
+    if (loading || error || hasMarkedInitialRenderRef.current) {
+      return;
+    }
+
+    const elapsed = performance.now() - pageLoadStartedAtRef.current;
+    hasMarkedInitialRenderRef.current = true;
+    markRenderMetric("/products/:productId", "initial-visible-render", elapsed);
+  }, [loading, error]);
+
+  useEffect(() => {
+    return () => {
+      printPagePerfSummary("/products/:productId");
+    };
+  }, []);
 
   const fastLookDisplayNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -308,36 +385,48 @@ const ProductDetailPage = () => {
 
   // Effect: Fetch AI Review Summary
   useEffect(() => {
-    if (!selectedVariantId) {
+    if (!selectedVariantId || loading) {
       setReviewSummary(null);
       return;
     }
 
-    let isMounted = true;
-    setIsReviewLoading(true);
-    setReviewError(null);
-    setReviewSummary(null);
+    const cachedSummary = reviewSummaryCacheRef.current.get(selectedVariantId);
+    if (cachedSummary) {
+      setReviewSummary(cachedSummary);
+      setReviewError(null);
+      setIsReviewLoading(false);
+      return;
+    }
 
-    reviewService
-      .fetchReviewSummaryWithPolling(selectedVariantId)
-      .then((summary) => {
-        if (!isMounted) return;
-        setReviewSummary(summary);
-      })
-      .catch((err) => {
-        if (!isMounted) return;
-        setReviewError(
-          err.message || "Không thể tải tóm tắt đánh giá hiện tại.",
-        );
-      })
-      .finally(() => {
-        if (isMounted) setIsReviewLoading(false);
-      });
+    let isMounted = true;
+    const timer = window.setTimeout(() => {
+      setIsReviewLoading(true);
+      setReviewError(null);
+      setReviewSummary(null);
+
+      reviewService
+        .fetchReviewSummaryWithPolling(selectedVariantId)
+        .then((summary) => {
+          if (!isMounted) return;
+          reviewSummaryCacheRef.current.set(selectedVariantId, summary);
+          setReviewSummary(summary);
+        })
+        .catch((err) => {
+          if (!isMounted) return;
+          setReviewError(
+            err.message || "Không thể tải tóm tắt đánh giá hiện tại.",
+          );
+        })
+        .finally(() => {
+          if (isMounted) setIsReviewLoading(false);
+        });
+    }, 500);
 
     return () => {
       isMounted = false;
+      window.clearTimeout(timer);
     };
-  }, [selectedVariantId]);
+  }, [selectedVariantId, loading]);
 
   useEffect(() => {
     void fetchMyReviews();
@@ -564,6 +653,18 @@ const ProductDetailPage = () => {
       setIsAdding(false);
     }
   };
+  const convertProductGenderToVietnamese = (gender: string) => {
+    switch (gender) {
+      case "Male":
+        return "Nam";
+      case "Female":
+        return "Nữ";
+      case "Unisex":
+        return "Unisex";
+      default:
+        return gender;
+    }
+  };
 
   const productGender = useMemo(() => {
     const meta = information as Record<string, unknown> | null;
@@ -578,21 +679,26 @@ const ProductDetailPage = () => {
       },
       { label: "Xuất xứ", value: information?.origin || "" },
       { label: "Năm phát hành", value: information?.releaseYear || "" },
-      { label: "Giới tính", value: productGender },
+      {
+        label: "Giới tính",
+        value: convertProductGenderToVietnamese(productGender),
+      },
       { label: "Phong cách", value: information?.style || "" },
       { label: "Nhóm hương", value: information?.scentGroup || "" },
       { label: "Hương đầu", value: information?.topNotes || "" },
-      { label: "Hương giữa", value: information?.middleNotes || "" },
+      { label: "Hương giữa", value: information?.heartNotes || "" },
       { label: "Hương cuối", value: information?.baseNotes || "" },
     ],
     [information, fastLook, productGender],
   );
 
+  const description = information?.description || fastLook?.description || "";
+  const sanitizedDescription = useMemo(
+    () => (description ? sanitizeDescriptionHtml(description) : ""),
+    [description],
+  );
+
   const renderInformationTabs = () => {
-    const description = information?.description || fastLook?.description || "";
-    const sanitizedDescription = description
-      ? sanitizeDescriptionHtml(description)
-      : "";
     const usageContent = normalizeProductDetailTabContent(
       productDetailTabsContent.usageAndStorage,
     );
@@ -809,7 +915,7 @@ const ProductDetailPage = () => {
       );
     }
 
-    if (!fastLook) {
+    if (!fastLook && !productDetail) {
       return (
         <Box py={6}>
           <Alert severity="info">
@@ -818,6 +924,13 @@ const ProductDetailPage = () => {
         </Box>
       );
     }
+
+    const productName = fastLook?.name || productDetail?.name || "Sản phẩm";
+    const productBrand =
+      information?.brandName ||
+      fastLook?.brandName ||
+      productDetail?.brandName ||
+      "";
 
     const fallbackImage =
       selectedVariantDetail?.media?.[0]?.url ||
@@ -840,7 +953,7 @@ const ProductDetailPage = () => {
             >
               Trang chủ
             </Link>
-            <Typography color="text.primary">{fastLook.name}</Typography>
+            <Typography color="text.primary">{productName}</Typography>
           </Breadcrumbs>
         </Box>
 
@@ -866,7 +979,7 @@ const ProductDetailPage = () => {
                   <img
                     key={activeImage.id}
                     src={activeImage.url || ""}
-                    alt={activeImage.altText || fastLook.name || "Product"}
+                    alt={activeImage.altText || productName || "Product"}
                     style={{
                       maxHeight: 380,
                       maxWidth: "90%",
@@ -894,7 +1007,7 @@ const ProductDetailPage = () => {
               ) : fallbackImage ? (
                 <img
                   src={fallbackImage}
-                  alt={fastLook.name || "Product"}
+                  alt={productName || "Product"}
                   style={{
                     maxHeight: 380,
                     maxWidth: "90%",
@@ -1032,10 +1145,10 @@ const ProductDetailPage = () => {
           <Grid size={{ xs: 12, md: 6 }}>
             <Stack spacing={2}>
               <Typography variant="h4" fontWeight={700}>
-                {fastLook.name}
+                {productName}
               </Typography>
               <Typography color="text.secondary">
-                Thương hiệu: {information?.brandName || fastLook.brandName}
+                Thương hiệu: {productBrand}
               </Typography>
               <Typography color="text.secondary">
                 Mã hàng:{" "}
@@ -1046,9 +1159,13 @@ const ProductDetailPage = () => {
               </Typography>
 
               <Stack direction="row" spacing={1} alignItems="center">
-                <Rating value={fastLook.rating ?? 0} precision={0.5} readOnly />
+                <Rating
+                  value={fastLook?.rating ?? 0}
+                  precision={0.5}
+                  readOnly
+                />
                 <Typography variant="body2" color="text.secondary">
-                  {fastLook.rating ?? 0}/5 ({fastLook.reviewCount ?? 0} đánh
+                  {fastLook?.rating ?? 0}/5 ({fastLook?.reviewCount ?? 0} đánh
                   giá)
                 </Typography>
               </Stack>

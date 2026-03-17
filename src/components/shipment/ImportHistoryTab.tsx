@@ -729,14 +729,14 @@ export const ImportHistoryTab: React.FC = () => {
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="center">
-                                  {product.quantity}
+                                  {product.expectedQuantity}
                                 </TableCell>
                                 <TableCell align="center">
                                   <Typography
                                     variant="body2"
                                     fontWeight={600}
                                     color={
-                                      totalReceived === product.quantity
+                                      totalReceived === product.expectedQuantity
                                         ? "success.main"
                                         : "warning.main"
                                     }
@@ -749,12 +749,12 @@ export const ImportHistoryTab: React.FC = () => {
                                     variant="body2"
                                     fontWeight={600}
                                     color={
-                                      product.rejectQuantity! > 0
+                                      product.rejectedQuantity! > 0
                                         ? "error.main"
                                         : "text.secondary"
                                     }
                                   >
-                                    {product.rejectQuantity}
+                                    {product.rejectedQuantity}
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">

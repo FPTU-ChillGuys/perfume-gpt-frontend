@@ -11,6 +11,7 @@ import {
   Divider,
   Card,
   CardContent,
+  Checkbox,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -18,6 +19,8 @@ import {
   Delete as DeleteIcon,
   ArrowBack,
   ShoppingCart,
+  CheckCircle,
+  RadioButtonUnchecked,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { cartService } from "@/services/cartService";
@@ -42,6 +45,52 @@ export const CartPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[]>([]);
+  const [hasInitializedSelection, setHasInitializedSelection] =
+    useState(false);
+
+  const roundCheckboxSx = {
+    p: 0.5,
+    color: "grey.500",
+    "&.Mui-checked": {
+      color: "error.main",
+    },
+  };
+
+  const getSelectableItemIds = useCallback(
+    () => items.map((item) => item.cartItemId).filter(Boolean) as string[],
+    [items],
+  );
+
+  const shouldQuerySelectedItems = useCallback(
+    (ids: string[]) => {
+      const allIds = getSelectableItemIds();
+      return ids.length > 0 && ids.length < allIds.length;
+    },
+    [getSelectableItemIds],
+  );
+
+  const loadTotals = useCallback(
+    async (selectedIds: string[]) => {
+      try {
+        const allIds = getSelectableItemIds();
+        if (!allIds.length || selectedIds.length === 0) {
+          setTotals({ subtotal: 0, shippingFee: 0, discount: 0, totalPrice: 0 });
+          return;
+        }
+
+        const totalsData = shouldQuerySelectedItems(selectedIds)
+          ? await cartService.getTotals(undefined, selectedIds)
+          : await cartService.getTotals();
+
+        setTotals(totalsData);
+      } catch (error) {
+        console.error("Error loading cart totals:", error);
+        showToast("Không thể tính tổng tiền giỏ hàng", "error");
+      }
+    },
+    [getSelectableItemIds, shouldQuerySelectedItems, showToast],
+  );
 
   const loadCart = useCallback(
     async (withLoader: boolean = false) => {
@@ -50,11 +99,28 @@ export const CartPage = () => {
       }
 
       try {
-        const { items: fetchedItems, totals: fetchedTotals } =
-          await cartService.getCartWithTotals();
+        const fetchedItems = await cartService.getItems();
 
         setItems(fetchedItems);
-        setTotals(fetchedTotals);
+        const fetchedItemIds = fetchedItems
+          .map((item) => item.cartItemId)
+          .filter(Boolean) as string[];
+
+        setSelectedCartItemIds((prev) => {
+          if (!hasInitializedSelection) {
+            return fetchedItemIds;
+          }
+
+          const filteredPrev = prev.filter((id) => fetchedItemIds.includes(id));
+          if (filteredPrev.length === 0 && fetchedItemIds.length > 0) {
+            return fetchedItemIds;
+          }
+          return filteredPrev;
+        });
+
+        if (!hasInitializedSelection) {
+          setHasInitializedSelection(true);
+        }
 
         return true;
       } catch (error) {
@@ -72,7 +138,7 @@ export const CartPage = () => {
         }
       }
     },
-    [showToast],
+    [hasInitializedSelection, showToast],
   );
 
   // Initial load - chỉ chạy một lần khi component mount
@@ -80,6 +146,30 @@ export const CartPage = () => {
     void loadCart(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!hasInitializedSelection) {
+      return;
+    }
+    void loadTotals(selectedCartItemIds);
+  }, [hasInitializedSelection, loadTotals, selectedCartItemIds]);
+
+  const handleToggleItem = (cartItemId?: string) => {
+    if (!cartItemId) {
+      return;
+    }
+
+    setSelectedCartItemIds((prev) =>
+      prev.includes(cartItemId)
+        ? prev.filter((id) => id !== cartItemId)
+        : [...prev, cartItemId],
+    );
+  };
+
+  const handleToggleSelectAll = (checked: boolean) => {
+    const allIds = getSelectableItemIds();
+    setSelectedCartItemIds(checked ? allIds : []);
+  };
 
   const handleQuantityChange = async (
     cartItemId: string | undefined,
@@ -148,6 +238,8 @@ export const CartPage = () => {
     try {
       await cartService.clearCart();
       await loadCart();
+      setSelectedCartItemIds([]);
+      setHasInitializedSelection(false);
       await refreshCart();
       showToast("Đã xóa toàn bộ giỏ hàng", "success");
     } catch (error) {
@@ -233,6 +325,37 @@ export const CartPage = () => {
                 pr: 1,
               }}
             >
+              <Box
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                mb={2}
+              >
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Checkbox
+                    checked={
+                      getSelectableItemIds().length > 0 &&
+                      selectedCartItemIds.length === getSelectableItemIds().length
+                    }
+                    indeterminate={
+                      selectedCartItemIds.length > 0 &&
+                      selectedCartItemIds.length < getSelectableItemIds().length
+                    }
+                    onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                    icon={<RadioButtonUnchecked fontSize="small" />}
+                    checkedIcon={<CheckCircle fontSize="small" />}
+                    indeterminateIcon={<CheckCircle fontSize="small" />}
+                    sx={roundCheckboxSx}
+                  />
+                  <Typography variant="body2" fontWeight={500}>
+                    Chọn tất cả
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  Đã chọn {selectedCartItemIds.length}/{getSelectableItemIds().length}
+                </Typography>
+              </Box>
+
               <Box display="flex" flexDirection="column" gap={3}>
                 {items.map((item, index) => {
                   const itemKey =
@@ -243,56 +366,74 @@ export const CartPage = () => {
                     : Number(item.variantPrice ?? 0) * quantity;
 
                   return (
-                    <Card key={itemKey} elevation={2}>
-                      <CardContent>
-                        <Box
-                          display="flex"
-                          flexDirection={{ xs: "column", sm: "row" }}
-                          gap={3}
-                        >
+                    <Box
+                      key={itemKey}
+                      display="flex"
+                      alignItems={{ xs: "flex-start", sm: "center" }}
+                      gap={1.5}
+                    >
+                      <Checkbox
+                        checked={
+                          item.cartItemId
+                            ? selectedCartItemIds.includes(item.cartItemId)
+                            : false
+                        }
+                        onChange={() => handleToggleItem(item.cartItemId)}
+                        disabled={!item.cartItemId}
+                        icon={<RadioButtonUnchecked fontSize="small" />}
+                        checkedIcon={<CheckCircle fontSize="small" />}
+                        sx={roundCheckboxSx}
+                      />
+                      <Card elevation={2} sx={{ flex: 1 }}>
+                        <CardContent>
                           <Box
-                            sx={{
-                              width: { xs: "100%", sm: 120 },
-                              height: 120,
-                              bgcolor: "grey.100",
-                              borderRadius: 2,
-                              overflow: "hidden",
-                            }}
+                            display="flex"
+                            flexDirection={{ xs: "column", sm: "row" }}
+                            gap={3}
                           >
-                            {item.imageUrl ? (
-                              <img
-                                src={item.imageUrl}
-                                alt={item.variantName ?? "Sản phẩm"}
-                                style={{
-                                  width: "100%",
-                                  height: "100%",
-                                  objectFit: "cover",
-                                }}
-                              />
-                            ) : (
-                              <Box
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                                height="100%"
-                              >
-                                <Typography
-                                  variant="caption"
-                                  color="text.disabled"
-                                >
-                                  Chưa có ảnh
-                                </Typography>
-                              </Box>
-                            )}
-                          </Box>
-                          <Box flex={1}>
-                            <Typography
-                              variant="h6"
-                              fontWeight={600}
-                              gutterBottom
+                            <Box
+                              sx={{
+                                width: { xs: "100%", sm: 120 },
+                                height: 120,
+                                bgcolor: "grey.100",
+                                borderRadius: 2,
+                                overflow: "hidden",
+                              }}
                             >
-                              {item.variantName ?? "Sản phẩm chưa đặt tên"}
-                            </Typography>
+                              {item.imageUrl ? (
+                                <img
+                                  src={item.imageUrl}
+                                  alt={item.variantName ?? "Sản phẩm"}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                  }}
+                                />
+                              ) : (
+                                <Box
+                                  display="flex"
+                                  alignItems="center"
+                                  justifyContent="center"
+                                  height="100%"
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    color="text.disabled"
+                                  >
+                                    Chưa có ảnh
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                            <Box flex={1}>
+                              <Typography
+                                variant="h6"
+                                fontWeight={600}
+                                gutterBottom
+                              >
+                                {item.variantName ?? "Sản phẩm chưa đặt tên"}
+                              </Typography>
                             <Typography
                               variant="body2"
                               color="text.secondary"
@@ -375,8 +516,9 @@ export const CartPage = () => {
                             </Box>
                           </Box>
                         </Box>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    </Box>
                   );
                 })}
               </Box>
@@ -424,10 +566,15 @@ export const CartPage = () => {
                   variant="contained"
                   color="error"
                   size="large"
-                  onClick={() => navigate("/checkout")}
+                  onClick={() =>
+                    navigate("/checkout", {
+                      state: { selectedCartItemIds },
+                    })
+                  }
+                  disabled={selectedCartItemIds.length === 0}
                   sx={{ py: 1.5, mt: 2 }}
                 >
-                  Thanh toán
+                  Thanh toán ({selectedCartItemIds.length})
                 </Button>
                 <Button
                   fullWidth

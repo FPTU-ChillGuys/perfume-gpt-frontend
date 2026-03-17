@@ -33,6 +33,16 @@ interface GetAllOrdersParams extends GetMyOrdersParams {
   IsDescending?: boolean;
 }
 
+interface FulfillOrderItemRequest {
+  orderDetailId: string;
+  scannedBatchCode: string;
+  quantity: number;
+}
+
+interface FulfillOrderRequest {
+  items: FulfillOrderItemRequest[];
+}
+
 class OrderService {
   async getMyOrders(
     params?: GetMyOrdersParams,
@@ -237,6 +247,56 @@ class OrderService {
         error.response?.data?.message ||
           error.message ||
           "Failed to update order status",
+      );
+    }
+  }
+
+  async cancelOrder(orderId: string): Promise<string> {
+    try {
+      const response = await apiInstance.POST("/api/orders/{orderId}/cancel", {
+        params: {
+          path: { orderId },
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to cancel order");
+      }
+
+      return response.data.message || "Order canceled successfully";
+    } catch (error: any) {
+      console.error("Error canceling order:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to cancel order",
+      );
+    }
+  }
+
+  async fulfillOrder(
+    orderId: string,
+    payload: FulfillOrderRequest,
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.POST("/api/orders/{orderId}/fulfill", {
+        params: {
+          path: { orderId },
+        },
+        body: payload,
+      });
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to fulfill order");
+      }
+
+      return response.data.message || "Order fulfilled successfully";
+    } catch (error: any) {
+      console.error("Error fulfilling order:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fulfill order",
       );
     }
   }

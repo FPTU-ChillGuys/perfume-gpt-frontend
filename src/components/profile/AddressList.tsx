@@ -105,7 +105,7 @@ const AddressList = ({ addresses, isLoading, onRefresh }: AddressListProps) => {
                   <Box display="flex" alignItems="center" gap={1}>
                     <HomeIcon color="primary" />
                     <Typography variant="subtitle1" fontWeight="bold">
-                      {address.receiverName}
+                      {address.recipientName}
                     </Typography>
                     {address.isDefault && (
                       <Chip
@@ -147,7 +147,7 @@ const AddressList = ({ addresses, isLoading, onRefresh }: AddressListProps) => {
                   </Box>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  {address.phone}
+                  {address.recipientPhoneNumber}
                 </Typography>
                 <Typography variant="body2" sx={{ mt: 1 }}>
                   {[

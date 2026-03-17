@@ -389,6 +389,7 @@ class ProductService {
       barcode?: string;
       mediaIdsToDelete?: string[] | null;
       temporaryMediaIdsToAdd?: string[] | null;
+      lowStockThreshold?: number;
     },
   ): Promise<string> {
     try {
@@ -399,7 +400,6 @@ class ProductService {
           body: payload,
         },
       );
-
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to update variant");
       }
@@ -488,6 +488,34 @@ class ProductService {
             response.data,
             "Failed to update product",
           ),
+        );
+      }
+
+      const metadata = (response.data as any)?.payload?.metadata as
+        | {
+            hasPartialFailure?: boolean;
+            allSucceeded?: boolean;
+            operations?: Array<{
+              operationName?: string;
+              errors?: Array<{ errorMessage?: string }>;
+            }>;
+          }
+        | undefined;
+
+      if (metadata?.hasPartialFailure || metadata?.allSucceeded === false) {
+        const operationErrors =
+          metadata?.operations
+            ?.flatMap((operation) => operation.errors || [])
+            .map((error) => error.errorMessage)
+            .filter((message): message is string => Boolean(message)) || [];
+
+        if (operationErrors.length > 0) {
+          throw new Error(operationErrors.join(" "));
+        }
+
+        throw new Error(
+          response.data.message ||
+            "Cập nhật sản phẩm thất bại một phần. Vui lòng kiểm tra lại thao tác media.",
         );
       }
 

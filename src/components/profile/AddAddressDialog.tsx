@@ -31,8 +31,8 @@ const AddAddressDialog = ({
   onSuccess,
 }: AddAddressDialogProps) => {
   const [formData, setFormData] = useState<CreateAddressRequest>({
-    receiverName: "",
-    phone: "",
+    recipientName: "",
+    recipientPhoneNumber: "",
     street: "",
     ward: "",
     district: "",
@@ -185,8 +185,8 @@ const AddAddressDialog = ({
 
     // Validation
     if (
-      !formData.receiverName ||
-      !formData.phone ||
+      !formData.recipientName ||
+      !formData.recipientPhoneNumber ||
       !formData.street ||
       !formData.provinceId ||
       !formData.districtId ||
@@ -211,8 +211,8 @@ const AddAddressDialog = ({
   const handleClose = () => {
     // Reset form
     setFormData({
-      receiverName: "",
-      phone: "",
+      recipientName: "",
+      recipientPhoneNumber: "",
       street: "",
       ward: "",
       district: "",
@@ -243,9 +243,12 @@ const AddAddressDialog = ({
         <Stack spacing={2} sx={{ mt: 2 }}>
           <TextField
             label="Tên người nhận *"
-            value={formData.receiverName}
+            value={formData.recipientName}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, receiverName: e.target.value }))
+              setFormData((prev) => ({
+                ...prev,
+                recipientName: e.target.value,
+              }))
             }
             fullWidth
             required
@@ -253,9 +256,12 @@ const AddAddressDialog = ({
 
           <TextField
             label="Số điện thoại *"
-            value={formData.phone}
+            value={formData.recipientPhoneNumber}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, phone: e.target.value }))
+              setFormData((prev) => ({
+                ...prev,
+                recipientPhoneNumber: e.target.value,
+              }))
             }
             fullWidth
             required

@@ -21,7 +21,6 @@ export const paymentStatusLabels: Record<PaymentStatus, string> = {
 export const orderTypeLabels: Record<OrderType, string> = {
   Online: "Online",
   Offline: "In-Store",
-  Shoppe: "Shopee",
 };
 
 // Colors for order status
@@ -67,5 +66,4 @@ export const orderTypeColors: Record<
 > = {
   Online: "success", // xanh lá
   Offline: "info", // màu khác (xanh dương nhạt)
-  Shoppe: "secondary",
 };

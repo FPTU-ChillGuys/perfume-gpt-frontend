@@ -1266,7 +1266,7 @@ export const ContentManagementPage = () => {
                       },
                       {
                         label: "Tầng hương giữa",
-                        value: productInformation.middleNotes,
+                        value: productInformation.heartNotes,
                       },
                       {
                         label: "Tầng hương cuối",

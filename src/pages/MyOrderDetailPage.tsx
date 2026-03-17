@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -35,6 +36,7 @@ import { orderService } from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
 import { productService } from "@/services/productService";
 import { userService } from "@/services/userService";
+import { useToast } from "@/hooks/useToast";
 import type { UserCredentials } from "@/services/userService";
 import type { PaymentMethod } from "@/types/checkout";
 import type { OrderResponse, CarrierName, OrderStatus } from "@/types/order";
@@ -292,6 +294,7 @@ export const MyOrderDetailPage = () => {
   const backStatus: string =
     (location.state as { status?: string } | null)?.status ?? "";
 
+  const { showToast } = useToast();
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [myReviews, setMyReviews] = useState<ReviewResponse[]>([]);
@@ -453,17 +456,19 @@ export const MyOrderDetailPage = () => {
                       borderColor: "divider",
                     }}
                   >
-                    <Button
-                      startIcon={<ArrowBack />}
-                      onClick={() =>
-                        navigate("/my-orders", {
-                          state: { status: backStatus },
-                        })
-                      }
-                      sx={{ color: "text.secondary", textTransform: "none" }}
-                    >
-                      TRỞ LẠI
-                    </Button>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <Button
+                        startIcon={<ArrowBack />}
+                        onClick={() =>
+                          navigate("/my-orders", {
+                            state: { status: backStatus },
+                          })
+                        }
+                        sx={{ color: "text.secondary", textTransform: "none" }}
+                      >
+                        TRỞ LẠI
+                      </Button>
+                    </Stack>
 
                     <Box
                       display="flex"
@@ -541,7 +546,7 @@ export const MyOrderDetailPage = () => {
                                   sx={{ color: "text.secondary" }}
                                 />
                                 <Typography variant="body2" fontWeight={600}>
-                                  {order.recipientInfo.fullName}
+                                  {order.recipientInfo.recipientName}
                                 </Typography>
                               </Box>
                               <Box display="flex" alignItems="center" gap={1}>
@@ -550,7 +555,7 @@ export const MyOrderDetailPage = () => {
                                   sx={{ color: "text.secondary" }}
                                 />
                                 <Typography variant="body2">
-                                  {order.recipientInfo.phone}
+                                  {order.recipientInfo.recipientPhoneNumber}
                                 </Typography>
                               </Box>
                               <Box
