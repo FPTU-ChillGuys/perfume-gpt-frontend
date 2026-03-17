@@ -69,7 +69,7 @@ export const ReviewCard = ({
   const avatarGradient = useMemo(() => {
     const seed = (review.userFullName || "perfume").length * 37;
     const hue = (seed * 23) % 360;
-    return `linear-gradient(135deg, hsl(${hue}, 70%, 60%), hsl(${(hue + 40) % 360}, 75%, 55%))`;
+    return `linear-gradient(135deg, hsl(${hue}, 55%, 52%), hsl(${(hue + 30) % 360}, 52%, 46%))`;
   }, [review.userFullName]);
   const reviewStatus = getReviewStatus(review);
 
@@ -81,13 +81,10 @@ export const ReviewCard = ({
       elevation={0}
       sx={{
         p: dense ? 2 : 3,
-        borderRadius: 3,
+        borderRadius: 2,
         border: "1px solid",
         borderColor: "divider",
-        background:
-          theme.palette.mode === "light"
-            ? "radial-gradient(circle at top, rgba(255,255,255,0.95), rgba(248,248,248,0.9))"
-            : theme.palette.background.paper,
+        backgroundColor: theme.palette.background.paper,
       }}
     >
       <Stack spacing={dense ? 2 : 2.5}>
@@ -153,7 +150,7 @@ export const ReviewCard = ({
               "& ul, & ol": { pl: 2, mb: 1 },
               "& li": { mb: 0.5 },
               "& code": {
-                bgcolor: "#f0f0f0",
+                bgcolor: "rgba(0,0,0,0.06)",
                 px: 0.5,
                 py: 0.25,
                 borderRadius: 0.5,
@@ -161,13 +158,14 @@ export const ReviewCard = ({
                 fontSize: "0.875em",
               },
               "& pre": {
-                bgcolor: "#f5f5f5",
-                color: "#333",
+                bgcolor: "rgba(0,0,0,0.04)",
+                color: "text.primary",
                 p: 1.5,
                 borderRadius: 1,
                 overflowX: "auto",
                 mb: 1,
-                border: "1px solid #e0e0e0",
+                border: "1px solid",
+                borderColor: "divider",
               },
               "& pre code": {
                 bgcolor: "transparent",
@@ -177,12 +175,13 @@ export const ReviewCard = ({
               "& strong": { fontWeight: 700 },
               "& em": { fontStyle: "italic" },
               "& a": {
-                color: "#dc2626",
+                color: "primary.main",
                 textDecoration: "underline",
                 cursor: "pointer",
               },
               "& blockquote": {
-                borderLeft: "3px solid #dc2626",
+                borderLeft: "3px solid",
+                borderColor: "primary.main",
                 pl: 2,
                 ml: 0,
                 my: 1,

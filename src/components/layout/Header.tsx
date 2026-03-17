@@ -273,11 +273,12 @@ export const Header = () => {
                   }}
                 >
                   <Avatar
+                    src={user.avatarUrl || undefined}
                     sx={{
                       width: 32,
                       height: 32,
                       mr: 1,
-                      bgcolor: "primary.main",
+                      bgcolor: user.avatarUrl ? undefined : "primary.main",
                       fontSize: "0.875rem",
                     }}
                   >

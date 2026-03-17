@@ -4,13 +4,17 @@ export type UserRole = components["schemas"]["UserRole"];
 
 export type LoginRequest = components["schemas"]["LoginRequest"];
 
-export type LoginResponse = components["schemas"]["BaseResponseOfTokenResponse"];
+export type LoginResponse =
+  components["schemas"]["BaseResponseOfTokenResponse"];
 
 export interface DecodedToken {
   sub: string;
   id: string;
   name?: string;
   email: string;
+  picture?: string;
+  avatar?: string;
+  avatarUrl?: string;
   role: UserRole;
   jti: string;
   iss: string;
@@ -23,4 +27,5 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
+  avatarUrl?: string;
 }

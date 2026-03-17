@@ -56,9 +56,6 @@ export const ProductListPage = () => {
       setError(null);
 
       try {
-        let productPage;
-        let variantPage;
-
         if (searchParamValue) {
           // Semantic search returns products with embedded variants — no extra variant API call needed
           const searchResult = await productService.searchProductsSemantic({
@@ -131,47 +128,53 @@ export const ProductListPage = () => {
           setTotalCount(filtered.length);
           return;
         } else {
-          // Standard product list API
-          const [pPage, vPage] = await Promise.all([
-            productService.getProducts({
-              PageNumber: page,
-              PageSize: pageSize,
-              IsDescending: true,
-            }),
-            productService.getProductVariantsPaged({
-              PageNumber: 1,
-              PageSize: Math.max(pageSize * 4, 120),
-              IsDescending: true,
-            }),
-          ]);
-          productPage = pPage;
-          variantPage = vPage;
-        }
+          // Standard product list API: render products first, then enrich by variants.
+          const productPage = await productService.getProducts({
+            PageNumber: page,
+            PageSize: pageSize,
+            IsDescending: true,
+          });
 
-        if (!isMounted) {
+          if (!isMounted) {
+            return;
+          }
+
+          const items = (productPage?.items ?? []).filter(
+            (product): product is ProductListItem & { id: string } =>
+              Boolean(product.id),
+          );
+
+          // Immediate paint with product-level data while variant API resolves.
+          setProducts(items.map((product) => mapProductToCard(product)));
+          setTotalPages(productPage?.totalPages ?? 0);
+          setTotalCount(productPage?.totalCount ?? items.length);
+          setIsLoading(false);
+
+          const variantPage = await productService.getProductVariantsPaged({
+            PageNumber: 1,
+            PageSize: Math.max(pageSize * 4, 120),
+            IsDescending: true,
+          });
+
+          if (!isMounted) {
+            return;
+          }
+
+          const productIdSet = new Set(items.map((product) => product.id));
+          const relevantVariants = (variantPage.items ?? []).filter(
+            (variant): variant is VariantPagedItem & { productId: string } =>
+              Boolean(variant.productId && productIdSet.has(variant.productId)),
+          );
+
+          const variantMap = buildVariantMap(relevantVariants);
+
+          const mapped = items.map((product) =>
+            mapProductToCard(product, variantMap.get(product.id)),
+          );
+
+          setProducts(mapped);
           return;
         }
-
-        const items = (productPage?.items ?? []).filter(
-          (product): product is ProductListItem & { id: string } =>
-            Boolean(product.id),
-        );
-
-        const productIdSet = new Set(items.map((product) => product.id));
-        const relevantVariants = (variantPage.items ?? []).filter(
-          (variant): variant is VariantPagedItem & { productId: string } =>
-            Boolean(variant.productId && productIdSet.has(variant.productId)),
-        );
-
-        const variantMap = buildVariantMap(relevantVariants);
-
-        const mapped = items.map((product) =>
-          mapProductToCard(product, variantMap.get(product.id)),
-        );
-
-        setProducts(mapped);
-        setTotalPages(productPage?.totalPages ?? 0);
-        setTotalCount(productPage?.totalCount ?? items.length);
       } catch (fetchError) {
         if (!isMounted) {
           return;

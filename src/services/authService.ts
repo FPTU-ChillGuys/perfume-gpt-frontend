@@ -1,6 +1,13 @@
 import { apiInstance } from "@/lib/api";
+import { jwtDecode } from "jwt-decode";
 import type { LoginRequest, User } from "../types/auth";
 import { getUserFromToken, isTokenExpired } from "../utils/jwt";
+
+type GoogleIdTokenPayload = {
+  name?: string;
+  email?: string;
+  picture?: string;
+};
 
 class AuthService {
   private readonly AUTH_ENDPOINT = "/api/auths";
@@ -13,7 +20,9 @@ class AuthService {
     if (response.error !== undefined || !response.data?.success) {
       const status = response.response?.status;
       if (status === 401 || status === 404) {
-        throw new Error("Email hoặc mật khẩu không chính xác. Vui lòng thử lại.");
+        throw new Error(
+          "Email hoặc mật khẩu không chính xác. Vui lòng thử lại.",
+        );
       }
       throw new Error(
         (response.error as any)?.message ||
@@ -47,9 +56,7 @@ class AuthService {
       );
 
       if (!response.data!.success) {
-        throw new Error(
-          response.data!.message || "Google login failed",
-        );
+        throw new Error(response.data!.message || "Google login failed");
       }
 
       const accessToken = response.data!.payload!.accessToken!;
@@ -60,11 +67,19 @@ class AuthService {
         throw new Error("Invalid token format");
       }
 
+      // Preserve Google avatar if backend access token does not include it.
+      const googlePayload = jwtDecode<GoogleIdTokenPayload>(idToken);
+      const enrichedUser: User = {
+        ...user,
+        name: user.name || googlePayload.name || user.email,
+        avatarUrl: user.avatarUrl || googlePayload.picture,
+      };
+
       // Store token and user info
       localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("user", JSON.stringify(enrichedUser));
 
-      return user;
+      return enrichedUser;
     } catch (error: any) {
       console.error("Google login error:", error);
       throw new Error(
