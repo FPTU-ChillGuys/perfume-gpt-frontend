@@ -22,6 +22,7 @@ import Rating from "@mui/material/Rating";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import { useAuth } from "@/hooks/useAuth";
 import type { ProductFastLook, ProductInformation } from "@/types/product";
 
 interface ProductQuickViewDialogProps {
@@ -76,10 +77,12 @@ const ProductQuickViewDialog = ({
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
+  const { user } = useAuth();
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     null,
   );
   const [isAdding, setIsAdding] = useState(false);
+  const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
 
   type FastLookVariant = NonNullable<ProductFastLook["variants"]>[number];
 
@@ -201,6 +204,14 @@ const ProductQuickViewDialog = ({
   };
 
   const handleAddToCart = async (navigateAfterAdd = false) => {
+    if (isBackOfficeRole) {
+      showToast(
+        "Tài khoản admin/staff không thể thêm giỏ hàng hoặc thanh toán online",
+        "info",
+      );
+      return;
+    }
+
     if (!selectedVariant?.id) {
       showToast("Vui lòng chọn size để mua", "warning");
       return;
@@ -434,7 +445,12 @@ const ProductQuickViewDialog = ({
               </Button>
             </Stack>
 
-            {isSelectedVariantOutOfStock ? (
+            {isBackOfficeRole ? (
+              <Typography variant="body2" color="text.secondary" mt={3}>
+                Tài khoản admin/staff chỉ có quyền xem sản phẩm, không hỗ trợ
+                mua hàng online.
+              </Typography>
+            ) : isSelectedVariantOutOfStock ? (
               <Typography variant="h4" color="error" fontWeight={700} mt={3}>
                 Hết hàng
               </Typography>

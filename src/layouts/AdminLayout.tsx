@@ -392,19 +392,15 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             }}
           >
             <MenuItem
-              onClick={() => {
-                handleMenuClose();
-                navigate(
-                  user?.role === "admin" ? "/admin/profile" : "/staff/profile",
-                );
-              }}
+              onClick={handleMenuClose}
               sx={{
                 px: 2,
                 py: 1.5,
                 flexDirection: "column",
                 alignItems: "flex-start",
+                cursor: "default",
                 "&:hover": {
-                  bgcolor: "action.hover",
+                  bgcolor: "transparent",
                 },
               }}
             >

@@ -447,6 +447,7 @@ const ProductDetailPage = () => {
 
   const selectedVariantStockQuantity = getVariantStockQuantity(selectedVariant);
   const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
+  const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
 
   const fallbackReviewThumbnail = useMemo(
     () =>
@@ -615,6 +616,14 @@ const ProductDetailPage = () => {
   };
 
   const handleAddToCart = async (redirectToCheckout = false) => {
+    if (isBackOfficeRole) {
+      showToast(
+        "Tài khoản admin/staff không thể thêm giỏ hàng hoặc thanh toán online",
+        "info",
+      );
+      return;
+    }
+
     if (!selectedVariant?.id) {
       showToast("Vui lòng chọn size để mua", "warning");
       return;
@@ -1326,7 +1335,7 @@ const ProductDetailPage = () => {
                 ))}
 
               {/* Action buttons */}
-              {!isSelectedVariantOutOfStock && (
+              {!isSelectedVariantOutOfStock && !isBackOfficeRole && (
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                   <Button
                     variant="outlined"
@@ -1344,6 +1353,13 @@ const ProductDetailPage = () => {
                     {isAdding ? "Đang xử lý..." : "Mua ngay"}
                   </Button>
                 </Stack>
+              )}
+
+              {isBackOfficeRole && (
+                <Typography variant="body2" color="text.secondary">
+                  Tài khoản admin/staff chỉ có quyền xem sản phẩm, không hỗ trợ
+                  mua hàng online.
+                </Typography>
               )}
             </Stack>
           </Grid>

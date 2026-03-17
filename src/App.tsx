@@ -12,6 +12,7 @@ import { CartProvider } from "./contexts/CartContext";
 import { ProductQuickViewProvider } from "./contexts/ProductQuickViewContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
+import { CustomerPurchaseRoute } from "./components/common/CustomerPurchaseRoute";
 import { ChatbotWidgetWrapper } from "./components/chatbot/ChatbotWidgetWrapper";
 import "./App.css";
 
@@ -167,8 +168,22 @@ function App() {
                         path="/unauthorized"
                         element={<UnauthorizedPage />}
                       />
-                      <Route path="/cart" element={<CartPage />} />
-                      <Route path="/checkout" element={<CheckoutPage />} />
+                      <Route
+                        path="/cart"
+                        element={
+                          <CustomerPurchaseRoute>
+                            <CartPage />
+                          </CustomerPurchaseRoute>
+                        }
+                      />
+                      <Route
+                        path="/checkout"
+                        element={
+                          <CustomerPurchaseRoute>
+                            <CheckoutPage />
+                          </CustomerPurchaseRoute>
+                        }
+                      />
                       <Route
                         path="/payment/success"
                         element={<PaymentSuccessPage />}
@@ -182,9 +197,7 @@ function App() {
                       <Route
                         path="/profile"
                         element={
-                          <RoleBasedRoute
-                            allowedRoles={["user", "admin", "staff"]}
-                          >
+                          <RoleBasedRoute allowedRoles={["user"]}>
                             <ProfilePage />
                           </RoleBasedRoute>
                         }
@@ -192,9 +205,7 @@ function App() {
                       <Route
                         path="/profile/address"
                         element={
-                          <RoleBasedRoute
-                            allowedRoles={["user", "admin", "staff"]}
-                          >
+                          <RoleBasedRoute allowedRoles={["user"]}>
                             <ProfilePage />
                           </RoleBasedRoute>
                         }
@@ -202,9 +213,7 @@ function App() {
                       <Route
                         path="/profile/change-password"
                         element={
-                          <RoleBasedRoute
-                            allowedRoles={["user", "admin", "staff"]}
-                          >
+                          <RoleBasedRoute allowedRoles={["user"]}>
                             <ProfilePage />
                           </RoleBasedRoute>
                         }
@@ -212,9 +221,7 @@ function App() {
                       <Route
                         path="/profile/vouchers"
                         element={
-                          <RoleBasedRoute
-                            allowedRoles={["user", "admin", "staff"]}
-                          >
+                          <RoleBasedRoute allowedRoles={["user"]}>
                             <ProfilePage />
                           </RoleBasedRoute>
                         }
@@ -222,9 +229,7 @@ function App() {
                       <Route
                         path="/profile/notifications"
                         element={
-                          <RoleBasedRoute
-                            allowedRoles={["user", "admin", "staff"]}
-                          >
+                          <RoleBasedRoute allowedRoles={["user"]}>
                             <ProfilePage />
                           </RoleBasedRoute>
                         }
@@ -232,9 +237,7 @@ function App() {
                       <Route
                         path="/my-orders"
                         element={
-                          <RoleBasedRoute
-                            allowedRoles={["user", "admin", "staff"]}
-                          >
+                          <RoleBasedRoute allowedRoles={["user"]}>
                             <MyOrdersPage />
                           </RoleBasedRoute>
                         }
@@ -242,9 +245,7 @@ function App() {
                       <Route
                         path="/my-orders/:orderId"
                         element={
-                          <RoleBasedRoute
-                            allowedRoles={["user", "admin", "staff"]}
-                          >
+                          <RoleBasedRoute allowedRoles={["user"]}>
                             <MyOrderDetailPage />
                           </RoleBasedRoute>
                         }
@@ -317,11 +318,7 @@ function App() {
                       />
                       <Route
                         path="/admin/profile"
-                        element={
-                          <RoleBasedRoute allowedRoles={["admin"]}>
-                            <ProfilePage />
-                          </RoleBasedRoute>
-                        }
+                        element={<UnauthorizedPage />}
                       />
                       <Route
                         path="/admin/logs"
@@ -417,12 +414,11 @@ function App() {
 
                       <Route
                         path="/staff/profile"
-                        element={
-                          <RoleBasedRoute allowedRoles={["staff"]}>
-                            <ProfilePage />
-                          </RoleBasedRoute>
-                        }
+                        element={<UnauthorizedPage />}
                       />
+
+                      {/* Fallback route for unknown URLs */}
+                      <Route path="*" element={<UnauthorizedPage />} />
                     </Routes>
                   </Suspense>
                   <ChatbotWidgetWrapper />
