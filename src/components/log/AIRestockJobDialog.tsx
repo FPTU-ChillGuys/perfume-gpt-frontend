@@ -38,6 +38,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [elapsedTime, setElapsedTime] = useState(0);
     const [showForceRefresh, setShowForceRefresh] = useState(false);
+    const [jobId, setJobId] = useState<string | null>(null);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -66,27 +67,21 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
         }
         setElapsedTime(0);
         setShowForceRefresh(false);
+        setJobId(null);
     }, []);
 
     // Cleanup polling when dialog closes
     useEffect(() => {
         if (!open) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             stopPolling();
         }
         return () => stopPolling();
     }, [open, stopPolling]);
 
-    const handleStart = async () => {
-        setPhase("pending");
-        setErrorMsg(null);
-        let jobId: string;
-        try {
-            const res = await inventoryService.createRestockJob();
-            jobId = res.data.jobId;
-            restart(new Date(res.data.expirationTime), true);
-        } catch (err: any) {
-            setPhase("error");
-            setErrorMsg(err?.message ?? "Không thể khởi tạo job dự đoán nhập hàng.");
+    // Handle polling when jobId changes
+    useEffect(() => {
+        if (!jobId || phase !== "pending") {
             return;
         }
 
@@ -105,7 +100,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                             // Small delay to let user see "Success" alert briefly
                             setTimeout(() => {
                                 onJobSuccess(parsedData);
-                                handleClose();
+                                onClose();
                             }, 1000);
                         } catch (parseError) {
                             console.error("Failed to parse restock job data:", parseError);
@@ -132,6 +127,29 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
         pollRef.current = setInterval(checkResult, POLL_INTERVAL_MS);
         void checkResult();
 
+        return () => {
+            if (pollRef.current !== null) {
+                clearInterval(pollRef.current);
+                pollRef.current = null;
+            }
+        };
+    }, [jobId, phase, stopPolling, onJobSuccess, onClose]);
+
+    const handleStart = async (forceRefresh: boolean = false) => {
+        setPhase("pending");
+        setErrorMsg(null);
+        setJobId(null); // Reset old job ID
+
+        try {
+            const res = await inventoryService.createRestockJob(forceRefresh);
+            setJobId(res.data.jobId); // This will trigger polling via useEffect
+            restart(new Date(res.data.expirationTime), true);
+        } catch (err: any) {
+            setPhase("error");
+            setErrorMsg(err?.message ?? "Không thể khởi tạo job dự đoán nhập hàng.");
+            return;
+        }
+
         // Start elapsed time tracker
         if (elapsedTimerRef.current !== null) {
             clearInterval(elapsedTimerRef.current);
@@ -153,7 +171,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
         stopPolling();
         pause();
         setErrorMsg(null);
-        void handleStart();
+        void handleStart(true);
     };
 
     const handleClose = () => {
@@ -237,7 +255,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
                 {phase === "idle" && (
-                    <Button variant="contained" startIcon={<AutoGraphIcon />} onClick={handleStart}>
+                    <Button variant="contained" startIcon={<AutoGraphIcon />} onClick={ () => void handleStart() }>
                         Bắt đầu phân tích
                     </Button>
                 )}

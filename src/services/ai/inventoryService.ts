@@ -1,151 +1,164 @@
 import { aiApiInstance } from "@/lib/api";
 import type {
-    AIInventoryReportResponse,
-    AIInventoryReportStructuredResponse,
-    AIInventoryReportLogListResponse,
-    AIInventoryReportLogPagedResponse,
-    AIInventoryReportLogResponse,
-    InventoryReportJobCreatedResponse,
-    InventoryReportJobResultResponse,
-    RestockAIPredictionResponse,
-    RestockLogPagedResponse,
-    RestockJobCreatedResponse,
-    RestockJobResultResponse
+  AIInventoryReportResponse,
+  AIInventoryReportStructuredResponse,
+  AIInventoryReportLogListResponse,
+  AIInventoryReportLogPagedResponse,
+  AIInventoryReportLogResponse,
+  InventoryReportJobCreatedResponse,
+  InventoryReportJobResultResponse,
+  RestockAIPredictionResponse,
+  RestockLogPagedResponse,
+  RestockJobCreatedResponse,
+  RestockJobResultResponse,
 } from "@/types/inventory";
 
 class InventoryService {
-    /**
-     * Lấy báo cáo tồn kho cơ bản do AI tạo
-     */
-    async getInventoryReport(): Promise<AIInventoryReportResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report", {})
-        );
-    }
+  /**
+   * Lấy báo cáo tồn kho cơ bản do AI tạo
+   */
+  async getInventoryReport(): Promise<AIInventoryReportResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/report", {}),
+    );
+  }
 
-    /**
-     * Lấy báo cáo tồn kho phân tích chuyên sâu bởi AI
-     */
-    async getAIInventoryReport(): Promise<AIInventoryReportResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report/ai", {})
-        );
-    }
+  /**
+   * Lấy báo cáo tồn kho phân tích chuyên sâu bởi AI
+   */
+  async getAIInventoryReport(): Promise<AIInventoryReportResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/report/ai", {}),
+    );
+  }
 
-    /**
-     * Lấy báo cáo tồn kho cấu trúc (Structured JSON) từ AI
-     */
-    async getStructuredAIInventoryReport(): Promise<AIInventoryReportStructuredResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report/ai/structured", {})
-        );
-    }
+  /**
+   * Lấy báo cáo tồn kho cấu trúc (Structured JSON) từ AI
+   */
+  async getStructuredAIInventoryReport(): Promise<AIInventoryReportStructuredResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/report/ai/structured", {}),
+    );
+  }
 
-    /**
-     * Lấy danh sách lịch sử log báo cáo tồn kho AI
-     */
-    async getAllInventoryReportLogs(): Promise<AIInventoryReportLogListResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report/logs", {})
-        );
-    }
+  /**
+   * Lấy danh sách lịch sử log báo cáo tồn kho AI
+   */
+  async getAllInventoryReportLogs(): Promise<AIInventoryReportLogListResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/report/logs", {}),
+    );
+  }
 
-    /**
-     * Lấy danh sách lịch sử log báo cáo tồn kho AI (paged)
-     */
-    async getInventoryReportLogsPaged(): Promise<AIInventoryReportLogPagedResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report/logs", {})
-        );
-    }
+  /**
+   * Lấy danh sách lịch sử log báo cáo tồn kho AI (paged)
+   */
+  async getInventoryReportLogsPaged(): Promise<AIInventoryReportLogPagedResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/report/logs", {}),
+    );
+  }
 
-    /**
-     * Lấy chi tiết một lịch sử log báo cáo tồn kho AI dựa theo ID
-     */
-    async getInventoryReportLogById(id: string): Promise<AIInventoryReportLogResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report/logs/{id}", {
-                params: { path: { id } }
-            })
-        );
-    }
+  /**
+   * Lấy chi tiết một lịch sử log báo cáo tồn kho AI dựa theo ID
+   */
+  async getInventoryReportLogById(
+    id: string,
+  ): Promise<AIInventoryReportLogResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/report/logs/{id}", {
+        params: { path: { id } },
+      }),
+    );
+  }
 
-    /**
-     * Khởi tạo job để tạo báo cáo tồn kho bằng AI (background job)
-     */
-    async createInventoryReportJob(forceRefresh?: boolean): Promise<InventoryReportJobCreatedResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report/ai/job", {
-                params: {
-                    query: {
-                        ...(forceRefresh ? { forceRefresh } : {}),
-                    },
-                },
-            })
-        );
-    }
+  /**
+   * Khởi tạo job để tạo báo cáo tồn kho bằng AI (background job)
+   */
+  async createInventoryReportJob(
+    forceRefresh?: boolean,
+  ): Promise<InventoryReportJobCreatedResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/report/ai/job", {
+        params: {
+          query: {
+            ...(forceRefresh ? { forceRefresh } : {}),
+          },
+        },
+      }),
+    );
+  }
 
-    /**
-     * Kiểm tra trạng thái / kết quả của job báo cáo tồn kho AI
-     */
-    async getInventoryReportJobResult(jobId: string): Promise<InventoryReportJobResultResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report/ai/job/result/{jobId}" as any, {
-                params: { path: { jobId } }
-            })
-        );
-    }
+  /**
+   * Kiểm tra trạng thái / kết quả của job báo cáo tồn kho AI
+   */
+  async getInventoryReportJobResult(
+    jobId: string,
+  ): Promise<InventoryReportJobResultResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET(
+        "/inventory/report/ai/job/result/{jobId}" as any,
+        {
+          params: { path: { jobId } },
+        },
+      ),
+    );
+  }
 
-    /**
-     * Lấy dự đoán nhập hàng từ AI (Restock Prediction)
-     */
-    async getRestockAIPrediction(): Promise<RestockAIPredictionResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/restock/ai" as any, {})
-        );
-    }
+  /**
+   * Lấy dự đoán nhập hàng từ AI (Restock Prediction)
+   */
+  async getRestockAIPrediction(): Promise<RestockAIPredictionResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/restock/ai" as any, {}),
+    );
+  }
 
-    /**
-     * Lấy danh sách lịch sử log dự đoán nhập hàng (Restock Logs)
-     */
-    async getRestockLogsPaged(): Promise<RestockLogPagedResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/restock/logs" as any, {})
-        );
-    }
+  /**
+   * Lấy danh sách lịch sử log dự đoán nhập hàng (Restock Logs)
+   */
+  async getRestockLogsPaged(): Promise<RestockLogPagedResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/restock/logs" as any, {}),
+    );
+  }
 
-    /**
-     * Khởi tạo job dự đoán nhập hàng (background job)
-     */
-    async createRestockJob(forceRefresh?: boolean): Promise<RestockJobCreatedResponse> {
-        const params: Record<string, any> = {};
-        if (forceRefresh) {
-            params.forceRefresh = "true";
-        }
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/restock/job" as any, { params })
-        );
-    }
+  /**
+   * Khởi tạo job dự đoán nhập hàng (background job)
+   */
+  async createRestockJob(
+    forceRefresh?: boolean,
+  ): Promise<RestockJobCreatedResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/restock/job", {
+        params: {
+          query: {
+            ...(forceRefresh ? { forceRefresh } : {}),
+          },
+        },
+      }),
+    );
+  }
 
-    /**
-     * Kiểm tra trạng thái job dự đoán nhập hàng
-     */
-    async getRestockJobResult(jobId: string): Promise<RestockJobResultResponse> {
-        return this.handleResponse(
-            await aiApiInstance.GET("/inventory/restock/job/result/{jobId}" as any, {
-                params: { path: { jobId } }
-            })
-        );
-    }
+  /**
+   * Kiểm tra trạng thái job dự đoán nhập hàng
+   */
+  async getRestockJobResult(jobId: string): Promise<RestockJobResultResponse> {
+    return this.handleResponse(
+      await aiApiInstance.GET("/inventory/restock/job/result/{jobId}" as any, {
+        params: { path: { jobId } },
+      }),
+    );
+  }
 
-    private handleResponse(response: any) {
-        if (!response.data || !response.data.success) {
-            throw new Error(
-                response.data?.message || "Lỗi tương tác với AI Inventory Report API"
-            );
-        }
-        return response.data;
+  private handleResponse(response: any) {
+    if (!response.data || !response.data.success) {
+      throw new Error(
+        response.data?.message || "Lỗi tương tác với AI Inventory Report API",
+      );
     }
+    return response.data;
+  }
 }
 
 export const inventoryService = new InventoryService();
