@@ -27,6 +27,8 @@
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",
+    "react-speech-recognition": "^4.0.1",
+    "react-text-to-speech": "^5.1.9",
     "react-timer-hook": "^4.0.5",
     "remark-gfm": "^4.0.1",
     "uuid": "^13.0.0"
@@ -38,6 +40,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
+    "@types/react-speech-recognition": "^3.9.6",
     "@vitejs/plugin-basic-ssl": "^2.1.4",
     "@vitejs/plugin-react": "^5.1.1",
     "eslint": "^9.39.1",
