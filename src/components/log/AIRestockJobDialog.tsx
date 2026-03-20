@@ -14,12 +14,16 @@ import {
     Alert,
     Tooltip,
 } from "@mui/material";
-import { AutoGraph as AutoGraphIcon } from "@mui/icons-material";
+import { 
+    AutoGraph as AutoGraphIcon,
+    Refresh as RefreshIcon,
+} from "@mui/icons-material";
 import { useTimer } from "react-timer-hook";
 import { inventoryService } from "@/services/ai/inventoryService";
 import type { RestockAIPredictionData } from "@/types/inventory";
 
 const POLL_INTERVAL_MS = 3000;
+const FORCE_REFRESH_THRESHOLD_MS = 15000; // 15 seconds
 
 type JobPhase = "idle" | "pending" | "done" | "error";
 
@@ -32,7 +36,10 @@ interface AIRestockJobDialogProps {
 export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJobDialogProps) => {
     const [phase, setPhase] = useState<JobPhase>("idle");
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [showForceRefresh, setShowForceRefresh] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const { seconds, minutes, isRunning, restart, pause } = useTimer({
         expiryTimestamp: new Date(),
@@ -53,6 +60,12 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
             clearInterval(pollRef.current);
             pollRef.current = null;
         }
+        if (elapsedTimerRef.current !== null) {
+            clearInterval(elapsedTimerRef.current);
+            elapsedTimerRef.current = null;
+        }
+        setElapsedTime(0);
+        setShowForceRefresh(false);
     }, []);
 
     // Cleanup polling when dialog closes
@@ -118,6 +131,29 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
 
         pollRef.current = setInterval(checkResult, POLL_INTERVAL_MS);
         void checkResult();
+
+        // Start elapsed time tracker
+        if (elapsedTimerRef.current !== null) {
+            clearInterval(elapsedTimerRef.current);
+        }
+        setElapsedTime(0);
+        setShowForceRefresh(false);
+        elapsedTimerRef.current = setInterval(() => {
+            setElapsedTime((prev) => {
+                const newTime = prev + 1000;
+                if (newTime >= FORCE_REFRESH_THRESHOLD_MS && !showForceRefresh) {
+                    setShowForceRefresh(true);
+                }
+                return newTime;
+            });
+        }, 1000);
+    };
+
+    const handleForceRefresh = () => {
+        stopPolling();
+        pause();
+        setErrorMsg(null);
+        void handleStart();
     };
 
     const handleClose = () => {
@@ -171,6 +207,16 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                             AI đang phân tích các mẫu tồn kho và bán hàng...
                         </Typography>
                         <LinearProgress sx={{ width: "100%", borderRadius: 1 }} />
+                        {showForceRefresh && (
+                            <Button
+                                variant="contained"
+                                color="warning"
+                                onClick={handleForceRefresh}
+                                startIcon={<RefreshIcon />}
+                            >
+                                Force Refresh (Request timed out)
+                            </Button>
+                        )}
                     </Box>
                 )}
 

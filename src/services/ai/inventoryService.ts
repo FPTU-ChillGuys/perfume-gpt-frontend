@@ -73,9 +73,15 @@ class InventoryService {
     /**
      * Khởi tạo job để tạo báo cáo tồn kho bằng AI (background job)
      */
-    async createInventoryReportJob(): Promise<InventoryReportJobCreatedResponse> {
+    async createInventoryReportJob(forceRefresh?: boolean): Promise<InventoryReportJobCreatedResponse> {
         return this.handleResponse(
-            await aiApiInstance.GET("/inventory/report/ai/job", {})
+            await aiApiInstance.GET("/inventory/report/ai/job", {
+                params: {
+                    query: {
+                        ...(forceRefresh ? { forceRefresh } : {}),
+                    },
+                },
+            })
         );
     }
 
@@ -111,9 +117,13 @@ class InventoryService {
     /**
      * Khởi tạo job dự đoán nhập hàng (background job)
      */
-    async createRestockJob(): Promise<RestockJobCreatedResponse> {
+    async createRestockJob(forceRefresh?: boolean): Promise<RestockJobCreatedResponse> {
+        const params: Record<string, any> = {};
+        if (forceRefresh) {
+            params.forceRefresh = "true";
+        }
         return this.handleResponse(
-            await aiApiInstance.GET("/inventory/restock/job" as any, {})
+            await aiApiInstance.GET("/inventory/restock/job" as any, { params })
         );
     }
 

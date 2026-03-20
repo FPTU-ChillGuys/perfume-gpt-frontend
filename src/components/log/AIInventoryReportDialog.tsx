@@ -18,6 +18,7 @@ import {
     AutoAwesome as AutoAwesomeIcon,
     Fullscreen as FullscreenIcon,
     FullscreenExit as FullscreenExitIcon,
+    Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { useTimer } from "react-timer-hook";
 import ReactMarkdown from "react-markdown";
@@ -25,6 +26,7 @@ import remarkGfm from "remark-gfm";
 import { inventoryService } from "@/services/ai/inventoryService";
 
 const POLL_INTERVAL_MS = 3000;
+const FORCE_REFRESH_THRESHOLD_MS = 15000; // 15 seconds
 
 type JobPhase = "idle" | "pending" | "done" | "error";
 
@@ -40,7 +42,10 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [showRateLimitMessage, setShowRateLimitMessage] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [elapsedTime, setElapsedTime] = useState(0);
+    const [showForceRefresh, setShowForceRefresh] = useState(false);
     const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const elapsedTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const { seconds, minutes, isRunning, restart, pause } = useTimer({
         expiryTimestamp: new Date(),
@@ -61,23 +66,30 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
             clearInterval(pollRef.current);
             pollRef.current = null;
         }
+        if (elapsedTimerRef.current !== null) {
+            clearInterval(elapsedTimerRef.current);
+            elapsedTimerRef.current = null;
+        }
+        setElapsedTime(0);
+        setShowForceRefresh(false);
     }, []);
 
     // Cleanup polling when dialog closes
     useEffect(() => {
         if (!open) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             stopPolling();
         }
         return () => stopPolling();
     }, [open, stopPolling]);
 
-    const handleStart = async () => {
+    const handleStart = async (forceRefresh: boolean = false) => {
         setPhase("pending");
         setReportText(null);
         setErrorMsg(null);
         let jobId: string;
         try {
-            const res = await inventoryService.createInventoryReportJob();
+            const res = await inventoryService.createInventoryReportJob(forceRefresh);
             jobId = res.data.jobId;
             restart(new Date(res.data.expirationTime), true);
         } catch (err: any) {
@@ -111,11 +123,30 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
 
         pollRef.current = setInterval(checkResult, POLL_INTERVAL_MS);
         void checkResult();
+
+        // Start elapsed time tracker
+        if (elapsedTimerRef.current !== null) {
+            clearInterval(elapsedTimerRef.current);
+        }
+        setElapsedTime(0);
+        setShowForceRefresh(false);
+        elapsedTimerRef.current = setInterval(() => {
+            setElapsedTime((prev) => {
+                const newTime = prev + 1000;
+                if (newTime >= FORCE_REFRESH_THRESHOLD_MS && !showForceRefresh) {
+                    setShowForceRefresh(true);
+                }
+                return newTime;
+            });
+        }, 1000);
     };
 
-    const handleClose = () => {
+    const handleForceRefresh = () => {
         stopPolling();
-        onClose();
+        pause();
+        setReportText(null);
+        setShowRateLimitMessage(false);
+        void handleStart(true);
     };
 
     const handleRetry = () => {
@@ -186,6 +217,16 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
                             AI đang tóm tắt báo cáo tồn kho, vui lòng chờ...
                         </Typography>
                         <LinearProgress sx={{ width: "100%", borderRadius: 1 }} />
+                        {showForceRefresh && (
+                            <Button
+                                variant="contained"
+                                color="warning"
+                                onClick={handleForceRefresh}
+                                startIcon={<RefreshIcon />}
+                            >
+                                Force Refresh (Request timed out)
+                            </Button>
+                        )}
                     </Box>
                 )}
 
@@ -262,14 +303,19 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
                 {phase === "idle" && (
-                    <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={handleStart}>
+                    <Button variant="contained" startIcon={<AutoAwesomeIcon />} onClick={() => handleStart(false)}>
                         Bắt đầu tóm tắt
                     </Button>
                 )}
                 {phase === "error" && (
-                    <Button variant="outlined" onClick={handleRetry} color="error">
-                        Thử lại
-                    </Button>
+                    <>
+                        <Button variant="outlined" onClick={handleRetry} color="error">
+                            Thử lại
+                        </Button>
+                        <Button variant="contained" onClick={handleForceRefresh} color="error">
+                            Force Refresh (Reset)
+                        </Button>
+                    </>
                 )}
                 {phase === "done" && (
                     <>
@@ -280,9 +326,13 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
                                 </Button>
                             </span>
                         </Tooltip>
+                        <Button variant="contained" onClick={handleForceRefresh} color="warning">
+                            Force Refresh
+                        </Button>
                         <Button 
                             onClick={() => { onSuccess?.(); handleDialogClose(); }} 
                             variant="contained"
+                            color="success"
                         >
                             Đóng & Tải mới
                         </Button>

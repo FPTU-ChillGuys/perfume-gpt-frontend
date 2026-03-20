@@ -43,11 +43,12 @@ export type InventoryReportJobResultResponse = ApiResponse<InventoryReportJobRes
 export interface RestockAIVariant {
     id: string;
     sku: string;
+    productName: string;
     volumeMl: number;
     type: string;
     basePrice: number;
     status: string;
-    concentrationName: string;
+    concentrationName: string | null;
     totalQuantity: number;
     reservedQuantity: number;
     suggestedRestockQuantity: number;

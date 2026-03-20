@@ -60,6 +60,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                             <TableHead>
                                 <TableRow sx={{ backgroundColor: "grey.100" }}>
                                     <TableCell><strong>SKU</strong></TableCell>
+                                    <TableCell><strong>Tên sản phẩm</strong></TableCell>
                                     <TableCell><strong>Volume</strong></TableCell>
                                     <TableCell><strong>Type</strong></TableCell>
                                     <TableCell align="right"><strong>Giá</strong></TableCell>
@@ -72,6 +73,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                 {data.map((row) => (
                                     <TableRow key={row.id} hover>
                                         <TableCell>{row.sku}</TableCell>
+                                        <TableCell>{row.productName || "N/A"}</TableCell>
                                         <TableCell>{row.volumeMl}ml</TableCell>
                                         <TableCell>
                                             <Chip label={row.type} size="small" variant="outlined" />
