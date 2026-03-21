@@ -319,13 +319,17 @@ export const CheckoutPage = () => {
       const effectiveSelectedIds =
         validSelectedIds.length > 0 ? validSelectedIds : allItemIds;
       const visibleItems = cartItems.filter((item) =>
-        item.cartItemId ? effectiveSelectedIds.includes(item.cartItemId) : false,
+        item.cartItemId
+          ? effectiveSelectedIds.includes(item.cartItemId)
+          : false,
       );
 
-      const totalsData =
-        shouldQuerySelectedItems(allItemIds, effectiveSelectedIds)
-          ? await cartService.getTotals(undefined, effectiveSelectedIds)
-          : await cartService.getTotals();
+      const totalsData = shouldQuerySelectedItems(
+        allItemIds,
+        effectiveSelectedIds,
+      )
+        ? await cartService.getTotals(undefined, effectiveSelectedIds)
+        : await cartService.getTotals();
 
       setAddresses(addressList);
       setAllCartItemIds(allItemIds);
@@ -513,7 +517,6 @@ export const CheckoutPage = () => {
         voucherCode: voucherCode || null,
         itemIds: selectedCartItemIds,
         deliveryMethod: isPickupInStore ? "PickupInStore" : "Delivery",
-        guestEmail: "",
         payment: {
           method: paymentMethod,
         },
