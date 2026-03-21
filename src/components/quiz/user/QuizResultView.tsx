@@ -10,6 +10,8 @@ import {
     CheckCircle as CheckIcon,
     Refresh as RestartIcon,
 } from "@mui/icons-material";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { AssistantPayload } from "@/types/chatbot";
 import QuizProductCard from "./QuizProductCard";
 
@@ -28,13 +30,39 @@ export default function QuizResultView({ result, userId, onRestart }: Props) {
                 <Typography variant="h4" fontWeight="bold" gutterBottom>
                     Gợi ý nước hoa cho bạn
                 </Typography>
-                <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{ maxWidth: 520, mx: "auto", lineHeight: 1.7 }}
+                <Box
+                    sx={{
+                        maxWidth: 680,
+                        mx: "auto",
+                        color: "text.secondary",
+                        lineHeight: 1.7,
+                        textAlign: "left",
+                        "& p": { my: 0, mb: 1.25 },
+                        "& p:last-child": { mb: 0 },
+                        "& ul, & ol": { my: 0, mb: 1.25, pl: 3 },
+                        "& li": { mb: 0.5 },
+                        "& strong": { color: "text.primary" },
+                        "& table": {
+                            width: "100%",
+                            borderCollapse: "collapse",
+                            my: 1.5,
+                            backgroundColor: "background.paper",
+                        },
+                        "& th, & td": {
+                            border: "1px solid",
+                            borderColor: "divider",
+                            px: 1.25,
+                            py: 0.85,
+                            textAlign: "left",
+                            verticalAlign: "top",
+                        },
+                        "& th": { fontWeight: 700 },
+                    }}
                 >
-                    {result.message}
-                </Typography>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {result.message}
+                    </ReactMarkdown>
+                </Box>
             </Box>
 
             {/* Product list */}
