@@ -55,6 +55,8 @@ export const mapProductToCard = (
     imageUrl:
       product.primaryImage?.url ?? getVariantImageUrl(variant) ?? undefined,
     variantId: variant?.id,
+    firstVariantVolumeMl:
+      typeof variant?.volumeMl === "number" ? variant.volumeMl : undefined,
     numberOfVariants: product.numberOfVariants ?? 0,
   };
 };
@@ -103,6 +105,14 @@ export const mapProductWithVariantsToCard = (
     (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
   );
   const price = typeof resolvedPrice === "number" ? resolvedPrice : 0;
+  const volumeCandidates = [
+    variantSource?.volumeMl,
+    variantSource?.volume,
+    productSource.volumeMl,
+  ];
+  const resolvedVolume = volumeCandidates.find(
+    (value) => typeof value === "number" && Number.isFinite(value) && value > 0,
+  );
 
   return {
     id: product.id,
@@ -111,6 +121,8 @@ export const mapProductWithVariantsToCard = (
     salePrice: Number.isFinite(price) ? price : 0,
     imageUrl: product.primaryImage?.url ?? undefined,
     variantId: firstVariant?.id,
+    firstVariantVolumeMl:
+      typeof resolvedVolume === "number" ? resolvedVolume : undefined,
     numberOfVariants: product.numberOfVariants ?? product.variants?.length ?? 0,
   };
 };
