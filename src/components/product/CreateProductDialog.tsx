@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import type { ChangeEvent } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -161,6 +161,46 @@ export default function CreateProductDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [newBrandName, setNewBrandName] = useState("");
+  const [newOlfactoryName, setNewOlfactoryName] = useState("");
+  const [newAttributeNamesByIndex, setNewAttributeNamesByIndex] = useState<
+    Record<number, string>
+  >({});
+  const [newStyleValueName, setNewStyleValueName] = useState("");
+  const [newAttributeValueNames, setNewAttributeValueNames] = useState<
+    Record<number, string>
+  >({});
+  const [newScentNoteNames, setNewScentNoteNames] = useState<
+    Record<NoteType, string>
+  >({
+    Top: "",
+    Heart: "",
+    Base: "",
+  });
+
+  const [creatingBrand, setCreatingBrand] = useState(false);
+  const [creatingOlfactory, setCreatingOlfactory] = useState(false);
+  const [creatingScentNote, setCreatingScentNote] = useState(false);
+  const [creatingAttribute, setCreatingAttribute] = useState(false);
+  const [creatingStyleValue, setCreatingStyleValue] = useState(false);
+  const [creatingAttributeValues, setCreatingAttributeValues] = useState<
+    Record<number, boolean>
+  >({});
+
+  const brandInputRef = useRef<HTMLInputElement | null>(null);
+  const olfactoryInputRef = useRef<HTMLInputElement | null>(null);
+  const styleValueInputRef = useRef<HTMLInputElement | null>(null);
+  const scentNoteInputRefs = useRef<Record<NoteType, HTMLInputElement | null>>({
+    Top: null,
+    Heart: null,
+    Base: null,
+  });
+  const attributeInputRefs = useRef<Record<number, HTMLInputElement | null>>(
+    {},
+  );
+  const attributeValueInputRefs = useRef<
+    Record<number, HTMLInputElement | null>
+  >({});
 
   const normalizeDescription = (input: string) => {
     const container = document.createElement("div");
@@ -181,6 +221,80 @@ export default function CreateProductDialog({
       }) || null,
     [availableAttributes],
   );
+
+  const appendUniqueById = <T extends { id?: number }>(
+    list: T[],
+    item: T,
+  ): T[] => {
+    if (typeof item.id !== "number") {
+      return list;
+    }
+    return list.some((existing) => existing.id === item.id)
+      ? list
+      : [...list, item];
+  };
+
+  const renderCreateNoOptions = (
+    value: string,
+    creating: boolean,
+    onCreate: () => void,
+  ) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return "Không có dữ liệu";
+    }
+
+    return (
+      <Button
+        size="small"
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onCreate}
+        disabled={loading || creating}
+      >
+        {creating ? "Đang tạo..." : `Tạo mới: ${trimmed}`}
+      </Button>
+    );
+  };
+
+  const refocusInput = (input: HTMLInputElement | null) => {
+    requestAnimationFrame(() => {
+      input?.focus();
+    });
+  };
+
+  const handleCreateOnEnter = (
+    event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
+    value: string,
+    creating: boolean,
+    optionExists: boolean,
+    onCreate: () => void,
+  ) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    if (!value.trim() || creating || optionExists) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    onCreate();
+  };
+
+  const hasSearchMatch = <T,>(
+    input: string,
+    options: T[],
+    getSearchableText: (item: T) => string | null | undefined,
+  ) => {
+    const needle = normalizeSearchText(input);
+    if (!needle) {
+      return false;
+    }
+    return options.some((item) =>
+      normalizeSearchText(getSearchableText(item)).includes(needle),
+    );
+  };
 
   useEffect(() => {
     if (open) {
@@ -280,6 +394,204 @@ export default function CreateProductDialog({
       setError("Không thể tải danh sách nốt hương");
     } finally {
       setLoadingScentNotes(false);
+    }
+  };
+
+  const handleCreateBrand = async () => {
+    const name = newBrandName.trim();
+    if (!name) {
+      showToast("Nhập tên thương hiệu trước khi tạo", "warning");
+      return;
+    }
+
+    try {
+      setCreatingBrand(true);
+      const created = await brandService.createBrand(name);
+      setBrands((prev) => appendUniqueById(prev, created));
+      setSelectedBrand(created);
+      setNewBrandName("");
+      refocusInput(brandInputRef.current);
+      showToast("Đã tạo thương hiệu mới", "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể tạo thương hiệu";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setCreatingBrand(false);
+    }
+  };
+
+  const handleCreateOlfactoryFamily = async () => {
+    const name = newOlfactoryName.trim();
+    if (!name) {
+      showToast("Nhập tên nhóm hương trước khi tạo", "warning");
+      return;
+    }
+
+    try {
+      setCreatingOlfactory(true);
+      const created = await olfactoryService.createOlfactoryFamily(name);
+      setOlfactoryOptions((prev) => appendUniqueById(prev, created));
+      setSelectedOlfactoryFamilies((prev) => appendUniqueById(prev, created));
+      setNewOlfactoryName("");
+      refocusInput(olfactoryInputRef.current);
+      showToast("Đã tạo nhóm hương mới", "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể tạo nhóm hương";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setCreatingOlfactory(false);
+    }
+  };
+
+  const handleCreateScentNote = async (type: NoteType) => {
+    const name = (newScentNoteNames[type] || "").trim();
+    if (!name) {
+      showToast("Nhập tên nốt hương trước khi tạo", "warning");
+      return;
+    }
+
+    try {
+      setCreatingScentNote(true);
+      const created = await scentNoteService.createScentNote(name);
+      setScentNoteOptions((prev) => appendUniqueById(prev, created));
+      if (type === "Top") {
+        setTopNotes((prev) => appendUniqueById(prev, created));
+      } else if (type === "Heart") {
+        setHeartNotes((prev) => appendUniqueById(prev, created));
+      } else {
+        setBaseNotes((prev) => appendUniqueById(prev, created));
+      }
+      setNewScentNoteNames((prev) => ({ ...prev, [type]: "" }));
+      refocusInput(scentNoteInputRefs.current[type]);
+      showToast("Đã tạo nốt hương mới", "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể tạo nốt hương";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setCreatingScentNote(false);
+    }
+  };
+
+  const handleCreateAttribute = async (index: number) => {
+    const name = (newAttributeNamesByIndex[index] || "").trim();
+    if (!name) {
+      showToast("Nhập tên attribute trước khi tạo", "warning");
+      return;
+    }
+
+    try {
+      setCreatingAttribute(true);
+      const created = await attributeService.createAttribute({
+        name,
+        isVariantLevel: false,
+      });
+      setAvailableAttributes((prev) => appendUniqueById(prev, created));
+      setAttributeSelections((prev) => {
+        const updated = [...prev];
+        const current = updated[index];
+        if (!current) {
+          return prev;
+        }
+        updated[index] = {
+          ...current,
+          attribute: created,
+          values: [],
+          valueOptions: [],
+          loadingValues: false,
+        };
+        return updated;
+      });
+      setNewAttributeNamesByIndex((prev) => ({ ...prev, [index]: "" }));
+      refocusInput(attributeInputRefs.current[index] || null);
+      showToast("Đã tạo attribute mới", "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể tạo attribute";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setCreatingAttribute(false);
+    }
+  };
+
+  const handleCreateStyleValue = async () => {
+    const styleAttributeId = styleAttribute?.id;
+    const value = newStyleValueName.trim();
+    if (!styleAttributeId) {
+      showToast("Chưa có attribute Phong cách", "warning");
+      return;
+    }
+    if (!value) {
+      showToast("Nhập giá trị phong cách trước khi tạo", "warning");
+      return;
+    }
+
+    try {
+      setCreatingStyleValue(true);
+      const created = await attributeService.createAttributeValue(
+        styleAttributeId,
+        value,
+      );
+      setStyleValueOptions((prev) => appendUniqueById(prev, created));
+      setSelectedStyleValues((prev) => appendUniqueById(prev, created));
+      setNewStyleValueName("");
+      refocusInput(styleValueInputRef.current);
+      showToast("Đã tạo giá trị phong cách mới", "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể tạo giá trị phong cách";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setCreatingStyleValue(false);
+    }
+  };
+
+  const handleCreateAttributeValue = async (index: number) => {
+    const selection = attributeSelections[index];
+    const attributeId = selection?.attribute?.id;
+    const value = (newAttributeValueNames[index] || "").trim();
+
+    if (!attributeId) {
+      showToast("Vui lòng chọn attribute trước", "warning");
+      return;
+    }
+    if (!value) {
+      showToast("Nhập giá trị trước khi tạo", "warning");
+      return;
+    }
+
+    try {
+      setCreatingAttributeValues((prev) => ({ ...prev, [index]: true }));
+      const created = await attributeService.createAttributeValue(
+        attributeId,
+        value,
+      );
+
+      setAttributeSelections((prev) => {
+        const updated = [...prev];
+        const current = updated[index];
+        if (!current) {
+          return prev;
+        }
+        updated[index] = {
+          ...current,
+          valueOptions: appendUniqueById(current.valueOptions, created),
+          values: appendUniqueById(current.values, created),
+        };
+        return updated;
+      });
+
+      setNewAttributeValueNames((prev) => ({ ...prev, [index]: "" }));
+      refocusInput(attributeValueInputRefs.current[index] || null);
+      showToast("Đã tạo giá trị mới", "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể tạo giá trị attribute";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setCreatingAttributeValues((prev) => ({ ...prev, [index]: false }));
     }
   };
 
@@ -614,6 +926,13 @@ export default function CreateProductDialog({
         loadingValues: false,
       },
     ]);
+    setNewBrandName("");
+    setNewOlfactoryName("");
+    setNewAttributeNamesByIndex({});
+    setNewStyleValueName("");
+    setNewAttributeValueNames({});
+    setNewScentNoteNames({ Top: "", Heart: "", Base: "" });
+    setCreatingAttributeValues({});
     setError(null);
   };
 
@@ -919,13 +1238,42 @@ export default function CreateProductDialog({
                 getOptionLabel={(option) => option.name || ""}
                 value={selectedBrand}
                 onChange={(_, newValue) => setSelectedBrand(newValue)}
+                inputValue={newBrandName}
+                onInputChange={(_, value) => setNewBrandName(value)}
+                noOptionsText={renderCreateNoOptions(
+                  newBrandName,
+                  creatingBrand,
+                  handleCreateBrand,
+                )}
                 disabled={loading || loadingBrands}
                 loading={loadingBrands}
                 renderInput={(params) => (
                   <TextField
                     {...params}
-                    label="Thương hiệu"
+                    inputRef={brandInputRef}
+                    label="Thương hiệu"
                     required
+                    inputProps={{
+                      ...params.inputProps,
+                      onKeyDown: (event) => {
+                        (
+                          params.inputProps.onKeyDown as
+                            | ((
+                                e: KeyboardEvent<
+                                  HTMLInputElement | HTMLTextAreaElement
+                                >,
+                              ) => void)
+                            | undefined
+                        )?.(event);
+                        handleCreateOnEnter(
+                          event,
+                          newBrandName,
+                          creatingBrand,
+                          hasSearchMatch(newBrandName, brands, (item) => item.name),
+                          handleCreateBrand,
+                        );
+                      },
+                    }}
                     InputProps={{
                       ...params.InputProps,
                       endAdornment: (
@@ -1019,7 +1367,7 @@ export default function CreateProductDialog({
                             size="small"
                             value={origin}
                             onChange={(e) => setOrigin(e.target.value)}
-                            placeholder="VD: France"
+                            placeholder="VD: Pháp, Mỹ, Italy..."
                             disabled={loading}
                           />
                         </TableCell>
@@ -1060,13 +1408,49 @@ export default function CreateProductDialog({
                             onChange={(_, value) =>
                               setSelectedOlfactoryFamilies(value)
                             }
+                            inputValue={newOlfactoryName}
+                            onInputChange={(_, value) =>
+                              setNewOlfactoryName(value)
+                            }
+                            noOptionsText={renderCreateNoOptions(
+                              newOlfactoryName,
+                              creatingOlfactory,
+                              handleCreateOlfactoryFamily,
+                            )}
                             loading={loadingOlfactory}
                             disabled={loading}
                             renderInput={(params) => (
                               <TextField
                                 {...params}
+                                inputRef={olfactoryInputRef}
                                 size="small"
                                 placeholder="Chọn nhóm hương"
+                                inputProps={{
+                                  ...params.inputProps,
+                                  onKeyDown: (event) => {
+                                    (
+                                      params.inputProps.onKeyDown as
+                                        | ((
+                                            e: KeyboardEvent<
+                                              | HTMLInputElement
+                                              | HTMLTextAreaElement
+                                            >,
+                                          ) => void)
+                                        | undefined
+                                    )?.(event);
+                                    handleCreateOnEnter(
+                                      event,
+                                      newOlfactoryName,
+                                      creatingOlfactory,
+                                      hasSearchMatch(
+                                        newOlfactoryName,
+                                        olfactoryOptions,
+                                        (item) => item.name,
+                                      ),
+                                      handleCreateOlfactoryFamily,
+                                    );
+                                  },
+                                }}
                                 InputProps={{
                                   ...params.InputProps,
                                   endAdornment: (
@@ -1097,16 +1481,52 @@ export default function CreateProductDialog({
                             onChange={(_, value) =>
                               setSelectedStyleValues(value)
                             }
+                            inputValue={newStyleValueName}
+                            onInputChange={(_, value) =>
+                              setNewStyleValueName(value)
+                            }
+                            noOptionsText={renderCreateNoOptions(
+                              newStyleValueName,
+                              creatingStyleValue,
+                              handleCreateStyleValue,
+                            )}
                             loading={loadingStyleValues}
                             disabled={loading || !styleAttribute}
                             renderInput={(params) => (
                               <TextField
                                 {...params}
+                                inputRef={styleValueInputRef}
                                 size="small"
+                                inputProps={{
+                                  ...params.inputProps,
+                                  onKeyDown: (event) => {
+                                    (
+                                      params.inputProps.onKeyDown as
+                                        | ((
+                                            e: KeyboardEvent<
+                                              | HTMLInputElement
+                                              | HTMLTextAreaElement
+                                            >,
+                                          ) => void)
+                                        | undefined
+                                    )?.(event);
+                                    handleCreateOnEnter(
+                                      event,
+                                      newStyleValueName,
+                                      creatingStyleValue,
+                                      hasSearchMatch(
+                                        newStyleValueName,
+                                        styleValueOptions,
+                                        (item) => item.value,
+                                      ),
+                                      handleCreateStyleValue,
+                                    );
+                                  },
+                                }}
                                 placeholder={
                                   styleAttribute
                                     ? "Chọn phong cách"
-                                    : "Chưa tìm thấy attribute Phong cách"
+                                    : "Chưa tìm thấy thuộc tính Phong cách"
                                 }
                                 InputProps={{
                                   ...params.InputProps,
@@ -1142,6 +1562,18 @@ export default function CreateProductDialog({
                                     ? heartNotes
                                     : baseNotes
                               }
+                              inputValue={newScentNoteNames[row.type] || ""}
+                              onInputChange={(_, value) =>
+                                setNewScentNoteNames((prev) => ({
+                                  ...prev,
+                                  [row.type]: value,
+                                }))
+                              }
+                              noOptionsText={renderCreateNoOptions(
+                                newScentNoteNames[row.type] || "",
+                                creatingScentNote,
+                                () => handleCreateScentNote(row.type),
+                              )}
                               onChange={(_, value) => {
                                 if (row.type === "Top") {
                                   setTopNotes(value);
@@ -1158,7 +1590,36 @@ export default function CreateProductDialog({
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
+                                  inputRef={(node) => {
+                                    scentNoteInputRefs.current[row.type] = node;
+                                  }}
                                   size="small"
+                                  inputProps={{
+                                    ...params.inputProps,
+                                    onKeyDown: (event) => {
+                                      (
+                                        params.inputProps.onKeyDown as
+                                          | ((
+                                              e: KeyboardEvent<
+                                                | HTMLInputElement
+                                                | HTMLTextAreaElement
+                                              >,
+                                            ) => void)
+                                          | undefined
+                                      )?.(event);
+                                      handleCreateOnEnter(
+                                        event,
+                                        newScentNoteNames[row.type] || "",
+                                        creatingScentNote,
+                                        hasSearchMatch(
+                                          newScentNoteNames[row.type] || "",
+                                          scentNoteOptions,
+                                          (item) => item.name,
+                                        ),
+                                        () => handleCreateScentNote(row.type),
+                                      );
+                                    },
+                                  }}
                                   placeholder={`Chọn ${row.label.toLowerCase()}`}
                                   InputProps={{
                                     ...params.InputProps,
@@ -1197,7 +1658,7 @@ export default function CreateProductDialog({
                   >
                     <CircularProgress size={24} />
                     <Typography ml={2} variant="body2">
-                      Đang tải attributes...
+                      Đang tải thuộc tính...
                     </Typography>
                   </Box>
                 ) : (
@@ -1227,13 +1688,54 @@ export default function CreateProductDialog({
                               onChange={(_, newValue) =>
                                 handleAttributeChange(index, newValue)
                               }
+                              inputValue={newAttributeNamesByIndex[index] || ""}
+                              onInputChange={(_, value) =>
+                                setNewAttributeNamesByIndex((prev) => ({
+                                  ...prev,
+                                  [index]: value,
+                                }))
+                              }
+                              noOptionsText={renderCreateNoOptions(
+                                newAttributeNamesByIndex[index] || "",
+                                creatingAttribute,
+                                () => handleCreateAttribute(index),
+                              )}
                               disabled={loading}
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
-                                  label="Attribute"
+                                  inputRef={(node) => {
+                                    attributeInputRefs.current[index] = node;
+                                  }}
+                                  label="Thuộc tính"
                                   size="small"
                                   required
+                                  inputProps={{
+                                    ...params.inputProps,
+                                    onKeyDown: (event) => {
+                                      (
+                                        params.inputProps.onKeyDown as
+                                          | ((
+                                              e: KeyboardEvent<
+                                                | HTMLInputElement
+                                                | HTMLTextAreaElement
+                                              >,
+                                            ) => void)
+                                          | undefined
+                                      )?.(event);
+                                      handleCreateOnEnter(
+                                        event,
+                                        newAttributeNamesByIndex[index] || "",
+                                        creatingAttribute,
+                                        hasSearchMatch(
+                                          newAttributeNamesByIndex[index] || "",
+                                          availableAttributes,
+                                          (item) => item.name,
+                                        ),
+                                        () => handleCreateAttribute(index),
+                                      );
+                                    },
+                                  }}
                                 />
                               )}
                             />
@@ -1245,6 +1747,22 @@ export default function CreateProductDialog({
                               onChange={(_, newValue) =>
                                 handleValueChange(index, newValue)
                               }
+                              inputValue={newAttributeValueNames[index] || ""}
+                              onInputChange={(_, value) =>
+                                setNewAttributeValueNames((prev) => ({
+                                  ...prev,
+                                  [index]: value,
+                                }))
+                              }
+                              noOptionsText={
+                                selection.attribute
+                                  ? renderCreateNoOptions(
+                                      newAttributeValueNames[index] || "",
+                                      Boolean(creatingAttributeValues[index]),
+                                      () => handleCreateAttributeValue(index),
+                                    )
+                                  : "Vui lòng chọn thuộc tính trước"
+                              }
                               disabled={
                                 loading ||
                                 !selection.attribute ||
@@ -1254,10 +1772,40 @@ export default function CreateProductDialog({
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
-                                  label="Values"
+                                  inputRef={(node) => {
+                                    attributeValueInputRefs.current[index] =
+                                      node;
+                                  }}
+                                  label="Giá trị"
                                   placeholder="Select values"
                                   size="small"
                                   required
+                                  inputProps={{
+                                    ...params.inputProps,
+                                    onKeyDown: (event) => {
+                                      (
+                                        params.inputProps.onKeyDown as
+                                          | ((
+                                              e: KeyboardEvent<
+                                                | HTMLInputElement
+                                                | HTMLTextAreaElement
+                                              >,
+                                            ) => void)
+                                          | undefined
+                                      )?.(event);
+                                      handleCreateOnEnter(
+                                        event,
+                                        newAttributeValueNames[index] || "",
+                                        Boolean(creatingAttributeValues[index]),
+                                        hasSearchMatch(
+                                          newAttributeValueNames[index] || "",
+                                          selection.valueOptions,
+                                          (item) => item.value,
+                                        ),
+                                        () => handleCreateAttributeValue(index),
+                                      );
+                                    },
+                                  }}
                                   InputProps={{
                                     ...params.InputProps,
                                     endAdornment: (
@@ -1293,7 +1841,7 @@ export default function CreateProductDialog({
                       size="small"
                       variant="outlined"
                     >
-                      Thêm Attribute
+                      Thêm thuộc tính
                     </Button>
                   </>
                 )}
