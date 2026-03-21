@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { productCardOutputItemSchema } from "./ai/product.output";
+
 /** Loại câu hỏi quiz */
 export const QuestionType = {
     SINGLE: 'single',
@@ -90,3 +93,30 @@ export interface UserQuizRecordResponse {
     error: string | null;
     data: UserQuizRecord;
 }
+
+// ============ AI Output Schemas & Parsers ============
+export const quizOutputItemSchema = z.object({
+    message: z.string(),
+    products: z.array(productCardOutputItemSchema)
+});
+
+export const quizOutputSchema = quizOutputItemSchema;
+export type QuizOutputItem = z.infer<typeof quizOutputItemSchema>;
+
+export const convertQuizOutputToResult = (output: unknown): QuizOutputItem | null => {
+    try {
+        const jsonOutput = typeof output === 'string' ? JSON.parse(output) : output;
+        const parsedOutput = quizOutputSchema.safeParse(jsonOutput);
+
+        if (!parsedOutput.success) {
+            console.error('[Quiz Output] Invalid structured output from AI.', parsedOutput.error.issues);
+            console.warn('[Quiz Output] Output format:', JSON.stringify(jsonOutput).substring(0, 200));
+            return null;
+        }
+
+        return parsedOutput.data;
+    } catch (error) {
+        console.error('[Quiz Output] Error parsing structured output:', error);
+        return null;
+    }
+};

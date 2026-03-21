@@ -14,6 +14,7 @@ import type {
 
 
 class QuizService {
+
     // 1. GET /quizzes/questions
     async getQuestions(): Promise<QuizQuestionsResponse> {
         try {

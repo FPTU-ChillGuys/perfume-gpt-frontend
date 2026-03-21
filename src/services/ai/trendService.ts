@@ -1,5 +1,6 @@
 import { aiApiInstance } from "@/lib/api";
 import type { ProductListItem } from "@/types/product";
+import { convertProductCardOutputToProducts, type ProductCardOutputItem } from "@/types/ai/product.output";
 import dayjs from "dayjs";
 
 /**
@@ -71,7 +72,12 @@ class TrendService {
 
             const jobInfo = responseData.data;
             if (jobInfo?.status === "completed") {
-                return Array.isArray(jobInfo.data) ? jobInfo.data : [];
+                const cardOutput = convertProductCardOutputToProducts(jobInfo.data);
+                // Map AI output cards to ProductListItem format
+                return cardOutput.map((card: ProductCardOutputItem) => ({
+                    ...card,
+                    displayPrice: card.variants?.[0]?.basePrice ?? 0,
+                } as unknown as ProductListItem));
             } else if (jobInfo?.status === "failed" || jobInfo?.status === "error") {
                 throw new Error("Trend job failed on server");
             }

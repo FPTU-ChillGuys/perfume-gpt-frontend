@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { productCardOutputItemSchema } from "./ai/product.output";
+
 export interface ChatMessage {
     sender: "user" | "assistant";
     message: string;
@@ -63,3 +66,30 @@ export interface ConversationResponse {
     data: ConversationResponseData;
     __httpStatusCode: number;
 }
+
+// ============ AI Output Schemas & Parsers ============
+export const chatbotOutputItemSchema = z.object({
+    message: z.string(),
+    products: z.array(productCardOutputItemSchema)
+});
+
+export const chatbotOutputSchema = chatbotOutputItemSchema;
+export type ChatbotOutputItem = z.infer<typeof chatbotOutputItemSchema>;
+
+export const convertChatbotOutputToMessage = (output: unknown): ChatbotOutputItem | null => {
+    try {
+        const jsonOutput = typeof output === 'string' ? JSON.parse(output) : output;
+        const parsedOutput = chatbotOutputSchema.safeParse(jsonOutput);
+
+        if (!parsedOutput.success) {
+            console.error('[Chatbot Output] Invalid structured output from AI.', parsedOutput.error.issues);
+            console.warn('[Chatbot Output] Output format:', JSON.stringify(jsonOutput).substring(0, 200));
+            return null;
+        }
+
+        return parsedOutput.data;
+    } catch (error) {
+        console.error('[Chatbot Output] Error parsing structured output:', error);
+        return null;
+    }
+};
