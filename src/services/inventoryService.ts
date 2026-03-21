@@ -9,9 +9,9 @@ export type PagedStockResponse =
   components["schemas"]["PagedResultOfStockResponse"];
 
 export type InventoryStockQuery = {
-  VariantId?: string;
-  SearchTerm?: string;
-  IsLowStock?: boolean;
+  BatchCode?: string;
+  SKU?: string;
+  StockStatus?: components["schemas"]["StockStatus"];
   PageNumber?: number;
   PageSize?: number;
   SortBy?: string;

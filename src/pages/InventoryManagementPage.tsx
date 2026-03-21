@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
   Badge,
@@ -64,8 +64,7 @@ import {
 } from "@/services/stockAdjustmentService";
 import { useToast } from "@/hooks/useToast";
 
-type SearchMode = "SearchTerm" | "VariantId";
-type LowStockFilter = "all" | "low" | "normal";
+type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type InventoryTab = "inventory" | "adjustments";
 type VerifyDetailDraft = {
   detailId: string;
@@ -116,6 +115,18 @@ const formatDate = (value?: string) => {
 };
 
 const getStockStatus = (stock: StockResponse) => {
+  if (stock.status === "OutOfStock") {
+    return { label: "Hết hàng", color: "error" as const };
+  }
+
+  if (stock.status === "LowStock") {
+    return { label: "Sắp hết", color: "warning" as const };
+  }
+
+  if (stock.status === "Normal") {
+    return { label: "Bình thường", color: "success" as const };
+  }
+
   const availableQuantity = stock.availableQuantity ?? 0;
   const threshold = stock.lowStockThreshold ?? 0;
 
@@ -148,12 +159,10 @@ export const InventoryManagementPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
 
-  const [searchMode, setSearchMode] = useState<SearchMode>("SearchTerm");
-  const [appliedSearchMode, setAppliedSearchMode] =
-    useState<SearchMode>("SearchTerm");
   const [searchInput, setSearchInput] = useState("");
   const [searchValue, setSearchValue] = useState("");
-  const [lowStockFilter, setLowStockFilter] = useState<LowStockFilter>("all");
+  const [stockStatusFilter, setStockStatusFilter] =
+    useState<StockStatusFilter>("");
 
   const [batchDialogOpen, setBatchDialogOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockResponse | null>(
@@ -197,21 +206,10 @@ export const InventoryManagementPage = () => {
     VerifyDetailDraft[]
   >([]);
   const showToastRef = useRef(showToast);
-  const searchModeRef = useRef<SearchMode>("SearchTerm");
 
   useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
-
-  useEffect(() => {
-    searchModeRef.current = searchMode;
-  }, [searchMode]);
-
-  const lowStockQueryValue = useMemo(() => {
-    if (lowStockFilter === "low") return true;
-    if (lowStockFilter === "normal") return false;
-    return undefined;
-  }, [lowStockFilter]);
 
   const loadSummary = useCallback(async () => {
     try {
@@ -231,10 +229,8 @@ export const InventoryManagementPage = () => {
       setLoading(true);
       setError(null);
 
-      const query: {
-        SearchTerm?: string;
-        VariantId?: string;
-        IsLowStock?: boolean;
+      const baseQuery: {
+        StockStatus?: NonNullable<StockResponse["status"]>;
         PageNumber: number;
         PageSize: number;
         SortBy: string;
@@ -246,21 +242,37 @@ export const InventoryManagementPage = () => {
         SortOrder: "asc",
       };
 
-      if (searchValue.trim()) {
-        if (appliedSearchMode === "VariantId") {
-          query.VariantId = searchValue.trim();
-        } else {
-          query.SearchTerm = searchValue.trim();
-        }
+      if (stockStatusFilter) {
+        baseQuery.StockStatus = stockStatusFilter;
       }
 
-      if (typeof lowStockQueryValue === "boolean") {
-        query.IsLowStock = lowStockQueryValue;
+      const normalizedSearchValue = searchValue.trim();
+
+      if (!normalizedSearchValue) {
+        const response = await inventoryService.getStock(baseQuery);
+        setStocks(response.items || []);
+        setTotalCount(response.totalCount || 0);
+        return;
       }
 
-      const response = await inventoryService.getStock(query);
-      setStocks(response.items || []);
-      setTotalCount(response.totalCount || 0);
+      const skuResponse = await inventoryService.getStock({
+        ...baseQuery,
+        SKU: normalizedSearchValue,
+      });
+
+      if ((skuResponse.items || []).length > 0) {
+        setStocks(skuResponse.items || []);
+        setTotalCount(skuResponse.totalCount || 0);
+        return;
+      }
+
+      const batchCodeResponse = await inventoryService.getStock({
+        ...baseQuery,
+        BatchCode: normalizedSearchValue,
+      });
+
+      setStocks(batchCodeResponse.items || []);
+      setTotalCount(batchCodeResponse.totalCount || 0);
     } catch (stockError) {
       console.error("Failed to load stock:", stockError);
       const message =
@@ -272,7 +284,7 @@ export const InventoryManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [appliedSearchMode, lowStockQueryValue, page, rowsPerPage, searchValue]);
+  }, [page, rowsPerPage, searchValue, stockStatusFilter]);
 
   useEffect(() => {
     void loadSummary();
@@ -343,9 +355,6 @@ export const InventoryManagementPage = () => {
         }
         return normalizedInput;
       });
-      setAppliedSearchMode((current) =>
-        current === searchModeRef.current ? current : searchModeRef.current,
-      );
       setPage((currentPage) => (currentPage === 0 ? currentPage : 0));
     }, 300);
 
@@ -356,16 +365,13 @@ export const InventoryManagementPage = () => {
 
   const handleSearch = () => {
     setPage(0);
-    setAppliedSearchMode(searchMode);
     setSearchValue(searchInput.trim());
   };
 
   const handleClearFilters = () => {
     setSearchInput("");
     setSearchValue("");
-    setSearchMode("SearchTerm");
-    setAppliedSearchMode("SearchTerm");
-    setLowStockFilter("all");
+    setStockStatusFilter("");
     setPage(0);
   };
 
@@ -829,38 +835,16 @@ export const InventoryManagementPage = () => {
                   display: "grid",
                   gridTemplateColumns: {
                     xs: "1fr",
-                    md: isStaff
-                      ? "180px 1fr 180px auto auto auto"
-                      : "180px 1fr 180px auto",
+                    md: "1fr 220px auto",
                   },
                   gap: 2,
                   alignItems: "center",
                 }}
               >
-                <FormControl fullWidth>
-                  <InputLabel>Tìm theo</InputLabel>
-                  <Select
-                    value={searchMode}
-                    label="Tìm theo"
-                    onChange={(event) =>
-                      setSearchMode(event.target.value as SearchMode)
-                    }
-                  >
-                    <MenuItem value="SearchTerm">Tên/SKU (SearchTerm)</MenuItem>
-                    <MenuItem value="VariantId">VariantId</MenuItem>
-                  </Select>
-                </FormControl>
-
                 <TextField
                   fullWidth
-                  label={
-                    searchMode === "VariantId" ? "VariantId" : "SearchTerm"
-                  }
-                  placeholder={
-                    searchMode === "VariantId"
-                      ? "Nhập VariantId"
-                      : "Nhập tên sản phẩm hoặc SKU"
-                  }
+                  label="Tìm SKU hoặc Batch code"
+                  placeholder="Nhập SKU hoặc Batch code"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   onKeyDown={(event) => {
@@ -880,18 +864,21 @@ export const InventoryManagementPage = () => {
                 />
 
                 <FormControl fullWidth>
-                  <InputLabel>Lọc tồn kho</InputLabel>
+                  <InputLabel>Lọc trạng thái</InputLabel>
                   <Select
-                    value={lowStockFilter}
-                    label="Lọc tồn kho"
+                    value={stockStatusFilter}
+                    label="Lọc trạng thái"
                     onChange={(event) => {
-                      setLowStockFilter(event.target.value as LowStockFilter);
+                      setStockStatusFilter(
+                        event.target.value as StockStatusFilter,
+                      );
                       setPage(0);
                     }}
                   >
-                    <MenuItem value="all">Tất cả</MenuItem>
-                    <MenuItem value="low">Sắp hết hàng / Hết hàng</MenuItem>
-                    <MenuItem value="normal">Bình thường</MenuItem>
+                    <MenuItem value="">Tất cả</MenuItem>
+                    <MenuItem value="OutOfStock">Hết hàng</MenuItem>
+                    <MenuItem value="LowStock">Sắp hết</MenuItem>
+                    <MenuItem value="Normal">Bình thường</MenuItem>
                   </Select>
                 </FormControl>
 
@@ -950,18 +937,40 @@ export const InventoryManagementPage = () => {
                             sx={{
                               width: 52,
                               height: 52,
-                              border: "1px dashed",
-                              borderColor: "divider",
                               borderRadius: 1.5,
+                              overflow: "hidden",
+                              border: "1px solid",
+                              borderColor: "divider",
+                              bgcolor: "grey.100",
                               display: "grid",
                               placeItems: "center",
-                              color: "text.disabled",
-                              fontSize: 12,
-                              textAlign: "center",
-                              px: 0.5,
                             }}
                           >
-                            Ảnh
+                            {stock.variantImageUrl ? (
+                              <Box
+                                component="img"
+                                src={stock.variantImageUrl}
+                                alt={
+                                  stock.productName ||
+                                  stock.variantSku ||
+                                  "Variant image"
+                                }
+                                sx={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  display: "block",
+                                }}
+                              />
+                            ) : (
+                              <Typography
+                                variant="caption"
+                                color="text.disabled"
+                                sx={{ fontSize: 11 }}
+                              >
+                                Ảnh
+                              </Typography>
+                            )}
                           </Box>
                         </TableCell>
                         <TableCell>

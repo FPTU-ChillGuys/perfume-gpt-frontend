@@ -7,12 +7,12 @@ import {
   type ProductCardProps,
 } from "../components/product/ProductCard";
 import { productService } from "../services/productService";
-import type { ProductListItem, VariantPagedItem } from "../types/product";
+import type { ProductListItem } from "../types/product";
 import {
-  buildVariantMap,
   mapProductToCard,
   mapProductWithVariantsToCard,
 } from "../utils/productCardMapper";
+import { resolveVariantMapForProducts } from "../utils/variantMapResolver";
 import { dexieCache } from "../utils/dexieCache";
 import { CACHE_KEYS, CACHE_TTL } from "../constants/cache";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
@@ -85,27 +85,19 @@ export const ProductListPage = () => {
           >(
             CACHE_KEYS.ALL_PRODUCTS_FOR_CATEGORY_FILTER,
             async () => {
-              const [pPage, vPage] = await Promise.all([
-                productService.getProducts({
-                  PageNumber: 1,
-                  PageSize: 500,
-                  IsDescending: true,
-                }),
-                productService.getProductVariantsPaged({
-                  PageNumber: 1,
-                  PageSize: 2000,
-                  IsDescending: true,
-                }),
-              ]);
+              const pPage = await productService.getProducts({
+                PageNumber: 1,
+                PageSize: 500,
+                IsDescending: true,
+              });
               const allItems = (pPage?.items ?? []).filter(
                 (p): p is ProductListItem & { id: string } => Boolean(p.id),
               );
-              const idSet = new Set(allItems.map((p) => p.id));
-              const relevantVariants = (vPage.items ?? []).filter(
-                (v): v is VariantPagedItem & { productId: string } =>
-                  Boolean(v.productId && idSet.has(v.productId)),
+              const vMap = await resolveVariantMapForProducts(
+                allItems.map((item) => item.id),
+                (query) => productService.getProductVariantsPaged(query),
+                { pageSize: 250, maxPages: 30 },
               );
-              const vMap = buildVariantMap(relevantVariants);
               return allItems.map((p) => ({
                 card: mapProductToCard(p, vMap.get(p.id)),
                 categoryId: p.categoryId,
@@ -151,23 +143,15 @@ export const ProductListPage = () => {
           setTotalCount(productPage?.totalCount ?? items.length);
           setIsLoading(false);
 
-          const variantPage = await productService.getProductVariantsPaged({
-            PageNumber: 1,
-            PageSize: Math.max(pageSize * 4, 120),
-            IsDescending: true,
-          });
+          const variantMap = await resolveVariantMapForProducts(
+            items.map((product) => product.id),
+            (query) => productService.getProductVariantsPaged(query),
+            { pageSize: Math.max(pageSize * 4, 120), maxPages: 20 },
+          );
 
           if (!isMounted) {
             return;
           }
-
-          const productIdSet = new Set(items.map((product) => product.id));
-          const relevantVariants = (variantPage.items ?? []).filter(
-            (variant): variant is VariantPagedItem & { productId: string } =>
-              Boolean(variant.productId && productIdSet.has(variant.productId)),
-          );
-
-          const variantMap = buildVariantMap(relevantVariants);
 
           const mapped = items.map((product) =>
             mapProductToCard(product, variantMap.get(product.id)),

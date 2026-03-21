@@ -5,11 +5,11 @@ import { CollectionBannerSection } from "../components/home/CollectionBannerSect
 import { FeatureSection } from "../components/home/FeatureSection";
 import { ProductSection } from "../components/home/ProductSection";
 import { productService } from "../services/productService";
-import { trendService, getLastSunday, getPrevSunday } from "../services/ai/trendService";
+import { trendService } from "../services/ai/trendService";
 import type { ProductListItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
-import { buildVariantMap, mapProductToCard, normalizeTrendProducts } from "../utils/productCardMapper";
-import dayjs from "dayjs";
+import { mapProductToCard, normalizeTrendProducts } from "../utils/productCardMapper";
+import { resolveVariantMapForProducts } from "../utils/variantMapResolver";
 
 export const HomePage = () => {
   const [newArrivals, setNewArrivals] = useState<ProductCardProps[]>([]);
@@ -30,22 +30,31 @@ export const HomePage = () => {
       setError(null);
 
       try {
-        const [newArrivalsPage, bestsellersPage, variantPage] =
+        const [newArrivalsPage, bestsellersPage] =
           await Promise.all([
             productService.getNewArrivals(),
             productService.getBestSellers(),
-            productService.getProductVariantsPaged({
-              PageNumber: 1,
-              PageSize: 48, // Fetch variants for both sections (24 products each)
-              IsDescending: true,
-            }),
           ]);
 
         if (!isMounted) {
           return;
         }
 
-        const variantMap = buildVariantMap(variantPage.items);
+        const productsNeedingVariants = [
+          ...newArrivalsPage.items,
+          ...bestsellersPage.items,
+        ]
+          .map((product) => product.id)
+          .filter((productId): productId is string => Boolean(productId));
+
+        const variantMap = await resolveVariantMapForProducts(
+          productsNeedingVariants,
+          (query) => productService.getProductVariantsPaged(query),
+        );
+
+        if (!isMounted) {
+          return;
+        }
 
         const normalizedNewArrivals = newArrivalsPage.items
           .filter((product): product is ProductListItem & { id: string } =>

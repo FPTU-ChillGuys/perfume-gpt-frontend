@@ -142,12 +142,9 @@ class OrderService {
     request: CreateInStoreOrderRequest,
   ): Promise<CheckoutResponse> {
     try {
-      const response = await apiInstance.POST(
-        "/api/orders/checkout-in-store",
-        {
-          body: request,
-        },
-      );
+      const response = await apiInstance.POST("/api/orders/checkout-in-store", {
+        body: request,
+      });
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Checkout failed");
@@ -160,9 +157,7 @@ class OrderService {
     } catch (error: any) {
       console.error("Error during in-store checkout:", error);
       throw new Error(
-        error.response?.data?.message ||
-          error.message ||
-          "Checkout failed",
+        error.response?.data?.message || error.message || "Checkout failed",
       );
     }
   }
@@ -251,11 +246,14 @@ class OrderService {
     }
   }
 
-  async cancelOrder(orderId: string): Promise<string> {
+  async cancelOrder(orderId: string, reason?: string): Promise<string> {
     try {
       const response = await apiInstance.POST("/api/orders/{orderId}/cancel", {
         params: {
           path: { orderId },
+        },
+        body: {
+          reason: reason ?? null,
         },
       });
 
@@ -321,9 +319,7 @@ class OrderService {
       );
 
       if (!response.data?.success) {
-        throw new Error(
-          response.data?.message || "Failed to retry payment",
-        );
+        throw new Error(response.data?.message || "Failed to retry payment");
       }
 
       // Return URL for redirect payment or orderId for cash payment
