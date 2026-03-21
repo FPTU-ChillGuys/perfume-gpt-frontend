@@ -24,6 +24,12 @@ import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
 import QuizQuestionCard from "@/components/quiz/user/QuizQuestionCard";
 import QuizResultView from "@/components/quiz/user/QuizResultView";
+import { dexieCache } from "@/utils/dexieCache";
+import { CACHE_KEYS, CACHE_TTL } from "@/constants/cache";
+
+interface CachedQuizResult {
+    result: AssistantPayload;
+}
 
 // ── Parse AI response string ────────────────────────────────────
 function parseAiResponse(raw: string): AssistantPayload {
@@ -45,6 +51,7 @@ export default function QuizPage() {
     const [currentStep, setCurrentStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState<AssistantPayload | null>(null);
+    const quizResultCacheKey = `${CACHE_KEYS.QUIZ_RESULT}_${userId}`;
 
     // ── Fetch ─────────────────────────────────────────────────────
     const fetchQuestions = useCallback(async () => {
@@ -60,6 +67,24 @@ export default function QuizPage() {
     }, []);
 
     useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const restoreQuizResult = async () => {
+            const cached = await dexieCache.get<CachedQuizResult>(quizResultCacheKey);
+            if (!isMounted || !cached?.result) {
+                return;
+            }
+            setResult(cached.result);
+        };
+
+        void restoreQuizResult();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [quizResultCacheKey]);
 
     // ── Selection handlers ────────────────────────────────────────
     const handleSingleSelect = useCallback((questionId: string, answerId: string) => {
@@ -102,22 +127,34 @@ export default function QuizPage() {
             const res = await quizService.submitQuizV2(userId, payload);
             const parsedRes = parseAiResponse(res.data);
             setResult(parsedRes);
+            await dexieCache.set<CachedQuizResult>(
+                quizResultCacheKey,
+                { result: parsedRes },
+                CACHE_TTL.ONE_DAY,
+            );
         } catch (err) {
             console.error("Quiz submit error:", err);
-            setResult({ message: "Đã xảy ra lỗi khi lấy gợi ý. Vui lòng thử lại.", products: [] });
+            const fallbackResult = { message: "Đã xảy ra lỗi khi lấy gợi ý. Vui lòng thử lại.", products: [] };
+            setResult(fallbackResult);
+            await dexieCache.set<CachedQuizResult>(
+                quizResultCacheKey,
+                { result: fallbackResult },
+                CACHE_TTL.ONE_DAY,
+            );
         } finally {
             setSubmitting(false);
         }
-    }, [userId, selections]);
+    }, [userId, selections, quizResultCacheKey]);
 
-    const handleRestart = () => {
+    const handleRestart = useCallback(() => {
         setSelections(new Map());
         setCurrentStep(0);
         setResult(null);
-    };
+        void dexieCache.delete(quizResultCacheKey);
+    }, [quizResultCacheKey]);
 
     // ── Loading ───────────────────────────────────────────────────
-    if (loading) {
+    if (loading && !result) {
         return (
             <>
                 <Header />
