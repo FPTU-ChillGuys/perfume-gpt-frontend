@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -120,7 +120,6 @@ const sortVariantMediaWithPrimaryFirst = (mediaList: MediaResponse[]) => {
 
 const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
@@ -200,7 +199,6 @@ const ProductDetailPage = () => {
   const THUMB_VISIBLE = 5;
   const THUMB_SIZE = 72;
   const THUMB_GAP = 8;
-  const requestedVariantId = searchParams.get("variantId");
 
   useEffect(() => {
     if (!productId) {
@@ -225,9 +223,6 @@ const ProductDetailPage = () => {
         setProductDetail(detailResponse);
 
         const variants = detailResponse.variants ?? [];
-        const requestedVariant = requestedVariantId
-          ? variants.find((variant) => variant.id === requestedVariantId)
-          : undefined;
 
         const firstAvailableVariant = variants.find(
           (variant) => {
@@ -243,7 +238,6 @@ const ProductDetailPage = () => {
               : false;
 
             return (
-              requestedVariant?.id ||
               (currentVariantStillValid ? current : null) ||
             firstAvailableVariant?.id ||
               variants[0]?.id ||
@@ -294,17 +288,7 @@ const ProductDetailPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [productId, requestedVariantId]);
-
-  useEffect(() => {
-    if (!selectedVariantId || searchParams.get("variantId") === selectedVariantId) {
-      return;
-    }
-
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("variantId", selectedVariantId);
-    setSearchParams(nextParams, { replace: true });
-  }, [selectedVariantId, searchParams, setSearchParams]);
+  }, [productId]);
 
   useEffect(() => {
     if (loading || error || hasMarkedInitialRenderRef.current) {

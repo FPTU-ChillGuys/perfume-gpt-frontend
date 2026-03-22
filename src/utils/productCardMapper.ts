@@ -45,12 +45,27 @@ export const mapProductToCard = (
   product: ProductListItem & { id: string },
   variant?: VariantCardSource,
 ): ProductCardProps => {
-  const finiteVariantPrices = Array.isArray(product.variantPrices)
+  const finiteVariantPricesFromField = Array.isArray(product.variantPrices)
     ? product.variantPrices.filter(
         (candidate): candidate is number =>
           typeof candidate === "number" && Number.isFinite(candidate),
       )
     : [];
+
+  const variantItems = Array.isArray((product as any).variants)
+    ? ((product as any).variants as Array<{ basePrice?: number; volumeMl?: number }>)
+    : [];
+  const finiteVariantPricesFromItems = variantItems
+    .map((item) => item.basePrice)
+    .filter(
+      (candidate): candidate is number =>
+        typeof candidate === "number" && Number.isFinite(candidate),
+    );
+
+  const finiteVariantPrices = [
+    ...finiteVariantPricesFromField,
+    ...finiteVariantPricesFromItems,
+  ];
 
   const minVariantPrice =
     finiteVariantPrices.length > 0
@@ -62,6 +77,9 @@ export const mapProductToCard = (
       : undefined;
   const rawPrice = variant?.basePrice ?? minVariantPrice ?? 0;
   const price = Number(rawPrice);
+  const rawVolume =
+    variant?.volumeMl ??
+    variantItems.find((item) => typeof item.volumeMl === "number")?.volumeMl;
 
   return {
     id: product.id,
@@ -73,7 +91,9 @@ export const mapProductToCard = (
       product.primaryImage?.url ?? getVariantImageUrl(variant) ?? undefined,
     variantId: variant?.id,
     firstVariantVolumeMl:
-      typeof variant?.volumeMl === "number" ? variant.volumeMl : undefined,
+      typeof rawVolume === "number" && Number.isFinite(rawVolume)
+        ? rawVolume
+        : undefined,
     numberOfVariants: product.numberOfVariants ?? 0,
   };
 };

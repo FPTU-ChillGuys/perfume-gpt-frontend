@@ -62,10 +62,7 @@ export const ProductCard = ({
         console.error("Failed to log product click", error);
       });
 
-    const variantQuery = variantId
-      ? `?variantId=${encodeURIComponent(variantId)}`
-      : "";
-    navigate(`/products/${id}${variantQuery}`);
+    navigate(`/products/${id}`);
   };
 
   const handleAddToCart = async () => {
