@@ -3,7 +3,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Dialog,
   DialogContent,
@@ -39,6 +38,64 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   currency: "VND",
   maximumFractionDigits: 0,
 });
+
+const toPositiveNumber = (value: unknown) => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value > 0 ? value : null;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value.replace(/[,_\s]/g, ""));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+
+  return null;
+};
+
+const getVariantPrice = (variant: unknown) => {
+  const source = variant as {
+    price?: unknown;
+    Price?: unknown;
+    basePrice?: unknown;
+    BasePrice?: unknown;
+  };
+
+  return (
+    toPositiveNumber(source?.price) ??
+    toPositiveNumber(source?.Price) ??
+    toPositiveNumber(source?.basePrice) ??
+    toPositiveNumber(source?.BasePrice)
+  );
+};
+
+const getVariantRetailPrice = (variant: unknown) => {
+  const source = variant as {
+    retailPrice?: unknown;
+    RetailPrice?: unknown;
+    marketPrice?: unknown;
+    MarketPrice?: unknown;
+  };
+
+  return (
+    toPositiveNumber(source?.retailPrice) ??
+    toPositiveNumber(source?.RetailPrice) ??
+    toPositiveNumber(source?.marketPrice) ??
+    toPositiveNumber(source?.MarketPrice)
+  );
+};
+
+const formatSavingPercent = (percent: number) => {
+  if (percent >= 1) {
+    return `${Math.round(percent)}%`;
+  }
+  if (percent >= 0.1) {
+    return `${percent.toFixed(1)}%`;
+  }
+  if (percent > 0) {
+    return `${percent.toFixed(2)}%`;
+  }
+  return "0%";
+};
 
 const sanitizeDescriptionHtml = (html: string) => {
   const container = document.createElement("div");
@@ -115,6 +172,21 @@ const ProductQuickViewDialog = ({
       null,
     [fastLook, selectedVariantId],
   );
+
+  const selectedVariantPrice = getVariantPrice(selectedVariant) || 0;
+  const selectedVariantRetailPrice =
+    getVariantRetailPrice(selectedVariant) || 0;
+  const hasRetailPriceComparison =
+    selectedVariantPrice > 0 &&
+    selectedVariantRetailPrice > selectedVariantPrice;
+  const savingAmount = hasRetailPriceComparison
+    ? selectedVariantRetailPrice - selectedVariantPrice
+    : 0;
+  const savingPercent = hasRetailPriceComparison
+    ? ((selectedVariantRetailPrice - selectedVariantPrice) /
+        selectedVariantRetailPrice) *
+      100
+    : 0;
 
   const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
 
@@ -284,7 +356,7 @@ const ProductQuickViewDialog = ({
                 justifyContent: "center",
                 alignItems: "center",
                 minHeight: 320,
-                bgcolor: "grey.50",
+                bgcolor: "white",
               }}
             >
               {heroImage ? (
@@ -306,8 +378,7 @@ const ProductQuickViewDialog = ({
               {fastLook.name}
             </Typography>
             <Typography color="text.secondary" fontWeight={500} gutterBottom>
-              Thương hiệu:{" "}
-              {fastLook.brandName || "Đang cập nhật"}
+              Thương hiệu: {fastLook.brandName || "Đang cập nhật"}
             </Typography>
             <Typography
               component="div"
@@ -414,11 +485,36 @@ const ProductQuickViewDialog = ({
             </ToggleButtonGroup>
 
             <Stack direction="column" spacing={1} mt={3}>
-              <Typography variant="h4" fontWeight={700} color="error">
-                {selectedVariant?.price
-                  ? currencyFormatter.format(Number(selectedVariant.price))
-                  : "Liên hệ"}
-              </Typography>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="baseline"
+                flexWrap="wrap"
+              >
+                <Typography variant="h4" fontWeight={700} color="error">
+                  {selectedVariantPrice
+                    ? currencyFormatter.format(selectedVariantPrice)
+                    : "Liên hệ"}
+                </Typography>
+                {hasRetailPriceComparison && (
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ textDecoration: "line-through" }}
+                  >
+                    {currencyFormatter.format(selectedVariantRetailPrice)}
+                  </Typography>
+                )}
+              </Stack>
+              {hasRetailPriceComparison && savingAmount > 0 && (
+                <Typography
+                  variant="body2"
+                  color="success.main"
+                  fontWeight={600}
+                >
+                  {`Tiết kiệm ${currencyFormatter.format(savingAmount)} (${formatSavingPercent(savingPercent)})`}
+                </Typography>
+              )}
               <Button
                 startIcon={<InfoIcon />}
                 variant="text"
@@ -482,11 +578,10 @@ const ProductQuickViewDialog = ({
       <DialogTitle
         sx={{
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "flex-end",
           alignItems: "center",
         }}
       >
-        Xem nhanh sản phẩm
         <IconButton onClick={handleClose} size="small">
           <CloseIcon fontSize="small" />
         </IconButton>

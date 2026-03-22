@@ -72,6 +72,9 @@ interface UploadedVariantImage {
 }
 
 type VariantFormMode = "create" | "edit";
+type VariantWithRetailPrice = ProductVariant & {
+  retailPrice?: number | null;
+};
 
 const VARIANT_TYPES: { value: VariantType; label: string }[] = [
   { value: "Standard", label: "Standard" },
@@ -239,6 +242,7 @@ const createInitialFormValues = () => ({
   barCode: "",
   volumeMl: "",
   basePrice: "",
+  retailPrice: "",
   lowStockThreshold: "",
   type: VARIANT_TYPES[0]?.value ?? "FullBox",
   status: VARIANT_STATUS[0]?.value ?? "Active",
@@ -509,6 +513,10 @@ export default function ManageProductVariantsDialog({
           "",
         volumeMl: variant.volumeMl ? String(variant.volumeMl) : "",
         basePrice: variant.basePrice ? String(variant.basePrice) : "",
+        retailPrice:
+          typeof (variant as VariantWithRetailPrice).retailPrice === "number"
+            ? String((variant as VariantWithRetailPrice).retailPrice)
+            : "",
         lowStockThreshold:
           typeof (variant as { lowStockThreshold?: number })
             .lowStockThreshold === "number"
@@ -657,8 +665,8 @@ export default function ManageProductVariantsDialog({
       setIsSkuDirty(true);
     }
 
-    // For basePrice, remove non-digits to store clean number
-    if (name === "basePrice") {
+    // For price fields, remove non-digits to store clean number
+    if (name === "basePrice" || name === "retailPrice") {
       const cleanValue = value.replace(/\D/g, "");
       setFormValues((prev) => ({ ...prev, [name]: cleanValue }));
     } else if (name === "volumeMl") {
@@ -881,6 +889,15 @@ export default function ManageProductVariantsDialog({
     if (!formValues.basePrice || Number(formValues.basePrice) <= 0) {
       return "Giá cơ bản phải lớn hơn 0";
     }
+    if (formValues.retailPrice && Number(formValues.retailPrice) <= 0) {
+      return "Giá thị trường phải lớn hơn 0 nếu có nhập";
+    }
+    if (
+      formValues.retailPrice &&
+      Number(formValues.retailPrice) < Number(formValues.basePrice)
+    ) {
+      return "Giá thị trường phải lớn hơn hoặc bằng giá bán";
+    }
     if (!isEditMode && !formValues.lowStockThreshold) {
       return "Mức cảnh báo tồn kho phải lớn hơn 0";
     }
@@ -914,7 +931,10 @@ export default function ManageProductVariantsDialog({
       return;
     }
 
-    const payload: CreateVariantRequest & { barcode: string } = {
+    const payload: CreateVariantRequest & {
+      barcode: string;
+      retailPrice: number | null;
+    } = {
       productId: product.id,
       sku: formValues.sku.trim(),
       barcode: formValues.barCode.trim(),
@@ -922,6 +942,9 @@ export default function ManageProductVariantsDialog({
       concentrationId: selectedConcentration!.id,
       type: formValues.type as VariantType,
       basePrice: Number(formValues.basePrice),
+      retailPrice: formValues.retailPrice
+        ? Number(formValues.retailPrice)
+        : null,
       status: formValues.status as VariantStatus,
       lowStockThreshold: Number(formValues.lowStockThreshold),
       temporaryMediaIds: buildOrderedTemporaryMediaIds(),
@@ -952,6 +975,7 @@ export default function ManageProductVariantsDialog({
     const trimmedBarcode = formValues.barCode.trim();
     const payload: UpdateVariantRequest & {
       barcode?: string;
+      retailPrice: number | null;
       mediaIdsToDelete?: string[] | null;
       temporaryMediaIdsToAdd?: string[] | null;
       lowStockThreshold?: number;
@@ -962,6 +986,9 @@ export default function ManageProductVariantsDialog({
       concentrationId: selectedConcentration!.id,
       type: formValues.type as VariantType,
       basePrice: Number(formValues.basePrice),
+      retailPrice: formValues.retailPrice
+        ? Number(formValues.retailPrice)
+        : null,
       status: formValues.status as VariantStatus,
       ...(formValues.lowStockThreshold
         ? { lowStockThreshold: Number(formValues.lowStockThreshold) }
@@ -1019,7 +1046,7 @@ export default function ManageProductVariantsDialog({
       return (
         <Box py={4} textAlign="center">
           <Typography color="text.secondary">
-            Chưa có variant nào cho sản phẩm này
+            Chưa có biến thể nào cho sản phẩm này
           </Typography>
         </Box>
       );
@@ -1135,8 +1162,14 @@ export default function ManageProductVariantsDialog({
                   size="small"
                 />
                 <Chip
-                  label={formatter.format(Number(variant.basePrice || 0))}
+                  label={`${formatter.format(Number(variant.basePrice || 0))}`}
                   color="default"
+                  variant="outlined"
+                  size="small"
+                />
+                <Chip
+                  label={`${formatter.format(Number((variant as VariantWithRetailPrice).retailPrice || 0))}`}
+                  color="warning"
                   variant="outlined"
                   size="small"
                 />
@@ -1863,6 +1896,23 @@ export default function ManageProductVariantsDialog({
                           required
                           disabled={saving}
                           helperText="Phải lớn hơn 0"
+                        />
+                      </Box>
+                      <Box>
+                        <TextField
+                          label="Giá thị trường (VND)"
+                          name="retailPrice"
+                          value={
+                            formValues.retailPrice
+                              ? parseInt(formValues.retailPrice).toLocaleString(
+                                  "vi-VN",
+                                )
+                              : ""
+                          }
+                          onChange={handleInputChange}
+                          fullWidth
+                          disabled={saving}
+                          helperText="Có thể để trống. Nếu nhập, phải lớn hơn hoặc bằng giá bán"
                         />
                       </Box>
                       {!isEditMode && (

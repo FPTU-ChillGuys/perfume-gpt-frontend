@@ -115,7 +115,7 @@ export const ProductCard = ({
 
       {/* Image */}
       <div
-        className="aspect-square bg-gray-100 flex items-center justify-center overflow-hidden p-4 cursor-pointer"
+        className="aspect-square bg-white flex items-center justify-center overflow-hidden p-4 cursor-pointer"
         onClick={handleNavigateDetail}
       >
         {imageUrl ? (
@@ -135,7 +135,7 @@ export const ProductCard = ({
       </div>
 
       {/* Info */}
-      <div className="p-4 ">
+      <div className="p-4 bg-gray-50 border-t border-gray-100">
         <p
           className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer text-center"
           onClick={handleNavigateDetail}

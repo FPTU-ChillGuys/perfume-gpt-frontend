@@ -55,6 +55,24 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   maximumFractionDigits: 0,
 });
 
+const getVariantRetailPrice = (variant: unknown) => {
+  const retailPrice = (variant as { retailPrice?: unknown })?.retailPrice;
+  return typeof retailPrice === "number" ? retailPrice : null;
+};
+
+const formatSavingPercent = (percent: number) => {
+  if (percent >= 1) {
+    return `${Math.round(percent)}%`;
+  }
+  if (percent >= 0.1) {
+    return `${percent.toFixed(1)}%`;
+  }
+  if (percent > 0) {
+    return `${percent.toFixed(2)}%`;
+  }
+  return "0%";
+};
+
 const sanitizeDescriptionHtml = (html: string) => {
   const container = document.createElement("div");
   container.innerHTML = html;
@@ -292,6 +310,7 @@ const ProductDetailPage = () => {
         variant.sku ||
         "Size",
       price: variant.basePrice,
+      retailPrice: getVariantRetailPrice(variant),
       stockQuantity: variant.stockQuantity,
       media: variant.media?.[0] || null,
       mediaList: variant.media || [],
@@ -465,6 +484,17 @@ const ProductDetailPage = () => {
   const selectedVariantStockQuantity = getVariantStockQuantity(selectedVariant);
   const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
   const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
+  const selectedBasePrice = Number(selectedVariant?.price || 0);
+  const selectedRetailPrice = Number(selectedVariant?.retailPrice || 0);
+  const hasRetailPriceComparison =
+    selectedBasePrice > 0 && selectedRetailPrice > selectedBasePrice;
+  const savingAmount = hasRetailPriceComparison
+    ? selectedRetailPrice - selectedBasePrice
+    : 0;
+  const savingPercent = hasRetailPriceComparison
+    ? ((selectedRetailPrice - selectedBasePrice) / selectedRetailPrice) * 100
+    : 0;
+  const shouldShowSavings = savingAmount > 0;
 
   const fallbackReviewThumbnail = useMemo(
     () =>
@@ -999,7 +1029,7 @@ const ProductDetailPage = () => {
                 borderRadius: 3,
                 border: "1px solid",
                 borderColor: "divider",
-                bgcolor: "grey.50",
+                bgcolor: "white",
                 height: 420,
                 display: "flex",
                 alignItems: "center",
@@ -1022,11 +1052,11 @@ const ProductDetailPage = () => {
                           left: 10,
                           top: "50%",
                           transform: "translateY(-50%)",
-                          bgcolor: "rgba(255,255,255,0.85)",
+                          bgcolor: "grey.100",
                           border: "1px solid",
                           borderColor: "divider",
                           zIndex: 2,
-                          "&:hover": { bgcolor: "rgba(255,255,255,1)" },
+                          "&:hover": { bgcolor: "grey.200" },
                         }}
                       >
                         <ChevronLeftIcon />
@@ -1043,11 +1073,11 @@ const ProductDetailPage = () => {
                           right: 10,
                           top: "50%",
                           transform: "translateY(-50%)",
-                          bgcolor: "rgba(255,255,255,0.85)",
+                          bgcolor: "grey.100",
                           border: "1px solid",
                           borderColor: "divider",
                           zIndex: 2,
-                          "&:hover": { bgcolor: "rgba(255,255,255,1)" },
+                          "&:hover": { bgcolor: "grey.200" },
                         }}
                       >
                         <ChevronRightIcon />
@@ -1330,15 +1360,40 @@ const ProductDetailPage = () => {
               </Box>
 
               {/* Price */}
-              <Stack direction="row" spacing={1} alignItems="baseline">
-                <Typography variant="h4" fontWeight={700} color="error">
-                  {selectedVariant?.price
-                    ? currencyFormatter.format(Number(selectedVariant.price))
-                    : "Liên hệ"}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Giá đã bao gồm VAT
-                </Typography>
+              <Stack spacing={0.5}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="baseline"
+                  flexWrap="wrap"
+                >
+                  <Typography variant="h4" fontWeight={700} color="error">
+                    {selectedVariant?.price
+                      ? currencyFormatter.format(Number(selectedVariant.price))
+                      : "Liên hệ"}
+                  </Typography>
+                  {hasRetailPriceComparison && (
+                    <Typography
+                      variant="body1"
+                      color="text.secondary"
+                      sx={{ textDecoration: "line-through" }}
+                    >
+                      {currencyFormatter.format(selectedRetailPrice)}
+                    </Typography>
+                  )}
+                  <Typography variant="caption" color="text.secondary">
+                    Giá đã bao gồm VAT
+                  </Typography>
+                </Stack>
+                {hasRetailPriceComparison && shouldShowSavings && (
+                  <Typography
+                    variant="body2"
+                    color="success.main"
+                    fontWeight={600}
+                  >
+                    {`Tiết kiệm ${currencyFormatter.format(savingAmount)} (${formatSavingPercent(savingPercent)})`}
+                  </Typography>
+                )}
               </Stack>
 
               {selectedVariantStockQuantity !== null &&
