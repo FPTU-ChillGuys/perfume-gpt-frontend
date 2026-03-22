@@ -8,13 +8,17 @@ import { productService } from "../services/productService";
 import { trendService } from "../services/ai/trendService";
 import type { ProductListItem } from "../types/product";
 import type { ProductCardProps } from "../components/product/ProductCard";
-import { mapProductToCard, normalizeTrendProducts } from "../utils/productCardMapper";
-import { resolveVariantMapForProducts } from "../utils/variantMapResolver";
+import {
+  mapProductToCard,
+  normalizeTrendProducts,
+} from "../utils/productCardMapper";
 
 export const HomePage = () => {
   const [newArrivals, setNewArrivals] = useState<ProductCardProps[]>([]);
   const [bestsellers, setBestsellers] = useState<ProductCardProps[]>([]);
-  const [trendingProducts, setTrendingProducts] = useState<ProductCardProps[]>([]);
+  const [trendingProducts, setTrendingProducts] = useState<ProductCardProps[]>(
+    [],
+  );
 
   const [isLoading, setIsLoading] = useState(true);
   const [isTrendingLoading, setIsTrendingLoading] = useState(true);
@@ -30,27 +34,10 @@ export const HomePage = () => {
       setError(null);
 
       try {
-        const [newArrivalsPage, bestsellersPage] =
-          await Promise.all([
-            productService.getNewArrivals(),
-            productService.getBestSellers(),
-          ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        const productsNeedingVariants = [
-          ...newArrivalsPage.items,
-          ...bestsellersPage.items,
-        ]
-          .map((product) => product.id)
-          .filter((productId): productId is string => Boolean(productId));
-
-        const variantMap = await resolveVariantMapForProducts(
-          productsNeedingVariants,
-          (query) => productService.getProductVariantsPaged(query),
-        );
+        const [newArrivalsPage, bestsellersPage] = await Promise.all([
+          productService.getNewArrivals(),
+          productService.getBestSellers(),
+        ]);
 
         if (!isMounted) {
           return;
@@ -61,7 +48,7 @@ export const HomePage = () => {
             Boolean(product.id),
           )
           .map((product) => ({
-            ...mapProductToCard(product, variantMap.get(product.id)),
+            ...mapProductToCard(product),
             isNew: true,
           }));
 
@@ -69,9 +56,7 @@ export const HomePage = () => {
           .filter((product): product is ProductListItem & { id: string } =>
             Boolean(product.id),
           )
-          .map((product) =>
-            mapProductToCard(product, variantMap.get(product.id)),
-          );
+          .map((product) => mapProductToCard(product));
 
         setNewArrivals(normalizedNewArrivals);
         setBestsellers(normalizedBestsellers);
@@ -105,7 +90,8 @@ export const HomePage = () => {
     const fetchTrending = async () => {
       setIsTrendingLoading(true);
       try {
-        const products = await trendService.getCurrentOrPreviousWeeklyTrend(false);
+        const products =
+          await trendService.getCurrentOrPreviousWeeklyTrend(false);
 
         if (!isMounted) return;
 
@@ -133,24 +119,25 @@ export const HomePage = () => {
       <CollectionBannerSection />
 
       {/* Completely hide the section while loading or if it's empty. */}
-      {(!isTrendingLoading && trendingProducts.length > 0) && (
+      {!isTrendingLoading && trendingProducts.length > 0 && (
         <ProductSection
           title="Trending (Weekly)"
           products={trendingProducts}
           isLoading={false}
         />
       )}
+      <ProductSection
+        title="Bestsellers"
+        products={bestsellers}
+        isLoading={isLoading}
+      />
 
       <ProductSection
         title="New Arrivals"
         products={newArrivals}
         isLoading={isLoading}
       />
-      <ProductSection
-        title="Bestsellers"
-        products={bestsellers}
-        isLoading={isLoading}
-      />
+
       <FeatureSection />
       {error && (
         <div className="container mx-auto px-4">
@@ -162,4 +149,3 @@ export const HomePage = () => {
     </MainLayout>
   );
 };
-

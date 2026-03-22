@@ -933,7 +933,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/attributes/values/lookup/{attributeId}": {
+    "/api/attributes/{attributeId}/values/lookup": {
         parameters: {
             query?: never;
             header?: never;
@@ -1127,7 +1127,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/attributes/values": {
+    "/api/attributes/{attributeId}/values": {
         parameters: {
             query?: never;
             header?: never;
@@ -1140,7 +1140,9 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    attributeId: number;
+                };
                 cookie?: never;
             };
             requestBody: {
@@ -4652,6 +4654,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    CategoryId?: null | number;
                     BatchCode?: string;
                     SKU?: string;
                     StockStatus?: components["schemas"]["StockStatus"];
@@ -6914,6 +6917,7 @@ export interface paths {
             parameters: {
                 query?: {
                     Gender?: components["schemas"]["Gender"];
+                    CategoryId?: null | number;
                     BrandId?: null | number;
                     Volume?: null | number;
                     FromPrice?: null | number;
@@ -7575,6 +7579,7 @@ export interface paths {
                 query?: {
                     searchText?: string;
                     Gender?: components["schemas"]["Gender"];
+                    CategoryId?: null | number;
                     BrandId?: null | number;
                     Volume?: null | number;
                     FromPrice?: null | number;
@@ -7663,6 +7668,7 @@ export interface paths {
             parameters: {
                 query?: {
                     Gender?: components["schemas"]["Gender"];
+                    CategoryId?: null | number;
                     BrandId?: null | number;
                     Volume?: null | number;
                     FromPrice?: null | number;
@@ -7723,6 +7729,7 @@ export interface paths {
             parameters: {
                 query?: {
                     Gender?: components["schemas"]["Gender"];
+                    CategoryId?: null | number;
                     BrandId?: null | number;
                     Volume?: null | number;
                     FromPrice?: null | number;
@@ -10612,6 +10619,7 @@ export interface components {
         AttributeLookupItem: {
             /** Format: int32 */
             id?: number;
+            internalCode?: string;
             name?: string;
             description?: string;
             isVariantLevel?: boolean;
@@ -11396,15 +11404,13 @@ export interface components {
             provinceId?: number;
         };
         CreateAttributeRequest: {
-            internalCode?: string;
-            name?: string;
+            internalCode: string;
+            name: string;
             description?: null | string;
-            isVariantLevel?: boolean;
+            isVariantLevel: boolean;
         };
         CreateAttributeValueRequest: {
-            /** Format: int32 */
-            attributeId?: number;
-            value?: string;
+            value: string;
         };
         CreateBatchRequest: {
             batchCode: string;
@@ -11798,8 +11804,8 @@ export interface components {
             expiringSoonCount?: number;
         };
         LoginRequest: {
-            credential?: string;
-            password?: string;
+            credential: string;
+            password: string;
         };
         MediaResponse: {
             /** Format: uuid */
@@ -12252,10 +12258,8 @@ export interface components {
             description?: null | string;
             /** Format: int32 */
             numberOfVariants?: number;
+            variantPrices?: number[];
             primaryImage?: null | components["schemas"]["MediaResponse"];
-            attributes?: null | components["schemas"]["ProductAttributeResponse"][];
-            scentNotes?: components["schemas"]["ProductScentNoteResponse"][];
-            olfactoryFamilies?: components["schemas"]["ProductOlfactoryFamilyResponse"][];
         };
         ProductListItemWithVariants: {
             variants?: components["schemas"]["VariantSummaryItem"][];
@@ -12271,10 +12275,8 @@ export interface components {
             description?: null | string;
             /** Format: int32 */
             numberOfVariants?: number;
+            variantPrices?: number[];
             primaryImage?: null | components["schemas"]["MediaResponse"];
-            attributes?: null | components["schemas"]["ProductAttributeResponse"][];
-            scentNotes?: components["schemas"]["ProductScentNoteResponse"][];
-            olfactoryFamilies?: components["schemas"]["ProductOlfactoryFamilyResponse"][];
         };
         ProductLookupItem: {
             /** Format: uuid */
@@ -12751,13 +12753,13 @@ export interface components {
             provinceId?: number;
         };
         UpdateAttributeRequest: {
-            internalCode?: string;
-            name?: null | string;
+            internalCode: string;
+            name: string;
             description?: null | string;
-            isVariantLevel?: null | boolean;
+            isVariantLevel: boolean;
         };
         UpdateAttributeValueRequest: {
-            value?: null | string;
+            value: string;
         };
         UpdateBrandRequest: {
             name?: string;
@@ -12974,6 +12976,7 @@ export interface components {
         VariantFastLookResponse: {
             /** Format: uuid */
             id?: string;
+            sku?: string;
             displayName?: string;
             /** Format: decimal */
             price?: number;

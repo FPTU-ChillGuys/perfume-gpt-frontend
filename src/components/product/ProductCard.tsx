@@ -13,6 +13,7 @@ export interface ProductCardProps {
   name: string;
   originalPrice?: number;
   salePrice: number;
+  maxPrice?: number;
   imageUrl?: string;
   isNew?: boolean;
   discount?: number;
@@ -26,6 +27,7 @@ export const ProductCard = ({
   name,
   originalPrice,
   salePrice,
+  maxPrice,
   imageUrl,
   isNew,
   discount,
@@ -42,14 +44,21 @@ export const ProductCard = ({
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
   };
 
+  const hasPriceRange =
+    typeof maxPrice === "number" &&
+    Number.isFinite(maxPrice) &&
+    maxPrice > salePrice;
+
   const handleNavigateDetail = () => {
     if (!id) {
       return;
     }
 
-    productActivityLogService.logProductView(id, variantId ?? null).catch((error) => {
-      console.error("Failed to log product click", error);
-    });
+    productActivityLogService
+      .logProductView(id, variantId ?? null)
+      .catch((error) => {
+        console.error("Failed to log product click", error);
+      });
 
     navigate(`/products/${id}`);
   };
@@ -102,9 +111,11 @@ export const ProductCard = ({
           onTouchStart={(event) => event.stopPropagation()}
           onClick={(event) => {
             event.stopPropagation();
-            void productActivityLogService.logProductView(id, variantId ?? null).catch((error) => {
-              console.error("Failed to log quick view click", error);
-            });
+            void productActivityLogService
+              .logProductView(id, variantId ?? null)
+              .catch((error) => {
+                console.error("Failed to log quick view click", error);
+              });
             openQuickView(id);
           }}
           className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
@@ -148,14 +159,16 @@ export const ProductCard = ({
         >
           {name}
         </h3>
-        <div className="flex items-center gap-2 justify-center">
+        <div className="flex min-h-6 items-center justify-center gap-1">
           {originalPrice && (
             <span className="text-xs text-gray-400 line-through">
               {formatPrice(originalPrice)}
             </span>
           )}
-          <span className="text-red-600 font-bold">
-            {formatPrice(salePrice)}
+          <span className="whitespace-nowrap text-sm font-bold leading-5 text-red-600">
+            {hasPriceRange
+              ? `${formatPrice(salePrice)} - ${formatPrice(maxPrice)}`
+              : formatPrice(salePrice)}
           </span>
         </div>
         <p className="mt-1 text-xs text-gray-500 text-center">
