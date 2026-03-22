@@ -677,6 +677,212 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/dashboard/revenue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    FromDate?: string;
+                    ToDate?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/dashboard/inventory-levels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    ExpiringWithinDays?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/dashboard/top-products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Top?: number;
+                    FromDate?: string;
+                    ToDate?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/dashboard/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    ExpiringWithinDays?: number;
+                    Top?: number;
+                    FromDate?: string;
+                    ToDate?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/attributes/lookup": {
         parameters: {
             query?: never;
@@ -727,7 +933,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/attributes/values/lookup/{attributeId}": {
+    "/api/attributes/{attributeId}/values/lookup": {
         parameters: {
             query?: never;
             header?: never;
@@ -921,7 +1127,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/attributes/values": {
+    "/api/attributes/{attributeId}/values": {
         parameters: {
             query?: never;
             header?: never;
@@ -934,7 +1140,9 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    attributeId: number;
+                };
                 cookie?: never;
             };
             requestBody: {
@@ -2066,6 +2274,904 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfboolean"];
                         "application/json": components["schemas"]["BaseResponseOfboolean"];
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    SearchTerm?: string;
+                    Status?: components["schemas"]["CampaignStatus"];
+                    Type?: components["schemas"]["CampaignType"];
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateCampaignRequest"];
+                    "text/json": components["schemas"]["CreateCampaignRequest"];
+                    "application/*+json": components["schemas"]["CreateCampaignRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns/{campaignId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCampaignResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCampaignResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCampaignResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateCampaignRequest"];
+                    "text/json": components["schemas"]["UpdateCampaignRequest"];
+                    "application/*+json": components["schemas"]["UpdateCampaignRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns/{campaignId}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns/{campaignId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    campaignId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateCampaignStatusRequest"];
+                    "text/json": components["schemas"]["UpdateCampaignStatusRequest"];
+                    "application/*+json": components["schemas"]["UpdateCampaignStatusRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns/{id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateCampaignPromotionItemRequest"];
+                    "text/json": components["schemas"]["CreateCampaignPromotionItemRequest"];
+                    "application/*+json": components["schemas"]["CreateCampaignPromotionItemRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns/{id}/items/{itemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateCampaignPromotionItemRequest"];
+                    "text/json": components["schemas"]["CreateCampaignPromotionItemRequest"];
+                    "application/*+json": components["schemas"]["CreateCampaignPromotionItemRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns/{id}/vouchers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateCampaignVoucherRequest"];
+                    "text/json": components["schemas"]["CreateCampaignVoucherRequest"];
+                    "application/*+json": components["schemas"]["CreateCampaignVoucherRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns/{id}/vouchers/{voucherId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    voucherId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    voucherId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateCampaignVoucherRequest"];
+                    "text/json": components["schemas"]["UpdateCampaignVoucherRequest"];
+                    "application/*+json": components["schemas"]["UpdateCampaignVoucherRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    voucherId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
             };
@@ -3548,6 +4654,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    CategoryId?: null | number;
                     BatchCode?: string;
                     SKU?: string;
                     StockStatus?: components["schemas"]["StockStatus"];
@@ -5810,6 +6917,7 @@ export interface paths {
             parameters: {
                 query?: {
                     Gender?: components["schemas"]["Gender"];
+                    CategoryId?: null | number;
                     BrandId?: null | number;
                     Volume?: null | number;
                     FromPrice?: null | number;
@@ -6471,6 +7579,7 @@ export interface paths {
                 query?: {
                     searchText?: string;
                     Gender?: components["schemas"]["Gender"];
+                    CategoryId?: null | number;
                     BrandId?: null | number;
                     Volume?: null | number;
                     FromPrice?: null | number;
@@ -6559,6 +7668,7 @@ export interface paths {
             parameters: {
                 query?: {
                     Gender?: components["schemas"]["Gender"];
+                    CategoryId?: null | number;
                     BrandId?: null | number;
                     Volume?: null | number;
                     FromPrice?: null | number;
@@ -6619,6 +7729,7 @@ export interface paths {
             parameters: {
                 query?: {
                     Gender?: components["schemas"]["Gender"];
+                    CategoryId?: null | number;
                     BrandId?: null | number;
                     Volume?: null | number;
                     FromPrice?: null | number;
@@ -8213,82 +9324,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/shippings/calculate-fee": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CalculateFeeRequest"];
-                    "text/json": components["schemas"]["CalculateFeeRequest"];
-                    "application/*+json": components["schemas"]["CalculateFeeRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCalculateFeeResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/stockadjustments": {
         parameters: {
             query?: never;
@@ -9576,9 +10611,15 @@ export interface components {
             provinceId?: number;
             isDefault?: boolean;
         };
+        AdminDashboardOverviewResponse: {
+            revenue?: components["schemas"]["RevenueSummaryResponse"];
+            inventoryLevels?: components["schemas"]["InventoryLevelsResponse"];
+            topProducts?: components["schemas"]["TopProductResponse"][];
+        };
         AttributeLookupItem: {
             /** Format: int32 */
             id?: number;
+            internalCode?: string;
             name?: string;
             description?: string;
             isVariantLevel?: boolean;
@@ -9596,11 +10637,11 @@ export interface components {
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
             /** Format: decimal */
-            minOrderValue?: number;
+            minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
             /** Format: int32 */
-            remainingQuantity?: number;
+            remainingQuantity?: null | number;
         };
         BaseResponse: {
             success?: boolean;
@@ -9617,6 +10658,13 @@ export interface components {
         };
         BaseResponseOfAddressResponse: {
             payload?: null | components["schemas"]["AddressResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfAdminDashboardOverviewResponse: {
+            payload?: null | components["schemas"]["AdminDashboardOverviewResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -9664,8 +10712,8 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
-        BaseResponseOfCalculateFeeResponse: {
-            payload?: null | components["schemas"]["CalculateFeeResponse"];
+        BaseResponseOfCampaignResponse: {
+            payload?: null | components["schemas"]["CampaignResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -9715,6 +10763,13 @@ export interface components {
         };
         BaseResponseOfImportTicketResponse: {
             payload?: null | components["schemas"]["ImportTicketResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfInventoryLevelsResponse: {
+            payload?: null | components["schemas"]["InventoryLevelsResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -9771,6 +10826,13 @@ export interface components {
         };
         BaseResponseOfListOfBrandResponse: {
             payload?: null | components["schemas"]["BrandResponse"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfListOfCampaignPromotionItemResponse: {
+            payload?: null | components["schemas"]["CampaignPromotionItemResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -9895,6 +10957,13 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfListOfTopProductResponse: {
+            payload?: null | components["schemas"]["TopProductResponse"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfListOfVariantLookupItem: {
             payload?: null | components["schemas"]["VariantLookupItem"][];
             success?: boolean;
@@ -9939,6 +11008,13 @@ export interface components {
         };
         BaseResponseOfPagedResultOfBatchDetailResponse: {
             payload?: null | components["schemas"]["PagedResultOfBatchDetailResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfPagedResultOfCampaignResponse: {
+            payload?: null | components["schemas"]["PagedResultOfCampaignResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -10065,6 +11141,13 @@ export interface components {
         };
         BaseResponseOfProfileResponse: {
             payload?: null | components["schemas"]["ProfileResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfRevenueSummaryResponse: {
+            payload?: null | components["schemas"]["RevenueSummaryResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -10245,51 +11328,43 @@ export interface components {
             totalProcessed?: number;
             hasError?: boolean;
         };
-        CalculateFeeData: {
+        CampaignPromotionItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            campaignId?: string;
+            /** Format: uuid */
+            productVariantId?: string;
+            /** Format: uuid */
+            batchId?: null | string;
+            name?: string;
+            itemType?: components["schemas"]["PromotionType"];
+            /** Format: date-time */
+            startDate?: null | string;
+            /** Format: date-time */
+            endDate?: null | string;
+            autoStopWhenBatchEmpty?: boolean;
             /** Format: int32 */
-            total?: number;
+            maxUsage?: null | number;
             /** Format: int32 */
-            service_fee?: number;
-            /** Format: int32 */
-            insurance_fee?: number;
-            /** Format: int32 */
-            pick_station_fee?: number;
-            /** Format: int32 */
-            coupon_value?: number;
-            /** Format: int32 */
-            r2s_fee?: number;
-            /** Format: int32 */
-            document_return?: number;
-            /** Format: int32 */
-            double_check?: number;
-            /** Format: int32 */
-            cod_fee?: number;
-            /** Format: int32 */
-            pick_remote_areas_fee?: number;
-            /** Format: int32 */
-            deliver_remote_areas_fee?: number;
-            /** Format: int32 */
-            cod_failed_fee?: number;
+            currentUsage?: number;
         };
-        CalculateFeeRequest: {
-            /** Format: int32 */
-            toDistrictId?: number;
-            toWardCode?: string;
-            /** Format: int32 */
-            length?: number;
-            /** Format: int32 */
-            width?: number;
-            /** Format: int32 */
-            height?: number;
-            /** Format: int32 */
-            weight?: number;
+        CampaignResponse: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            description?: null | string;
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
+            type?: components["schemas"]["CampaignType"];
+            status?: components["schemas"]["CampaignStatus"];
         };
-        CalculateFeeResponse: {
-            /** Format: int32 */
-            code?: number;
-            message?: string;
-            data?: components["schemas"]["CalculateFeeData"];
-        };
+        /** @enum {string} */
+        CampaignStatus: "Upcoming" | "Active" | "Paused" | "Completed" | "Cancelled";
+        /** @enum {string} */
+        CampaignType: "FlashSale" | "Clearance";
         /** @enum {string} */
         CancelRequestStatus: "Pending" | "Approved" | "Rejected";
         /** @enum {string} */
@@ -10322,38 +11397,69 @@ export interface components {
             district?: string;
             city?: string;
             isDefault?: boolean;
-            wardCode?: string;
+            wardCode: string;
             /** Format: int32 */
             districtId?: number;
             /** Format: int32 */
             provinceId?: number;
         };
         CreateAttributeRequest: {
-            internalCode?: string;
-            name?: string;
+            internalCode: string;
+            name: string;
             description?: null | string;
-            isVariantLevel?: boolean;
+            isVariantLevel: boolean;
         };
         CreateAttributeValueRequest: {
-            /** Format: int32 */
-            attributeId?: number;
-            value?: string;
+            value: string;
         };
         CreateBatchRequest: {
-            batchCode?: string;
+            batchCode: string;
             /** Format: date-time */
-            manufactureDate?: string;
+            manufactureDate: string;
             /** Format: date-time */
-            expiryDate?: string;
+            expiryDate: string;
             /** Format: int32 */
             quantity?: number;
         };
         CreateBrandRequest: {
             name?: string;
         };
+        CreateCampaignPromotionItemRequest: {
+            /** Format: uuid */
+            productVariantId: string;
+            /** Format: uuid */
+            batchId?: null | string;
+            name: string;
+            promotionType?: components["schemas"]["PromotionType"];
+            /** Format: date-time */
+            startDate?: null | string;
+            /** Format: date-time */
+            endDate?: null | string;
+            autoStopWhenBatchEmpty?: boolean;
+            /** Format: int32 */
+            maxUsage?: null | number;
+        };
+        CreateCampaignRequest: {
+            name: string;
+            description?: null | string;
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
+            type?: components["schemas"]["CampaignType"];
+            items: components["schemas"]["CreateCampaignPromotionItemRequest"][];
+        };
+        CreateCampaignVoucherRequest: {
+            code: string;
+            /** Format: decimal */
+            discountValue?: number;
+            targetItemType?: components["schemas"]["PromotionType"];
+            discountType?: components["schemas"]["DiscountType"];
+            applyType?: components["schemas"]["VoucherType"];
+        };
         CreateCartItemRequest: {
             /** Format: uuid */
-            variantId?: string;
+            variantId: string;
             /** Format: int32 */
             quantity?: number;
         };
@@ -10365,7 +11471,7 @@ export interface components {
         };
         CreateImportDetailRequest: {
             /** Format: uuid */
-            variantId?: string;
+            variantId: string;
             /** Format: int32 */
             expectedQuantity?: number;
             /** Format: decimal */
@@ -10375,8 +11481,8 @@ export interface components {
             /** Format: int32 */
             supplierId?: number;
             /** Format: date-time */
-            expectedArrivalDate?: string;
-            importDetails?: components["schemas"]["CreateImportDetailRequest"][];
+            expectedArrivalDate: string;
+            importDetails: components["schemas"]["CreateImportDetailRequest"][];
         };
         CreateInStoreOrderRequest: {
             voucherCode?: null | string;
@@ -10397,6 +11503,8 @@ export interface components {
         CreateOrderRequest: {
             voucherCode?: null | string;
             itemIds?: string[];
+            /** Format: decimal */
+            expectedTotalPrice?: null | number;
             deliveryMethod?: components["schemas"]["DeliveryMethod"];
             /** Format: uuid */
             savedAddressId?: null | string;
@@ -10404,7 +11512,7 @@ export interface components {
             payment?: components["schemas"]["PaymentInformation"];
         };
         CreateProductRequest: {
-            name?: null | string;
+            name: string;
             /** Format: int32 */
             brandId?: number;
             /** Format: int32 */
@@ -10421,10 +11529,10 @@ export interface components {
         };
         CreateReviewRequest: {
             /** Format: uuid */
-            orderDetailId?: string;
+            orderDetailId: string;
             /** Format: int32 */
             rating?: number;
-            comment?: string;
+            comment: string;
             temporaryMediaIds?: null | string[];
         };
         CreateScentNoteRequest: {
@@ -10432,25 +11540,25 @@ export interface components {
         };
         CreateStockAdjustmentDetailRequest: {
             /** Format: uuid */
-            variantId?: string;
+            variantId: string;
             /** Format: uuid */
-            batchId?: string;
+            batchId: string;
             /** Format: int32 */
             adjustmentQuantity?: number;
             note?: null | string;
         };
         CreateStockAdjustmentRequest: {
             /** Format: date-time */
-            adjustmentDate?: string;
+            adjustmentDate: string;
             reason?: components["schemas"]["StockAdjustmentReason"];
             note?: null | string;
-            adjustmentDetails?: components["schemas"]["CreateStockAdjustmentDetailRequest"][];
+            adjustmentDetails: components["schemas"]["CreateStockAdjustmentDetailRequest"][];
         };
         CreateVariantRequest: {
             /** Format: uuid */
-            productId?: string;
+            productId: string;
             barcode?: string;
-            sku?: string;
+            sku: string;
             /** Format: int32 */
             volumeMl?: number;
             /** Format: int32 */
@@ -10462,6 +11570,8 @@ export interface components {
             type?: components["schemas"]["VariantType"];
             /** Format: decimal */
             basePrice?: number;
+            /** Format: decimal */
+            retailPrice?: null | number;
             status?: components["schemas"]["VariantStatus"];
             /** Format: int32 */
             lowStockThreshold?: number;
@@ -10469,11 +11579,12 @@ export interface components {
             temporaryMediaIds?: null | string[];
         };
         CreateVoucherRequest: {
-            code?: string;
+            code: string;
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
-            /** Format: int64 */
+            applyType?: components["schemas"]["VoucherType"];
+            /** Format: int32 */
             requiredPoints?: number;
             /** Format: decimal */
             minOrderValue?: number;
@@ -10503,7 +11614,7 @@ export interface components {
         /** @enum {string} */
         DeliveryMethod: "Delivery" | "PickupInStore";
         /** @enum {string} */
-        DiscountType: "Percentage" | "Fixed";
+        DiscountType: "Percentage" | "FixedAmount";
         DistrictResponse: {
             /** Format: int32 */
             DistrictID?: number;
@@ -10660,6 +11771,24 @@ export interface components {
             createdAt?: string;
             importDetails?: components["schemas"]["ImportDetailResponse"][];
         };
+        InventoryLevelsResponse: {
+            /** Format: int32 */
+            totalVariants?: number;
+            /** Format: int32 */
+            totalStockQuantity?: number;
+            /** Format: int32 */
+            totalAvailableQuantity?: number;
+            /** Format: int32 */
+            lowStockVariantsCount?: number;
+            /** Format: int32 */
+            outOfStockVariantsCount?: number;
+            /** Format: int32 */
+            totalBatches?: number;
+            /** Format: int32 */
+            expiredBatchesCount?: number;
+            /** Format: int32 */
+            expiringSoonCount?: number;
+        };
         InventorySummaryResponse: {
             /** Format: int32 */
             totalVariants?: number;
@@ -10675,8 +11804,8 @@ export interface components {
             expiringSoonCount?: number;
         };
         LoginRequest: {
-            credential?: string;
-            password?: string;
+            credential: string;
+            password: string;
         };
         MediaResponse: {
             /** Format: uuid */
@@ -10822,6 +11951,19 @@ export interface components {
         };
         PagedResultOfBatchDetailResponse: {
             items: components["schemas"]["BatchDetailResponse"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
+        PagedResultOfCampaignResponse: {
+            items: components["schemas"]["CampaignResponse"][];
             /** Format: int32 */
             pageNumber: number;
             /** Format: int32 */
@@ -11116,10 +12258,8 @@ export interface components {
             description?: null | string;
             /** Format: int32 */
             numberOfVariants?: number;
+            variantPrices?: number[];
             primaryImage?: null | components["schemas"]["MediaResponse"];
-            attributes?: null | components["schemas"]["ProductAttributeResponse"][];
-            scentNotes?: components["schemas"]["ProductScentNoteResponse"][];
-            olfactoryFamilies?: components["schemas"]["ProductOlfactoryFamilyResponse"][];
         };
         ProductListItemWithVariants: {
             variants?: components["schemas"]["VariantSummaryItem"][];
@@ -11135,10 +12275,8 @@ export interface components {
             description?: null | string;
             /** Format: int32 */
             numberOfVariants?: number;
+            variantPrices?: number[];
             primaryImage?: null | components["schemas"]["MediaResponse"];
-            attributes?: null | components["schemas"]["ProductAttributeResponse"][];
-            scentNotes?: components["schemas"]["ProductScentNoteResponse"][];
-            olfactoryFamilies?: components["schemas"]["ProductOlfactoryFamilyResponse"][];
         };
         ProductLookupItem: {
             /** Format: uuid */
@@ -11198,6 +12336,8 @@ export interface components {
             type?: components["schemas"]["VariantType"];
             /** Format: decimal */
             basePrice?: number;
+            /** Format: decimal */
+            retailPrice?: null | number;
             status?: components["schemas"]["VariantStatus"];
             /** Format: int32 */
             stockQuantity?: number;
@@ -11218,6 +12358,8 @@ export interface components {
             familyPreferences?: components["schemas"]["CustomerFamilyPreferenceRespone"][];
             attributePreferences?: components["schemas"]["CustomerAttributePreferenceResponse"][];
         };
+        /** @enum {string} */
+        PromotionType: "Clearance" | "NewArrival" | "Regular";
         ProvinceResponse: {
             /** Format: int32 */
             ProvinceID?: number;
@@ -11269,15 +12411,15 @@ export interface components {
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
-            /** Format: int64 */
-            requiredPoints?: number;
+            /** Format: int32 */
+            requiredPoints?: null | number;
             /** Format: decimal */
-            minOrderValue?: number;
+            minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
             isExpired?: boolean;
             /** Format: int32 */
-            remainingQuantity?: number;
+            remainingQuantity?: null | number;
             /** Format: date-time */
             createdAt?: string;
         };
@@ -11288,8 +12430,9 @@ export interface components {
         };
         RegisterRequest: {
             fullName?: string;
-            phoneNumber?: string;
-            email?: string;
+            phoneNumber: string;
+            /** Format: email */
+            email: string;
             password?: string;
             clientUri?: string;
         };
@@ -11309,7 +12452,23 @@ export interface components {
             token?: string;
         };
         /** @enum {string} */
-        ResponseErrorType: "None" | "BadRequest" | "Unauthorized" | "Forbidden" | "NotFound" | "Conflict" | "InternalError";
+        ResponseErrorType: "BadRequest" | "Unauthorized" | "Forbidden" | "NotFound" | "Conflict" | "InternalError";
+        RevenueSummaryResponse: {
+            /** Format: date-time */
+            fromDate?: string;
+            /** Format: date-time */
+            toDate?: string;
+            /** Format: decimal */
+            grossRevenue?: number;
+            /** Format: decimal */
+            refundedAmount?: number;
+            /** Format: decimal */
+            netRevenue?: number;
+            /** Format: int32 */
+            successfulTransactionsCount?: number;
+            /** Format: int32 */
+            paidOrdersCount?: number;
+        };
         ReviewDetailResponse: {
             /** Format: uuid */
             id?: string;
@@ -11568,6 +12727,15 @@ export interface components {
         TokenResponse: {
             accessToken: string;
         };
+        TopProductResponse: {
+            /** Format: uuid */
+            productId?: string;
+            productName?: string;
+            /** Format: int32 */
+            totalUnitsSold?: number;
+            /** Format: decimal */
+            revenue?: number;
+        };
         /** @enum {string} */
         TransactionStatus: "Pending" | "Success" | "Failed" | "Cancelled" | "Refunded";
         UpdateAddressRequest: {
@@ -11578,23 +12746,43 @@ export interface components {
             district?: string;
             city?: string;
             isDefault?: boolean;
-            wardCode?: string;
+            wardCode: string;
             /** Format: int32 */
             districtId?: number;
             /** Format: int32 */
             provinceId?: number;
         };
         UpdateAttributeRequest: {
-            internalCode?: string;
-            name?: null | string;
+            internalCode: string;
+            name: string;
             description?: null | string;
-            isVariantLevel?: null | boolean;
+            isVariantLevel: boolean;
         };
         UpdateAttributeValueRequest: {
-            value?: null | string;
+            value: string;
         };
         UpdateBrandRequest: {
             name?: string;
+        };
+        UpdateCampaignRequest: {
+            name: string;
+            description?: null | string;
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
+            type?: components["schemas"]["CampaignType"];
+        };
+        UpdateCampaignStatusRequest: {
+            status?: components["schemas"]["CampaignStatus"];
+        };
+        UpdateCampaignVoucherRequest: {
+            code?: string;
+            /** Format: decimal */
+            discountValue?: number;
+            targetItemType?: components["schemas"]["PromotionType"];
+            discountType?: components["schemas"]["DiscountType"];
+            applyType?: components["schemas"]["VoucherType"];
         };
         UpdateCartItemRequest: {
             /** Format: int32 */
@@ -11610,7 +12798,7 @@ export interface components {
             /** Format: uuid */
             id?: null | string;
             /** Format: uuid */
-            variantId?: string;
+            variantId: string;
             /** Format: int32 */
             expectedQuantity?: number;
             /** Format: decimal */
@@ -11620,8 +12808,8 @@ export interface components {
             /** Format: int32 */
             supplierId?: number;
             /** Format: date-time */
-            expectedArrivalDate?: string;
-            importDetails?: components["schemas"]["UpdateImportDetailRequest"][];
+            expectedArrivalDate: string;
+            importDetails: components["schemas"]["UpdateImportDetailRequest"][];
         };
         UpdateImportStatusRequest: {
             status?: components["schemas"]["ImportStatus"];
@@ -11640,7 +12828,7 @@ export interface components {
             note?: null | string;
         };
         UpdateProductRequest: {
-            name?: null | string;
+            name: string;
             /** Format: int32 */
             brandId?: number;
             /** Format: int32 */
@@ -11670,7 +12858,7 @@ export interface components {
         UpdateReviewRequest: {
             /** Format: int32 */
             rating?: number;
-            comment?: string;
+            comment: string;
             temporaryMediaIdsToAdd?: null | string[];
             mediaIdsToDelete?: null | string[];
         };
@@ -11681,7 +12869,7 @@ export interface components {
             status?: components["schemas"]["StockAdjustmentStatus"];
         };
         UpdateVariantRequest: {
-            sku?: string;
+            sku: string;
             barcode?: string;
             /** Format: int32 */
             volumeMl?: number;
@@ -11690,6 +12878,8 @@ export interface components {
             type?: components["schemas"]["VariantType"];
             /** Format: decimal */
             basePrice?: number;
+            /** Format: decimal */
+            retailPrice?: null | number;
             status?: components["schemas"]["VariantStatus"];
             /** Format: int32 */
             sillage?: number;
@@ -11704,7 +12894,8 @@ export interface components {
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
-            /** Format: int64 */
+            applyType?: components["schemas"]["VoucherType"];
+            /** Format: int32 */
             requiredPoints?: number;
             /** Format: decimal */
             minOrderValue?: number;
@@ -11764,7 +12955,7 @@ export interface components {
             discountValue?: number;
             discountType?: string;
             /** Format: decimal */
-            minOrderValue?: number;
+            minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
             isUsed?: boolean;
@@ -11785,9 +12976,12 @@ export interface components {
         VariantFastLookResponse: {
             /** Format: uuid */
             id?: string;
+            sku?: string;
             displayName?: string;
             /** Format: decimal */
             price?: number;
+            /** Format: decimal */
+            retailPrice?: null | number;
             /** Format: int32 */
             stockQuantity?: number;
             media?: null | components["schemas"]["MediaResponse"];
@@ -11828,6 +13022,8 @@ export interface components {
             type?: components["schemas"]["VariantType"];
             /** Format: decimal */
             basePrice?: number;
+            /** Format: decimal */
+            retailPrice?: null | number;
             status?: components["schemas"]["VariantStatus"];
             /** Format: int32 */
             stockQuantity?: number;
@@ -11845,24 +13041,24 @@ export interface components {
         VariantType: "Standard" | "FullBox" | "Tester" | "Mini";
         VerifyImportDetailRequest: {
             /** Format: uuid */
-            importDetailId?: string;
+            importDetailId: string;
             /** Format: int32 */
             rejectedQuantity?: number;
             note?: null | string;
             batches?: components["schemas"]["CreateBatchRequest"][];
         };
         VerifyImportTicketRequest: {
-            importDetails?: components["schemas"]["VerifyImportDetailRequest"][];
+            importDetails: components["schemas"]["VerifyImportDetailRequest"][];
         };
         VerifyStockAdjustmentDetailRequest: {
             /** Format: uuid */
-            detailId?: string;
+            detailId: string;
             /** Format: int32 */
             approvedQuantity?: number;
             note?: null | string;
         };
         VerifyStockAdjustmentRequest: {
-            adjustmentDetails?: components["schemas"]["VerifyStockAdjustmentDetailRequest"][];
+            adjustmentDetails: components["schemas"]["VerifyStockAdjustmentDetailRequest"][];
         };
         VoucherResponse: {
             /** Format: uuid */
@@ -11871,21 +13067,27 @@ export interface components {
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
-            /** Format: int64 */
-            requiredPoints?: number;
+            /** Format: uuid */
+            campaignId?: null | string;
+            applyType?: components["schemas"]["VoucherType"];
+            targetItemType?: components["schemas"]["PromotionType"];
+            /** Format: int32 */
+            requiredPoints?: null | number;
             /** Format: decimal */
-            minOrderValue?: number;
+            minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
             isExpired?: boolean;
             /** Format: int32 */
-            totalQuantity?: number;
+            totalQuantity?: null | number;
             /** Format: int32 */
-            remainingQuantity?: number;
+            remainingQuantity?: null | number;
             isPublic?: boolean;
             /** Format: date-time */
             createdAt?: string;
         };
+        /** @enum {string} */
+        VoucherType: "Order" | "Product";
         WardResponse: {
             WardCode?: string;
             /** Format: int32 */

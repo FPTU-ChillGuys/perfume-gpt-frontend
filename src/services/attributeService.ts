@@ -7,6 +7,17 @@ import type {
 const normalizeText = (value?: string | null) =>
   (value || "").trim().toLowerCase();
 
+const generateInternalCode = (name: string) => {
+  const baseCode = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toUpperCase();
+
+  return baseCode || `ATTR_${Date.now()}`;
+};
+
 class AttributeService {
   async getAttributes(): Promise<AttributeLookupItem[]> {
     try {
@@ -32,7 +43,7 @@ class AttributeService {
   ): Promise<AttributeValueLookupItem[]> {
     try {
       const response = await apiInstance.GET(
-        "/api/attributes/values/lookup/{attributeId}",
+        "/api/attributes/{attributeId}/values/lookup",
         {
           params: {
             path: {
@@ -60,10 +71,9 @@ class AttributeService {
   }
 
   async createAttribute(
-    payload: Pick<
-      AttributeLookupItem,
-      "name" | "description" | "isVariantLevel"
-    >,
+    payload: Pick<AttributeLookupItem, "name" | "description" | "isVariantLevel"> & {
+      internalCode?: string | null;
+    },
   ): Promise<AttributeLookupItem> {
     try {
       const name = payload.name?.trim();
@@ -71,8 +81,12 @@ class AttributeService {
         throw new Error("Tên attribute không được để trống");
       }
 
+      const internalCode =
+        payload.internalCode?.trim() || generateInternalCode(name);
+
       const response = await apiInstance.POST("/api/attributes", {
         body: {
+          internalCode,
           name,
           description: payload.description?.trim() || null,
           isVariantLevel: Boolean(payload.isVariantLevel),
@@ -122,12 +136,19 @@ class AttributeService {
         throw new Error("Giá trị attribute không được để trống");
       }
 
-      const response = await apiInstance.POST("/api/attributes/values", {
+      const response = await apiInstance.POST(
+        "/api/attributes/{attributeId}/values",
+        {
+          params: {
+            path: {
+              attributeId,
+            },
+          },
         body: {
-          attributeId,
           value: trimmedValue,
         },
-      });
+        },
+      );
 
       if (!response.data?.success) {
         throw new Error(

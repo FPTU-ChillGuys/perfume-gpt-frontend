@@ -9,8 +9,8 @@ import type {
 export type VariantCardSource =
   | VariantPagedItem
   | (ProductVariant & {
-    primaryImage?: VariantPagedItem["primaryImage"] | null;
-  });
+      primaryImage?: VariantPagedItem["primaryImage"] | null;
+    });
 
 const getVariantImageUrl = (variant?: VariantCardSource) => {
   if (!variant) {
@@ -45,13 +45,30 @@ export const mapProductToCard = (
   product: ProductListItem & { id: string },
   variant?: VariantCardSource,
 ): ProductCardProps => {
-  const price = Number(variant?.basePrice ?? 0);
+  const finiteVariantPrices = Array.isArray(product.variantPrices)
+    ? product.variantPrices.filter(
+        (candidate): candidate is number =>
+          typeof candidate === "number" && Number.isFinite(candidate),
+      )
+    : [];
+
+  const minVariantPrice =
+    finiteVariantPrices.length > 0
+      ? Math.min(...finiteVariantPrices)
+      : undefined;
+  const maxVariantPrice =
+    finiteVariantPrices.length > 1
+      ? Math.max(...finiteVariantPrices)
+      : undefined;
+  const rawPrice = variant?.basePrice ?? minVariantPrice ?? 0;
+  const price = Number(rawPrice);
 
   return {
     id: product.id,
     brand: product.brandName ?? "Đang cập nhật",
     name: product.name ?? "Đang cập nhật",
     salePrice: Number.isFinite(price) ? price : 0,
+    maxPrice: maxVariantPrice,
     imageUrl:
       product.primaryImage?.url ?? getVariantImageUrl(variant) ?? undefined,
     variantId: variant?.id,
@@ -127,12 +144,15 @@ export const mapProductWithVariantsToCard = (
   };
 };
 
-export const normalizeTrendProducts = (products: ProductListItem[]): ProductCardProps[] =>
+export const normalizeTrendProducts = (
+  products: ProductListItem[],
+): ProductCardProps[] =>
   products
-    .filter((product): product is ProductListItem & { id: string } => Boolean(product.id))
+    .filter((product): product is ProductListItem & { id: string } =>
+      Boolean(product.id),
+    )
     .map((product: any) => {
-      const firstVariant = product.variants?.[0];
-      const mapped = mapProductToCard(product, firstVariant);
+      const mapped = mapProductToCard(product);
       const imageUrl =
         typeof product.primaryImage === "string"
           ? product.primaryImage
@@ -141,4 +161,3 @@ export const normalizeTrendProducts = (products: ProductListItem[]): ProductCard
         product.variants?.length ?? product.numberOfVariants ?? 0;
       return { ...mapped, imageUrl, numberOfVariants, isTrending: true };
     });
-

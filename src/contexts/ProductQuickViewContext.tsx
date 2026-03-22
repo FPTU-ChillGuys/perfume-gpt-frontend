@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { productService } from "@/services/productService";
-import type { ProductFastLook, ProductInformation } from "@/types/product";
+import type { ProductFastLook } from "@/types/product";
 import ProductQuickViewDialog from "@/components/product/ProductQuickViewDialog";
 import { ProductQuickViewContext } from "@/contexts/productQuickViewContextDefinition";
 
@@ -29,9 +29,6 @@ export const ProductQuickViewProvider = ({
     open: false,
     productId: null,
   });
-  const [information, setInformation] = useState<ProductInformation | null>(
-    null,
-  );
   const [fastLook, setFastLook] = useState<ProductFastLook | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,22 +38,12 @@ export const ProductQuickViewProvider = ({
     setError(null);
 
     try {
-      const [fastLookResult, infoResult] = await Promise.allSettled([
-        productService.getProductFastLook(productId),
-        productService.getProductInformation(productId),
-      ]);
+      const fastLookResult = await productService.getProductFastLook(productId);
 
-      if (fastLookResult.status !== "fulfilled" || !fastLookResult.value) {
-        const reason =
-          fastLookResult.status === "rejected"
-            ? toError(
-                fastLookResult.reason,
-                "Không thể tải thông tin xem nhanh",
-              )
-            : new Error("Không tìm thấy thông tin xem nhanh");
+      if (!fastLookResult) {
+        const reason = new Error("Không tìm thấy thông tin xem nhanh");
         console.error("Error loading product fast look:", reason);
         setFastLook(null);
-        setInformation(null);
         setError(
           reason.message ||
             "Không thể tải thông tin sản phẩm. Vui lòng thử lại.",
@@ -64,26 +51,17 @@ export const ProductQuickViewProvider = ({
         return;
       }
 
-      setFastLook(fastLookResult.value);
-
-      if (infoResult.status === "fulfilled") {
-        setInformation(infoResult.value);
-      } else {
-        setInformation(null);
-        if (infoResult.status === "rejected") {
-          const infoError = toError(
-            infoResult.reason,
-            "Không thể tải thông tin chi tiết",
-          );
-          console.warn("Không thể tải thông tin chi tiết:", infoError);
-        }
-      }
+      setFastLook(fastLookResult);
     } catch (err: any) {
-      console.error("Unexpected error loading quick view data:", err);
-      setError(
-        err?.message || "Không thể tải thông tin sản phẩm. Vui lòng thử lại.",
+      const quickViewError = toError(
+        err,
+        "Không thể tải thông tin xem nhanh sản phẩm",
       );
-      setInformation(null);
+      console.error("Unexpected error loading quick view data:", quickViewError);
+      setError(
+        quickViewError.message ||
+          "Không thể tải thông tin sản phẩm. Vui lòng thử lại.",
+      );
       setFastLook(null);
     } finally {
       setLoading(false);
@@ -96,7 +74,6 @@ export const ProductQuickViewProvider = ({
         return;
       }
       setState({ open: true, productId });
-      setInformation(null);
       setFastLook(null);
       void fetchProductData(productId);
     },
@@ -105,7 +82,6 @@ export const ProductQuickViewProvider = ({
 
   const handleClose = () => {
     setState({ open: false, productId: null });
-    setInformation(null);
     setFastLook(null);
     setError(null);
   };
@@ -118,7 +94,6 @@ export const ProductQuickViewProvider = ({
         productId={state.productId}
         loading={loading}
         error={error}
-        information={information}
         fastLook={fastLook}
         onClose={handleClose}
       />
