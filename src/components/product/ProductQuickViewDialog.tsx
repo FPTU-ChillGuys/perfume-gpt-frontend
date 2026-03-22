@@ -23,7 +23,7 @@ import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
-import type { ProductFastLook, ProductInformation } from "@/types/product";
+import type { ProductFastLook } from "@/types/product";
 
 interface ProductQuickViewDialogProps {
   open: boolean;
@@ -31,7 +31,6 @@ interface ProductQuickViewDialogProps {
   loading: boolean;
   error: string | null;
   fastLook: ProductFastLook | null;
-  information: ProductInformation | null;
   onClose: () => void;
 }
 
@@ -71,7 +70,6 @@ const ProductQuickViewDialog = ({
   loading,
   error,
   fastLook,
-  information,
   onClose,
 }: ProductQuickViewDialogProps) => {
   const navigate = useNavigate();
@@ -121,12 +119,9 @@ const ProductQuickViewDialog = ({
   const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
 
   const descriptionHtml = useMemo(() => {
-    const description =
-      fastLook?.description ||
-      information?.description ||
-      "Đang cập nhật mô tả";
+    const description = fastLook?.description || "Đang cập nhật mô tả";
     return sanitizeDescriptionHtml(description);
-  }, [fastLook?.description, information?.description]);
+  }, [fastLook?.description]);
 
   const heroImage =
     selectedVariant?.media?.url ||
@@ -312,13 +307,8 @@ const ProductQuickViewDialog = ({
             </Typography>
             <Typography color="text.secondary" fontWeight={500} gutterBottom>
               Thương hiệu:{" "}
-              {information?.brandName || fastLook.brandName || "Đang cập nhật"}
+              {fastLook.brandName || "Đang cập nhật"}
             </Typography>
-            {information?.productCode && (
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                Mã hàng: {information.productCode}
-              </Typography>
-            )}
             <Typography
               component="div"
               variant="body2"

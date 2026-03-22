@@ -74,6 +74,7 @@ interface UploadedVariantImage {
 type VariantFormMode = "create" | "edit";
 
 const VARIANT_TYPES: { value: VariantType; label: string }[] = [
+  { value: "Standard", label: "Standard" },
   { value: "FullBox", label: "Full box" },
   { value: "Tester", label: "Tester" },
   { value: "Mini", label: "Mini" },
