@@ -4,6 +4,7 @@ export type Supplier = components["schemas"]["SupplierLookupItem"];
 export type SuppliersResponse =
   components["schemas"]["BaseResponseOfListOfSupplierLookupItem"];
 export type ProductVariant = components["schemas"]["ProductVariantResponse"];
+export type VariantLookupItem = components["schemas"]["VariantLookupItem"];
 export type ProductVariantsResponse =
   components["schemas"]["BaseResponseOfListOfVariantLookupItem"];
 

@@ -15,6 +15,10 @@ export type VerifyTicketRequest =
 export type VerifyImportDetail =
   components["schemas"]["VerifyImportDetailRequest"];
 export type VerifyBatch = components["schemas"]["CreateBatchRequest"];
+export type CreateImportDetailRequestPayload =
+  components["schemas"]["CreateImportDetailRequest"];
+export type CreateImportTicketRequestPayload =
+  components["schemas"]["CreateImportTicketRequest"];
 
 export interface ImportDetail {
   variantId: string;

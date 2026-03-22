@@ -1,5 +1,12 @@
 import { apiInstance } from "@/lib/api";
-import type { ImportDetail, ImportTicketResponse, ImportTicketsResponse, ImportTicketStatus, VerifyTicketRequest } from "@/types/import-ticket";
+import type {
+  CreateImportTicketRequestPayload,
+  ImportDetail,
+  ImportTicketResponse,
+  ImportTicketsResponse,
+  ImportTicketStatus,
+  VerifyTicketRequest,
+} from "@/types/import-ticket";
 
 class ImportStockService {
   private readonly IMPORT_ENDPOINT = "/api/importtickets";
@@ -25,20 +32,18 @@ class ImportStockService {
 
   async createImportTicket(
     supplierId: number,
-    importDate: string,
     importDetails: ImportDetail[],
     expectedArrivalDate: string,
   ): Promise<string> {
     try {
       if (
         !supplierId ||
-        !importDate ||
         !expectedArrivalDate ||
         !importDetails ||
         importDetails.length === 0
       ) {
         throw new Error(
-          "Invalid request: supplierId, importDate, expectedArrivalDate, and importDetails are required",
+          "Vui lòng cung cấp đầy đủ thông tin nhà cung cấp, ngày dự kiến nhận và chi tiết nhập kho",
         );
       }
 
@@ -48,11 +53,11 @@ class ImportStockService {
 
       if (validatedDetails.length === 0) {
         throw new Error(
-          "All items must have valid SKU, quantity > 0, and unit price >= 0",
+          "Mọi chi tiết nhập kho phải có mã sản phẩm, số lượng lớn hơn 0 và giá đơn vị không âm",
         );
       }
 
-      const importTime = Date.parse(importDate);
+      const importTime = Date.parse(new Date().toISOString().split("T")[0]!);
       const expectedTime = Date.parse(expectedArrivalDate);
 
       if (
@@ -60,18 +65,15 @@ class ImportStockService {
         !Number.isNaN(expectedTime) &&
         expectedTime < importTime
       ) {
-        throw new Error(
-          "Expected arrival date cannot be earlier than the import date",
-        );
+        throw new Error("Ngày dự kiến nhận không thể trước ngày tạo đơn");
       }
 
       const payload = {
         supplierId: supplierId,
-        importDate: importDate,
         expectedArrivalDate: expectedArrivalDate,
         importDetails: validatedDetails.map((item) => ({
           variantId: item.variantId,
-          quantity: item.quantity,
+          expectedQuantity: item.quantity,
           unitPrice: item.unitPrice,
         })),
       };
@@ -81,7 +83,6 @@ class ImportStockService {
         body: payload,
       });
 
-
       if (!response.data?.success) {
         throw new Error(
           response.data?.message || "Import ticket creation failed",
@@ -90,12 +91,12 @@ class ImportStockService {
 
       return response.data.payload!;
     } catch (error: any) {
-      console.error("Import ticket error:", error);
+      console.error("Tạo đơn nhập kho thất bại:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.errors?.join(", ") ||
         error.message ||
-        "Failed to create import ticket";
+        "Tạo đơn nhập kho thất bại";
       throw new Error(errorMessage);
     }
   }
@@ -123,30 +124,27 @@ class ImportStockService {
       const response = await apiInstance.GET("/api/importtickets", {
         params: {
           query: params,
-        }
+        },
       });
-
 
       if (!response.data!.success) {
         throw new Error(
-          response.data?.message || "Failed to fetch import tickets",
+          response.data?.message || "Tải danh sách đơn nhập kho thất bại",
         );
       }
 
       return response.data!;
     } catch (error: any) {
-      console.error("Get import tickets error:", error);
+      console.error("Tải danh sách đơn nhập kho thất bại:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        "Failed to fetch import tickets";
+        "Tải danh sách đơn nhập kho thất bại";
       throw new Error(errorMessage);
     }
   }
 
-  async getImportTicketDetail(
-    ticketId: string,
-  ): Promise<ImportTicketResponse> {
+  async getImportTicketDetail(ticketId: string): Promise<ImportTicketResponse> {
     try {
       //const response = await axiosInstance.get<ImportTicketResponse>(`${this.IMPORT_ENDPOINT}/${ticketId}`,);
       const response = await apiInstance.GET(`/api/importtickets/{id}`, {
@@ -154,22 +152,22 @@ class ImportStockService {
           path: {
             id: ticketId,
           },
-        }
+        },
       });
 
       if (!response.data?.success) {
         throw new Error(
-          response.data?.message || "Failed to fetch ticket detail",
+          response.data?.message || "Tải chi tiết đơn nhập kho thất bại",
         );
       }
 
       return response.data;
     } catch (error: any) {
-      console.error("Get ticket detail error:", error);
+      console.error("Tải chi tiết đơn nhập kho thất bại:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        "Failed to fetch ticket detail";
+        "Tải chi tiết đơn nhập kho thất bại";
       throw new Error(errorMessage);
     }
   }
@@ -191,20 +189,19 @@ class ImportStockService {
         },
       });
 
-
       if (!response.data?.success) {
         throw new Error(
-          response.data?.message || "Failed to update ticket status",
+          response.data?.message || "Cập nhật trạng thái đơn nhập kho thất bại",
         );
       }
 
       return response.data.payload!;
     } catch (error: any) {
-      console.error("Update ticket status error:", error);
+      console.error("Cập nhật trạng thái đơn nhập kho thất bại:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        "Failed to update ticket status";
+        "Cập nhật trạng thái đơn nhập kho thất bại";
       throw new Error(errorMessage);
     }
   }
@@ -215,24 +212,33 @@ class ImportStockService {
   ): Promise<string> {
     try {
       //const response = await axiosInstance.post<ImportTicketResponse>(`${this.IMPORT_ENDPOINT}/${ticketId}/verify`,verifyData,);
-      const response = await apiInstance.POST(`/api/importtickets/{ticketId}/verify`, {
-        params: {
-          path: {
-            ticketId: ticketId,
+      const response = await apiInstance.POST(
+        `/api/importtickets/{ticketId}/verify`,
+        {
+          params: {
+            path: {
+              ticketId: ticketId,
+            },
           },
+          body: verifyData,
         },
-        body: verifyData,
-      });
+      );
 
       if (response.error) {
         throw new Error(
-          this.extractApiErrorMessage(response.error, "Failed to verify ticket"),
+          this.extractApiErrorMessage(
+            response.error,
+            "Xác minh đơn nhập kho thất bại",
+          ),
         );
       }
 
       if (!response.data?.success) {
         throw new Error(
-          this.extractApiErrorMessage(response.data, "Failed to verify ticket"),
+          this.extractApiErrorMessage(
+            response.data,
+            "Xác minh đơn nhập kho thất bại",
+          ),
         );
       }
 
@@ -244,7 +250,7 @@ class ImportStockService {
         error.response?.data?.message ||
         error?.errors?.join(", ") ||
         error.message ||
-        "Failed to verify ticket";
+        "Xác minh đơn nhập kho thất bại";
       throw new Error(errorMessage);
     }
   }
@@ -253,7 +259,7 @@ class ImportStockService {
     file: File,
     supplierId: number,
     expectedArrivalDate?: string,
-  ): Promise<string> {
+  ): Promise<CreateImportTicketRequestPayload> {
     try {
       const formData = new FormData();
       formData.append("ExcelFile", file);
@@ -262,46 +268,38 @@ class ImportStockService {
         formData.append("ExpectedArrivalDate", expectedArrivalDate);
       }
 
-      /*
-      const response = await axiosInstance.post<string>(
-        `${this.IMPORT_ENDPOINT}/upload-excel`,
-        formData,
+      const response = await apiInstance.POST(
+        `/api/importtickets/upload-excel`,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
+          body: {
+            ExcelFile: "",
+            SupplierId: supplierId,
+            ExpectedArrivalDate: expectedArrivalDate,
+          },
+          bodySerializer() {
+            return formData;
           },
         },
       );
-      */
-      const response = await apiInstance.POST(`/api/importtickets/upload-excel`, {
-        body: {
-          ExcelFile: "",
-          SupplierId: supplierId,
-          ExpectedArrivalDate: expectedArrivalDate,
-        },
-        bodySerializer() {
-          return formData;
-        },
-        // headers: {
-        //   "Content-Type": "multipart/form-data",
-        // }
-      });
-
 
       if (!response.data?.success) {
         throw new Error(
-          response.data?.message || "Import Excel upload failed",
+          response.data?.message || "Tải lên file Excel thất bại",
         );
       }
 
-      return response.data.payload!;
+      if (!response.data.payload) {
+        throw new Error("Không nhận được dữ liệu danh sách từ file Excel");
+      }
+
+      return response.data.payload;
     } catch (error: any) {
-      console.error("Upload import Excel error:", error);
+      console.error("Tải lên file Excel thất bại:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.response?.data?.errors?.join(", ") ||
         error.message ||
-        "Failed to upload import Excel file";
+        "Tải lên file Excel thất bại";
       throw new Error(errorMessage);
     }
   }
@@ -309,21 +307,24 @@ class ImportStockService {
   async downloadImportTemplate(): Promise<Blob> {
     try {
       //const response = await axiosInstance.get(`${this.IMPORT_ENDPOINT}/download-template`,{responseType: "blob",},);
-      const response = await apiInstance.GET(`/api/importtickets/download-template`, {
-        parseAs: "blob",
-      });
+      const response = await apiInstance.GET(
+        `/api/importtickets/download-template`,
+        {
+          parseAs: "blob",
+        },
+      );
 
       if (!response.data) {
-        throw new Error("Failed to download import template");
+        throw new Error("Tải xuống mẫu Excel thất bại");
       }
 
       return response.data;
     } catch (error: any) {
-      console.error("Download import template error:", error);
+      console.error("Tải xuống mẫu Excel thất bại:", error);
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
-        "Failed to download import template";
+        "Tải xuống mẫu Excel thất bại";
       throw new Error(errorMessage);
     }
   }
