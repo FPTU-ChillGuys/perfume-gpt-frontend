@@ -66,10 +66,48 @@ import { useToast } from "@/hooks/useToast";
 
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type InventoryTab = "inventory" | "adjustments";
+type InventoryCategoryTab =
+  | "all"
+  | "men"
+  | "women"
+  | "unisex"
+  | "niche"
+  | "giftset";
 type VerifyDetailDraft = {
   detailId: string;
   approvedQuantity: string;
   note: string;
+};
+
+const INVENTORY_CATEGORY_TAB_ITEMS: Array<{
+  key: InventoryCategoryTab;
+  label: string;
+}> = [
+  { key: "all", label: "Tất cả" },
+  { key: "men", label: "Nước hoa Nam" },
+  { key: "women", label: "Nước hoa Nữ" },
+  { key: "unisex", label: "Unisex" },
+  { key: "niche", label: "Niche" },
+  { key: "giftset", label: "Gifset" },
+];
+
+const INVENTORY_CATEGORY_ID_BY_TAB: Record<
+  Exclude<InventoryCategoryTab, "all">,
+  number
+> = {
+  women: 1,
+  men: 2,
+  unisex: 3,
+  niche: 4,
+  giftset: 5,
+};
+
+const resolveCategoryIdByTab = (tab: InventoryCategoryTab) => {
+  if (tab === "all") {
+    return undefined;
+  }
+
+  return INVENTORY_CATEGORY_ID_BY_TAB[tab];
 };
 
 const ADJUSTMENT_REASON_OPTIONS: StockAdjustmentReason[] = [
@@ -147,6 +185,8 @@ export const InventoryManagementPage = () => {
   const isStaff = user?.role === "staff";
   const isAdmin = user?.role === "admin";
   const [activeTab, setActiveTab] = useState<InventoryTab>("inventory");
+  const [selectedCategoryTab, setSelectedCategoryTab] =
+    useState<InventoryCategoryTab>("all");
 
   const [summary, setSummary] = useState<InventorySummaryResponse | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -211,6 +251,10 @@ export const InventoryManagementPage = () => {
     showToastRef.current = showToast;
   }, [showToast]);
 
+  useEffect(() => {
+    setPage(0);
+  }, [selectedCategoryTab]);
+
   const loadSummary = useCallback(async () => {
     try {
       setSummaryLoading(true);
@@ -225,11 +269,14 @@ export const InventoryManagementPage = () => {
   }, []);
 
   const loadStock = useCallback(async () => {
+    const selectedCategoryId = resolveCategoryIdByTab(selectedCategoryTab);
+
     try {
       setLoading(true);
       setError(null);
 
       const baseQuery: {
+        CategoryId?: number;
         StockStatus?: NonNullable<StockResponse["status"]>;
         PageNumber: number;
         PageSize: number;
@@ -244,6 +291,10 @@ export const InventoryManagementPage = () => {
 
       if (stockStatusFilter) {
         baseQuery.StockStatus = stockStatusFilter;
+      }
+
+      if (selectedCategoryId) {
+        baseQuery.CategoryId = selectedCategoryId;
       }
 
       const normalizedSearchValue = searchValue.trim();
@@ -284,7 +335,7 @@ export const InventoryManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, searchValue, stockStatusFilter]);
+  }, [page, rowsPerPage, searchValue, stockStatusFilter, selectedCategoryTab]);
 
   useEffect(() => {
     void loadSummary();
@@ -828,6 +879,22 @@ export const InventoryManagementPage = () => {
                 </Paper>
               ))}
             </Box>
+
+            <Paper variant="outlined" sx={{ mb: 3 }}>
+              <Tabs
+                value={selectedCategoryTab}
+                onChange={(_, value: InventoryCategoryTab) =>
+                  setSelectedCategoryTab(value)
+                }
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+              >
+                {INVENTORY_CATEGORY_TAB_ITEMS.map((tab) => (
+                  <Tab key={tab.key} value={tab.key} label={tab.label} />
+                ))}
+              </Tabs>
+            </Paper>
 
             <Paper sx={{ p: 3, mb: 3 }}>
               <Box

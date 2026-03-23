@@ -9,6 +9,7 @@ export type PagedStockResponse =
   components["schemas"]["PagedResultOfStockResponse"];
 
 export type InventoryStockQuery = {
+  CategoryId?: number | null;
   BatchCode?: string;
   SKU?: string;
   StockStatus?: components["schemas"]["StockStatus"];
