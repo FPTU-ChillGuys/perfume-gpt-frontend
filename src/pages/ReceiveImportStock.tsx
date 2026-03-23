@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { AdminLayout } from "../layouts/AdminLayout";
-import {
-  importStockService,
-} from "../services/importStockService";
+import { importStockService } from "../services/importStockService";
+import { productService } from "../services/productService";
 import { Snackbar, Alert } from "@mui/material";
 import { Close, Check, Delete } from "@mui/icons-material";
 import type {
   ImportTicket,
   ImportTicketDetail,
   VerifyBatch,
+  VerifyImportDetail,
+  VerifyTicketRequest,
 } from "@/types/import-ticket";
 
 interface BatchInput extends VerifyBatch {
@@ -23,7 +24,7 @@ interface ProductWithBatches {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  rejectQuantity: number;
+  rejectedQuantity: number;
   note: string | null;
   batches: BatchInput[];
   isExpanded: boolean;
@@ -42,6 +43,10 @@ const ReceiveImportStock: React.FC = () => {
   >("All");
   const [staffNote, setStaffNote] = useState("");
   const [allItemsVerified, setAllItemsVerified] = useState(false);
+  const [variantImageMap, setVariantImageMap] = useState<
+    Record<string, string>
+  >({});
+  const [hasLoadedVariantImages, setHasLoadedVariantImages] = useState(false);
   const pageSize = 10;
   const [toast, setToast] = useState<{
     open: boolean;
@@ -59,6 +64,29 @@ const ReceiveImportStock: React.FC = () => {
   const toApiDateTime = (dateValue?: string) => {
     if (!dateValue) return "";
     return dateValue.includes("T") ? dateValue : `${dateValue}T00:00:00`;
+  };
+
+  const getDefaultExpiryDateFromManufacture = (manufactureDate?: string) => {
+    if (!manufactureDate) return "";
+
+    const date = new Date(manufactureDate);
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    date.setMonth(date.getMonth() + 60);
+    return date.toISOString().split("T")[0] || "";
+  };
+
+  const normalizeQuantityInput = (value: string | number) => {
+    const digitsOnly = String(value).replace(/\D/g, "");
+    const withoutLeadingZeros = digitsOnly.replace(/^0+(?=\d)/, "");
+
+    if (!withoutLeadingZeros) {
+      return 0;
+    }
+
+    return Number(withoutLeadingZeros);
   };
 
   // Load tickets on mount
@@ -90,7 +118,8 @@ const ReceiveImportStock: React.FC = () => {
           ...inProgressResponse.payload!.items,
         ].sort(
           (a, b) =>
-            new Date(b.actualImportDate!).getTime() - new Date(a.actualImportDate!).getTime(),
+            new Date(b.actualImportDate!).getTime() -
+            new Date(a.actualImportDate!).getTime(),
         );
 
         setTickets(allTickets);
@@ -111,6 +140,55 @@ const ReceiveImportStock: React.FC = () => {
     loadTickets();
   }, [currentPage]);
 
+  useEffect(() => {
+    const loadVariantImages = async () => {
+      if (products.length === 0) {
+        return;
+      }
+
+      if (hasLoadedVariantImages) {
+        return;
+      }
+
+      const productVariantIds = products
+        .map((product) => product.variantId)
+        .filter(Boolean);
+
+      if (productVariantIds.length === 0) {
+        return;
+      }
+
+      const hasMissingImage = productVariantIds.some(
+        (variantId) => !variantImageMap[variantId],
+      );
+
+      if (!hasMissingImage) {
+        return;
+      }
+
+      try {
+        const lookupVariants = await productService.getProductVariants();
+        const nextMap = lookupVariants.reduce<Record<string, string>>(
+          (acc, variant) => {
+            if (variant.id && variant.primaryImage?.url) {
+              acc[variant.id] = variant.primaryImage.url;
+            }
+            return acc;
+          },
+          {},
+        );
+
+        setVariantImageMap((prev) => ({ ...prev, ...nextMap }));
+      } catch (error) {
+        console.error("Failed to load variant images:", error);
+      } finally {
+        setHasLoadedVariantImages(true);
+      }
+    };
+
+    void loadVariantImages();
+  }, [hasLoadedVariantImages, products, variantImageMap]);
+
   const handleSelectTicket = async (ticketId: string) => {
     try {
       setIsLoading(true);
@@ -128,13 +206,13 @@ const ReceiveImportStock: React.FC = () => {
           unitPrice: Number(detail.unitPrice!),
           totalPrice: Number(detail.totalPrice!),
           quantity: Number(detail.expectedQuantity!),
-          rejectQuantity: 0,
+          rejectedQuantity: Number(detail.rejectedQuantity || 0),
           note: null,
           batches: detail.batches!.map((batch, idx) => ({
             batchCode: batch.batchCode!,
-            manufactureDate: batch.manufactureDate!.split("T")[0],
-            expiryDate: batch.expiryDate!.split("T")[0],
-            quantity: batch.importQuantity,
+            manufactureDate: batch.manufactureDate?.split("T")[0] || "",
+            expiryDate: batch.expiryDate?.split("T")[0] || "",
+            quantity: Number(batch.importQuantity || 0),
             tempId: `${detail.id}-${idx}`,
           })),
           isExpanded: false,
@@ -187,7 +265,8 @@ const ReceiveImportStock: React.FC = () => {
         ...inProgressResponse.payload!.items,
       ].sort(
         (a, b) =>
-          new Date(b.actualImportDate!).getTime() - new Date(a.actualImportDate!).getTime(),
+          new Date(b.actualImportDate!).getTime() -
+          new Date(a.actualImportDate!).getTime(),
       );
 
       setTickets(allTickets);
@@ -243,9 +322,33 @@ const ReceiveImportStock: React.FC = () => {
         if (p.id === productId) {
           return {
             ...p,
-            batches: p.batches.map((b) =>
-              b.tempId === tempId ? { ...b, [field]: value } : b,
-            ),
+            batches: p.batches.map((b) => {
+              if (b.tempId !== tempId) {
+                return b;
+              }
+
+              if (field === "quantity") {
+                return {
+                  ...b,
+                  quantity: normalizeQuantityInput(value),
+                };
+              }
+
+              if (field === "manufactureDate") {
+                const manufactureDate = String(value);
+                return {
+                  ...b,
+                  manufactureDate,
+                  expiryDate:
+                    getDefaultExpiryDateFromManufacture(manufactureDate),
+                };
+              }
+
+              return {
+                ...b,
+                [field]: value,
+              };
+            }),
           };
         }
         return p;
@@ -271,12 +374,7 @@ const ReceiveImportStock: React.FC = () => {
     if (!selectedTicket) return;
 
     // Validate
-    const verifyDetails = [] as {
-      importDetailId: string;
-      rejectQuantity: number;
-      note: string | null;
-      batches: VerifyBatch[];
-    }[];
+    const verifyDetails: VerifyImportDetail[] = [];
 
     for (const product of products) {
       if (product.batches.length === 0) {
@@ -292,10 +390,18 @@ const ReceiveImportStock: React.FC = () => {
           !batch.batchCode ||
           !batch.manufactureDate ||
           !batch.expiryDate ||
-          batch.quantity! < 0
+          Number(batch.quantity || 0) <= 0
         ) {
           showToast(
             `Vui lòng điền đầy đủ thông tin batch cho "${product.variantName}"`,
+            "warning",
+          );
+          return;
+        }
+
+        if (new Date(batch.expiryDate) <= new Date(batch.manufactureDate)) {
+          showToast(
+            `Ngày hết hạn phải sau ngày sản xuất cho "${product.variantName}"`,
             "warning",
           );
           return;
@@ -315,11 +421,14 @@ const ReceiveImportStock: React.FC = () => {
         return;
       }
 
-      const rejectQuantity = Math.max(0, product.quantity - totalBatchQuantity);
+      const rejectedQuantity = Math.max(
+        0,
+        product.quantity - totalBatchQuantity,
+      );
 
       verifyDetails.push({
         importDetailId: product.id,
-        rejectQuantity,
+        rejectedQuantity,
         note: staffNote || null,
         batches: product.batches.map((b) => ({
           batchCode: b.batchCode,
@@ -333,7 +442,7 @@ const ReceiveImportStock: React.FC = () => {
     try {
       setIsLoading(true);
 
-      const verifyData = {
+      const verifyData: VerifyTicketRequest = {
         importDetails: verifyDetails,
       };
 
@@ -369,7 +478,8 @@ const ReceiveImportStock: React.FC = () => {
           ...inProgressResponse.payload!.items,
         ].sort(
           (a, b) =>
-            new Date(b.actualImportDate!).getTime() - new Date(a.actualImportDate!).getTime(),
+            new Date(b.actualImportDate!).getTime() -
+            new Date(a.actualImportDate!).getTime(),
         );
 
         setTickets(allTickets);
@@ -521,9 +631,9 @@ const ReceiveImportStock: React.FC = () => {
                             </h3>
                             <p className="text-sm text-gray-600 mt-1">
                               ID: {ticket.id!.substring(0, 8)}... | Ngày:{" "}
-                              {new Date(ticket.actualImportDate!).toLocaleDateString(
-                                "vi-VN",
-                              )}{" "}
+                              {new Date(
+                                ticket.actualImportDate!,
+                              ).toLocaleDateString("vi-VN")}{" "}
                               | Số sản phẩm: {ticket.totalItems}
                             </p>
                           </div>
@@ -601,9 +711,9 @@ const ReceiveImportStock: React.FC = () => {
                     </span>
                     <span className="text-gray-400">|</span>
                     <span className="text-gray-600">
-                      {new Date(selectedTicket.actualImportDate!).toLocaleDateString(
-                        "vi-VN",
-                      )}
+                      {new Date(
+                        selectedTicket.actualImportDate!,
+                      ).toLocaleDateString("vi-VN")}
                     </span>
                   </div>
                 </div>
@@ -681,11 +791,28 @@ const ReceiveImportStock: React.FC = () => {
                                 )}
                               </div>
                               <div className="col-span-5">
-                                <div className="font-semibold text-gray-900">
-                                  {product.variantName}
-                                </div>
-                                <div className="text-sm text-gray-500 mt-1">
-                                  {product.variantSku}
+                                <div className="flex items-center gap-3">
+                                  {variantImageMap[product.variantId] ? (
+                                    <img
+                                      src={variantImageMap[product.variantId]}
+                                      alt={product.variantName}
+                                      className="h-12 w-12 shrink-0 rounded-md border border-gray-200 object-cover"
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
+                                  ) : (
+                                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-dashed border-gray-300 text-[10px] text-gray-400">
+                                      No Img
+                                    </div>
+                                  )}
+                                  <div>
+                                    <div className="font-semibold text-gray-900">
+                                      {product.variantName}
+                                    </div>
+                                    <div className="text-sm text-gray-500 mt-1">
+                                      {product.variantSku}
+                                    </div>
+                                  </div>
                                 </div>
                                 {selectedTicket.status === "InProgress" && (
                                   <button
@@ -769,7 +896,7 @@ const ReceiveImportStock: React.FC = () => {
                                               )
                                             }
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-red-500 focus:outline-none"
-                                            placeholder="BATCH001"
+                                            placeholder="BCH-[...]"
                                           />
                                         </div>
                                         <div className="col-span-3">
@@ -813,18 +940,30 @@ const ReceiveImportStock: React.FC = () => {
                                             Số lượng
                                           </label>
                                           <input
-                                            type="number"
-                                            value={batch.quantity}
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            value={batch.quantity ?? 0}
                                             onChange={(e) =>
                                               updateBatch(
                                                 product.id,
                                                 batch.tempId,
                                                 "quantity",
-                                                Number(e.target.value),
+                                                e.target.value,
                                               )
                                             }
+                                            onBlur={() => {
+                                              if (!batch.quantity) {
+                                                updateBatch(
+                                                  product.id,
+                                                  batch.tempId,
+                                                  "quantity",
+                                                  0,
+                                                );
+                                              }
+                                            }}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:border-red-500 focus:outline-none"
-                                            min="0"
+                                            placeholder="0"
                                           />
                                         </div>
                                         <div className="col-span-1 flex justify-center">
@@ -908,7 +1047,7 @@ const ReceiveImportStock: React.FC = () => {
                       </div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-semibold text-gray-600">
-                          Theo dự kiến
+                          Tổng số sản phẩm dự kiến nhận
                         </span>
                         <span className="text-xl font-bold text-gray-900">
                           {expectedTotal}

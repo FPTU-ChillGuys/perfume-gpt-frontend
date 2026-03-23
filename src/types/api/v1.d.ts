@@ -4215,9 +4215,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "application/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "text/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
                     };
                 };
                 /** @description Bad Request */
@@ -4226,9 +4226,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "application/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "text/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
                     };
                 };
                 /** @description Not Found */
@@ -4237,9 +4237,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "application/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "text/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
                     };
                 };
                 /** @description Internal Server Error */
@@ -4248,9 +4248,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "application/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "text/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
                     };
                 };
             };
@@ -10733,6 +10733,13 @@ export interface components {
             errors?: null | string[];
             errorType?: components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfCreateImportTicketRequest: {
+            payload?: null | components["schemas"]["CreateImportTicketRequest"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfExcelTemplateResponse: {
             payload?: null | components["schemas"]["ExcelTemplateResponse"];
             success?: boolean;
@@ -11390,8 +11397,8 @@ export interface components {
             name?: string;
         };
         CreateAddressRequest: {
-            recipientName?: string;
-            recipientPhoneNumber?: string;
+            recipientName: string;
+            recipientPhoneNumber: string;
             street?: string;
             ward?: string;
             district?: string;
@@ -11404,7 +11411,7 @@ export interface components {
             provinceId?: number;
         };
         CreateAttributeRequest: {
-            internalCode: string;
+            internalCode?: null | string;
             name: string;
             description?: null | string;
             isVariantLevel: boolean;
@@ -12739,13 +12746,12 @@ export interface components {
         /** @enum {string} */
         TransactionStatus: "Pending" | "Success" | "Failed" | "Cancelled" | "Refunded";
         UpdateAddressRequest: {
-            recipientName?: string;
-            recipientPhoneNumber?: string;
+            recipientName: string;
+            recipientPhoneNumber: string;
             street?: string;
             ward?: string;
             district?: string;
             city?: string;
-            isDefault?: boolean;
             wardCode: string;
             /** Format: int32 */
             districtId?: number;
@@ -12753,7 +12759,6 @@ export interface components {
             provinceId?: number;
         };
         UpdateAttributeRequest: {
-            internalCode: string;
             name: string;
             description?: null | string;
             isVariantLevel: boolean;

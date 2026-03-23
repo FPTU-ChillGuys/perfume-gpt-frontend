@@ -15,6 +15,7 @@ import type {
   TemporaryMediaResponse,
   UpdateProductRequest,
   UpdateVariantRequest,
+  VariantLookupItem,
   VariantPagedItem,
   MediaResponse,
   CreateProductRequest,
@@ -95,7 +96,7 @@ class ProductService {
     }
   }
 
-  async getProductVariants(productId?: string): Promise<ProductVariant[]> {
+  async getProductVariants(productId?: string): Promise<VariantLookupItem[]> {
     try {
       const response = await apiInstance.GET(this.VARIANTS_LOOKUP_ENDPOINT, {
         params: {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { importStockService } from "../../services/importStockService";
 import { productService } from "../../services/productService";
-import type { Supplier, ProductVariant } from "@/types/product";
+import type { Supplier, VariantLookupItem } from "@/types/product";
 import {
   Inventory2,
   Add,
@@ -29,7 +29,7 @@ export const CreateImportStockTab: React.FC = () => {
   const [expectedArrivalDate, setExpectedArrivalDate] = useState<string>(
     () => getTodayIsoDate()!,
   );
-  const [variants, setVariants] = useState<ProductVariant[]>([]);
+  const [variants, setVariants] = useState<VariantLookupItem[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState<boolean>(true);
   const [loadingVariants, setLoadingVariants] = useState<boolean>(false);
   const [toast, setToast] = useState<{
@@ -126,12 +126,40 @@ export const CreateImportStockTab: React.FC = () => {
 
     try {
       setUploadingExcel(true);
-      await importStockService.uploadImportTicketsExcel(
+      const excelPayload = await importStockService.uploadImportTicketsExcel(
         file,
         selectedSupplierId,
         expectedArrivalDate,
       );
-      showToast("Đã nhập đơn hàng từ Excel", "success");
+
+      const mappedItems: ImportStockItem[] = (excelPayload.importDetails || [])
+        .map((detail) => ({
+          variantId: detail.variantId || "",
+          quantity: Number(detail.expectedQuantity || 0),
+          price: Number(detail.unitPrice || 0),
+        }))
+        .filter((item) => Boolean(item.variantId));
+
+      if (mappedItems.length === 0) {
+        showToast(
+          "File Excel không có dòng hợp lệ để hiển thị. Vui lòng kiểm tra lại dữ liệu.",
+          "warning",
+        );
+      } else {
+        setItems(mappedItems);
+        showToast(
+          `Đã tải ${mappedItems.length} sản phẩm từ Excel. Bạn có thể chỉnh sửa trước khi tạo đơn.`,
+          "success",
+        );
+      }
+
+      if (typeof excelPayload.supplierId === "number") {
+        setSelectedSupplierId(excelPayload.supplierId);
+      }
+
+      if (excelPayload.expectedArrivalDate) {
+        setExpectedArrivalDate(excelPayload.expectedArrivalDate.split("T")[0]!);
+      }
     } catch (err: any) {
       showToast(err.message || "Không thể nhập đơn từ Excel", "error");
     } finally {
@@ -235,7 +263,6 @@ export const CreateImportStockTab: React.FC = () => {
         unitPrice: item.price,
       }));
 
-      // Create today's date in ISO format
       const importDate = getTodayIsoDate();
 
       if (new Date(expectedArrivalDate) < new Date(importDate!)) {
@@ -246,7 +273,6 @@ export const CreateImportStockTab: React.FC = () => {
       // Call API
       await importStockService.createImportTicket(
         selectedSupplierId,
-        importDate!,
         importDetails,
         expectedArrivalDate,
       );
@@ -425,55 +451,84 @@ export const CreateImportStockTab: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-4 py-4 align-middle">
-                        <select
-                          value={item.variantId}
-                          onChange={(e) => {
-                            const newVariantId = e.target.value;
-
-                            // Check for duplicate
-                            if (newVariantId) {
-                              const isDuplicate = items.some(
-                                (existingItem, existingIdx) =>
-                                  existingIdx !== idx &&
-                                  existingItem.variantId === newVariantId,
-                              );
-
-                              if (isDuplicate) {
-                                showToast(
-                                  "Sản phẩm này đã được chọn. Vui lòng chọn sản phẩm khác.",
-                                  "warning",
-                                );
-                                return;
-                              }
-                            }
-
+                        <div className="flex items-center gap-3">
+                          {(() => {
                             const selectedVariant = variants.find(
-                              (v) => v.id === newVariantId,
+                              (variant) => variant.id === item.variantId,
                             );
-                            handleItemChange(idx, "variantId", newVariantId);
-                            if (selectedVariant) {
-                              handleItemChange(
-                                idx,
-                                "price",
-                                selectedVariant.basePrice!,
+                            const imageUrl = selectedVariant?.primaryImage?.url;
+
+                            return imageUrl ? (
+                              <img
+                                src={imageUrl}
+                                alt={
+                                  selectedVariant?.displayName ||
+                                  "Variant image"
+                                }
+                                className="h-10 w-10 shrink-0 rounded-md border border-gray-200 object-cover"
+                                loading="lazy"
+                                decoding="async"
+                              />
+                            ) : (
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-dashed border-gray-300 text-[10px] text-gray-400">
+                                No Img
+                              </div>
+                            );
+                          })()}
+                          <select
+                            value={item.variantId}
+                            onChange={(e) => {
+                              const newVariantId = e.target.value;
+
+                              // Check for duplicate
+                              if (newVariantId) {
+                                const isDuplicate = items.some(
+                                  (existingItem, existingIdx) =>
+                                    existingIdx !== idx &&
+                                    existingItem.variantId === newVariantId,
+                                );
+
+                                if (isDuplicate) {
+                                  showToast(
+                                    "Sản phẩm này đã được chọn. Vui lòng chọn sản phẩm khác.",
+                                    "warning",
+                                  );
+                                  return;
+                                }
+                              }
+
+                              const selectedVariant = variants.find(
+                                (v) => v.id === newVariantId,
                               );
-                            }
-                          }}
-                          className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:outline-none transition-all"
-                          disabled={loadingVariants || variants.length === 0}
-                        >
-                          <option value="">
-                            {loadingVariants
-                              ? "Đang tải..."
-                              : "Chọn sản phẩm..."}
-                          </option>
-                          {variants.map((variant) => (
-                            <option key={variant.id} value={variant.id}>
-                              {variant.productName} - {variant.sku} (
-                              {variant.volumeMl}ml)
+                              handleItemChange(idx, "variantId", newVariantId);
+                              if (selectedVariant) {
+                                handleItemChange(
+                                  idx,
+                                  "price",
+                                  selectedVariant.basePrice ?? 0,
+                                );
+                              }
+                            }}
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:outline-none transition-all"
+                            disabled={loadingVariants || variants.length === 0}
+                          >
+                            <option value="">
+                              {loadingVariants
+                                ? "Đang tải..."
+                                : "Chọn sản phẩm..."}
                             </option>
-                          ))}
-                        </select>
+                            {variants.map((variant) => (
+                              <option key={variant.id} value={variant.id}>
+                                {variant.displayName ||
+                                  variant.sku ||
+                                  "Variant"}
+                                {typeof variant.volumeMl === "number"
+                                  ? ` (${variant.volumeMl}ml)`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </td>
                       <td className="px-4 py-4 align-middle">
                         <input
