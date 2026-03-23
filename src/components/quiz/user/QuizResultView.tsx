@@ -8,7 +8,9 @@ import {
 import {
     AutoAwesome as SparkleIcon,
     CheckCircle as CheckIcon,
+    RestartAlt as ResetIcon,
     Refresh as RestartIcon,
+    Visibility as ReviewIcon,
 } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -18,10 +20,12 @@ import QuizProductCard from "./QuizProductCard";
 interface Props {
     result: AssistantPayload;
     userId: string;
+    onReviewAnswers: () => void;
+    onResetAnswers: () => void;
     onRestart: () => void;
 }
 
-export default function QuizResultView({ result, userId, onRestart }: Props) {
+export default function QuizResultView({ result, userId, onReviewAnswers, onResetAnswers, onRestart }: Props) {
     return (
         <Box>
             {/* Header */}
@@ -84,12 +88,39 @@ export default function QuizResultView({ result, userId, onRestart }: Props) {
             )}
 
             {/* Restart */}
-            <Box sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
+            <Box
+                sx={{
+                    mt: 4,
+                    display: "flex",
+                    justifyContent: "center",
+                    flexWrap: "wrap",
+                    gap: 1.25,
+                }}
+            >
+                <Button
+                    variant="outlined"
+                    startIcon={<ReviewIcon />}
+                    onClick={onReviewAnswers}
+                    sx={{ borderRadius: 5, px: 3 }}
+                >
+                    Xem lại đáp án
+                </Button>
+
+                <Button
+                    variant="outlined"
+                    color="warning"
+                    startIcon={<ResetIcon />}
+                    onClick={onResetAnswers}
+                    sx={{ borderRadius: 5, px: 3 }}
+                >
+                    Reset đáp án
+                </Button>
+
                 <Button
                     variant="outlined"
                     startIcon={<RestartIcon />}
                     onClick={onRestart}
-                    sx={{ borderRadius: 5, px: 4 }}
+                    sx={{ borderRadius: 5, px: 3 }}
                 >
                     Làm lại quiz
                 </Button>
