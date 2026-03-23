@@ -15,10 +15,13 @@ import {
     Assessment as AssessmentIcon,
     Fullscreen as FullscreenIcon,
     FullscreenExit as FullscreenExitIcon,
+    PictureAsPdf as PictureAsPdfIcon,
 } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AIInventoryReportLog } from "@/types/inventory";
+import { inventoryService } from "@/services/ai/inventoryService";
+import { useToast } from "@/hooks/useToast";
 
 const formatDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
@@ -33,12 +36,39 @@ interface InventoryLogDetailDialogProps {
 
 export const InventoryLogDetailDialog = ({ open, onClose, log }: InventoryLogDetailDialogProps) => {
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
+    const { showToast } = useToast();
 
     if (!log) return null;
 
     const handleClose = () => {
         setIsFullscreen(false);
         onClose();
+    };
+
+    const handleDownloadPdf = async () => {
+        if (!log?.id) {
+            showToast("Không tìm thấy mã log để tải PDF.", "warning");
+            return;
+        }
+
+        try {
+            setDownloadingPdf(true);
+            const blob = await inventoryService.downloadInventoryReportLogPdf(log.id);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `inventory-report-log-${log.id.substring(0, 8)}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Download inventory report pdf failed:", error);
+            showToast("Không thể tải PDF log báo cáo tồn kho.", "error");
+        } finally {
+            setDownloadingPdf(false);
+        }
     };
 
     return (
@@ -184,7 +214,16 @@ export const InventoryLogDetailDialog = ({ open, onClose, log }: InventoryLogDet
                     </Paper>
                 </Box>
             </DialogContent>
-            <DialogActions sx={{ px: 3, pb: 2 }}>
+            <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
+                <Button
+                    variant="outlined"
+                    color="inherit"
+                    startIcon={<PictureAsPdfIcon />}
+                    onClick={handleDownloadPdf}
+                    disabled={downloadingPdf}
+                >
+                    {downloadingPdf ? "Đang tải..." : "Tải PDF"}
+                </Button>
                 <Button onClick={handleClose} variant="outlined">
                     Đóng
                 </Button>

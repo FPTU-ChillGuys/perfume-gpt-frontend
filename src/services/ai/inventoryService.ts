@@ -73,6 +73,22 @@ class InventoryService {
   }
 
   /**
+   * Tải PDF chi tiết log báo cáo tồn kho
+   */
+  async downloadInventoryReportLogPdf(id: string): Promise<Blob> {
+    const response = await aiApiInstance.GET("/inventory/report/logs/{id}/pdf" as any, {
+      params: { path: { id } },
+      parseAs: "blob",
+    });
+
+    if (!response.data) {
+      throw new Error("Không thể tải file PDF báo cáo tồn kho");
+    }
+
+    return response.data as Blob;
+  }
+
+  /**
    * Khởi tạo job để tạo báo cáo tồn kho bằng AI (background job)
    */
   async createInventoryReportJob(
@@ -121,6 +137,22 @@ class InventoryService {
     return this.handleResponse(
       await aiApiInstance.GET("/inventory/restock/logs" as any, {}),
     );
+  }
+
+  /**
+   * Tải PDF chi tiết log dự đoán nhập hàng
+   */
+  async downloadRestockLogPdf(id: string): Promise<Blob> {
+    const response = await aiApiInstance.GET("/inventory/restock/logs/{id}/pdf" as any, {
+      params: { path: { id } },
+      parseAs: "blob",
+    });
+
+    if (!response.data) {
+      throw new Error("Không thể tải file PDF dự đoán nhập hàng");
+    }
+
+    return response.data as Blob;
   }
 
   /**

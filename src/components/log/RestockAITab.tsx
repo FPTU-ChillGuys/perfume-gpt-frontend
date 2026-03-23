@@ -50,6 +50,7 @@ export const RestockAITab = () => {
 
     // Detail dialog
     const [selectedVariants, setSelectedVariants] = useState<RestockAIVariant[] | null>(null);
+    const [selectedLogId, setSelectedLogId] = useState<string | null>(null);
     const [detailDialogOpen, setDetailDialogOpen] = useState(false);
     const [dialogTitle, setDialogTitle] = useState("");
 
@@ -101,6 +102,7 @@ export const RestockAITab = () => {
             // Log.data contains JSON string
             const parsedData = JSON.parse(log.inventoryLog) as RestockAIPredictionData;
             setSelectedVariants(parsedData.variants || []);
+            setSelectedLogId(log.id ?? null);
             setDialogTitle(`Chi tiết log nhập hàng: ${log.id?.substring(0, 8)}`);
             setDetailDialogOpen(true);
         } catch (error) {
@@ -111,6 +113,7 @@ export const RestockAITab = () => {
 
     const handleJobSuccess = (data: RestockAIPredictionData) => {
         setSelectedVariants(data.variants || []);
+        setSelectedLogId(null);
         setDialogTitle("Kết quả Dự đoán Nhập hàng mới nhất");
         // Open detail dialog to show results
         setDetailDialogOpen(true);
@@ -327,9 +330,13 @@ export const RestockAITab = () => {
 
             <RestockDetailDialog
                 open={detailDialogOpen}
-                onClose={() => setDetailDialogOpen(false)}
+                onClose={() => {
+                    setDetailDialogOpen(false);
+                    setSelectedLogId(null);
+                }}
                 data={selectedVariants}
                 title={dialogTitle}
+                logId={selectedLogId}
             />
 
             <AIRestockJobDialog

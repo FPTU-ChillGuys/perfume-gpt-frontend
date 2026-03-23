@@ -15,14 +15,19 @@ import {
     Paper,
     Box,
     Chip,
+    Tooltip,
 } from "@mui/material";
+import { PictureAsPdf as PictureAsPdfIcon } from "@mui/icons-material";
 import type { RestockAIVariant } from "@/types/inventory";
+import { inventoryService } from "@/services/ai/inventoryService";
+import { useToast } from "@/hooks/useToast";
 
 interface RestockDetailDialogProps {
     open: boolean;
     onClose: () => void;
     data: RestockAIVariant[] | null;
     title?: string;
+    logId?: string | null;
 }
 
 export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
@@ -30,7 +35,11 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
     onClose,
     data,
     title = "Chi tiết dự đoán nhập hàng",
+    logId,
 }) => {
+    const [downloadingPdf, setDownloadingPdf] = React.useState(false);
+    const { showToast } = useToast();
+
     // Helper function to format price
     const formatPrice = (price?: number) => {
         if (price === undefined) return "N/A";
@@ -38,6 +47,31 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
             style: "currency",
             currency: "VND",
         }).format(price);
+    };
+
+    const handleDownloadPdf = async () => {
+        if (!logId) {
+            showToast("Chỉ có thể tải PDF cho log đã lưu.", "warning");
+            return;
+        }
+
+        try {
+            setDownloadingPdf(true);
+            const blob = await inventoryService.downloadRestockLogPdf(logId);
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `restock-log-${logId.substring(0, 8)}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Download restock pdf failed:", error);
+            showToast("Không thể tải PDF log dự đoán nhập hàng.", "error");
+        } finally {
+            setDownloadingPdf(false);
+        }
     };
 
     return (
@@ -97,6 +131,19 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                 )}
             </DialogContent>
             <DialogActions>
+                <Tooltip title={logId ? "Tải PDF log này" : "Log mới tạo chưa có mã để tải PDF"}>
+                    <span>
+                        <Button
+                            variant="outlined"
+                            color="inherit"
+                            startIcon={<PictureAsPdfIcon />}
+                            onClick={handleDownloadPdf}
+                            disabled={!logId || downloadingPdf}
+                        >
+                            {downloadingPdf ? "Đang tải..." : "Tải PDF"}
+                        </Button>
+                    </span>
+                </Tooltip>
                 <Button onClick={onClose} variant="contained" color="primary">
                     Đóng
                 </Button>
