@@ -4,6 +4,8 @@ import {
   Typography,
   Paper,
   Button,
+  Tab,
+  Tabs,
   Table,
   TableBody,
   TableCell,
@@ -23,7 +25,6 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
-  FilterList as FilterIcon,
   Category as CategoryIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "../layouts/AdminLayout";
@@ -34,8 +35,49 @@ import EditProductDialog from "../components/product/EditProductDialog";
 import ManageProductVariantsDialog from "../components/product/ManageProductVariantsDialog";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 
+type ProductCategoryTab =
+  | "all"
+  | "men"
+  | "women"
+  | "unisex"
+  | "niche"
+  | "giftset";
+
+const PRODUCT_CATEGORY_TAB_ITEMS: Array<{
+  key: ProductCategoryTab;
+  label: string;
+}> = [
+  { key: "all", label: "Tất cả" },
+  { key: "men", label: "Nước hoa Nam" },
+  { key: "women", label: "Nước hoa Nữ" },
+  { key: "unisex", label: "Unisex" },
+  { key: "niche", label: "Niche" },
+  { key: "giftset", label: "Gifset" },
+];
+
+const PRODUCT_CATEGORY_ID_BY_TAB: Record<
+  Exclude<ProductCategoryTab, "all">,
+  number
+> = {
+  women: 1,
+  men: 2,
+  unisex: 3,
+  niche: 4,
+  giftset: 5,
+};
+
+const resolveCategoryIdByTab = (tab: ProductCategoryTab) => {
+  if (tab === "all") {
+    return undefined;
+  }
+
+  return PRODUCT_CATEGORY_ID_BY_TAB[tab];
+};
+
 const ProductManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategoryTab, setSelectedCategoryTab] =
+    useState<ProductCategoryTab>("all");
   const [products, setProducts] = useState<ProductListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,11 +101,14 @@ const ProductManagement = () => {
     description: "",
   });
 
+  const selectedCategoryId = resolveCategoryIdByTab(selectedCategoryTab);
+
   const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const response = await productService.getProducts({
+        CategoryId: selectedCategoryId ?? undefined,
         PageNumber: page + 1,
         PageSize: rowsPerPage,
       });
@@ -75,11 +120,15 @@ const ProductManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage]);
+  }, [page, rowsPerPage, selectedCategoryId]);
 
   useEffect(() => {
-    fetchProducts();
+    void fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [selectedCategoryTab]);
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
@@ -206,13 +255,6 @@ const ProductManagement = () => {
               />
               <Box sx={{ display: "flex", gap: 1 }}>
                 <Button
-                  variant="outlined"
-                  startIcon={<FilterIcon />}
-                  sx={{ textTransform: "none" }}
-                >
-                  Bộ lọc
-                </Button>
-                <Button
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={handleAddProduct}
@@ -222,6 +264,22 @@ const ProductManagement = () => {
                 </Button>
               </Box>
             </Stack>
+
+            <Paper variant="outlined" sx={{ mb: 3 }}>
+              <Tabs
+                value={selectedCategoryTab}
+                onChange={(_, value: ProductCategoryTab) =>
+                  setSelectedCategoryTab(value)
+                }
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+              >
+                {PRODUCT_CATEGORY_TAB_ITEMS.map((tab) => (
+                  <Tab key={tab.key} value={tab.key} label={tab.label} />
+                ))}
+              </Tabs>
+            </Paper>
 
             {error && (
               <Alert severity="error" sx={{ mb: 3 }}>

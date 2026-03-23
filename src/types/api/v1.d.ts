@@ -4657,6 +4657,7 @@ export interface paths {
                     CategoryId?: null | number;
                     BatchCode?: string;
                     SKU?: string;
+                    DaysUntilExpiry?: null | number;
                     StockStatus?: components["schemas"]["StockStatus"];
                     PageNumber?: number;
                     PageSize?: number;

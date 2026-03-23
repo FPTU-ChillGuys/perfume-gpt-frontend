@@ -23,6 +23,7 @@ import type {
 } from "@/types/product";
 
 type PaginatedQuery = {
+  CategoryId?: number | null;
   PageNumber?: number;
   PageSize?: number;
   SortBy?: string;
