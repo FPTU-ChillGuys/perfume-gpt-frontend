@@ -116,6 +116,11 @@ const AIAcceptancePage = lazy(() =>
     default: m.AIAcceptancePage,
   })),
 );
+const CampaignManagementPage = lazy(() =>
+  import("./pages/CampaignManagementPage").then((m) => ({
+    default: m.CampaignManagementPage,
+  })),
+);
 
 const PageLoader = () => (
   <Box
@@ -353,6 +358,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/campaigns"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <CampaignManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/ai-acceptance"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -408,6 +421,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
                             <InventoryManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/campaigns"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <CampaignManagementPage />
                           </RoleBasedRoute>
                         }
                       />
