@@ -316,7 +316,7 @@ export const UserLogsManagementPage = () => {
                                 <TableRow sx={{ bgcolor: "grey.50" }}>
                                     <TableCell>Log ID</TableCell>
                                     <TableCell>User ID</TableCell>
-                                    <TableCell align="center">Loai su kien</TableCell>
+                                    <TableCell align="center">Loại sự kiện</TableCell>
                                     <TableCell align="center">Entity</TableCell>
                                     <TableCell>Noi dung</TableCell>
                                     <TableCell>Ngày tạo log</TableCell>
