@@ -18,7 +18,6 @@ export interface ProductCardProps {
   isNew?: boolean;
   discount?: number;
   variantId?: string;
-  firstVariantVolumeMl?: number;
   numberOfVariants?: number;
 }
 
@@ -33,7 +32,6 @@ export const ProductCard = ({
   isNew,
   discount,
   variantId,
-  firstVariantVolumeMl,
   numberOfVariants,
 }: ProductCardProps) => {
   const { showToast } = useToast();
@@ -174,9 +172,7 @@ export const ProductCard = ({
           </span>
         </div>
         <p className="mt-1 text-xs text-gray-500 text-center">
-          {typeof firstVariantVolumeMl === "number" && firstVariantVolumeMl > 0
-            ? `${firstVariantVolumeMl}ml`
-            : (numberOfVariants ?? 0) > 0
+          {(numberOfVariants ?? 0) > 0
             ? (numberOfVariants ?? 0) > 1
               ? `${numberOfVariants} Sizes`
               : `${numberOfVariants} Size`
