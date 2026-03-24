@@ -116,6 +116,76 @@ class AuthService {
     }
   }
 
+  async register(data: {
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    password: string;
+    clientUri: string;
+  }): Promise<string> {
+    const response = await apiInstance.POST(`${this.AUTH_ENDPOINT}/register`, {
+      body: data,
+    });
+    if (response.error !== undefined || !response.data?.success) {
+      if (response.response?.status === 409) {
+        throw new Error("Email hoặc số điện thoại đã được đăng ký.");
+      }
+      throw new Error(
+        response.data?.message || "Đăng ký thất bại. Vui lòng thử lại.",
+      );
+    }
+    return (
+      response.data.message ||
+      "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản."
+    );
+  }
+
+  async verifyEmail(email: string, token: string): Promise<string> {
+    const response = await apiInstance.GET(
+      `${this.AUTH_ENDPOINT}/verify-email`,
+      {
+        params: { query: { email, token } },
+      },
+    );
+    if (response.error !== undefined || !response.data?.success) {
+      throw new Error(
+        response.data?.message || "Xác thực email thất bại.",
+      );
+    }
+    return response.data.message || "Xác thực email thành công!";
+  }
+
+  async forgotPassword(email: string, clientUri: string): Promise<string> {
+    const response = await apiInstance.POST(
+      `${this.AUTH_ENDPOINT}/forgot-password`,
+      { body: { email, clientUri } },
+    );
+    if (response.error !== undefined || !response.data?.success) {
+      throw new Error(
+        response.data?.message || "Gửi yêu cầu đặt lại mật khẩu thất bại.",
+      );
+    }
+    return response.data.message || "Email đặt lại mật khẩu đã được gửi.";
+  }
+
+  async resetPassword(
+    email: string,
+    token: string,
+    password: string,
+    confirmPassword: string,
+  ): Promise<string> {
+    const response = await apiInstance.POST(
+      `${this.AUTH_ENDPOINT}/reset-password`,
+      { body: { email, token, password, confirmPassword } },
+    );
+    if (response.error !== undefined || !response.data?.success) {
+      throw new Error(
+        response.data?.message || "Đặt lại mật khẩu thất bại.",
+      );
+    }
+    return response.data.message || "Mật khẩu đã được đặt lại thành công.";
+  }
+
   isAuthenticated(): boolean {
     const token = localStorage.getItem("accessToken");
     if (!token) return false;

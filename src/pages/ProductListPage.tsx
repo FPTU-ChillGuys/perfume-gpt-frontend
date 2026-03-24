@@ -217,13 +217,19 @@ export const ProductListPage = () => {
   const categoryNameParam = searchParams.get("categoryName") || "";
   const isHomeSourceMode = Boolean(source);
   const [searchTerm, setSearchTerm] = useState(searchParamValue);
-  const [sort, setSort] = useState<SortValue>("featured");
-  const [selectedBrandId, setSelectedBrandId] = useState<string>("all");
+  const [sort, setSort] = useState<SortValue>(
+    (searchParams.get("sort") as SortValue) || "featured",
+  );
+  const [selectedBrandId, setSelectedBrandId] = useState<string>(
+    searchParams.get("brand") || "all",
+  );
   const [priceRange, setPriceRange] = useState<[number, number]>([
-    PRICE_RANGE_MIN,
-    PRICE_RANGE_MAX,
+    Number(searchParams.get("minPrice")) || PRICE_RANGE_MIN,
+    Number(searchParams.get("maxPrice")) || PRICE_RANGE_MAX,
   ]);
-  const [selectedVolume, setSelectedVolume] = useState<string>("all");
+  const [selectedVolume, setSelectedVolume] = useState<string>(
+    searchParams.get("volume") || "all",
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -682,6 +688,42 @@ export const ProductListPage = () => {
   useEffect(() => {
     setSearchTerm(searchParamValue);
   }, [searchParamValue]);
+
+  // Sync filter state → URL params (preserves existing params like search, categoryId, source)
+  useEffect(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (sort && sort !== "featured") {
+          next.set("sort", sort);
+        } else {
+          next.delete("sort");
+        }
+        if (selectedBrandId && selectedBrandId !== "all") {
+          next.set("brand", selectedBrandId);
+        } else {
+          next.delete("brand");
+        }
+        if (priceRange[0] !== PRICE_RANGE_MIN) {
+          next.set("minPrice", String(priceRange[0]));
+        } else {
+          next.delete("minPrice");
+        }
+        if (priceRange[1] !== PRICE_RANGE_MAX) {
+          next.set("maxPrice", String(priceRange[1]));
+        } else {
+          next.delete("maxPrice");
+        }
+        if (selectedVolume && selectedVolume !== "all") {
+          next.set("volume", selectedVolume);
+        } else {
+          next.delete("volume");
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  }, [sort, selectedBrandId, priceRange, selectedVolume, setSearchParams]);
 
   const availableVolumes = useMemo(
     () =>

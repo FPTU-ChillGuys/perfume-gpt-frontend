@@ -175,6 +175,24 @@ const menuItems: MenuItem[] = [
     path: "/admin/ai-acceptance",
     roles: ["admin"],
   },
+  {
+    text: "Quản lý Voucher",
+    icon: <LocalOfferIcon />,
+    path: "/admin/vouchers",
+    roles: ["admin"],
+  },
+  {
+    text: "Yêu cầu hủy đơn",
+    icon: <ShoppingCartIcon />,
+    path: "/admin/cancel-requests",
+    roles: ["admin"],
+  },
+  {
+    text: "Nhà cung cấp",
+    icon: <PeopleIcon />,
+    path: "/admin/suppliers",
+    roles: ["admin"],
+  },
 ];
 
 export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
