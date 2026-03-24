@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard, type ProductCardProps } from "../product/ProductCard";
 
@@ -7,6 +8,7 @@ interface ProductSectionProps {
   products: ProductCardProps[];
   isLoading?: boolean;
   emptyMessage?: string;
+  viewMoreHref?: string;
 }
 
 const SKELETON_ITEMS = 6;
@@ -30,6 +32,7 @@ export const ProductSection = ({
   products,
   isLoading = false,
   emptyMessage = "Hiện chưa có sản phẩm để hiển thị.",
+  viewMoreHref = "/products",
 }: ProductSectionProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -203,13 +206,13 @@ export const ProductSection = ({
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold">{title}</h2>
-          <a
-            href="#"
+          <Link
+            to={viewMoreHref}
             className="flex items-center gap-1 text-gray-600 hover:text-red-600 font-medium"
           >
             Xem thêm
             <ChevronRight size={18} />
-          </a>
+          </Link>
         </div>
 
         {/* Products Carousel */}

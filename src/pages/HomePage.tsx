@@ -124,18 +124,21 @@ export const HomePage = () => {
           title="Trending (Weekly)"
           products={trendingProducts}
           isLoading={false}
+          viewMoreHref="/products?source=trending&sourceLabel=Trending%20%28Weekly%29"
         />
       )}
       <ProductSection
         title="Bestsellers"
         products={bestsellers}
         isLoading={isLoading}
+        viewMoreHref="/products?source=bestsellers&sourceLabel=Bestsellers"
       />
 
       <ProductSection
         title="New Arrivals"
         products={newArrivals}
         isLoading={isLoading}
+        viewMoreHref="/products?source=new-arrivals&sourceLabel=New%20Arrivals"
       />
 
       <FeatureSection />
