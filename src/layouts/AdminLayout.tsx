@@ -134,12 +134,6 @@ const menuItems: MenuItem[] = [
     roles: ["staff"],
   },
   {
-    text: "Chiến lược khuyến mãi",
-    icon: <LocalOfferIcon />,
-    path: "/staff/campaigns",
-    roles: ["staff"],
-  },
-  {
     text: "Báo cáo",
     icon: <ReportsIcon />,
     path: "/admin/inventory-report-logs",
