@@ -31,7 +31,6 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import { addressService } from "@/services/addressService";
 import { cartService } from "@/services/cartService";
-import { voucherService } from "@/services/voucherService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
@@ -144,6 +143,9 @@ export const CheckoutPage = () => {
     discount: 0,
     totalPrice: 0,
   });
+  const [totalsWarningMessage, setTotalsWarningMessage] = useState<
+    string | null
+  >(null);
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -171,15 +173,7 @@ export const CheckoutPage = () => {
       updateTotalsWithAddress();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    isPickupInStore,
-    selectedAddressId,
-    addresses,
-    useNewAddress,
-    newAddress.districtId,
-    newAddress.wardCode,
-    selectedCartItemIds,
-  ]);
+  }, [isPickupInStore, selectedCartItemIds]);
 
   const shouldQuerySelectedItems = (
     allItemIds: string[],
@@ -349,10 +343,10 @@ export const CheckoutPage = () => {
     }
   };
 
-  // Update totals khi địa chỉ hoặc voucher thay đổi
+  // Update totals bằng /api/cart/total; shipping đang free nên không cần query theo địa chỉ
   const updateTotalsWithAddress = async (
     voucherCodeOverride?: string | null,
-  ) => {
+  ): Promise<CartTotals | null> => {
     const activeVoucher =
       voucherCodeOverride !== undefined
         ? voucherCodeOverride || undefined
@@ -360,7 +354,8 @@ export const CheckoutPage = () => {
     try {
       if (selectedCartItemIds.length === 0) {
         setTotals({ subtotal: 0, shippingFee: 0, discount: 0, totalPrice: 0 });
-        return;
+        setTotalsWarningMessage(null);
+        return null;
       }
 
       const itemIdsForQuery = shouldQuerySelectedItems(
@@ -370,51 +365,18 @@ export const CheckoutPage = () => {
         ? selectedCartItemIds
         : undefined;
 
-      // Nếu là pickup in store, không cần địa chỉ
-      if (isPickupInStore) {
-        const totalsData = await cartService.getTotals(
-          activeVoucher,
-          itemIdsForQuery,
-        );
-        setTotals(totalsData);
-        return;
-      }
-
-      // Lấy districtId và wardCode từ địa chỉ hiện tại
-      let districtId: number | undefined;
-      let wardCode: string | undefined;
-      let savedAddressId: string | undefined;
-
-      if (useNewAddress) {
-        // Dùng địa chỉ mới đang nhập
-        districtId = newAddress.districtId;
-        wardCode = newAddress.wardCode;
-      } else if (selectedAddressId) {
-        // Dùng địa chỉ đã chọn
-        savedAddressId = selectedAddressId;
-        const selectedAddr = addresses.find(
-          (addr) => addr.id === selectedAddressId,
-        );
-        if (selectedAddr) {
-          districtId = selectedAddr.districtId;
-          wardCode = selectedAddr.wardCode;
-        }
-      }
-
-      // Call API nếu có địa chỉ đã lưu hoặc có đủ district/ward cho địa chỉ mới
-      if (savedAddressId || (districtId && wardCode)) {
-        const totalsData = await cartService.getTotals(
-          activeVoucher,
-          itemIdsForQuery,
-          districtId,
-          wardCode,
-          savedAddressId,
-        );
-        setTotals(totalsData);
-      }
+      const totalsData = await cartService.getTotals(
+        activeVoucher,
+        itemIdsForQuery,
+      );
+      setTotals(totalsData);
+      setTotalsWarningMessage(totalsData.warningMessage || null);
+      return totalsData;
     } catch (error) {
       console.error("Error updating totals with address:", error);
+      setTotalsWarningMessage(null);
       // Không hiển thị toast để tránh spam khi user đang nhập
+      return null;
     }
   };
 
@@ -438,20 +400,25 @@ export const CheckoutPage = () => {
     setVoucherError(null);
     setIsApplyingVoucher(true);
     try {
-      // Call API apply voucher để validate
-      const voucherResult = await voucherService.applyVoucher({
+      const updatedTotals = await updateTotalsWithAddress(normalizedVoucher);
+
+      if (!updatedTotals) {
+        setAppliedVoucher(null);
+        setVoucherError(
+          "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại.",
+        );
+        return;
+      }
+
+      setAppliedVoucher({
         voucherCode: normalizedVoucher,
-        orderAmount: totals.subtotal,
+        discountAmount: updatedTotals?.discount ?? 0,
+        finalAmount: updatedTotals?.totalPrice ?? 0,
+        message: "Đã áp dụng mã giảm giá",
       });
+      setVoucherCode(normalizedVoucher);
 
-      // Lưu thông tin voucher đã apply
-      setAppliedVoucher(voucherResult);
-      setVoucherCode(voucherResult.voucherCode);
-
-      // Update totals - truyền thẳng voucherCode để tránh stale closure
-      await updateTotalsWithAddress(voucherResult.voucherCode);
-
-      showToast(voucherResult.message || "Đã áp dụng mã giảm giá", "success");
+      showToast("Đã áp dụng mã giảm giá", "success");
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : "Mã giảm giá không hợp lệ";
@@ -1002,6 +969,12 @@ export const CheckoutPage = () => {
                 Đơn hàng
               </Typography>
 
+              {totalsWarningMessage && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  {totalsWarningMessage}
+                </Alert>
+              )}
+
               {/* Items */}
               <Box mb={2}>
                 {items.map((item) => (
@@ -1122,12 +1095,7 @@ export const CheckoutPage = () => {
                   {formatCurrency(totals.subtotal)}
                 </Typography>
               </Box>
-              <Box display="flex" justifyContent="space-between" mb={1}>
-                <Typography>Phí vận chuyển</Typography>
-                <Typography fontWeight={600}>
-                  {formatCurrency(totals.shippingFee)}
-                </Typography>
-              </Box>
+
               {totals.discount > 0 && (
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography>Giảm giá</Typography>
@@ -1136,6 +1104,12 @@ export const CheckoutPage = () => {
                   </Typography>
                 </Box>
               )}
+              <Box display="flex" justifyContent="space-between" mb={1}>
+                <Typography>Phí vận chuyển</Typography>
+                <Typography fontWeight={500} color="success.main">
+                  FREE
+                </Typography>
+              </Box>
               <Divider sx={{ my: 1.5 }} />
               <Box display="flex" justifyContent="space-between" mb={2}>
                 <Typography variant="h6" fontWeight={600}>

@@ -46,7 +46,9 @@ import {
   type CampaignStatus,
   type CampaignType,
   type CreateCampaignRequest,
+  type DiscountType,
   type PromotionType,
+  type VoucherType,
 } from "@/services/campaignService";
 import {
   inventoryService,
@@ -75,6 +77,15 @@ type SelectedCampaignItem = {
   availableQuantity: number;
   promotionType: PromotionType;
   maxUsageInput: string;
+};
+
+type CampaignVoucherDraft = {
+  key: string;
+  code: string;
+  discountValueInput: string;
+  discountType: DiscountType;
+  applyType: VoucherType;
+  targetItemType: PromotionType | "";
 };
 
 type CachedBatchState = {
@@ -126,6 +137,26 @@ const PROMOTION_TYPE_LABEL: Record<PromotionType, string> = {
   Regular: "Regular",
 };
 
+const DISCOUNT_TYPE_OPTIONS: Array<{ value: DiscountType; label: string }> = [
+  { value: "Percentage", label: "Phần trăm (%)" },
+  { value: "FixedAmount", label: "Số tiền cố định" },
+];
+
+const VOUCHER_APPLY_TYPE_OPTIONS: Array<{ value: VoucherType; label: string }> =
+  [
+    { value: "Product", label: "Theo sản phẩm" },
+    { value: "Order", label: "Theo đơn hàng" },
+  ];
+
+const createEmptyVoucherDraft = (): CampaignVoucherDraft => ({
+  key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  code: "",
+  discountValueInput: "",
+  discountType: "Percentage",
+  applyType: "Product",
+  targetItemType: "Regular",
+});
+
 const INVENTORY_CATEGORY_TAB_ITEMS: Array<{
   key: CampaignCategoryTab;
   label: string;
@@ -173,20 +204,18 @@ const formatDate = (value?: string | null) => {
   return new Date(value).toLocaleDateString("vi-VN");
 };
 
-const toStartOfDayIso = (dateValue: string) => {
-  if (!dateValue) {
+const DEFAULT_END_TIME = "23:59";
+
+const toLocalDateTime = (
+  dateValue: string,
+  timeValue: string,
+  withFraction = false,
+) => {
+  if (!dateValue || !timeValue) {
     return "";
   }
 
-  return new Date(`${dateValue}T00:00:00`).toISOString();
-};
-
-const toEndOfDayIso = (dateValue: string) => {
-  if (!dateValue) {
-    return "";
-  }
-
-  return new Date(`${dateValue}T23:59:59.999`).toISOString();
+  return `${dateValue}T${timeValue}:00${withFraction ? ".00" : ""}`;
 };
 
 const resolveCategoryIdByTab = (tab: CampaignCategoryTab) => {
@@ -237,8 +266,11 @@ export const CampaignManagementPage = () => {
     description: "",
     type: "FlashSale" as CampaignType,
     startDate: "",
+    startTime: "",
     endDate: "",
+    endTime: DEFAULT_END_TIME,
   });
+  const [isEndTimeManuallyEdited, setIsEndTimeManuallyEdited] = useState(false);
 
   const [stockList, setStockList] = useState<StockResponse[]>([]);
   const [stockLoading, setStockLoading] = useState(false);
@@ -262,6 +294,9 @@ export const CampaignManagementPage = () => {
   const [selectedItems, setSelectedItems] = useState<SelectedCampaignItem[]>(
     [],
   );
+  const [campaignVouchers, setCampaignVouchers] = useState<
+    CampaignVoucherDraft[]
+  >([createEmptyVoucherDraft()]);
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -425,8 +460,11 @@ export const CampaignManagementPage = () => {
       description: "",
       type: "FlashSale",
       startDate: "",
+      startTime: "",
       endDate: "",
+      endTime: DEFAULT_END_TIME,
     });
+    setIsEndTimeManuallyEdited(false);
     setSelectedItems([]);
     setStockPage(0);
     setStockRowsPerPage(10);
@@ -436,7 +474,50 @@ export const CampaignManagementPage = () => {
     setExpiryDaysFilter("");
     setSelectedCategoryTab("all");
     setBatchByVariantId({});
+    setCampaignVouchers([createEmptyVoucherDraft()]);
     setCreateDialogOpen(true);
+  };
+
+  const addCampaignVoucher = () => {
+    setCampaignVouchers((current) => [...current, createEmptyVoucherDraft()]);
+  };
+
+  const removeCampaignVoucher = (key: string) => {
+    setCampaignVouchers((current) => {
+      const next = current.filter((voucher) => voucher.key !== key);
+      return next.length > 0 ? next : [createEmptyVoucherDraft()];
+    });
+  };
+
+  const handleVoucherFieldChange = <K extends keyof CampaignVoucherDraft>(
+    key: string,
+    field: K,
+    value: CampaignVoucherDraft[K],
+  ) => {
+    setCampaignVouchers((current) =>
+      current.map((voucher) => {
+        if (voucher.key !== key) {
+          return voucher;
+        }
+
+        if (field === "applyType") {
+          const nextApplyType = value as VoucherType;
+          return {
+            ...voucher,
+            applyType: nextApplyType,
+            targetItemType:
+              nextApplyType === "Product"
+                ? voucher.targetItemType || "Regular"
+                : "",
+          };
+        }
+
+        return {
+          ...voucher,
+          [field]: value,
+        };
+      }),
+    );
   };
 
   const loadBatchesByVariantId = useCallback(async (variantId: string) => {
@@ -599,22 +680,39 @@ export const CampaignManagementPage = () => {
     };
   }, [selectedItems]);
 
+  const selectedPromotionTypes = useMemo(() => {
+    const typeSet = new Set<PromotionType>();
+
+    selectedItems.forEach((item) => {
+      typeSet.add(item.promotionType);
+    });
+
+    return Array.from(typeSet);
+  }, [selectedItems]);
+
   const handleCreateCampaign = async () => {
     const name = createForm.name.trim();
-    const startIso = toStartOfDayIso(createForm.startDate);
-    const endIso = toEndOfDayIso(createForm.endDate);
+    const startDateTime = toLocalDateTime(
+      createForm.startDate,
+      createForm.startTime,
+    );
+    const endDateTime = toLocalDateTime(
+      createForm.endDate,
+      createForm.endTime,
+      true,
+    );
 
     if (!name) {
       showToast("Vui lòng nhập tên chiến lược", "warning");
       return;
     }
 
-    if (!startIso || !endIso) {
+    if (!startDateTime || !endDateTime) {
       showToast("Vui lòng nhập thời gian bắt đầu và kết thúc", "warning");
       return;
     }
 
-    if (new Date(endIso).getTime() <= new Date(startIso).getTime()) {
+    if (new Date(endDateTime).getTime() <= new Date(startDateTime).getTime()) {
       showToast("Thời gian kết thúc phải lớn hơn thời gian bắt đầu", "warning");
       return;
     }
@@ -641,22 +739,89 @@ export const CampaignManagementPage = () => {
       return;
     }
 
+    const normalizedVoucherCodes = new Set<string>();
+    const parsedVouchers: NonNullable<CreateCampaignRequest["vouchers"]> = [];
+
+    for (const [index, voucher] of campaignVouchers.entries()) {
+      const rowNumber = index + 1;
+      const code = voucher.code.trim().toUpperCase();
+      const discountValue = Number(
+        voucher.discountValueInput.replace(",", "."),
+      );
+
+      if (!code) {
+        showToast(`Voucher #${rowNumber}: vui lòng nhập mã voucher`, "warning");
+        return;
+      }
+
+      if (normalizedVoucherCodes.has(code)) {
+        showToast(`Voucher #${rowNumber}: mã voucher bị trùng`, "warning");
+        return;
+      }
+
+      if (!Number.isFinite(discountValue) || discountValue <= 0) {
+        showToast(
+          `Voucher #${rowNumber}: giá trị giảm phải lớn hơn 0`,
+          "warning",
+        );
+        return;
+      }
+
+      if (voucher.discountType === "Percentage" && discountValue > 100) {
+        showToast(
+          `Voucher #${rowNumber}: giảm phần trăm không được vượt quá 100`,
+          "warning",
+        );
+        return;
+      }
+
+      if (voucher.applyType === "Product") {
+        const targetType = voucher.targetItemType;
+        if (!targetType) {
+          showToast(
+            `Voucher #${rowNumber}: vui lòng chọn loại item áp dụng`,
+            "warning",
+          );
+          return;
+        }
+
+        if (!selectedPromotionTypes.includes(targetType)) {
+          showToast(
+            `Voucher #${rowNumber}: chưa có item thuộc loại ${PROMOTION_TYPE_LABEL[targetType]}`,
+            "warning",
+          );
+          return;
+        }
+      }
+
+      normalizedVoucherCodes.add(code);
+      const targetItemType =
+        voucher.applyType === "Product" && voucher.targetItemType
+          ? voucher.targetItemType
+          : undefined;
+
+      parsedVouchers.push({
+        code,
+        discountValue,
+        discountType: voucher.discountType,
+        applyType: voucher.applyType,
+        targetItemType,
+      });
+    }
+
     const payload: CreateCampaignRequest = {
       name,
       description: createForm.description.trim() || null,
-      startDate: startIso,
-      endDate: endIso,
+      startDate: startDateTime,
+      endDate: endDateTime,
       type: createForm.type,
       items: selectedItems.map((item) => ({
         productVariantId: item.productVariantId,
         batchId: item.batchId,
-        name,
         promotionType: item.promotionType,
-        startDate: startIso,
-        endDate: endIso,
-        autoStopWhenBatchEmpty: Boolean(item.batchId),
         maxUsage: item.batchId ? null : Number(item.maxUsageInput),
       })),
+      vouchers: parsedVouchers,
     };
 
     try {
@@ -1511,35 +1676,285 @@ export const CampaignManagementPage = () => {
                     </Select>
                   </FormControl>
 
-                  <TextField
-                    label="Thời gian bắt đầu"
-                    type="date"
-                    value={createForm.startDate}
-                    onChange={(event) =>
-                      setCreateForm((current) => ({
-                        ...current,
-                        startDate: event.target.value,
-                      }))
-                    }
-                    required
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                  />
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gap: 1.5,
+                      gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                    }}
+                  >
+                    <TextField
+                      label="Ngày bắt đầu"
+                      type="date"
+                      value={createForm.startDate}
+                      onChange={(event) =>
+                        setCreateForm((current) => ({
+                          ...current,
+                          startDate: event.target.value,
+                        }))
+                      }
+                      required
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Giờ bắt đầu"
+                      type="time"
+                      value={createForm.startTime}
+                      onChange={(event) =>
+                        setCreateForm((current) => ({
+                          ...current,
+                          startTime: event.target.value,
+                        }))
+                      }
+                      required
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ step: 60 }}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Ngày kết thúc"
+                      type="date"
+                      value={createForm.endDate}
+                      onChange={(event) => {
+                        const nextDate = event.target.value;
+                        setCreateForm((current) => ({
+                          ...current,
+                          endDate: nextDate,
+                          endTime: isEndTimeManuallyEdited
+                            ? current.endTime
+                            : DEFAULT_END_TIME,
+                        }));
 
-                  <TextField
-                    label="Thời gian kết thúc"
-                    type="date"
-                    value={createForm.endDate}
-                    onChange={(event) =>
-                      setCreateForm((current) => ({
-                        ...current,
-                        endDate: event.target.value,
-                      }))
-                    }
-                    required
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                  />
+                        if (!nextDate) {
+                          setIsEndTimeManuallyEdited(false);
+                        }
+                      }}
+                      required
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Giờ kết thúc"
+                      type="time"
+                      value={createForm.endTime}
+                      onChange={(event) => {
+                        setIsEndTimeManuallyEdited(true);
+                        setCreateForm((current) => ({
+                          ...current,
+                          endTime: event.target.value,
+                        }));
+                      }}
+                      required
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ step: 60 }}
+                      helperText="Mặc định 23:59 khi chọn ngày kết thúc, có thể chỉnh tay"
+                      fullWidth
+                    />
+                  </Box>
+
+                  <Paper
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      bgcolor: "grey.50",
+                      borderStyle: "dashed",
+                    }}
+                  >
+                    <Stack spacing={1.5}>
+                      <Stack
+                        direction={{ xs: "column", md: "row" }}
+                        alignItems={{ xs: "flex-start", md: "center" }}
+                        justifyContent="space-between"
+                        spacing={1}
+                      >
+                        <Box>
+                          <Typography variant="subtitle1" fontWeight={700}>
+                            Voucher theo campaign
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            Có thể tạo nhiều voucher cho từng loại item trong
+                            cùng đợt sale.
+                          </Typography>
+                        </Box>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<AddIcon />}
+                          onClick={addCampaignVoucher}
+                        >
+                          Thêm voucher
+                        </Button>
+                      </Stack>
+
+                      <TableContainer component={Paper} variant="outlined">
+                        <Table size="small">
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>Mã voucher</TableCell>
+                              <TableCell align="right">Giá trị giảm</TableCell>
+                              <TableCell>Kiểu giảm</TableCell>
+                              <TableCell>Áp dụng</TableCell>
+                              <TableCell>Loại item</TableCell>
+                              <TableCell align="center" sx={{ width: 64 }}>
+                                Xóa
+                              </TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {campaignVouchers.map((voucher) => {
+                              const isProductVoucher =
+                                voucher.applyType === "Product";
+
+                              return (
+                                <TableRow key={voucher.key} hover>
+                                  <TableCell sx={{ minWidth: 180 }}>
+                                    <TextField
+                                      size="small"
+                                      placeholder="VD: FLASH30"
+                                      value={voucher.code}
+                                      onChange={(event) =>
+                                        handleVoucherFieldChange(
+                                          voucher.key,
+                                          "code",
+                                          event.target.value,
+                                        )
+                                      }
+                                      fullWidth
+                                    />
+                                  </TableCell>
+                                  <TableCell
+                                    align="right"
+                                    sx={{ minWidth: 150 }}
+                                  >
+                                    <TextField
+                                      size="small"
+                                      value={voucher.discountValueInput}
+                                      onChange={(event) => {
+                                        const nextValue = event.target.value;
+                                        if (
+                                          !/^\d*([.,]\d{0,2})?$/.test(nextValue)
+                                        ) {
+                                          return;
+                                        }
+
+                                        handleVoucherFieldChange(
+                                          voucher.key,
+                                          "discountValueInput",
+                                          nextValue,
+                                        );
+                                      }}
+                                      placeholder={
+                                        voucher.discountType === "Percentage"
+                                          ? "VD: 20"
+                                          : "VD: 100000"
+                                      }
+                                      InputProps={{
+                                        endAdornment: (
+                                          <InputAdornment position="end">
+                                            {voucher.discountType ===
+                                            "Percentage"
+                                              ? "%"
+                                              : "VND"}
+                                          </InputAdornment>
+                                        ),
+                                      }}
+                                      fullWidth
+                                    />
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 170 }}>
+                                    <FormControl size="small" fullWidth>
+                                      <Select
+                                        value={voucher.discountType}
+                                        onChange={(event) =>
+                                          handleVoucherFieldChange(
+                                            voucher.key,
+                                            "discountType",
+                                            event.target.value as DiscountType,
+                                          )
+                                        }
+                                      >
+                                        {DISCOUNT_TYPE_OPTIONS.map((option) => (
+                                          <MenuItem
+                                            key={option.value}
+                                            value={option.value}
+                                          >
+                                            {option.label}
+                                          </MenuItem>
+                                        ))}
+                                      </Select>
+                                    </FormControl>
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 150 }}>
+                                    <FormControl size="small" fullWidth>
+                                      <Select
+                                        value={voucher.applyType}
+                                        onChange={(event) =>
+                                          handleVoucherFieldChange(
+                                            voucher.key,
+                                            "applyType",
+                                            event.target.value as VoucherType,
+                                          )
+                                        }
+                                      >
+                                        {VOUCHER_APPLY_TYPE_OPTIONS.map(
+                                          (option) => (
+                                            <MenuItem
+                                              key={option.value}
+                                              value={option.value}
+                                            >
+                                              {option.label}
+                                            </MenuItem>
+                                          ),
+                                        )}
+                                      </Select>
+                                    </FormControl>
+                                  </TableCell>
+                                  <TableCell sx={{ minWidth: 160 }}>
+                                    <FormControl size="small" fullWidth>
+                                      <Select
+                                        value={voucher.targetItemType}
+                                        disabled={!isProductVoucher}
+                                        onChange={(event) =>
+                                          handleVoucherFieldChange(
+                                            voucher.key,
+                                            "targetItemType",
+                                            event.target.value as PromotionType,
+                                          )
+                                        }
+                                      >
+                                        {PROMOTION_TYPE_OPTIONS.map(
+                                          (option) => (
+                                            <MenuItem
+                                              key={option.value}
+                                              value={option.value}
+                                            >
+                                              {option.label}
+                                            </MenuItem>
+                                          ),
+                                        )}
+                                      </Select>
+                                    </FormControl>
+                                  </TableCell>
+                                  <TableCell align="center">
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      onClick={() =>
+                                        removeCampaignVoucher(voucher.key)
+                                      }
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </Stack>
+                  </Paper>
 
                   <Box>
                     <Stack
@@ -1633,11 +2048,11 @@ export const CampaignManagementPage = () => {
                                     <Chip
                                       size="small"
                                       color={isBatchItem ? "info" : "success"}
-                                      label={
+                                      label={`${PROMOTION_TYPE_LABEL[item.promotionType]} • ${
                                         isBatchItem
-                                          ? "Xả kho theo lô"
-                                          : "Flash Sale toàn bộ"
-                                      }
+                                          ? "Theo lô"
+                                          : "Theo sản phẩm"
+                                      }`}
                                     />
                                   </TableCell>
                                   <TableCell align="right">

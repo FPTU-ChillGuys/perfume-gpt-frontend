@@ -16,6 +16,9 @@ const DEFAULT_TOTALS: CartTotals = {
   totalPrice: 0,
 };
 
+const PROMOTION_WARNING_REGEX =
+  /not in promotion|khong.*khuyen mai|không.*khuyến mãi/i;
+
 class CartService {
   private readonly ITEMS_ENDPOINT = "/api/cart/items";
   private readonly TOTAL_ENDPOINT = "/api/cart/total";
@@ -108,23 +111,39 @@ class CartService {
         params: query ? { query } : undefined,
       });
 
+      const payload = response.data.payload;
+      const rawMessage = (response.data?.message || "").trim();
+      const warningMessage = PROMOTION_WARNING_REGEX.test(rawMessage)
+        ? rawMessage
+        : undefined;
+
+      // Some backend flows may return warning messages for mixed promotion
+      // carts; as long as payload exists, we still use it to keep UI totals usable.
+      if (payload) {
+        return {
+          subtotal: Number(
+            (payload as { subtotal?: number; subTotal?: number }).subtotal ??
+              (payload as { subTotal?: number }).subTotal ??
+              0,
+          ),
+          shippingFee: Number(payload.shippingFee ?? 0),
+          discount: Number(payload.discount ?? 0),
+          totalPrice: Number(
+            (payload as { totalPrice?: number; total?: number }).totalPrice ??
+              (payload as { total?: number }).total ??
+              0,
+          ),
+          warningMessage,
+        };
+      }
+
       if (!response.data?.success) {
         throw new Error(
           response.data?.message || "Failed to fetch cart totals",
         );
       }
 
-      const payload = response.data.payload;
-      if (!payload) {
-        return DEFAULT_TOTALS;
-      }
-
-      return {
-        subtotal: Number(payload.subtotal ?? 0),
-        shippingFee: Number(payload.shippingFee ?? 0),
-        discount: Number(payload.discount ?? 0),
-        totalPrice: Number(payload.totalPrice ?? 0),
-      };
+      return DEFAULT_TOTALS;
     } catch (error: any) {
       console.error("Error fetching cart totals:", error);
       throw new Error(

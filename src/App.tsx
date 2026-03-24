@@ -490,14 +490,6 @@ function App() {
                           </RoleBasedRoute>
                         }
                       />
-                      <Route
-                        path="/staff/campaigns"
-                        element={
-                          <RoleBasedRoute allowedRoles={["staff"]}>
-                            <CampaignManagementPage />
-                          </RoleBasedRoute>
-                        }
-                      />
 
                       <Route
                         path="/staff/profile"

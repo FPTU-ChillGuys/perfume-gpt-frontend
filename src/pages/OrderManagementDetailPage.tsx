@@ -746,6 +746,7 @@ export const OrderManagementDetailPage = () => {
                             <TableCell align="right">Đơn giá</TableCell>
                             <TableCell align="right">Thành tiền</TableCell>
                             <TableCell align="left">Batch giữ hàng</TableCell>
+                            <TableCell align="left"></TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -814,10 +815,7 @@ export const OrderManagementDetailPage = () => {
                                   >
                                     {fmt(item.total)}
                                   </TableCell>
-                                  <TableCell
-                                    align="left"
-                                    sx={{ minWidth: 280 }}
-                                  >
+                                  <TableCell align="center">
                                     {batches.length === 0 ? (
                                       <Typography
                                         variant="body2"
@@ -842,33 +840,35 @@ export const OrderManagementDetailPage = () => {
                                               : "outlined"
                                           }
                                         />
-                                        {isExpandable ? (
-                                          <Button
-                                            size="small"
-                                            variant="text"
-                                            onClick={() =>
-                                              toggleBatchDetails(item.id)
-                                            }
-                                            endIcon={
-                                              isExpanded ? (
-                                                <ExpandLess />
-                                              ) : (
-                                                <ExpandMore />
-                                              )
-                                            }
-                                            sx={{
-                                              px: 0,
-                                              minWidth: 0,
-                                              textTransform: "none",
-                                            }}
-                                          >
-                                            {isExpanded
-                                              ? "Ẩn chi tiết"
-                                              : "Xem chi tiết"}
-                                          </Button>
-                                        ) : null}
                                       </Stack>
                                     )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {isExpandable ? (
+                                      <Button
+                                        size="small"
+                                        variant="text"
+                                        onClick={() =>
+                                          toggleBatchDetails(item.id)
+                                        }
+                                        endIcon={
+                                          isExpanded ? (
+                                            <ExpandLess />
+                                          ) : (
+                                            <ExpandMore />
+                                          )
+                                        }
+                                        sx={{
+                                          px: 0,
+                                          minWidth: 0,
+                                          textTransform: "none",
+                                        }}
+                                      >
+                                        {isExpanded
+                                          ? "Ẩn chi tiết"
+                                          : "Xem chi tiết"}
+                                      </Button>
+                                    ) : null}
                                   </TableCell>
                                 </TableRow>
 
@@ -1139,8 +1139,12 @@ export const OrderManagementDetailPage = () => {
                         <Typography variant="body2" color="text.secondary">
                           Phí vận chuyển
                         </Typography>
-                        <Typography variant="body2">
-                          {fmt(shippingFee)}
+                        <Typography
+                          variant="body2"
+                          color="success.main"
+                          fontWeight={500}
+                        >
+                          FREE
                         </Typography>
                       </Box>
 

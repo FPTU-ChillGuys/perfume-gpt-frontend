@@ -11,6 +11,7 @@ export interface CartTotals {
   shippingFee: number;
   discount: number;
   totalPrice: number;
+  warningMessage?: string;
 }
 
 export interface ApplyVoucherRequest {
