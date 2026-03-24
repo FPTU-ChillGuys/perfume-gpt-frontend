@@ -17,22 +17,18 @@ import {
 import { Search as SearchIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
-import { productService } from "../../services/productService";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
-import { aiProductSearchService } from "@/services/ai/productSearchService";
-import type { ProductListItemWithVariants } from "../../types/product";
 import {
-    extractSuggestionGender,
-    extractSuggestionPrice,
-    formatSuggestionPrice,
-} from "@/utils/searchSuggestionDisplay";
+    aiProductSearchService,
+    type ProductSearchSuggestion,
+} from "@/services/ai/productSearchService";
+import { formatSuggestionPrice } from "@/utils/searchSuggestionDisplay";
 
 export const HeaderSearch = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [isSearching, setIsSearching] = useState(false);
-    const [suggestions, setSuggestions] = useState<ProductListItemWithVariants[]>([]);
-    const [fallbackPricesByProductId, setFallbackPricesByProductId] = useState<Record<string, number>>({});
+    const [suggestions, setSuggestions] = useState<ProductSearchSuggestion[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
 
     const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -47,11 +43,7 @@ export const HeaderSearch = () => {
 
             setIsSearching(true);
             try {
-                const response = await aiProductSearchService.searchProducts({
-                    searchText: term,
-                    PageNumber: 1,
-                    PageSize: 5,
-                });
+                const response = await aiProductSearchService.getSearchSuggestions(term);
                 setSuggestions(response.items || []);
             } catch (error) {
                 console.error("Failed to fetch search suggestions", error);
@@ -70,79 +62,6 @@ export const HeaderSearch = () => {
         };
     }, [searchTerm, debouncedSearch]);
 
-    useEffect(() => {
-        const missingPriceProducts = suggestions.filter((product) => {
-            const productId = product.id;
-            if (!productId) {
-                return false;
-            }
-
-            const hasPriceFromSemantic = extractSuggestionPrice(product) !== null;
-            const hasCachedPrice = typeof fallbackPricesByProductId[productId] === "number";
-            return !hasPriceFromSemantic && !hasCachedPrice;
-        });
-
-        if (missingPriceProducts.length === 0) {
-            return;
-        }
-
-        let disposed = false;
-
-        void (async () => {
-            const resolvedPrices = await Promise.all(
-                missingPriceProducts.map(async (product) => {
-                    const productId = product.id;
-                    if (!productId) {
-                        return null;
-                    }
-
-                    try {
-                        const variants = await productService.getProductVariants(productId);
-                        const validPrices = (variants || [])
-                            .map((variant) => {
-                                const value = variant.basePrice;
-                                return typeof value === "number" && Number.isFinite(value) && value > 0
-                                    ? value
-                                    : null;
-                            })
-                            .filter((value): value is number => value !== null);
-
-                        if (validPrices.length === 0) {
-                            return null;
-                        }
-
-                        return {
-                            productId,
-                            price: Math.min(...validPrices),
-                        };
-                    } catch {
-                        return null;
-                    }
-                })
-            );
-
-            if (disposed) {
-                return;
-            }
-
-            setFallbackPricesByProductId((prev) => {
-                const next = { ...prev };
-                resolvedPrices.forEach((item) => {
-                    if (!item) {
-                        return;
-                    }
-
-                    next[item.productId] = item.price;
-                });
-                return next;
-            });
-        })();
-
-        return () => {
-            disposed = true;
-        };
-    }, [suggestions, fallbackPricesByProductId]);
-
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setSearchTerm(value);
@@ -159,11 +78,10 @@ export const HeaderSearch = () => {
         }
     };
 
-    const handleSuggestionClick = (product?: ProductListItemWithVariants) => {
+    const handleSuggestionClick = (product?: ProductSearchSuggestion) => {
         const productId = product?.id;
         if (productId) {
-            const variantId = product?.variants?.[0]?.id ?? null;
-            void productActivityLogService.logProductView(productId, variantId).catch((error) => {
+            void productActivityLogService.logProductView(productId, null).catch((error) => {
                 console.error("Failed to log product click from search", error);
             });
             setShowDropdown(false);
@@ -238,15 +156,9 @@ export const HeaderSearch = () => {
                         ) : suggestions.length > 0 ? (
                             <List sx={{ p: 0 }}>
                                 {suggestions.map((product) => {
-                                    const imageUrl = typeof product.primaryImage === "string"
-                                        ? product.primaryImage
-                                        : product.primaryImage?.url || "https://placehold.co/400x400?text=No+Image";
-                                    const displayGender = extractSuggestionGender(product);
-                                    const semanticPrice = extractSuggestionPrice(product);
-                                    const fallbackPrice = product.id
-                                        ? fallbackPricesByProductId[product.id]
-                                        : undefined;
-                                    const displayPrice = semanticPrice ?? fallbackPrice ?? null;
+                                    const imageUrl = product.imageUrl || "https://placehold.co/400x400?text=No+Image";
+                                    const displayGender = product.gender;
+                                    const displayPrice = product.price ?? null;
 
                                     return (
                                         <ListItem
@@ -280,16 +192,9 @@ export const HeaderSearch = () => {
                                                                 Thương hiệu: {product.brandName}
                                                             </Typography>
                                                         )}
-                                                        {displayGender && (
-                                                            <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                                                Giới tính: {displayGender}
-                                                            </Typography>
-                                                        )}
-                                                        {!displayGender && product.categoryName && (
-                                                            <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                                                Nhóm hương: {product.categoryName}
-                                                            </Typography>
-                                                        )}
+                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                            Giới tính: {displayGender}
+                                                        </Typography>
                                                         <Typography variant="body2" color="error.main" fontWeight={600} sx={{ mt: 0.5 }}>
                                                             {formatSuggestionPrice(displayPrice)}
                                                         </Typography>

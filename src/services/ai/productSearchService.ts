@@ -14,8 +14,27 @@ export type AiProductSearchQuery = {
     IsDescending?: boolean;
 };
 
+export type ProductSearchSuggestion = {
+    id: string;
+    name: string;
+    brandName: string;
+    gender: string;
+    price: number;
+    variantCount: number;
+    imageUrl: string | null;
+};
+
+export type PagedSearchSuggestions = {
+    items: ProductSearchSuggestion[];
+    pageNumber: number;
+    pageSize: number;
+    totalCount: number;
+    totalPages: number;
+};
+
 class AiProductSearchService {
     private readonly SEARCH_ENDPOINT = "/products/search";
+    private readonly SUGGESTIONS_ENDPOINT = "/products/search/suggestions";
 
     private createEmptyPagedResult<T>(query?: AiProductSearchQuery) {
         return {
@@ -60,6 +79,41 @@ class AiProductSearchService {
                 error.response?.data?.message ||
                 error.message ||
                 "Failed to search products via AI",
+            );
+        }
+    }
+
+    async getSearchSuggestions(
+        searchText: string,
+    ): Promise<PagedSearchSuggestions> {
+        try {
+            const response = await aiApiInstance.GET(this.SUGGESTIONS_ENDPOINT, {
+                params: {
+                    query: { searchText, PageNumber: 1, PageSize: 5 },
+                },
+            });
+
+            if (!response.data?.success) {
+                throw new Error(
+                    response.data?.message || "Failed to fetch search suggestions",
+                );
+            }
+
+            return (
+                response.data.data || {
+                    items: [],
+                    pageNumber: 1,
+                    pageSize: 5,
+                    totalCount: 0,
+                    totalPages: 0,
+                }
+            );
+        } catch (error: any) {
+            console.error("Error fetching search suggestions:", error);
+            throw new Error(
+                error.response?.data?.message ||
+                error.message ||
+                "Failed to fetch search suggestions",
             );
         }
     }
