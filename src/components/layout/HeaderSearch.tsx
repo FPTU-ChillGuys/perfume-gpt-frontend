@@ -22,8 +22,8 @@ import { aiProductSearchService } from "@/services/ai/productSearchService";
 import type { ProductListItemWithVariants } from "../../types/product";
 import {
     extractSuggestionGender,
-    extractSuggestionPrice,
-    formatSuggestionPrice,
+    extractSuggestionPriceRange,
+    formatSuggestionPriceRange,
 } from "@/utils/searchSuggestionDisplay";
 
 export const HeaderSearch = () => {
@@ -163,8 +163,7 @@ export const HeaderSearch = () => {
                                         ? product.primaryImage
                                         : product.primaryImage?.url || "https://placehold.co/400x400?text=No+Image";
                                     const displayGender = extractSuggestionGender(product);
-                                    const semanticPrice = extractSuggestionPrice(product);
-                                    const displayPrice = semanticPrice ?? null;
+                                    const displayPriceRange = extractSuggestionPriceRange(product);
                                     const brandName = product.brandName || "Đang cập nhật";
                                     const categoryName = product.categoryName;
 
@@ -206,7 +205,7 @@ export const HeaderSearch = () => {
                                                             </Typography>
                                                         )}
                                                         <Typography variant="body2" color="error.main" fontWeight={600} sx={{ mt: 0.5 }}>
-                                                            {formatSuggestionPrice(displayPrice)}
+                                                            {formatSuggestionPriceRange(displayPriceRange)}
                                                         </Typography>
                                                     </Box>
                                                 }

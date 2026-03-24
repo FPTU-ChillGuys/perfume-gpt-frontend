@@ -217,71 +217,27 @@ const ProductDetailPage = () => {
     setError(null);
 
     const fetchData = async () => {
-      const applyDetail = (detailResponse: ProductDetail | null) => {
-        if (!detailResponse) {
-          return;
-        }
-
-        setProductDetail(detailResponse);
-
-        const variants = detailResponse.variants ?? [];
-        const requestedVariant = requestedVariantId
-          ? variants.find((variant) => variant.id === requestedVariantId)
-          : undefined;
-
-        const firstAvailableVariant = variants.find(
-          (variant) => {
-            const stockQuantity = variant?.stockQuantity;
-            return typeof stockQuantity !== "number" || stockQuantity > 0;
-          },
-        );
-
-        setSelectedVariantId(
-          (current) => {
-            const currentVariantStillValid = current
-              ? variants.some((variant) => variant.id === current)
-              : false;
-
-            return (
-              requestedVariant?.id ||
-              (currentVariantStillValid ? current : null) ||
-              firstAvailableVariant?.id ||
-              variants[0]?.id ||
-              null
-            );
-          },
-        );
-      };
-
       try {
         const detailPromise = productService.getProductDetail(productId);
         const infoPromise = productService.getProductInformation(productId);
 
         const detailFirst = await detailPromise;
 
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
-        applyDetail(detailFirst);
-        setLoading(false);
+        setProductDetail(detailFirst);
 
-        const infoResult = await Promise.allSettled([infoPromise]);
+        // Fetch additional info in background
+        void infoPromise.then((info) => {
+          if (isMounted) setInformation(info);
+        }).catch(err => {
+          console.error("Error loading product information:", err);
+        });
 
-        if (!isMounted) {
-          return;
-        }
-
-        if (infoResult[0]?.status === "fulfilled") {
-          setInformation(infoResult[0].value);
-        }
-
-        setLoading(false);
       } catch (err: any) {
-        if (!isMounted) {
-          return;
+        if (isMounted) {
+          setError(err?.message || "Không thể tải thông tin sản phẩm");
         }
-        setError(err?.message || "Không thể tải thông tin sản phẩm");
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -294,7 +250,34 @@ const ProductDetailPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [productId, requestedVariantId]);
+  }, [productId]);
+
+  useEffect(() => {
+    if (!productDetail) return;
+
+    const variants = productDetail.variants ?? [];
+    if (variants.length === 0) return;
+
+    const requestedVariant = requestedVariantId
+      ? variants.find((variant) => variant.id === requestedVariantId)
+      : undefined;
+
+    const firstAvailableVariant = variants.find((variant) => {
+      const stockQuantity = variant?.stockQuantity;
+      return typeof stockQuantity !== "number" || stockQuantity > 0;
+    });
+
+    const targetId =
+      requestedVariant?.id ||
+      (selectedVariantId && variants.some(v => v.id === selectedVariantId) ? selectedVariantId : null) ||
+      firstAvailableVariant?.id ||
+      variants[0]?.id ||
+      null;
+
+    if (targetId && targetId !== selectedVariantId) {
+      setSelectedVariantId(targetId);
+    }
+  }, [productDetail, requestedVariantId, selectedVariantId]);
 
   useEffect(() => {
     if (!selectedVariantId || searchParams.get("variantId") === selectedVariantId) {

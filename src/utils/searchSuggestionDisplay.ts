@@ -86,6 +86,37 @@ export const extractSuggestionPrice = (
   return Math.min(...variantPrices);
 };
 
+export const extractSuggestionPriceRange = (
+  product: ProductListItemWithVariants,
+): { min: number; max: number } | null => {
+  const variants = Array.isArray(product.variants) ? product.variants : [];
+  const variantPrices = variants
+    .flatMap((variant) => {
+      const variantSource = variant as Record<string, unknown>;
+      return PRICE_FIELD_CANDIDATES.map((field) =>
+        parsePrice(variantSource[field]),
+      );
+    })
+    .filter((price): price is number => price !== null);
+
+  if (variantPrices.length === 0) {
+    const source = product as Record<string, unknown>;
+    const productLevelPrice = PRICE_FIELD_CANDIDATES
+      .map((field) => parsePrice(source[field]))
+      .find((price): price is number => price !== null);
+
+    if (productLevelPrice !== undefined && productLevelPrice !== null) {
+      return { min: productLevelPrice, max: productLevelPrice };
+    }
+    return null;
+  }
+
+  return {
+    min: Math.min(...variantPrices),
+    max: Math.max(...variantPrices),
+  };
+};
+
 export const extractSuggestionGender = (
   product: ProductListItemWithVariants,
 ): string | null => {
@@ -118,4 +149,23 @@ export const formatSuggestionPrice = (price?: number | null) => {
     style: "currency",
     currency: "VND",
   }).format(price);
+};
+
+export const formatSuggestionPriceRange = (
+  range?: { min: number; max: number } | null,
+) => {
+  if (!range || range.min <= 0) {
+    return "Liên hệ";
+  }
+
+  const formatter = new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  });
+
+  if (range.min === range.max) {
+    return formatter.format(range.min);
+  }
+
+  return `${formatter.format(range.min)} - ${formatter.format(range.max)}`;
 };
