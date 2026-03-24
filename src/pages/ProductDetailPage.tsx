@@ -315,6 +315,12 @@ const ProductDetailPage = () => {
       media: variant.media?.[0] || null,
       mediaList: variant.media || [],
       sku: variant.sku || null,
+      campaignName: variant.campaignName || null,
+      voucherCode: variant.voucherCode || null,
+      discountedPrice:
+        typeof variant.discountedPrice === "number"
+          ? variant.discountedPrice
+          : null,
     }));
   }, [productDetail]);
 
@@ -481,18 +487,38 @@ const ProductDetailPage = () => {
     return stockQuantity !== null && stockQuantity <= 0;
   };
 
-  const selectedVariantStockQuantity = getVariantStockQuantity(selectedVariant);
   const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
   const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
   const selectedBasePrice = Number(selectedVariant?.price || 0);
+  const selectedDiscountedPrice = Number(selectedVariant?.discountedPrice || 0);
+  const hasCampaignDiscount =
+    selectedDiscountedPrice > 0 &&
+    selectedBasePrice > 0 &&
+    selectedDiscountedPrice < selectedBasePrice;
+  const campaignDisplayedPrice = hasCampaignDiscount
+    ? selectedDiscountedPrice
+    : selectedBasePrice;
+  const mainDisplayedPrice = selectedBasePrice;
   const selectedRetailPrice = Number(selectedVariant?.retailPrice || 0);
+  const campaignSavingAmount = hasCampaignDiscount
+    ? selectedBasePrice - selectedDiscountedPrice
+    : 0;
+  const campaignSavingPercent =
+    hasCampaignDiscount && selectedBasePrice > 0
+      ? (campaignSavingAmount / selectedBasePrice) * 100
+      : 0;
+  const selectedCampaignName = selectedVariant?.campaignName?.trim() || "";
+  const selectedVoucherCode = selectedVariant?.voucherCode?.trim() || "";
+  const shouldShowCampaignCard =
+    hasCampaignDiscount &&
+    (Boolean(selectedCampaignName) || Boolean(selectedVoucherCode));
   const hasRetailPriceComparison =
-    selectedBasePrice > 0 && selectedRetailPrice > selectedBasePrice;
+    mainDisplayedPrice > 0 && selectedRetailPrice > mainDisplayedPrice;
   const savingAmount = hasRetailPriceComparison
-    ? selectedRetailPrice - selectedBasePrice
+    ? selectedRetailPrice - mainDisplayedPrice
     : 0;
   const savingPercent = hasRetailPriceComparison
-    ? ((selectedRetailPrice - selectedBasePrice) / selectedRetailPrice) * 100
+    ? ((selectedRetailPrice - mainDisplayedPrice) / selectedRetailPrice) * 100
     : 0;
   const shouldShowSavings = savingAmount > 0;
 
@@ -1358,7 +1384,50 @@ const ProductDetailPage = () => {
                   })}
                 </ToggleButtonGroup>
               </Box>
-
+              {shouldShowCampaignCard && (
+                <Box
+                  sx={{
+                    borderRadius: 2,
+                    border: "1px solid",
+                    borderColor: "error.light",
+                    bgcolor: "#fff5f5",
+                    px: 2,
+                    py: 1.5,
+                    maxWidth: 320,
+                  }}
+                >
+                  {selectedCampaignName && (
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={800}
+                      sx={{ color: "error.main", textTransform: "uppercase" }}
+                    >
+                      {`${selectedCampaignName}`}
+                    </Typography>
+                  )}
+                  <Typography variant="h6" fontWeight={800} color="error.main">
+                    {currencyFormatter.format(campaignDisplayedPrice)}
+                  </Typography>
+                  {campaignSavingPercent > 0 && (
+                    <Typography variant="body2" color="text.primary">
+                      {`Giảm thêm ${formatSavingPercent(campaignSavingPercent)}`}
+                    </Typography>
+                  )}
+                  {selectedVoucherCode && (
+                    <Typography variant="body2" color="text.secondary">
+                      Nhập code
+                      <Typography
+                        component="span"
+                        variant="body1"
+                        fontWeight={800}
+                        sx={{ color: "primary.main", ml: 0.75 }}
+                      >
+                        {selectedVoucherCode}
+                      </Typography>
+                    </Typography>
+                  )}
+                </Box>
+              )}
               {/* Price */}
               <Stack spacing={0.5}>
                 <Stack
@@ -1368,8 +1437,8 @@ const ProductDetailPage = () => {
                   flexWrap="wrap"
                 >
                   <Typography variant="h4" fontWeight={700} color="error">
-                    {selectedVariant?.price
-                      ? currencyFormatter.format(Number(selectedVariant.price))
+                    {mainDisplayedPrice
+                      ? currencyFormatter.format(mainDisplayedPrice)
                       : "Liên hệ"}
                   </Typography>
                   {hasRetailPriceComparison && (
@@ -1396,20 +1465,11 @@ const ProductDetailPage = () => {
                 )}
               </Stack>
 
-              {selectedVariantStockQuantity !== null &&
-                (isSelectedVariantOutOfStock ? (
-                  <Typography variant="h4" color="error.main" fontWeight={700}>
-                    Hết hàng
-                  </Typography>
-                ) : (
-                  <Typography
-                    variant="body2"
-                    color="success.main"
-                    fontWeight={600}
-                  >
-                    {`Còn ${selectedVariantStockQuantity} sản phẩm`}
-                  </Typography>
-                ))}
+              {isSelectedVariantOutOfStock && (
+                <Typography variant="h4" color="error.main" fontWeight={700}>
+                  Hết hàng
+                </Typography>
+              )}
 
               {/* Action buttons */}
               {!isSelectedVariantOutOfStock && !isBackOfficeRole && (

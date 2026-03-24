@@ -4,6 +4,8 @@ import type { components } from "@/types/api/v1";
 export type CampaignStatus = components["schemas"]["CampaignStatus"];
 export type CampaignType = components["schemas"]["CampaignType"];
 export type PromotionType = components["schemas"]["PromotionType"];
+export type DiscountType = components["schemas"]["DiscountType"];
+export type VoucherType = components["schemas"]["VoucherType"];
 export type CampaignResponse = components["schemas"]["CampaignResponse"];
 export type CampaignPromotionItemResponse =
   components["schemas"]["CampaignPromotionItemResponse"];
@@ -12,7 +14,8 @@ export type PagedCampaignResponse =
 export type CreateCampaignRequest =
   components["schemas"]["CreateCampaignRequest"];
 type BaseResponseString = components["schemas"]["BaseResponseOfstring"];
-type BaseResponseCampaign = components["schemas"]["BaseResponseOfCampaignResponse"];
+type BaseResponseCampaign =
+  components["schemas"]["BaseResponseOfCampaignResponse"];
 type BaseResponseCampaignItems =
   components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
 
@@ -29,11 +32,14 @@ export type CampaignQuery = {
 
 class CampaignService {
   private formatApiErrorMessage(
-    base: {
-      message?: string;
-      errors?: string[] | null;
-      errorType?: string;
-    } | null | undefined,
+    base:
+      | {
+          message?: string;
+          errors?: string[] | null;
+          errorType?: string;
+        }
+      | null
+      | undefined,
     statusCode?: number,
     fallback = "Request failed",
   ) {
@@ -152,13 +158,18 @@ class CampaignService {
     campaignId: string,
   ): Promise<CampaignPromotionItemResponse[]> {
     try {
-      const response = await apiInstance.GET("/api/campaigns/{campaignId}/items", {
-        params: { path: { campaignId } },
-      });
+      const response = await apiInstance.GET(
+        "/api/campaigns/{campaignId}/items",
+        {
+          params: { path: { campaignId } },
+        },
+      );
 
       if (response.error) {
         const statusCode = response.response?.status;
-        const apiError = response.error as BaseResponseCampaignItems | undefined;
+        const apiError = response.error as
+          | BaseResponseCampaignItems
+          | undefined;
         const message = this.formatApiErrorMessage(
           {
             message: apiError?.message,
