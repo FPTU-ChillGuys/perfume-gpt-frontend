@@ -47,6 +47,7 @@ export const ProductListPage = () => {
   const searchParamValue = searchParams.get("search") || "";
   const categoryIdParam = searchParams.get("categoryId") || "";
   const categoryNameParam = searchParams.get("categoryName") || "";
+  const searchVersionParam = (searchParams.get("searchVersion") as "v2" | "v3") || "v2";
   const [searchTerm, setSearchTerm] = useState(searchParamValue);
   const [sort, setSort] = useState<SortValue>("featured");
 
@@ -65,7 +66,7 @@ export const ProductListPage = () => {
             PageNumber: page,
             PageSize: pageSize,
             IsDescending: true,
-          });
+          }, searchVersionParam);
 
           if (!isMounted) return;
 
@@ -305,10 +306,14 @@ export const ProductListPage = () => {
                         productActivityLogService.logSearch(searchTerm).catch((error) => {
                           console.error("Failed to log search text", error);
                         });
-                        setSearchParams({ search: searchTerm.trim() });
+                        setSearchParams({
+                          search: searchTerm.trim(),
+                          searchVersion: searchVersionParam
+                        });
                       } else {
-                        searchParams.delete("search");
-                        setSearchParams(searchParams);
+                        const newParams = new URLSearchParams(searchParams);
+                        newParams.delete("search");
+                        setSearchParams(newParams);
                       }
                     }
                   }}
