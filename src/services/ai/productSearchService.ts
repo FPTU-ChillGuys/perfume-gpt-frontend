@@ -34,7 +34,7 @@ export type PagedSearchSuggestions = {
 
 class AiProductSearchService {
     private readonly SEARCH_ENDPOINT = "/products/search";
-    private readonly SUGGESTIONS_ENDPOINT = "/products/search/suggestions";
+    private readonly SUGGESTIONS_ENDPOINT = "/products/search/v2";
 
     private createEmptyPagedResult<T>(query?: AiProductSearchQuery) {
         return {
