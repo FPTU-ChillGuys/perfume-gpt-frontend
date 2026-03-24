@@ -785,8 +785,12 @@ export const MyOrderDetailPage = () => {
                           <Typography variant="body2" color="text.secondary">
                             Phí vận chuyển
                           </Typography>
-                          <Typography variant="body2">
-                            {fmt(shippingFee)}
+                          <Typography
+                            variant="body2"
+                            color="success.main"
+                            fontWeight={500}
+                          >
+                            FREE
                           </Typography>
                         </Box>
 
