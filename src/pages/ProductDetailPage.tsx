@@ -134,9 +134,28 @@ const ProductDetailPage = () => {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
-    null,
-  );
+
+  const requestedVariantId = searchParams.get("variantId");
+  const selectedVariantId = useMemo(() => {
+    const variants = productDetail?.variants ?? [];
+    if (variants.length === 0) return null;
+
+    if (requestedVariantId && variants.some((v) => v.id === requestedVariantId)) {
+      return requestedVariantId;
+    }
+
+    const firstAvailable = variants.find((v) => (v.stockQuantity ?? 1) > 0);
+    return firstAvailable?.id || variants[0]?.id || null;
+  }, [productDetail, requestedVariantId]);
+
+  useEffect(() => {
+    if (selectedVariantId && selectedVariantId !== requestedVariantId) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("variantId", selectedVariantId);
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [selectedVariantId, requestedVariantId, searchParams, setSearchParams]);
+
   const [isAdding, setIsAdding] = useState(false);
   const [variantMediaList, setVariantMediaList] = useState<MediaResponse[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
@@ -200,7 +219,6 @@ const ProductDetailPage = () => {
   const THUMB_VISIBLE = 5;
   const THUMB_SIZE = 72;
   const THUMB_GAP = 8;
-  const requestedVariantId = searchParams.get("variantId");
 
   useEffect(() => {
     if (!productId) {
@@ -251,43 +269,6 @@ const ProductDetailPage = () => {
       isMounted = false;
     };
   }, [productId]);
-
-  useEffect(() => {
-    if (!productDetail) return;
-
-    const variants = productDetail.variants ?? [];
-    if (variants.length === 0) return;
-
-    const requestedVariant = requestedVariantId
-      ? variants.find((variant) => variant.id === requestedVariantId)
-      : undefined;
-
-    const firstAvailableVariant = variants.find((variant) => {
-      const stockQuantity = variant?.stockQuantity;
-      return typeof stockQuantity !== "number" || stockQuantity > 0;
-    });
-
-    const targetId =
-      requestedVariant?.id ||
-      (selectedVariantId && variants.some(v => v.id === selectedVariantId) ? selectedVariantId : null) ||
-      firstAvailableVariant?.id ||
-      variants[0]?.id ||
-      null;
-
-    if (targetId && targetId !== selectedVariantId) {
-      setSelectedVariantId(targetId);
-    }
-  }, [productDetail, requestedVariantId, selectedVariantId]);
-
-  useEffect(() => {
-    if (!selectedVariantId || searchParams.get("variantId") === selectedVariantId) {
-      return;
-    }
-
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("variantId", selectedVariantId);
-    setSearchParams(nextParams, { replace: true });
-  }, [selectedVariantId, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (loading || error || hasMarkedInitialRenderRef.current) {
@@ -521,13 +502,15 @@ const ProductDetailPage = () => {
   );
 
   const handleVariantChange = (_: unknown, value: string | null) => {
-    if (value) {
+    if (value && value !== selectedVariantId) {
       productActivityLogService
         .logProductView(productId, value)
         .catch((error) => {
           console.error("Failed to log variant click", error);
         });
-      setSelectedVariantId(value);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("variantId", value);
+      setSearchParams(nextParams, { replace: true });
     }
   };
 
