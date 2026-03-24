@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import {
   Box,
   CircularProgress,
@@ -12,7 +12,7 @@ import { useToast } from "../hooks/useToast";
 import { profileService } from "../services/profileService";
 import { addressService } from "../services/addressService";
 import { userService } from "../services/userService";
-import type { UserCredentials } from "../services/userService";
+import type { UserAvatar, UserCredentials } from "../services/userService";
 import { productReviewService } from "../services/reviewService";
 import type { UserProfile, UpdateProfileRequest } from "../types/profile";
 import type { AddressResponse } from "../types/address";
@@ -32,8 +32,12 @@ const ProfilePage = () => {
   const { pathname } = useLocation();
 
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
+  const [avatar, setAvatar] = useState<UserAvatar | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAvatarUploading, setIsAvatarUploading] = useState(false);
+  const [isAvatarDeleting, setIsAvatarDeleting] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const [addresses, setAddresses] = useState<AddressResponse[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
@@ -74,6 +78,7 @@ const ProfilePage = () => {
 
   useEffect(() => {
     loadUserInfo();
+    loadAvatar();
     loadProfile();
   }, []);
 
@@ -107,6 +112,18 @@ const ProfilePage = () => {
       setError(err.message || "Không thể tải thông tin profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAvatar = async () => {
+    try {
+      const data = await userService.getMyAvatar();
+      setAvatar(data);
+    } catch (err: any) {
+      // Avatar can be empty for new users; only surface unexpected errors.
+      if (err?.message) {
+        console.error("Failed to load avatar:", err);
+      }
     }
   };
 
@@ -200,6 +217,57 @@ const ProfilePage = () => {
     }
   };
 
+  const handlePickAvatar = () => {
+    avatarInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      showToast("Chỉ hỗ trợ ảnh JPG, PNG hoặc WEBP", "warning");
+      event.target.value = "";
+      return;
+    }
+
+    const maxSizeBytes = 5 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      showToast("Ảnh phải nhỏ hơn hoặc bằng 5MB", "warning");
+      event.target.value = "";
+      return;
+    }
+
+    setIsAvatarUploading(true);
+    try {
+      const message = await userService.uploadAvatar(file, file.name);
+      showToast(message, "success");
+      await Promise.all([loadAvatar(), loadUserInfo()]);
+    } catch (err: any) {
+      showToast(err?.message || "Không thể tải ảnh đại diện", "error");
+    } finally {
+      setIsAvatarUploading(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleDeleteAvatar = async () => {
+    if (!avatar) return;
+    setIsAvatarDeleting(true);
+    try {
+      const message = await userService.deleteMyAvatar();
+      showToast(message, "success");
+      await Promise.all([loadAvatar(), loadUserInfo()]);
+    } catch (err: any) {
+      showToast(err?.message || "Không thể xóa ảnh đại diện", "error");
+    } finally {
+      setIsAvatarDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -275,6 +343,11 @@ const ProfilePage = () => {
               onChange={handleChange}
               onClearError={() => setError("")}
               onClearSuccess={() => setSuccess("")}
+              avatar={avatar}
+              isAvatarUploading={isAvatarUploading}
+              isAvatarDeleting={isAvatarDeleting}
+              onPickAvatar={handlePickAvatar}
+              onDeleteAvatar={handleDeleteAvatar}
             />
             {(myReviews.length > 0 || isLoadingReviews) && (
               <Box mt={4}>
@@ -326,6 +399,14 @@ const ProfilePage = () => {
           setSelectedReview(null);
         }}
         onSuccess={loadMyReviews}
+      />
+
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/png,image/jpeg,image/webp"
+        style={{ display: "none" }}
+        onChange={handleAvatarChange}
       />
     </Layout>
   );

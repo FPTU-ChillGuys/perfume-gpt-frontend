@@ -29,10 +29,12 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   ContentCopy as ContentCopyIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
+import { exportToCsv } from "@/utils/exportCsv";
 import type { OrderListItem, OrderStatus, OrderType } from "@/types/order";
 import {
   orderStatusLabels,
@@ -138,6 +140,22 @@ export const OrderManagementPage = () => {
     setFromDate("");
     setToDate("");
     setPage(0);
+  };
+
+  const handleExportCsv = () => {
+    exportToCsv(
+      orders,
+      `don-hang-${new Date().toISOString().slice(0, 10)}`,
+      [
+        { key: "id", header: "Mã đơn hàng" },
+        { key: "customerName", header: "Khách hàng" },
+        { key: "customerEmail", header: "Email" },
+        { key: "status", header: "Trạng thái" },
+        { key: "totalAmount", header: "Tổng tiền" },
+        { key: "type", header: "Loại" },
+        { key: "createdAt", header: "Ngày tạo" },
+      ],
+    );
   };
 
   const handleCopyOrderId = async (orderId?: string | null) => {
@@ -334,6 +352,17 @@ export const OrderManagementPage = () => {
                 sx={{ height: 56 }}
               >
                 Xóa bộ lọc
+              </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="success"
+                startIcon={<DownloadIcon />}
+                onClick={handleExportCsv}
+                disabled={orders.length === 0}
+                sx={{ height: 56 }}
+              >
+                Xuất CSV
               </Button>
             </Box>
           </Box>

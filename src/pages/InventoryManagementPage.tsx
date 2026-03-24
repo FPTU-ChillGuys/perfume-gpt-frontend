@@ -45,6 +45,7 @@ import {
   WarningAmber as WarningAmberIcon,
   Category as CategoryIcon,
   ViewList as ViewListIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
@@ -63,6 +64,7 @@ import {
   type StockAdjustmentStatus,
 } from "@/services/stockAdjustmentService";
 import { useToast } from "@/hooks/useToast";
+import { exportToCsv } from "@/utils/exportCsv";
 
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type ExpiryDaysFilter = "" | "30" | "60" | "90";
@@ -450,6 +452,21 @@ export const InventoryManagementPage = () => {
     setStockStatusFilter("");
     setExpiryDaysFilter("");
     setPage(0);
+  };
+
+  const handleExportCsv = () => {
+    exportToCsv(
+      stocks,
+      `ton-kho-${new Date().toISOString().slice(0, 10)}`,
+      [
+        { key: "variantId", header: "Variant ID" },
+        { key: "sku", header: "SKU" },
+        { key: "productName", header: "Sản phẩm" },
+        { key: "totalQuantity", header: "Tổng nhập" },
+        { key: "availableQuantity", header: "Khả dụng" },
+        { key: "status", header: "Trạng thái" },
+      ],
+    );
   };
 
   const loadBatchesByVariantId = useCallback(async (variantId: string) => {
@@ -1031,6 +1048,16 @@ export const InventoryManagementPage = () => {
                   sx={{ height: 56 }}
                 >
                   Xóa lọc
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="success"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleExportCsv}
+                  disabled={stocks.length === 0}
+                  sx={{ height: 56 }}
+                >
+                  Xuất CSV
                 </Button>
               </Box>
             </Paper>

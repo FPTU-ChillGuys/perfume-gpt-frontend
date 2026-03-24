@@ -6,6 +6,25 @@ export type VoucherResponse = components["schemas"]["VoucherResponse"];
 type VoucherListResponse =
   components["schemas"]["PagedResultOfVoucherResponse"];
 
+export interface CreateVoucherRequest {
+  code?: string;
+  description?: string;
+  discountType?: "Percentage" | "FixedAmount";
+  discountValue?: number;
+  minOrderValue?: number;
+  maxUsage?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface PagedVouchers {
+  items: VoucherResponse[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 class VoucherService {
   private readonly BASE_ENDPOINT = "/api/vouchers";
 
@@ -88,6 +107,107 @@ class VoucherService {
       );
     }
   }
+
+  async getAll(params?: {
+    PageNumber?: number;
+    PageSize?: number;
+    Code?: string;
+    IsExpired?: boolean;
+  }): Promise<PagedVouchers> {
+    const response = await apiInstance.GET(this.BASE_ENDPOINT, {
+      params: { query: params },
+    });
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load vouchers");
+    }
+    const payload = response.data.payload as VoucherListResponse | null | undefined;
+    return {
+      items: payload?.items ?? [],
+      totalCount: payload?.totalCount ?? 0,
+      pageNumber: payload?.pageNumber ?? 1,
+      pageSize: payload?.pageSize ?? 10,
+      totalPages: payload?.totalPages ?? 1,
+    };
+  }
+
+  async getById(voucherId: string): Promise<VoucherResponse> {
+    const response = await apiInstance.GET(
+      `${this.BASE_ENDPOINT}/{voucherId}` as any,
+      { params: { path: { voucherId } } } as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load voucher");
+    }
+    return response.data.payload as VoucherResponse;
+  }
+
+  async create(body: CreateVoucherRequest): Promise<VoucherResponse> {
+    const response = await apiInstance.POST(this.BASE_ENDPOINT as any, {
+      body,
+    } as any);
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to create voucher");
+    }
+    return response.data.payload as VoucherResponse;
+  }
+
+  async update(
+    voucherId: string,
+    body: Partial<CreateVoucherRequest>,
+  ): Promise<VoucherResponse> {
+    const response = await apiInstance.PUT(
+      `${this.BASE_ENDPOINT}/{voucherId}` as any,
+      { params: { path: { voucherId } }, body } as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to update voucher");
+    }
+    return response.data.payload as VoucherResponse;
+  }
+
+  async deleteVoucher(voucherId: string): Promise<void> {
+    const response = await apiInstance.DELETE(
+      `${this.BASE_ENDPOINT}/{voucherId}` as any,
+      { params: { path: { voucherId } } } as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to delete voucher");
+    }
+  }
+
+  async getMyVouchers(): Promise<VoucherResponse[]> {
+    const response = await apiInstance.GET(
+      `${this.BASE_ENDPOINT}/my-vouchers` as any,
+      {} as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load my vouchers");
+    }
+    return (response.data.payload as VoucherResponse[]) ?? [];
+  }
+
+  async getAvailable(): Promise<VoucherResponse[]> {
+    const response = await apiInstance.GET(
+      `${this.BASE_ENDPOINT}/available` as any,
+      {} as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load vouchers");
+    }
+    return (response.data.payload as VoucherResponse[]) ?? [];
+  }
+
+  async redeemVoucher(voucherId: string): Promise<string> {
+    const response = await apiInstance.POST(
+      `${this.BASE_ENDPOINT}/redeem` as any,
+      { body: { voucherId } } as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to redeem voucher");
+    }
+    return response.data.message || "Nhận voucher thành công!";
+  }
 }
 
 export const voucherService = new VoucherService();
+

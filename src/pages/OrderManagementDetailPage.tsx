@@ -41,6 +41,7 @@ import {
   LocationOn,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { AppBreadcrumbs } from "@/components/common/AppBreadcrumbs";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
 import type { PaymentMethod } from "@/types/checkout";
@@ -535,6 +536,14 @@ export const OrderManagementDetailPage = () => {
   return (
     <AdminLayout>
       <Box>
+        <AppBreadcrumbs
+          items={[
+            { label: "Quản trị", href: "/admin" },
+            { label: "Quản lý đơn hàng", href: "/admin/orders" },
+            { label: "Chi tiết đơn hàng" },
+          ]}
+          sx={{ mb: 2 }}
+        />
         <Paper sx={{ overflow: "hidden", borderRadius: 2 }}>
           {isLoading ? (
             <Box

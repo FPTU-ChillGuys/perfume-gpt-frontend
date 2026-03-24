@@ -1,10 +1,20 @@
-import { Alert, Box, Chip, Divider, Typography } from "@mui/material";
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Divider,
+  Stack,
+  Typography,
+} from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import EmailIcon from "@mui/icons-material/Email";
 import PhoneIcon from "@mui/icons-material/Phone";
 import type { UserProfile } from "@/types/profile";
 import type { UpdateProfileRequest } from "@/types/profile";
-import type { UserCredentials } from "@/services/userService";
+import type { UserAvatar, UserCredentials } from "@/services/userService";
 
 interface ProfileInfoProps {
   profile: UserProfile | null;
@@ -20,6 +30,11 @@ interface ProfileInfoProps {
   onChange: (field: keyof UpdateProfileRequest, value: any) => void;
   onClearError: () => void;
   onClearSuccess: () => void;
+  avatar: UserAvatar | null;
+  isAvatarUploading: boolean;
+  isAvatarDeleting: boolean;
+  onPickAvatar: () => void;
+  onDeleteAvatar: () => void;
 }
 
 const InfoRow = ({
@@ -77,7 +92,17 @@ const ProfileInfo = ({
   success,
   onClearError,
   onClearSuccess,
+  avatar,
+  isAvatarUploading,
+  isAvatarDeleting,
+  onPickAvatar,
+  onDeleteAvatar,
 }: ProfileInfoProps) => {
+  const avatarFallback = (userInfo?.fullName || userInfo?.email || "U")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
+
   return (
     <>
       {error && (
@@ -114,6 +139,57 @@ const ProfileInfo = ({
       </Box>
 
       <Divider sx={{ mb: 3 }} />
+
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={2}
+        alignItems={{ xs: "flex-start", sm: "center" }}
+        sx={{ mb: 3 }}
+      >
+        <Avatar
+          src={avatar?.url || undefined}
+          alt={avatar?.altText || userInfo?.fullName || "Avatar"}
+          sx={{ width: 88, height: 88, bgcolor: "error.main", fontSize: 32 }}
+        >
+          {avatarFallback}
+        </Avatar>
+
+        <Box>
+          <Typography variant="subtitle1" fontWeight={600}>
+            Ảnh đại diện
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            JPG/PNG, dung lượng nên dưới 5MB.
+          </Typography>
+
+          <Stack direction="row" spacing={1.25}>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={onPickAvatar}
+              disabled={isAvatarUploading || isAvatarDeleting}
+            >
+              {isAvatarUploading ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                "Tải ảnh lên"
+              )}
+            </Button>
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={onDeleteAvatar}
+              disabled={!avatar || isAvatarUploading || isAvatarDeleting}
+            >
+              {isAvatarDeleting ? (
+                <CircularProgress size={18} color="inherit" />
+              ) : (
+                "Xóa ảnh"
+              )}
+            </Button>
+          </Stack>
+        </Box>
+      </Stack>
 
       {/* Info rows */}
       <Box>

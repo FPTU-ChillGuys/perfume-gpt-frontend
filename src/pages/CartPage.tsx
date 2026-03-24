@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
   Box,
   Container,
@@ -45,6 +46,8 @@ export const CartPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[]>([]);
   const [hasInitializedSelection, setHasInitializedSelection] = useState(false);
   const [totalsWarningMessage, setTotalsWarningMessage] = useState<
@@ -221,6 +224,11 @@ export const CartPage = () => {
       return;
     }
 
+    setConfirmDeleteId(cartItemId);
+  };
+
+  const doRemoveItem = async (cartItemId: string) => {
+    setConfirmDeleteId(null);
     setUpdatingItemId(cartItemId);
     try {
       await cartService.removeCartItem(cartItemId);
@@ -239,11 +247,13 @@ export const CartPage = () => {
     }
   };
 
-  const handleClearCart = async () => {
-    if (items.length === 0) {
-      return;
-    }
+  const handleClearCart = () => {
+    if (items.length === 0) return;
+    setConfirmClearOpen(true);
+  };
 
+  const doClearCart = async () => {
+    setConfirmClearOpen(false);
     setIsClearing(true);
     try {
       await cartService.clearCart();
@@ -614,6 +624,26 @@ export const CartPage = () => {
           </Box>
         )}
       </Container>
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Xóa sản phẩm"
+        description="Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?"
+        confirmText="Xóa"
+        loading={updatingItemId === confirmDeleteId}
+        onConfirm={() => confirmDeleteId && void doRemoveItem(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmClearOpen}
+        title="Xóa toàn bộ giỏ hàng"
+        description="Toàn bộ sản phẩm trong giỏ hàng sẽ bị xóa. Bạn có chắc chắn không?"
+        confirmText="Xóa hết"
+        loading={isClearing}
+        onConfirm={() => void doClearCart()}
+        onClose={() => setConfirmClearOpen(false)}
+      />
     </MainLayout>
   );
 };
