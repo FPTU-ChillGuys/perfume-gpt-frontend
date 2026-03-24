@@ -16,6 +16,7 @@ import { resolveVariantMapForProducts } from "../utils/variantMapResolver";
 import { dexieCache } from "../utils/dexieCache";
 import { CACHE_KEYS, CACHE_TTL } from "../constants/cache";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
+import { aiProductSearchService } from "@/services/ai/productSearchService";
 
 const PAGE_SIZE_OPTIONS = [12, 24, 36];
 
@@ -59,7 +60,7 @@ export const ProductListPage = () => {
       try {
         if (searchParamValue) {
           // Semantic search returns products with embedded variants — no extra variant API call needed
-          const searchResult = await productService.searchProductsSemantic({
+          const searchResult = await aiProductSearchService.searchProducts({
             searchText: searchParamValue,
             PageNumber: page,
             PageSize: pageSize,
@@ -205,10 +206,10 @@ export const ProductListPage = () => {
 
     const filtered = shouldFilterLocally
       ? products.filter(
-          (product) =>
-            product.name.toLowerCase().includes(normalizedLocalSearch) ||
-            product.brand.toLowerCase().includes(normalizedLocalSearch),
-        )
+        (product) =>
+          product.name.toLowerCase().includes(normalizedLocalSearch) ||
+          product.brand.toLowerCase().includes(normalizedLocalSearch),
+      )
       : products;
 
     const sorted = [...filtered];

@@ -9,8 +9,8 @@ import type {
 export type VariantCardSource =
   | VariantPagedItem
   | (ProductVariant & {
-      primaryImage?: VariantPagedItem["primaryImage"] | null;
-    });
+    primaryImage?: VariantPagedItem["primaryImage"] | null;
+  });
 
 const getVariantImageUrl = (variant?: VariantCardSource) => {
   if (!variant) {
@@ -47,9 +47,9 @@ export const mapProductToCard = (
 ): ProductCardProps => {
   const finiteVariantPricesFromField = Array.isArray(product.variantPrices)
     ? product.variantPrices.filter(
-        (candidate): candidate is number =>
-          typeof candidate === "number" && Number.isFinite(candidate),
-      )
+      (candidate): candidate is number =>
+        typeof candidate === "number" && Number.isFinite(candidate),
+    )
     : [];
 
   const variantItems = Array.isArray((product as any).variants)
@@ -141,7 +141,10 @@ export const mapProductWithVariantsToCard = (
     brand: product.brandName ?? "\u0110ang c\u1eadp nh\u1eadt",
     name: product.name ?? "\u0110ang c\u1eadp nh\u1eadt",
     salePrice: Number.isFinite(price) ? price : 0,
-    imageUrl: product.primaryImage?.url ?? undefined,
+    imageUrl:
+      typeof product.primaryImage === "string"
+        ? product.primaryImage
+        : product.primaryImage?.url ?? undefined,
     variantId: firstVariant?.id,
     numberOfVariants: product.numberOfVariants ?? product.variants?.length ?? 0,
   };

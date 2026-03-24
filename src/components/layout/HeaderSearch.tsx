@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import { productService } from "../../services/productService";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
+import { aiProductSearchService } from "@/services/ai/productSearchService";
 import type { ProductListItemWithVariants } from "../../types/product";
 import {
     extractSuggestionGender,
@@ -46,7 +47,7 @@ export const HeaderSearch = () => {
 
             setIsSearching(true);
             try {
-                const response = await productService.searchProductsSemantic({
+                const response = await aiProductSearchService.searchProducts({
                     searchText: term,
                     PageNumber: 1,
                     PageSize: 5,
@@ -237,7 +238,9 @@ export const HeaderSearch = () => {
                         ) : suggestions.length > 0 ? (
                             <List sx={{ p: 0 }}>
                                 {suggestions.map((product) => {
-                                    const imageUrl = product.primaryImage?.url || "https://placehold.co/400x400?text=No+Image";
+                                    const imageUrl = typeof product.primaryImage === "string"
+                                        ? product.primaryImage
+                                        : product.primaryImage?.url || "https://placehold.co/400x400?text=No+Image";
                                     const displayGender = extractSuggestionGender(product);
                                     const semanticPrice = extractSuggestionPrice(product);
                                     const fallbackPrice = product.id
