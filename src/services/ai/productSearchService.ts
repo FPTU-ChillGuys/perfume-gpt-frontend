@@ -14,27 +14,8 @@ export type AiProductSearchQuery = {
     IsDescending?: boolean;
 };
 
-export type ProductSearchSuggestion = {
-    id: string;
-    name: string;
-    brandName: string;
-    gender: string;
-    price: number;
-    variantCount: number;
-    imageUrl: string | null;
-};
-
-export type PagedSearchSuggestions = {
-    items: ProductSearchSuggestion[];
-    pageNumber: number;
-    pageSize: number;
-    totalCount: number;
-    totalPages: number;
-};
-
 class AiProductSearchService {
-    private readonly SEARCH_ENDPOINT = "/products/search";
-    private readonly SUGGESTIONS_ENDPOINT = "/products/search/v2";
+    private readonly SEARCH_ENDPOINT = "/products/search/v2";
 
     private createEmptyPagedResult<T>(query?: AiProductSearchQuery) {
         return {
@@ -64,13 +45,8 @@ class AiProductSearchService {
                 );
             }
 
-            // The AI service returns payload or data? 
-            // Checking other AI services: aiAcceptanceService uses response.data.data
-            // trendService uses response.data.data.jobId
-            // chatbotService uses response.data.data
-
             return (
-                response.data.payload ||
+                response.data.data ||
                 this.createEmptyPagedResult<ProductListItemWithVariants>(query)
             );
         } catch (error: any) {
@@ -85,9 +61,9 @@ class AiProductSearchService {
 
     async getSearchSuggestions(
         searchText: string,
-    ): Promise<PagedSearchSuggestions> {
+    ): Promise<PagedProductListWithVariants> {
         try {
-            const response = await aiApiInstance.GET(this.SUGGESTIONS_ENDPOINT, {
+            const response = await aiApiInstance.GET(this.SEARCH_ENDPOINT, {
                 params: {
                     query: { searchText, PageNumber: 1, PageSize: 5 },
                 },

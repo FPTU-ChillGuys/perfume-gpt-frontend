@@ -18,17 +18,19 @@ import { Search as SearchIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
+import { aiProductSearchService } from "@/services/ai/productSearchService";
+import type { ProductListItemWithVariants } from "../../types/product";
 import {
-    aiProductSearchService,
-    type ProductSearchSuggestion,
-} from "@/services/ai/productSearchService";
-import { formatSuggestionPrice } from "@/utils/searchSuggestionDisplay";
+    extractSuggestionGender,
+    extractSuggestionPrice,
+    formatSuggestionPrice,
+} from "@/utils/searchSuggestionDisplay";
 
 export const HeaderSearch = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [isSearching, setIsSearching] = useState(false);
-    const [suggestions, setSuggestions] = useState<ProductSearchSuggestion[]>([]);
+    const [suggestions, setSuggestions] = useState<ProductListItemWithVariants[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
 
     const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -78,10 +80,11 @@ export const HeaderSearch = () => {
         }
     };
 
-    const handleSuggestionClick = (product?: ProductSearchSuggestion) => {
+    const handleSuggestionClick = (product?: ProductListItemWithVariants) => {
         const productId = product?.id;
         if (productId) {
-            void productActivityLogService.logProductView(productId, null).catch((error) => {
+            const variantId = product?.variants?.[0]?.id ?? null;
+            void productActivityLogService.logProductView(productId, variantId).catch((error) => {
                 console.error("Failed to log product click from search", error);
             });
             setShowDropdown(false);
@@ -156,9 +159,14 @@ export const HeaderSearch = () => {
                         ) : suggestions.length > 0 ? (
                             <List sx={{ p: 0 }}>
                                 {suggestions.map((product) => {
-                                    const imageUrl = product.imageUrl || "https://placehold.co/400x400?text=No+Image";
-                                    const displayGender = product.gender;
-                                    const displayPrice = product.price ?? null;
+                                    const imageUrl = typeof product.primaryImage === "string"
+                                        ? product.primaryImage
+                                        : product.primaryImage?.url || "https://placehold.co/400x400?text=No+Image";
+                                    const displayGender = extractSuggestionGender(product);
+                                    const semanticPrice = extractSuggestionPrice(product);
+                                    const displayPrice = semanticPrice ?? null;
+                                    const brandName = product.brandName || "Đang cập nhật";
+                                    const categoryName = product.categoryName;
 
                                     return (
                                         <ListItem
@@ -187,14 +195,16 @@ export const HeaderSearch = () => {
                                                 }
                                                 secondary={
                                                     <Box sx={{ mt: 0.5 }}>
-                                                        {product.brandName && (
+                                                        {brandName && (
                                                             <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                                                Thương hiệu: {product.brandName}
+                                                                Thương hiệu: {brandName} {categoryName ? `- ${categoryName}` : ""}
                                                             </Typography>
                                                         )}
-                                                        <Typography variant="caption" color="text.secondary" display="block" noWrap>
-                                                            Giới tính: {displayGender}
-                                                        </Typography>
+                                                        {displayGender && (
+                                                            <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                                                Giới tính: {displayGender}
+                                                            </Typography>
+                                                        )}
                                                         <Typography variant="body2" color="error.main" fontWeight={600} sx={{ mt: 0.5 }}>
                                                             {formatSuggestionPrice(displayPrice)}
                                                         </Typography>
