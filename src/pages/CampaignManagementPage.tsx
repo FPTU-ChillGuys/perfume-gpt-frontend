@@ -206,12 +206,16 @@ const formatDate = (value?: string | null) => {
 
 const DEFAULT_END_TIME = "23:59";
 
-const toIsoDateTime = (dateValue: string, timeValue: string) => {
+const toLocalDateTime = (
+  dateValue: string,
+  timeValue: string,
+  withFraction = false,
+) => {
   if (!dateValue || !timeValue) {
     return "";
   }
 
-  return new Date(`${dateValue}T${timeValue}:00`).toISOString();
+  return `${dateValue}T${timeValue}:00${withFraction ? ".00" : ""}`;
 };
 
 const resolveCategoryIdByTab = (tab: CampaignCategoryTab) => {
@@ -688,20 +692,27 @@ export const CampaignManagementPage = () => {
 
   const handleCreateCampaign = async () => {
     const name = createForm.name.trim();
-    const startIso = toIsoDateTime(createForm.startDate, createForm.startTime);
-    const endIso = toIsoDateTime(createForm.endDate, createForm.endTime);
+    const startDateTime = toLocalDateTime(
+      createForm.startDate,
+      createForm.startTime,
+    );
+    const endDateTime = toLocalDateTime(
+      createForm.endDate,
+      createForm.endTime,
+      true,
+    );
 
     if (!name) {
       showToast("Vui lòng nhập tên chiến lược", "warning");
       return;
     }
 
-    if (!startIso || !endIso) {
+    if (!startDateTime || !endDateTime) {
       showToast("Vui lòng nhập thời gian bắt đầu và kết thúc", "warning");
       return;
     }
 
-    if (new Date(endIso).getTime() <= new Date(startIso).getTime()) {
+    if (new Date(endDateTime).getTime() <= new Date(startDateTime).getTime()) {
       showToast("Thời gian kết thúc phải lớn hơn thời gian bắt đầu", "warning");
       return;
     }
@@ -801,8 +812,8 @@ export const CampaignManagementPage = () => {
     const payload: CreateCampaignRequest = {
       name,
       description: createForm.description.trim() || null,
-      startDate: startIso,
-      endDate: endIso,
+      startDate: startDateTime,
+      endDate: endDateTime,
       type: createForm.type,
       items: selectedItems.map((item) => ({
         productVariantId: item.productVariantId,
