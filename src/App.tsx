@@ -1,11 +1,9 @@
 import { lazy, Suspense } from "react";
-import { ThemeProvider } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
 import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import { theme } from "./theme/theme";
+import { AppThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastProvider";
 import { CartProvider } from "./contexts/CartContext";
@@ -30,6 +28,16 @@ const LoginPage = lazy(() =>
 );
 const RegisterPage = lazy(() =>
   import("./pages/RegisterPage").then((m) => ({ default: m.RegisterPage })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import("./pages/ForgotPasswordPage").then((m) => ({
+    default: m.ForgotPasswordPage,
+  })),
+);
+const ResetPasswordPage = lazy(() =>
+  import("./pages/ResetPasswordPage").then((m) => ({
+    default: m.ResetPasswordPage,
+  })),
 );
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const StaffDashboard = lazy(() => import("./pages/StaffDashboard"));
@@ -116,6 +124,26 @@ const AIAcceptancePage = lazy(() =>
     default: m.AIAcceptancePage,
   })),
 );
+const CampaignManagementPage = lazy(() =>
+  import("./pages/CampaignManagementPage").then((m) => ({
+    default: m.CampaignManagementPage,
+  })),
+);
+const VerifyEmailPage = lazy(() =>
+  import("./pages/VerifyEmailPage").then((m) => ({ default: m.VerifyEmailPage })),
+);
+const AdminVouchersPage = lazy(() =>
+  import("./pages/AdminVouchersPage").then((m) => ({ default: m.AdminVouchersPage })),
+);
+const OrderCancelRequestsPage = lazy(() =>
+  import("./pages/OrderCancelRequestsPage").then((m) => ({ default: m.OrderCancelRequestsPage })),
+);
+const SuppliersPage = lazy(() =>
+  import("./pages/SuppliersPage").then((m) => ({ default: m.SuppliersPage })),
+);
+const LoyaltyTransactionsPage = lazy(() =>
+  import("./pages/LoyaltyTransactionsPage").then((m) => ({ default: m.LoyaltyTransactionsPage })),
+);
 
 const PageLoader = () => (
   <Box
@@ -134,8 +162,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+      <AppThemeProvider>
         <BrowserRouter>
           <ToastProvider>
             <AuthProvider>
@@ -146,6 +173,18 @@ function App() {
                       <Route path="/" element={<HomePage />} />
                       <Route path="/login" element={<LoginPage />} />
                       <Route path="/register" element={<RegisterPage />} />
+                      <Route
+                        path="/forgot-password"
+                        element={<ForgotPasswordPage />}
+                      />
+                      <Route
+                        path="/reset-password"
+                        element={<ResetPasswordPage />}
+                      />
+                      <Route
+                        path="/verify-email"
+                        element={<VerifyEmailPage />}
+                      />
                       <Route
                         path="/checkout/counter/staff"
                         element={
@@ -247,6 +286,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
                             <MyOrderDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/loyalty"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <LoyaltyTransactionsPage />
                           </RoleBasedRoute>
                         }
                       />
@@ -353,10 +400,42 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/campaigns"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <CampaignManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/ai-acceptance"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <AIAcceptancePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/vouchers"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <AdminVouchersPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/cancel-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderCancelRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/suppliers"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <SuppliersPage />
                           </RoleBasedRoute>
                         }
                       />
@@ -427,7 +506,7 @@ function App() {
             </AuthProvider>
           </ToastProvider>
         </BrowserRouter>
-      </ThemeProvider>
+      </AppThemeProvider>
     </GoogleOAuthProvider>
   );
 }

@@ -9,7 +9,7 @@ import type {
 export type VariantCardSource =
   | VariantPagedItem
   | (ProductVariant & {
-    primaryImage?: VariantPagedItem["primaryImage"] | null;
+    primaryImageUrl?: string | null;
   });
 
 const getVariantImageUrl = (variant?: VariantCardSource) => {
@@ -17,8 +17,8 @@ const getVariantImageUrl = (variant?: VariantCardSource) => {
     return undefined;
   }
 
-  if (variant.primaryImage?.url) {
-    return variant.primaryImage.url;
+  if ("primaryImageUrl" in variant && variant.primaryImageUrl) {
+    return variant.primaryImageUrl;
   }
 
   if ("media" in variant && variant.media?.length) {
@@ -105,7 +105,7 @@ export const withVariantPrimaryImage = (
 
   return {
     ...variant,
-    primaryImage,
+    primaryImageUrl: primaryImage?.url ?? null,
   };
 };
 

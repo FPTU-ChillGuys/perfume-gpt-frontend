@@ -38,6 +38,7 @@ import {
   Feed as FeedIcon,
   Chat as ChatIcon,
   ThumbsUpDown as ThumbsUpDownIcon,
+  LocalOffer as LocalOfferIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -121,6 +122,12 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
+    text: "Chiến lược khuyến mãi",
+    icon: <LocalOfferIcon />,
+    path: "/admin/campaigns",
+    roles: ["admin"],
+  },
+  {
     text: "Quản lý kho",
     icon: <InventoryIcon />,
     path: "/staff/inventory",
@@ -160,6 +167,24 @@ const menuItems: MenuItem[] = [
     text: "AI Acceptance",
     icon: <ThumbsUpDownIcon />,
     path: "/admin/ai-acceptance",
+    roles: ["admin"],
+  },
+  {
+    text: "Quản lý Voucher",
+    icon: <LocalOfferIcon />,
+    path: "/admin/vouchers",
+    roles: ["admin"],
+  },
+  {
+    text: "Yêu cầu hủy đơn",
+    icon: <ShoppingCartIcon />,
+    path: "/admin/cancel-requests",
+    roles: ["admin"],
+  },
+  {
+    text: "Nhà cung cấp",
+    icon: <PeopleIcon />,
+    path: "/admin/suppliers",
     roles: ["admin"],
   },
 ];
@@ -263,7 +288,11 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         {filteredMenuItems.map((item) => {
           const isActive = location.pathname === item.path;
           return (
-            <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+            <ListItem
+              key={`${item.text}-${item.path}`}
+              disablePadding
+              sx={{ mb: 0.5 }}
+            >
               <ListItemButton
                 onClick={() => handleNavigate(item.path)}
                 sx={{

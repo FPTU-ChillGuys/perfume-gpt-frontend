@@ -32,6 +32,7 @@ import {
   AssignmentReturn,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
+import { AppBreadcrumbs } from "@/components/common/AppBreadcrumbs";
 import { orderService } from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
 import { productService } from "@/services/productService";
@@ -405,6 +406,14 @@ export const MyOrderDetailPage = () => {
     <MainLayout>
       <Box sx={{ bgcolor: "#f5f5f5", py: 4, flex: 1 }}>
         <Container maxWidth="lg">
+          <AppBreadcrumbs
+            items={[
+              { label: "Trang chủ", href: "/" },
+              { label: "Đơn hàng của tôi", href: "/my-orders" },
+              { label: "Chi tiết đơn hàng" },
+            ]}
+            sx={{ mb: 2 }}
+          />
           <Paper
             elevation={0}
             sx={{
@@ -785,8 +794,12 @@ export const MyOrderDetailPage = () => {
                           <Typography variant="body2" color="text.secondary">
                             Phí vận chuyển
                           </Typography>
-                          <Typography variant="body2">
-                            {fmt(shippingFee)}
+                          <Typography
+                            variant="body2"
+                            color="success.main"
+                            fontWeight={500}
+                          >
+                            FREE
                           </Typography>
                         </Box>
 

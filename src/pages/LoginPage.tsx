@@ -243,6 +243,10 @@ export const LoginPage = () => {
                   underline="hover"
                   sx={{ fontSize: "0.875rem" }}
                   tabIndex={-1}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/forgot-password");
+                  }}
                 >
                   Quên mật khẩu?
                 </Link>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
   Box,
   Container,
@@ -45,9 +46,13 @@ export const CartPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[]>([]);
-  const [hasInitializedSelection, setHasInitializedSelection] =
-    useState(false);
+  const [hasInitializedSelection, setHasInitializedSelection] = useState(false);
+  const [totalsWarningMessage, setTotalsWarningMessage] = useState<
+    string | null
+  >(null);
 
   const roundCheckboxSx = {
     p: 0.5,
@@ -75,7 +80,13 @@ export const CartPage = () => {
       try {
         const allIds = getSelectableItemIds();
         if (!allIds.length || selectedIds.length === 0) {
-          setTotals({ subtotal: 0, shippingFee: 0, discount: 0, totalPrice: 0 });
+          setTotals({
+            subtotal: 0,
+            shippingFee: 0,
+            discount: 0,
+            totalPrice: 0,
+          });
+          setTotalsWarningMessage(null);
           return;
         }
 
@@ -84,8 +95,10 @@ export const CartPage = () => {
           : await cartService.getTotals();
 
         setTotals(totalsData);
+        setTotalsWarningMessage(totalsData.warningMessage || null);
       } catch (error) {
         console.error("Error loading cart totals:", error);
+        setTotalsWarningMessage(null);
         showToast("Không thể tính tổng tiền giỏ hàng", "error");
       }
     },
@@ -211,6 +224,11 @@ export const CartPage = () => {
       return;
     }
 
+    setConfirmDeleteId(cartItemId);
+  };
+
+  const doRemoveItem = async (cartItemId: string) => {
+    setConfirmDeleteId(null);
     setUpdatingItemId(cartItemId);
     try {
       await cartService.removeCartItem(cartItemId);
@@ -229,11 +247,13 @@ export const CartPage = () => {
     }
   };
 
-  const handleClearCart = async () => {
-    if (items.length === 0) {
-      return;
-    }
+  const handleClearCart = () => {
+    if (items.length === 0) return;
+    setConfirmClearOpen(true);
+  };
 
+  const doClearCart = async () => {
+    setConfirmClearOpen(false);
     setIsClearing(true);
     try {
       await cartService.clearCart();
@@ -335,7 +355,8 @@ export const CartPage = () => {
                   <Checkbox
                     checked={
                       getSelectableItemIds().length > 0 &&
-                      selectedCartItemIds.length === getSelectableItemIds().length
+                      selectedCartItemIds.length ===
+                        getSelectableItemIds().length
                     }
                     indeterminate={
                       selectedCartItemIds.length > 0 &&
@@ -352,7 +373,8 @@ export const CartPage = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Đã chọn {selectedCartItemIds.length}/{getSelectableItemIds().length}
+                  Đã chọn {selectedCartItemIds.length}/
+                  {getSelectableItemIds().length}
                 </Typography>
               </Box>
 
@@ -434,88 +456,92 @@ export const CartPage = () => {
                               >
                                 {item.variantName ?? "Sản phẩm chưa đặt tên"}
                               </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              mb={2}
-                            >
-                              {item.volumeMl ? `${item.volumeMl} ml` : ""}
-                              {item.volumeMl && item.variantPrice ? " • " : ""}
-                              {item.variantPrice
-                                ? formatCurrency(item.variantPrice)
-                                : ""}
-                            </Typography>
-                            <Box
-                              display="flex"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              flexWrap="wrap"
-                              gap={2}
-                              pt={2}
-                              borderTop={1}
-                              borderColor="divider"
-                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                mb={2}
+                              >
+                                {item.volumeMl ? `${item.volumeMl} ml` : ""}
+                                {item.volumeMl && item.variantPrice
+                                  ? " • "
+                                  : ""}
+                                {item.variantPrice
+                                  ? formatCurrency(item.variantPrice)
+                                  : ""}
+                              </Typography>
                               <Box
                                 display="flex"
                                 alignItems="center"
-                                gap={1}
-                                border={1}
+                                justifyContent="space-between"
+                                flexWrap="wrap"
+                                gap={2}
+                                pt={2}
+                                borderTop={1}
                                 borderColor="divider"
-                                borderRadius={"24px"}
-                                px={2}
-                                py={0.5}
                               >
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    handleQuantityChange(item.cartItemId, -1)
-                                  }
-                                  disabled={
-                                    quantity <= 1 ||
-                                    updatingItemId === item.cartItemId
-                                  }
+                                <Box
+                                  display="flex"
+                                  alignItems="center"
+                                  gap={1}
+                                  border={1}
+                                  borderColor="divider"
+                                  borderRadius={"24px"}
+                                  px={2}
+                                  py={0.5}
                                 >
-                                  <RemoveIcon fontSize="small" />
-                                </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      handleQuantityChange(item.cartItemId, -1)
+                                    }
+                                    disabled={
+                                      quantity <= 1 ||
+                                      updatingItemId === item.cartItemId
+                                    }
+                                  >
+                                    <RemoveIcon fontSize="small" />
+                                  </IconButton>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    minWidth="2ch"
+                                    textAlign="center"
+                                  >
+                                    {quantity}
+                                  </Typography>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      handleQuantityChange(item.cartItemId, 1)
+                                    }
+                                    disabled={
+                                      updatingItemId === item.cartItemId
+                                    }
+                                  >
+                                    <AddIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
                                 <Typography
-                                  variant="body2"
+                                  variant="h6"
+                                  color="error"
                                   fontWeight={600}
-                                  minWidth="2ch"
-                                  textAlign="center"
                                 >
-                                  {quantity}
+                                  {formatCurrency(lineTotal)}
                                 </Typography>
-                                <IconButton
+                                <Button
                                   size="small"
+                                  color="error"
+                                  startIcon={<DeleteIcon />}
                                   onClick={() =>
-                                    handleQuantityChange(item.cartItemId, 1)
+                                    handleRemoveItem(item.cartItemId)
                                   }
                                   disabled={updatingItemId === item.cartItemId}
                                 >
-                                  <AddIcon fontSize="small" />
-                                </IconButton>
+                                  Xóa
+                                </Button>
                               </Box>
-                              <Typography
-                                variant="h6"
-                                color="error"
-                                fontWeight={600}
-                              >
-                                {formatCurrency(lineTotal)}
-                              </Typography>
-                              <Button
-                                size="small"
-                                color="error"
-                                startIcon={<DeleteIcon />}
-                                onClick={() =>
-                                  handleRemoveItem(item.cartItemId)
-                                }
-                                disabled={updatingItemId === item.cartItemId}
-                              >
-                                Xóa
-                              </Button>
                             </Box>
                           </Box>
-                        </Box>
                         </CardContent>
                       </Card>
                     </Box>
@@ -529,6 +555,12 @@ export const CartPage = () => {
                 <Typography variant="h6" fontWeight={600} mb={2}>
                   Tóm tắt đơn hàng
                 </Typography>
+
+                {totalsWarningMessage && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    {totalsWarningMessage}
+                  </Alert>
+                )}
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2" color="text.secondary">
                     Tạm tính
@@ -592,6 +624,26 @@ export const CartPage = () => {
           </Box>
         )}
       </Container>
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Xóa sản phẩm"
+        description="Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?"
+        confirmText="Xóa"
+        loading={updatingItemId === confirmDeleteId}
+        onConfirm={() => confirmDeleteId && void doRemoveItem(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmClearOpen}
+        title="Xóa toàn bộ giỏ hàng"
+        description="Toàn bộ sản phẩm trong giỏ hàng sẽ bị xóa. Bạn có chắc chắn không?"
+        confirmText="Xóa hết"
+        loading={isClearing}
+        onConfirm={() => void doClearCart()}
+        onClose={() => setConfirmClearOpen(false)}
+      />
     </MainLayout>
   );
 };

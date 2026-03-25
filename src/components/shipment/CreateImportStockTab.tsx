@@ -456,7 +456,7 @@ export const CreateImportStockTab: React.FC = () => {
                             const selectedVariant = variants.find(
                               (variant) => variant.id === item.variantId,
                             );
-                            const imageUrl = selectedVariant?.primaryImage?.url;
+                            const imageUrl = selectedVariant?.primaryImageUrl;
 
                             return imageUrl ? (
                               <img

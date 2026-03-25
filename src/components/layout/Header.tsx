@@ -24,10 +24,13 @@ import {
   ShoppingBag as ShoppingBagIcon,
   PointOfSale as PointOfSaleIcon,
   Tv as TvIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
+import { useThemeMode } from "../../contexts/ThemeContext";
 import { useState, useEffect } from "react";
 import { CartDropdown } from "../common/CartDropdown";
 import { HeaderSearch } from "./HeaderSearch";
@@ -55,6 +58,7 @@ export const Header = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const { cartCount } = useCart();
+  const { mode, toggleMode } = useThemeMode();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [cartAnchorEl, setCartAnchorEl] = useState<null | HTMLElement>(null);
   const [hoverTimerRef, setHoverTimerRef] = useState<number | null>(null);
@@ -232,6 +236,13 @@ export const Header = () => {
           >
             <IconButton color="default" aria-label="Thông báo">
               <NotificationsNone />
+            </IconButton>
+            <IconButton
+              color="default"
+              aria-label="Chuyển chế độ tối/sáng"
+              onClick={toggleMode}
+            >
+              {mode === "dark" ? <LightModeIcon /> : <DarkModeIcon />}
             </IconButton>
             {!isBackOfficeRole && (
               <>
