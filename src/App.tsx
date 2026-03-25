@@ -96,8 +96,8 @@ const ContentManagementPage = lazy(() =>
   })),
 );
 const AIInstructionPage = lazy(() => import("./pages/AIInstructionPage"));
-const QuizManagementPage = lazy(() => import("./pages/QuizManagementPage"));
-const QuizPage = lazy(() => import("./pages/QuizPage"));
+const SurveyManagementPage = lazy(() => import("./pages/SurveyManagementPage"));
+const SurveyPage = lazy(() => import("./pages/SurveyPage"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const UserLogsManagementPage = lazy(() =>
   import("./pages/UserLogsManagementPage").then((m) => ({
@@ -198,7 +198,7 @@ function App() {
                         element={<CounterCheckoutDisplayPage />}
                       />
                       <Route path="/products" element={<ProductListPage />} />
-                      <Route path="/quiz" element={<QuizPage />} />
+                      <Route path="/survey" element={<SurveyPage />} />
                       <Route
                         path="/products/:productId"
                         element={<ProductDetailPage />}
@@ -356,10 +356,10 @@ function App() {
                         }
                       />
                       <Route
-                        path="/admin/quiz"
+                        path="/admin/survey"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
-                            <QuizManagementPage />
+                            <SurveyManagementPage />
                           </RoleBasedRoute>
                         }
                       />

@@ -501,17 +501,17 @@ export const Header = () => {
             </>
           )}
 
-          {/* Quiz AI */}
+          {/* Survey AI */}
           <Button
             color="inherit"
-            onClick={() => navigate("/quiz")}
+            onClick={() => navigate("/survey")}
             sx={{
               fontWeight: 500,
               color: "text.primary",
               "&:hover": { color: "primary.main" },
             }}
           >
-            Quiz AI
+            Survey AI
           </Button>
         </Box>
       </Container>

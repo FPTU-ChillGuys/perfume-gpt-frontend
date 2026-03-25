@@ -10,17 +10,17 @@ import {
     Typography,
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
-import type { QuizQuestion } from "@/types/quiz";
+import type { SurveyQuestion } from "@/types/survey";
 
 interface Props {
     open: boolean;
-    item: QuizQuestion | null;
+    item: SurveyQuestion | null;
     isDeleting: boolean;
     onClose: () => void;
     onConfirm: () => void;
 }
 
-export default function QuizDeleteDialog({ open, item, isDeleting, onClose, onConfirm }: Props) {
+export default function SurveyDeleteDialog({ open, item, isDeleting, onClose, onConfirm }: Props) {
     return (
         <Dialog
             open={open}

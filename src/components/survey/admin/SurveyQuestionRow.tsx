@@ -18,19 +18,19 @@ import {
     ExpandLess as ExpandLessIcon,
     ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
-import { QuestionType } from "@/types/quiz";
-import type { QuizQuestion } from "@/types/quiz";
+import { QuestionType } from "@/types/survey";
+import type { SurveyQuestion } from "@/types/survey";
 import dayjs from "dayjs";
 
 interface Props {
-    item: QuizQuestion;
+    item: SurveyQuestion;
     isExpanded: boolean;
     onToggle: (id: string) => void;
-    onEdit: (item: QuizQuestion) => void;
-    onDelete: (item: QuizQuestion) => void;
+    onEdit: (item: SurveyQuestion) => void;
+    onDelete: (item: SurveyQuestion) => void;
 }
 
-function QuizQuestionRow({ item, isExpanded, onToggle, onEdit, onDelete }: Props) {
+function SurveyQuestionRow({ item, isExpanded, onToggle, onEdit, onDelete }: Props) {
     return (
         <>
             <TableRow
@@ -139,4 +139,4 @@ function QuizQuestionRow({ item, isExpanded, onToggle, onEdit, onDelete }: Props
     );
 }
 
-export default React.memo(QuizQuestionRow);
+export default React.memo(SurveyQuestionRow);

@@ -34,7 +34,7 @@ import {
   ShoppingCart as ShoppingCartIcon,
   Slideshow as SlideshowIcon,
   SmartToy as BotIcon,
-  Quiz as QuizIcon,
+  Survey as SurveyIcon,
   Feed as FeedIcon,
   Chat as ChatIcon,
   ThumbsUpDown as ThumbsUpDownIcon,
@@ -146,9 +146,9 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
-    text: "Quiz",
-    icon: <QuizIcon />,
-    path: "/admin/quiz",
+    text: "Survey",
+    icon: <SurveyIcon />,
+    path: "/admin/survey",
     roles: ["admin"],
   },
   {
@@ -311,9 +311,9 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               >
                 <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
                   {item.text === "Đợt nhập hàng" &&
-                  user?.role === "staff" &&
-                  pendingCount > 0 &&
-                  collapsed ? (
+                    user?.role === "staff" &&
+                    pendingCount > 0 &&
+                    collapsed ? (
                     <Badge badgeContent={pendingCount} color="error" max={99}>
                       {item.icon}
                     </Badge>

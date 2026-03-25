@@ -8,17 +8,17 @@ import {
     RadioGroup,
     Typography,
 } from "@mui/material";
-import type { QuizQuestion } from "@/types/quiz";
-import { QuestionType } from "@/types/quiz";
+import type { SurveyQuestion } from "@/types/survey";
+import { QuestionType } from "@/types/survey";
 
 interface Props {
-    question: QuizQuestion;
+    question: SurveyQuestion;
     selectedIds: Set<string>;
     onSingleSelect: (questionId: string, answerId: string) => void;
     onMultiSelect: (questionId: string, answerId: string, checked: boolean) => void;
 }
 
-export default function QuizQuestionCard({
+export default function SurveyQuestionCard({
     question,
     selectedIds,
     onSingleSelect,

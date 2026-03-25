@@ -22,18 +22,18 @@ import {
     Add as AddIcon,
     AddCircleOutline as AddAnswerIcon,
     Close as CloseIcon,
-    Quiz as QuizIcon,
+    Survey as SurveyIcon,
     RemoveCircleOutline as RemoveAnswerIcon,
     DeleteOutline as DeleteIcon,
 } from "@mui/icons-material";
-import { QuestionType } from "@/types/quiz";
-import type { QuizQuestionRequest } from "@/types/quiz";
+import { QuestionType } from "@/types/survey";
+import type { SurveyQuestionRequest } from "@/types/survey";
 
 interface Props {
     open: boolean;
     isCreating: boolean;
     onClose: () => void;
-    onSubmit: (payload: QuizQuestionRequest[]) => void;
+    onSubmit: (payload: SurveyQuestionRequest[]) => void;
 }
 
 interface QuestionForm {
@@ -43,7 +43,7 @@ interface QuestionForm {
     answers: string[];
 }
 
-export default function QuizAddDialog({ open, isCreating, onClose, onSubmit }: Props) {
+export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }: Props) {
     const createEmptyForm = (): QuestionForm => ({
         id: uuid(),
         question: "",
@@ -103,7 +103,7 @@ export default function QuizAddDialog({ open, isCreating, onClose, onSubmit }: P
     };
 
     const handleSubmit = () => {
-        const payload: QuizQuestionRequest[] = forms.map((f) => {
+        const payload: SurveyQuestionRequest[] = forms.map((f) => {
             const filled = f.answers.filter((a) => a.trim());
             return {
                 question: f.question.trim(),
@@ -132,7 +132,7 @@ export default function QuizAddDialog({ open, isCreating, onClose, onSubmit }: P
                 }}
             >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <QuizIcon color="primary" />
+                    <SurveyIcon color="primary" />
                     <Typography variant="h6" fontWeight="bold">Thêm câu hỏi mới</Typography>
                 </Box>
                 <IconButton onClick={onClose} disabled={isCreating} size="small">
