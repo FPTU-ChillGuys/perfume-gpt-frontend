@@ -1,4 +1,4 @@
-import { apiInstance } from "@/lib/api";
+import { aiApiInstance } from "@/lib/api";
 import type {
     ProductListItemWithVariants,
     PagedProductListWithVariants,
@@ -15,7 +15,7 @@ export type AiProductSearchQuery = {
 };
 
 class AiProductSearchService {
-    private readonly SEMANTIC_SEARCH_ENDPOINT = "/api/products/search/semantic";
+    private readonly SEMANTIC_SEARCH_ENDPOINT = "/products/search/";
 
     private createEmptyPagedResult<T>(query?: AiProductSearchQuery) {
         return {
@@ -33,7 +33,7 @@ class AiProductSearchService {
         query: AiProductSearchQuery,
     ): Promise<PagedProductListWithVariants> {
         try {
-            const response = await apiInstance.GET(this.SEMANTIC_SEARCH_ENDPOINT as any, {
+            const response = await aiApiInstance.GET(this.SEMANTIC_SEARCH_ENDPOINT as any, {
                 params: {
                     query,
                 },
@@ -65,7 +65,7 @@ class AiProductSearchService {
         searchText: string,
     ): Promise<PagedProductListWithVariants> {
         try {
-            const response = await apiInstance.GET(this.SEMANTIC_SEARCH_ENDPOINT as any, {
+            const response = await aiApiInstance.GET(this.SEMANTIC_SEARCH_ENDPOINT as any, {
                 params: {
                     query: { searchText, PageNumber: 1, PageSize: 5 },
                 },

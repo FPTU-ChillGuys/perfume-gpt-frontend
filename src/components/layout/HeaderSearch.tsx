@@ -13,6 +13,8 @@ import {
     Avatar,
     ListItemText,
     Divider,
+    ToggleButton,
+    ToggleButtonGroup,
 } from "@mui/material";
 import { Search as SearchIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -28,12 +30,15 @@ import {
 
 export const HeaderSearch = () => {
     const navigate = useNavigate();
+    const [activeVersion, setActiveVersion] = useState<"v1" | "v2">("v1");
     const [searchTerm, setSearchTerm] = useState("");
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<ProductListItemWithVariants[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
 
     const searchContainerRef = useRef<HTMLDivElement>(null);
+
+    const delay = activeVersion === "v1" ? 800 : 1500;
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const debouncedSearch = useCallback(
@@ -53,8 +58,8 @@ export const HeaderSearch = () => {
             } finally {
                 setIsSearching(false);
             }
-        }, 800),
-        []
+        }, delay),
+        [delay]
     );
 
     useEffect(() => {
@@ -93,24 +98,54 @@ export const HeaderSearch = () => {
         }
     };
 
+    const handleVersionChange = (
+        _event: React.MouseEvent<HTMLElement>,
+        newVersion: "v1" | "v2" | null,
+    ) => {
+        if (newVersion !== null) {
+            setActiveVersion(newVersion);
+        }
+    };
+
     return (
         <ClickAwayListener onClickAway={() => setShowDropdown(false)}>
             <Box
                 ref={searchContainerRef}
                 sx={{
                     flex: 1,
-                    maxWidth: 640,
-                    mx: 4,
+                    maxWidth: 700,
+                    mx: 2,
                     display: "flex",
-                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: 1,
                     position: "relative",
-                    zIndex: 1400, // Make sure it's above other elements
+                    zIndex: 1400,
                 }}
             >
+                <ToggleButtonGroup
+                    value={activeVersion}
+                    exclusive
+                    onChange={handleVersionChange}
+                    size="small"
+                    sx={{
+                        height: 40,
+                        backgroundColor: "background.paper",
+                        "& .MuiToggleButton-root": {
+                            px: 1.5,
+                            py: 0,
+                            fontWeight: 600,
+                            fontSize: "0.75rem",
+                        }
+                    }}
+                >
+                    <ToggleButton value="v1">V1</ToggleButton>
+                    <ToggleButton value="v2">V2</ToggleButton>
+                </ToggleButtonGroup>
+
                 <TextField
                     fullWidth
                     size="small"
-                    placeholder="Tìm kiếm sản phẩm..."
+                    placeholder={`Tìm kiếm sản phẩm (${activeVersion.toUpperCase()})...`}
                     value={searchTerm}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
@@ -126,6 +161,11 @@ export const HeaderSearch = () => {
                             </InputAdornment>
                         ),
                     }}
+                    sx={{
+                        "& .MuiOutlinedInput-root": {
+                            height: 40,
+                        }
+                    }}
                 />
 
                 {/* Dropdown Suggestions */}
@@ -135,8 +175,8 @@ export const HeaderSearch = () => {
                         sx={{
                             position: "absolute",
                             top: "100%",
-                            left: 4,
-                            right: 4,
+                            left: 56, // Adjust to line up with text field after toggle buttons
+                            right: 0,
                             mt: 1,
                             maxHeight: 400,
                             overflowY: "auto",
@@ -148,7 +188,7 @@ export const HeaderSearch = () => {
                     >
                         <Box sx={{ p: 1.5, bgcolor: "grey.50" }}>
                             <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                                Sản phẩm gợi ý
+                                Sản phẩm gợi ý ({activeVersion.toUpperCase()} - Wait: {delay / 1000}s)
                             </Typography>
                         </Box>
                         <Divider />
