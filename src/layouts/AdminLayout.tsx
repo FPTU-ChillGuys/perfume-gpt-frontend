@@ -34,7 +34,7 @@ import {
   ShoppingCart as ShoppingCartIcon,
   Slideshow as SlideshowIcon,
   SmartToy as BotIcon,
-  Survey as SurveyIcon,
+  Quiz as SurveyIcon,
   Feed as FeedIcon,
   Chat as ChatIcon,
   ThumbsUpDown as ThumbsUpDownIcon,

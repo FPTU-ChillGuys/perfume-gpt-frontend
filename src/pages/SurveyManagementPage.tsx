@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import {
     Add as AddIcon,
-    Survey as SurveyIcon,
+    Quiz as SurveyIcon,
     Search as SearchIcon,
 } from "@mui/icons-material";
 import { useToast } from "@/hooks/useToast";

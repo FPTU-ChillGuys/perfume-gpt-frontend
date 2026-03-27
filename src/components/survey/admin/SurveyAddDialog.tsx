@@ -22,7 +22,7 @@ import {
     Add as AddIcon,
     AddCircleOutline as AddAnswerIcon,
     Close as CloseIcon,
-    Survey as SurveyIcon,
+    Quiz as SurveyIcon,
     RemoveCircleOutline as RemoveAnswerIcon,
     DeleteOutline as DeleteIcon,
 } from "@mui/icons-material";
