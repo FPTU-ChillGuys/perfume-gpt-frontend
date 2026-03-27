@@ -216,7 +216,6 @@ export const ProductListPage = () => {
   const searchParamValue = searchParams.get("search") || "";
   const categoryIdParam = searchParams.get("categoryId") || "";
   const categoryNameParam = searchParams.get("categoryName") || "";
-  const searchVersionParam = (searchParams.get("searchVersion") as "v2" | "v3") || "v2";
   const isHomeSourceMode = Boolean(source);
   const [searchTerm, setSearchTerm] = useState(searchParamValue);
   const [sort, setSort] = useState<SortValue>(
@@ -452,7 +451,7 @@ export const ProductListPage = () => {
             PageNumber: page,
             PageSize: pageSize,
             IsDescending: true,
-          }, searchVersionParam);
+          });
 
           if (!isMounted) return;
 
@@ -1134,7 +1133,6 @@ export const ProductListPage = () => {
                               });
                             setSearchParams({
                               search: searchTerm.trim(),
-                              searchVersion: searchVersionParam,
                             });
                           } else {
                             const newParams = new URLSearchParams(searchParams);

@@ -1,4 +1,4 @@
-import { aiApiInstance } from "@/lib/api";
+import { apiInstance } from "@/lib/api";
 import type {
     ProductListItemWithVariants,
     PagedProductListWithVariants,
@@ -15,12 +15,7 @@ export type AiProductSearchQuery = {
 };
 
 class AiProductSearchService {
-    private readonly SEARCH_V2_ENDPOINT = "/products/search/v2";
-    private readonly SEARCH_V3_ENDPOINT = "/products/search/v3";
-
-    private getEndpoint(version: "v2" | "v3" = "v2") {
-        return version === "v3" ? this.SEARCH_V3_ENDPOINT : this.SEARCH_V2_ENDPOINT;
-    }
+    private readonly SEMANTIC_SEARCH_ENDPOINT = "/api/products/search/semantic";
 
     private createEmptyPagedResult<T>(query?: AiProductSearchQuery) {
         return {
@@ -36,54 +31,56 @@ class AiProductSearchService {
 
     async searchProducts(
         query: AiProductSearchQuery,
-        version: "v2" | "v3" = "v2"
     ): Promise<PagedProductListWithVariants> {
         try {
-            const response = await aiApiInstance.GET(this.getEndpoint(version), {
+            const response = await apiInstance.GET(this.SEMANTIC_SEARCH_ENDPOINT as any, {
                 params: {
                     query,
                 },
             });
 
-            if (!response.data?.success) {
+            if (!response.data || !("payload" in response.data)) {
                 throw new Error(
-                    response.data?.message || `Failed to search products via AI ${version}`,
+                    (response.data as any)?.message || "Failed to search products via semantic search",
                 );
             }
 
+            const payload = (response.data as any).payload as PagedProductListWithVariants;
+
             return (
-                response.data.data ||
+                payload ||
                 this.createEmptyPagedResult<ProductListItemWithVariants>(query)
             );
         } catch (error: any) {
-            console.error(`Error searching products via AI ${version}:`, error);
+            console.error("Error searching products via semantic search:", error);
             throw new Error(
                 error.response?.data?.message ||
                 error.message ||
-                `Failed to search products via AI ${version}`,
+                "Failed to search products via semantic search",
             );
         }
     }
 
     async getSearchSuggestions(
         searchText: string,
-        version: "v2" | "v3" = "v2"
     ): Promise<PagedProductListWithVariants> {
         try {
-            const response = await aiApiInstance.GET(this.getEndpoint(version), {
+            const response = await apiInstance.GET(this.SEMANTIC_SEARCH_ENDPOINT as any, {
                 params: {
                     query: { searchText, PageNumber: 1, PageSize: 5 },
                 },
             });
 
-            if (!response.data?.success) {
+            if (!response.data || !("payload" in response.data)) {
                 throw new Error(
-                    response.data?.message || `Failed to fetch search suggestions ${version}`,
+                    (response.data as any)?.message || "Failed to fetch search suggestions",
                 );
             }
 
+            const payload = (response.data as any).payload as PagedProductListWithVariants;
+
             return (
-                response.data.data || {
+                payload || {
                     items: [],
                     pageNumber: 1,
                     pageSize: 5,
@@ -92,11 +89,11 @@ class AiProductSearchService {
                 }
             );
         } catch (error: any) {
-            console.error(`Error fetching search suggestions ${version}:`, error);
+            console.error("Error fetching search suggestions:", error);
             throw new Error(
                 error.response?.data?.message ||
                 error.message ||
-                `Failed to fetch search suggestions ${version}`,
+                "Failed to fetch search suggestions",
             );
         }
     }

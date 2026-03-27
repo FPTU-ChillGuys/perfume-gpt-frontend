@@ -14,15 +14,8 @@ import {
     ListItemText,
     Divider,
 } from "@mui/material";
-import {
-    Search as SearchIcon,
-    Bolt as VectorIcon,
-    AutoGraph as HybridIcon,
-} from "@mui/icons-material";
-import {
-    useNavigate,
-    useSearchParams as useReactRouterSearchParams
-} from "react-router-dom";
+import { Search as SearchIcon } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
 import { aiProductSearchService } from "@/services/ai/productSearchService";
@@ -35,21 +28,16 @@ import {
 
 export const HeaderSearch = () => {
     const navigate = useNavigate();
-    const [searchParams] = useReactRouterSearchParams();
     const [searchTerm, setSearchTerm] = useState("");
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<ProductListItemWithVariants[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
 
-    const [searchVersion, setSearchVersion] = useState<"v2" | "v3">(() => {
-        return (localStorage.getItem("ai_search_version") as "v2" | "v3") || "v2";
-    });
-
     const searchContainerRef = useRef<HTMLDivElement>(null);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const debouncedSearch = useCallback(
-        debounce(async (term: string, version: "v2" | "v3") => {
+        debounce(async (term: string) => {
             if (!term.trim()) {
                 setSuggestions([]);
                 return;
@@ -57,7 +45,7 @@ export const HeaderSearch = () => {
 
             setIsSearching(true);
             try {
-                const response = await aiProductSearchService.getSearchSuggestions(term, version);
+                const response = await aiProductSearchService.getSearchSuggestions(term);
                 setSuggestions(response.items || []);
             } catch (error) {
                 console.error("Failed to fetch search suggestions", error);
@@ -65,21 +53,17 @@ export const HeaderSearch = () => {
             } finally {
                 setIsSearching(false);
             }
-        }, searchVersion === "v3" ? 2000 : 500),
-        [searchVersion]
+        }, 800),
+        []
     );
 
     useEffect(() => {
-        debouncedSearch(searchTerm, searchVersion);
+        debouncedSearch(searchTerm);
         return () => {
             debouncedSearch.cancel();
         };
-    }, [searchTerm, searchVersion, debouncedSearch]);
+    }, [searchTerm, debouncedSearch]);
 
-    const handleVersionToggle = (version: "v2" | "v3") => {
-        setSearchVersion(version);
-        localStorage.setItem("ai_search_version", version);
-    };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
@@ -93,10 +77,7 @@ export const HeaderSearch = () => {
                 console.error("Failed to log search text", error);
             });
             setShowDropdown(false);
-            const params = new URLSearchParams();
-            params.set("search", searchTerm.trim());
-            params.set("searchVersion", searchVersion);
-            navigate(`/products?${params.toString()}`);
+            navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
         }
     };
 
@@ -129,7 +110,7 @@ export const HeaderSearch = () => {
                 <TextField
                     fullWidth
                     size="small"
-                    placeholder={searchVersion === "v3" ? "Tìm kiếm Hybrid (Debounce 2s)..." : "Tìm kiếm sản phẩm..."}
+                    placeholder="Tìm kiếm sản phẩm..."
                     value={searchTerm}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
@@ -139,62 +120,6 @@ export const HeaderSearch = () => {
                         }
                     }}
                     InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <Box sx={{ display: "flex", gap: 0.5, mr: 1 }}>
-                                    <Box
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleVersionToggle("v2");
-                                        }}
-                                        sx={{
-                                            cursor: "pointer",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            px: 1,
-                                            py: 0.25,
-                                            borderRadius: 1,
-                                            bgcolor: searchVersion === "v2" ? "primary.main" : "transparent",
-                                            color: searchVersion === "v2" ? "primary.contrastText" : "text.secondary",
-                                            transition: "all 0.2s",
-                                            border: "1px solid",
-                                            borderColor: searchVersion === "v2" ? "primary.main" : "divider",
-                                            "&:hover": {
-                                                bgcolor: searchVersion === "v2" ? "primary.dark" : "grey.100",
-                                            }
-                                        }}
-                                    >
-                                        <VectorIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                                        <Typography variant="caption" fontWeight={700}>V2</Typography>
-                                    </Box>
-                                    <Box
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleVersionToggle("v3");
-                                        }}
-                                        sx={{
-                                            cursor: "pointer",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            px: 1,
-                                            py: 0.25,
-                                            borderRadius: 1,
-                                            bgcolor: searchVersion === "v3" ? "secondary.main" : "transparent",
-                                            color: searchVersion === "v3" ? "secondary.contrastText" : "text.secondary",
-                                            transition: "all 0.2s",
-                                            border: "1px solid",
-                                            borderColor: searchVersion === "v3" ? "secondary.main" : "divider",
-                                            "&:hover": {
-                                                bgcolor: searchVersion === "v3" ? "secondary.dark" : "grey.100",
-                                            }
-                                        }}
-                                    >
-                                        <HybridIcon sx={{ fontSize: 16, mr: 0.5 }} />
-                                        <Typography variant="caption" fontWeight={700}>V3</Typography>
-                                    </Box>
-                                </Box>
-                            </InputAdornment>
-                        ),
                         endAdornment: (
                             <InputAdornment position="end">
                                 {isSearching ? <CircularProgress size={20} /> : <SearchIcon color="action" />}
@@ -305,10 +230,7 @@ export const HeaderSearch = () => {
                                     console.error("Failed to log search text", error);
                                 });
                                 setShowDropdown(false);
-                                const params = new URLSearchParams();
-                                params.set("search", searchTerm.trim());
-                                params.set("searchVersion", searchVersion);
-                                navigate(`/products?${params.toString()}`);
+                                navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
                             }}
                             sx={{
                                 p: 1.5,
@@ -321,7 +243,7 @@ export const HeaderSearch = () => {
                             }}
                         >
                             <Typography variant="body2" color="primary.main" fontWeight={600}>
-                                {searchVersion === "v3" ? "Xem tất cả kết quả Hybrid" : "Xem tất cả kết quả cho"} "{searchTerm}"
+                                Xem tất cả kết quả cho "{searchTerm}"
                             </Typography>
                         </Box>
                     </Paper>
