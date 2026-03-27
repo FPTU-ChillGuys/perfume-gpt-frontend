@@ -30,7 +30,10 @@ import {
 
 export const HeaderSearch = () => {
     const navigate = useNavigate();
-    const [activeVersion, setActiveVersion] = useState<"v1" | "v2">("v1");
+    const [activeVersion, setActiveVersion] = useState<"v1" | "v2">(() => {
+        const savedVersion = localStorage.getItem("searchVersion");
+        return (savedVersion === "v1" || savedVersion === "v2") ? savedVersion : "v1";
+    });
     const [searchTerm, setSearchTerm] = useState("");
     const [isSearching, setIsSearching] = useState(false);
     const [suggestions, setSuggestions] = useState<ProductListItemWithVariants[]>([]);
@@ -50,8 +53,19 @@ export const HeaderSearch = () => {
 
             setIsSearching(true);
             try {
-                const response = await aiProductSearchService.getSearchSuggestions(term);
-                setSuggestions(response.items || []);
+                let items: ProductListItemWithVariants[] = [];
+                if (activeVersion === "v1") {
+                    const response = await aiProductSearchService.searchProducts({
+                        searchText: term,
+                        PageNumber: 1,
+                        PageSize: 5
+                    });
+                    items = response.items || [];
+                } else {
+                    const response = await aiProductSearchService.getSearchSuggestions(term);
+                    items = response.items || [];
+                }
+                setSuggestions(items);
             } catch (error) {
                 console.error("Failed to fetch search suggestions", error);
                 setSuggestions([]);
@@ -104,6 +118,7 @@ export const HeaderSearch = () => {
     ) => {
         if (newVersion !== null) {
             setActiveVersion(newVersion);
+            localStorage.setItem("searchVersion", newVersion);
         }
     };
 
