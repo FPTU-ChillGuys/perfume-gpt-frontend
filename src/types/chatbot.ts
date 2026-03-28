@@ -47,6 +47,7 @@ export interface ChatProduct {
 export interface AssistantPayload {
     message: string;
     products: ChatProduct[];
+    suggestedQuestions?: string[];
 }
 
 export interface ConversationRequest {

@@ -4,7 +4,7 @@ import type { ProductCardOutputItem } from "@/types/ai/product.output";
 export function parseAssistantPayload(raw: string): AssistantPayload {
   try {
     const parsed = JSON.parse(raw) as any;
-    
+
     // Handle new ProductCardOutputItem format from AI
     if (parsed.products && Array.isArray(parsed.products)) {
       const products: ChatProduct[] = parsed.products.map((item: ProductCardOutputItem) => ({
@@ -27,13 +27,14 @@ export function parseAssistantPayload(raw: string): AssistantPayload {
           reservedQuantity: null,
         })) || [],
       }));
-      
+
       return {
         message: parsed.message || raw,
         products,
+        suggestedQuestions: parsed.suggestedQuestions || [],
       };
     }
-    
+
     return parsed as AssistantPayload;
   } catch {
     return { message: raw, products: [] };

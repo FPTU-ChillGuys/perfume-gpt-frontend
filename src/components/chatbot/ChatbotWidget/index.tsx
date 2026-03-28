@@ -450,6 +450,7 @@ export default function ChatbotWidget() {
                 msg={msg}
                 onAddToCart={handleAddToCart}
                 onNavigate={handleNavigate}
+                onSuggestionClick={sendMessageText}
               />
             )}
             renderTypingIndicator={() => <TypingIndicator />}
