@@ -78,7 +78,7 @@ export function MessageBubble({
             borderRadius: "18px 18px 18px 4px",
             px: 2,
             py: 1,
-            mb: payload.products.length > 0 ? 1 : 0,
+            mb: payload.products?.length > 0 ? 1 : 0,
             "& > p": { lineHeight: 1.6, mb: 1, margin: 0 },
             "& > p:last-child": { mb: 0 },
             "& ul, & ol": { pl: 2, mb: 1 },
@@ -118,7 +118,7 @@ export function MessageBubble({
         </Box>
 
         {/* Product cards */}
-        {payload.products.length > 0 && (
+        {payload.products?.length > 0 && (
           <Box
             sx={{
               display: "flex",

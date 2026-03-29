@@ -3,7 +3,7 @@ import type { ProductCardOutputItem } from "@/types/ai/product.output";
 
 export function parseAssistantPayload(raw: string): AssistantPayload {
   try {
-    const parsed = JSON.parse(raw) as any;
+    let parsed = JSON.parse(raw) as any;
 
     // Handle new ProductCardOutputItem format from AI
     if (parsed.products && Array.isArray(parsed.products)) {
@@ -33,6 +33,10 @@ export function parseAssistantPayload(raw: string): AssistantPayload {
         products,
         suggestedQuestions: parsed.suggestedQuestions || [],
       };
+    }
+
+    if (parsed.products === null || parsed.products === undefined) {
+      parsed.products = [];
     }
 
     return parsed as AssistantPayload;
