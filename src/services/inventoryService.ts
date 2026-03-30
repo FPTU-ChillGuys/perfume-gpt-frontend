@@ -21,6 +21,12 @@ export type InventoryStockQuery = {
   IsDescending?: boolean;
 };
 
+type BatchByVariantQuery = {
+  VariantId: string;
+  PageNumber?: number;
+  PageSize?: number;
+};
+
 class InventoryService {
   private extractErrorMessage(error: any, fallback: string) {
     return error?.response?.data?.message || error?.message || fallback;
@@ -45,18 +51,21 @@ class InventoryService {
 
   async getBatchesByVariant(variantId: string): Promise<BatchDetailResponse[]> {
     try {
-      const response = await apiInstance.GET(
-        "/api/inventory/batches/variant/{variantId}",
-        {
-          params: { path: { variantId } },
-        },
-      );
+      const query: BatchByVariantQuery = {
+        VariantId: variantId,
+        PageNumber: 1,
+        PageSize: 100,
+      };
+
+      const response = await apiInstance.GET("/api/batches", {
+        params: { query },
+      });
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to fetch batches");
       }
 
-      return response.data.payload || [];
+      return response.data.payload?.items || [];
     } catch (error: any) {
       console.error("Error fetching variant batches:", error);
       throw new Error(

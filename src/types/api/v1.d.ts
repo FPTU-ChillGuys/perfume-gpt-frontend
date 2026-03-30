@@ -677,7 +677,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/dashboard/revenue": {
+    "/api/admindashboard/revenue": {
         parameters: {
             query?: never;
             header?: never;
@@ -728,7 +728,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/dashboard/inventory-levels": {
+    "/api/admindashboard/inventory-levels": {
         parameters: {
             query?: never;
             header?: never;
@@ -778,7 +778,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/dashboard/top-products": {
+    "/api/admindashboard/top-products": {
         parameters: {
             query?: never;
             header?: never;
@@ -830,7 +830,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/admin/dashboard/overview": {
+    "/api/admindashboard/overview": {
         parameters: {
             query?: never;
             header?: never;
@@ -1007,8 +1007,8 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Created */
-                201: {
+                /** @description OK */
+                200: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1524,8 +1524,8 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    email?: string;
-                    token?: string;
+                    Email?: string;
+                    Token?: string;
                 };
                 header?: never;
                 path?: never;
@@ -1959,56 +1959,6 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
                         "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
                         "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/batches/variant/{variantId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    variantId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
                     };
                 };
             };
@@ -2805,9 +2755,9 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["CreateCampaignPromotionItemRequest"];
-                    "text/json": components["schemas"]["CreateCampaignPromotionItemRequest"];
-                    "application/*+json": components["schemas"]["CreateCampaignPromotionItemRequest"];
+                    "application/json": components["schemas"]["UpdateCampaignPromotionItemRequest"];
+                    "text/json": components["schemas"]["UpdateCampaignPromotionItemRequest"];
+                    "application/*+json": components["schemas"]["UpdateCampaignPromotionItemRequest"];
                 };
             };
             responses: {
@@ -3235,7 +3185,67 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateCartItemRequest"];
+                    "text/json": components["schemas"]["CreateCartItemRequest"];
+                    "application/*+json": components["schemas"]["CreateCartItemRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -3375,83 +3385,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/cart/items/add-to-cart": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["CreateCartItemRequest"];
-                    "text/json": components["schemas"]["CreateCartItemRequest"];
-                    "application/*+json": components["schemas"]["CreateCartItemRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cart/items/{id}/update-cart-item": {
+    "/api/cart/items/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3522,22 +3456,6 @@ export interface paths {
                 };
             };
         };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/cart/items/{id}/remove-from-cart": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
         post?: never;
         delete: {
             parameters: {
@@ -4181,7 +4099,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/importtickets/upload-excel": {
+    "/api/importtickets/excel-parser": {
         parameters: {
             query?: never;
             header?: never;
@@ -4261,7 +4179,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/importtickets/download-template": {
+    "/api/importtickets/excel-template": {
         parameters: {
             query?: never;
             header?: never;
@@ -4764,175 +4682,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/inventory/batches": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    VariantId?: string;
-                    SearchTerm?: string;
-                    IsExpired?: boolean;
-                    IsExpiringSoon?: boolean;
-                    PageNumber?: number;
-                    PageSize?: number;
-                    SortBy?: string;
-                    SortOrder?: string;
-                    IsDescending?: boolean;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/inventory/batches/variant/{variantId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    variantId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfBatchDetailResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/inventory/batches/{batchId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    batchId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/inventory/summary": {
         parameters: {
             query?: never;
@@ -4981,7 +4730,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/loyaltytransactions/me": {
+    "/api/loyaltytransactions/me/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    TransactionType?: components["schemas"]["LoyaltyTransactionType"];
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loyaltytransactions/me/total": {
         parameters: {
             query?: never;
             header?: never;
@@ -5003,9 +4807,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfGetLoyaltyPointResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfGetLoyaltyPointResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfGetLoyaltyPointResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
                     };
                 };
                 /** @description Bad Request */
@@ -5014,9 +4818,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfGetLoyaltyPointResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfGetLoyaltyPointResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfGetLoyaltyPointResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
                     };
                 };
             };
@@ -5029,31 +4833,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/loyaltytransactions/{userId}/plus": {
+    "/api/loyaltytransactions": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get?: never;
-        put?: never;
-        post: {
+        get: {
             parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    userId: string;
+                query?: {
+                    UserId?: string;
+                    TransactionType?: components["schemas"]["LoyaltyTransactionType"];
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
                 };
+                header?: never;
+                path?: never;
                 cookie?: never;
             };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PointsRequest"];
-                    "text/json": components["schemas"]["PointsRequest"];
-                    "application/*+json": components["schemas"]["PointsRequest"];
-                };
-            };
+            requestBody?: never;
             responses: {
                 /** @description OK */
                 200: {
@@ -5061,9 +4863,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
                     };
                 };
                 /** @description Bad Request */
@@ -5072,20 +4874,22 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
                     };
                 };
             };
         };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/loyaltytransactions/{userId}/redeem": {
+    "/api/loyaltytransactions/{userId}/manual-change": {
         parameters: {
             query?: never;
             header?: never;
@@ -5105,9 +4909,9 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["PointsRequest"];
-                    "text/json": components["schemas"]["PointsRequest"];
-                    "application/*+json": components["schemas"]["PointsRequest"];
+                    "application/json": components["schemas"]["ManualChangeRequest"];
+                    "text/json": components["schemas"]["ManualChangeRequest"];
+                    "application/*+json": components["schemas"]["ManualChangeRequest"];
                 };
             };
             responses: {
@@ -5117,9 +4921,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
                 /** @description Bad Request */
@@ -5128,9 +4932,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
             };
@@ -5388,6 +5192,7 @@ export interface paths {
             parameters: {
                 query?: {
                     Status?: components["schemas"]["CancelRequestStatus"];
+                    IsRefundRequired?: boolean;
                     PageNumber?: number;
                     PageSize?: number;
                     SortBy?: string;
@@ -5441,9 +5246,9 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["ProcessCancelRequestDto"];
-                    "text/json": components["schemas"]["ProcessCancelRequestDto"];
-                    "application/*+json": components["schemas"]["ProcessCancelRequestDto"];
+                    "application/json": components["schemas"]["ProcessCancelRequest"];
+                    "text/json": components["schemas"]["ProcessCancelRequest"];
+                    "application/*+json": components["schemas"]["ProcessCancelRequest"];
                 };
             };
             responses: {
@@ -5460,6 +5265,394 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateReturnRequestDto"];
+                    "text/json": components["schemas"]["CreateReturnRequestDto"];
+                    "application/*+json": components["schemas"]["CreateReturnRequestDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProcessInitialReturnDto"];
+                    "text/json": components["schemas"]["ProcessInitialReturnDto"];
+                    "application/*+json": components["schemas"]["ProcessInitialReturnDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}/start-inspection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartInspectionDto"];
+                    "text/json": components["schemas"]["StartInspectionDto"];
+                    "application/*+json": components["schemas"]["StartInspectionDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}/complete-inspection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RecordInspectionDto"];
+                    "text/json": components["schemas"]["RecordInspectionDto"];
+                    "application/*+json": components["schemas"]["RecordInspectionDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}/fail-inspection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RejectInspectionDto"];
+                    "text/json": components["schemas"]["RejectInspectionDto"];
+                    "application/*+json": components["schemas"]["RejectInspectionDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}/refund": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/images/temporary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/x-www-form-urlencoded": {
+                        Images?: components["schemas"]["IFormFile"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5575,6 +5768,67 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
                         "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
                         "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/my-orders/{orderId}/invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
                     };
                 };
             };
@@ -5758,6 +6012,67 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
                         "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
                         "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{orderId}/invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
                     };
                 };
             };
@@ -6587,7 +6902,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/payments/retry/{paymentId}": {
+    "/api/payments/{paymentId}/retry": {
         parameters: {
             query?: never;
             header?: never;
@@ -6665,7 +6980,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/payments/change-method/{paymentId}": {
+    "/api/payments/{paymentId}/method": {
         parameters: {
             query?: never;
             header?: never;
@@ -6743,7 +7058,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/payments/confirm/{paymentId}": {
+    "/api/payments/{paymentId}/confirm": {
         parameters: {
             query?: never;
             header?: never;
@@ -6753,17 +7068,20 @@ export interface paths {
         get?: never;
         put: {
             parameters: {
-                query?: {
-                    isSuccess?: boolean;
-                    failureReason?: string;
-                };
+                query?: never;
                 header?: never;
                 path: {
                     paymentId: string;
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ConfirmPaymentRequest"];
+                    "text/json": components["schemas"]["ConfirmPaymentRequest"];
+                    "application/*+json": components["schemas"]["ConfirmPaymentRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -8736,6 +9054,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reviews/{reviewId}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    reviewId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AnswerReviewRequest"];
+                    "text/json": components["schemas"]["AnswerReviewRequest"];
+                    "application/*+json": components["schemas"]["AnswerReviewRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reviews/{reviewId}": {
         parameters: {
             query?: never;
@@ -8789,80 +9185,7 @@ export interface paths {
                 };
             };
         };
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    reviewId: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateReviewRequest"];
-                    "text/json": components["schemas"]["UpdateReviewRequest"];
-                    "application/*+json": components["schemas"]["UpdateReviewRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-            };
-        };
+        put?: never;
         post?: never;
         delete: {
             parameters: {
@@ -10770,7 +11093,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/vouchers/my-vouchers": {
+    "/api/vouchers/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -10857,6 +11180,9 @@ export interface components {
             inventoryLevels?: components["schemas"]["InventoryLevelsResponse"];
             topProducts?: components["schemas"]["TopProductResponse"][];
         };
+        AnswerReviewRequest: {
+            staffFeedbackComment: string;
+        };
         AttributeLookupItem: {
             /** Format: int32 */
             id?: number;
@@ -10888,609 +11214,616 @@ export interface components {
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfAddressLevel4Response: {
             payload?: null | components["schemas"]["AddressLevel4Response"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfAddressResponse: {
             payload?: null | components["schemas"]["AddressResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfAdminDashboardOverviewResponse: {
             payload?: null | components["schemas"]["AdminDashboardOverviewResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfBatchDetailResponse: {
             payload?: null | components["schemas"]["BatchDetailResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfboolean: {
             payload?: boolean;
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfBrandResponse: {
             payload?: null | components["schemas"]["BrandResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfBulkActionResultOfGuid: {
             payload?: null | components["schemas"]["BulkActionResultOfGuid"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse: {
             payload?: null | components["schemas"]["BulkActionResultOfListOfTemporaryMediaResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfBulkActionResultOfstring: {
             payload?: null | components["schemas"]["BulkActionResultOfstring"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfCampaignResponse: {
             payload?: null | components["schemas"]["CampaignResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfCategoryResponse: {
             payload?: null | components["schemas"]["CategoryResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfConcentrationResponse: {
             payload?: null | components["schemas"]["ConcentrationResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfCreateImportTicketRequest: {
             payload?: null | components["schemas"]["CreateImportTicketRequest"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfExcelTemplateResponse: {
             payload?: null | components["schemas"]["ExcelTemplateResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfGetCartItemsResponse: {
             payload?: null | components["schemas"]["GetCartItemsResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfGetCartTotalResponse: {
             payload?: null | components["schemas"]["GetCartTotalResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
-        };
-        BaseResponseOfGetLoyaltyPointResponse: {
-            payload?: null | components["schemas"]["GetLoyaltyPointResponse"];
-            success?: boolean;
-            message?: string;
-            errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfImportTicketResponse: {
             payload?: null | components["schemas"]["ImportTicketResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfInventoryLevelsResponse: {
             payload?: null | components["schemas"]["InventoryLevelsResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfInventorySummaryResponse: {
             payload?: null | components["schemas"]["InventorySummaryResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfAddressResponse: {
             payload?: null | components["schemas"]["AddressResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfAttributeLookupItem: {
             payload?: null | components["schemas"]["AttributeLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfAttributeValueLookupItem: {
             payload?: null | components["schemas"]["AttributeValueLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
-        };
-        BaseResponseOfListOfBatchDetailResponse: {
-            payload?: null | components["schemas"]["BatchDetailResponse"][];
-            success?: boolean;
-            message?: string;
-            errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfBatchLookupResponse: {
             payload?: null | components["schemas"]["BatchLookupResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfBrandLookupItem: {
             payload?: null | components["schemas"]["BrandLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfBrandResponse: {
             payload?: null | components["schemas"]["BrandResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfCampaignPromotionItemResponse: {
             payload?: null | components["schemas"]["CampaignPromotionItemResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfCategoriesLookupItem: {
             payload?: null | components["schemas"]["CategoriesLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfCategoryResponse: {
             payload?: null | components["schemas"]["CategoryResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfConcentrationLookupDto: {
             payload?: null | components["schemas"]["ConcentrationLookupDto"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfConcentrationResponse: {
             payload?: null | components["schemas"]["ConcentrationResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfDistrictResponse: {
             payload?: null | components["schemas"]["DistrictResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfMediaResponse: {
             payload?: null | components["schemas"]["MediaResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfOlfactoryFamilyResponse: {
             payload?: null | components["schemas"]["OlfactoryFamilyResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfOlfactoryLookupResponse: {
             payload?: null | components["schemas"]["OlfactoryLookupResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfProductDailySaleFigureResponse: {
             payload?: null | components["schemas"]["ProductDailySaleFigureResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfProductLookupItem: {
             payload?: null | components["schemas"]["ProductLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfProvinceResponse: {
             payload?: null | components["schemas"]["ProvinceResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfRedeemableVoucherResponse: {
             payload?: null | components["schemas"]["RedeemableVoucherResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfReviewResponse: {
             payload?: null | components["schemas"]["ReviewResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfScentNoteLookupResponse: {
             payload?: null | components["schemas"]["ScentNoteLookupResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfScentNoteResponse: {
             payload?: null | components["schemas"]["ScentNoteResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfStaffLookupItem: {
             payload?: null | components["schemas"]["StaffLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfSupplierLookupItem: {
             payload?: null | components["schemas"]["SupplierLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfSupplierResponse: {
             payload?: null | components["schemas"]["SupplierResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfTopProductResponse: {
             payload?: null | components["schemas"]["TopProductResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfVariantLookupItem: {
             payload?: null | components["schemas"]["VariantLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfListOfWardResponse: {
             payload?: null | components["schemas"]["WardResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfLoyaltyTransactionTotalsResponse: {
+            payload?: null | components["schemas"]["LoyaltyTransactionTotalsResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfMediaResponse: {
             payload?: null | components["schemas"]["MediaResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfOlfactoryFamilyResponse: {
             payload?: null | components["schemas"]["OlfactoryFamilyResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfOrderResponse: {
             payload?: null | components["schemas"]["OrderResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfAvailableVoucherResponse: {
             payload?: null | components["schemas"]["PagedResultOfAvailableVoucherResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfBatchDetailResponse: {
             payload?: null | components["schemas"]["PagedResultOfBatchDetailResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfCampaignResponse: {
             payload?: null | components["schemas"]["PagedResultOfCampaignResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfImportTicketListItem: {
             payload?: null | components["schemas"]["PagedResultOfImportTicketListItem"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse: {
+            payload?: null | components["schemas"]["PagedResultOfLoyaltyTransactionHistoryItemResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfOrderCancelRequestResponse: {
             payload?: null | components["schemas"]["PagedResultOfOrderCancelRequestResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfOrderListItem: {
             payload?: null | components["schemas"]["PagedResultOfOrderListItem"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfProductListItem: {
             payload?: null | components["schemas"]["PagedResultOfProductListItem"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfProductListItemWithVariants: {
             payload?: null | components["schemas"]["PagedResultOfProductListItemWithVariants"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfReviewListItem: {
             payload?: null | components["schemas"]["PagedResultOfReviewListItem"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfStockAdjustmentListItem: {
             payload?: null | components["schemas"]["PagedResultOfStockAdjustmentListItem"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfStockResponse: {
             payload?: null | components["schemas"]["PagedResultOfStockResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfUserVoucherResponse: {
             payload?: null | components["schemas"]["PagedResultOfUserVoucherResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfVariantPagedItem: {
             payload?: null | components["schemas"]["PagedResultOfVariantPagedItem"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPagedResultOfVoucherResponse: {
             payload?: null | components["schemas"]["PagedResultOfVoucherResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPickListResponse: {
             payload?: null | components["schemas"]["PickListResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfPreviewOrderResponse: {
             payload?: null | components["schemas"]["PreviewOrderResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfProductFastLookResponse: {
             payload?: null | components["schemas"]["ProductFastLookResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfProductInforResponse: {
             payload?: null | components["schemas"]["ProductInforResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfProductResponse: {
             payload?: null | components["schemas"]["ProductResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfProductVariantResponse: {
             payload?: null | components["schemas"]["ProductVariantResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfProfileResponse: {
             payload?: null | components["schemas"]["ProfileResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfReceiptResponse: {
+            payload?: null | components["schemas"]["ReceiptResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfRevenueSummaryResponse: {
             payload?: null | components["schemas"]["RevenueSummaryResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfReviewDetailResponse: {
             payload?: null | components["schemas"]["ReviewDetailResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfReviewStatisticsResponse: {
             payload?: null | components["schemas"]["ReviewStatisticsResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfScentNoteResponse: {
             payload?: null | components["schemas"]["ScentNoteResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfStockAdjustmentResponse: {
             payload?: null | components["schemas"]["StockAdjustmentResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfStockResponse: {
             payload?: null | components["schemas"]["StockResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfstring: {
             payload?: null | string;
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfSupplierResponse: {
             payload?: null | components["schemas"]["SupplierResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfSwapDamagedStockResponse: {
             payload?: null | components["schemas"]["SwapDamagedStockResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfTokenResponse: {
             payload?: null | components["schemas"]["TokenResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfUserCredentialsResponse: {
             payload?: null | components["schemas"]["UserCredentialsResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfUserOrderResponse: {
             payload?: null | components["schemas"]["UserOrderResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfVoucherResponse: {
             payload?: null | components["schemas"]["VoucherResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
-            errorType?: components["schemas"]["ResponseErrorType"];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BatchDetailResponse: {
             /** Format: uuid */
@@ -11651,6 +11984,10 @@ export interface components {
             id?: number;
             name?: string;
         };
+        ConfirmPaymentRequest: {
+            isSuccess: boolean;
+            failureReason?: null | string;
+        };
         CreateAddressRequest: {
             recipientName: string;
             recipientPhoneNumber: string;
@@ -11744,16 +12081,16 @@ export interface components {
         CreateInStoreOrderRequest: {
             voucherCode?: null | string;
             isPickupInStore?: boolean;
-            orderDetails?: components["schemas"]["CreateOrderDetailRequest"][];
+            orderDetails: components["schemas"]["CreateOrderDetailRequest"][];
             recipient?: null | components["schemas"]["RecipientInformation"];
-            payment?: components["schemas"]["PaymentInformation"];
+            payment: components["schemas"]["PaymentInformation"];
         };
         CreateOlfactoryFamilyRequest: {
             name: string;
         };
         CreateOrderDetailRequest: {
             /** Format: uuid */
-            variantId?: string;
+            variantId: string;
             /** Format: int32 */
             quantity?: number;
         };
@@ -11766,7 +12103,7 @@ export interface components {
             /** Format: uuid */
             savedAddressId?: null | string;
             recipient?: null | components["schemas"]["RecipientInformation"];
-            payment?: components["schemas"]["PaymentInformation"];
+            payment: components["schemas"]["PaymentInformation"];
         };
         CreateProductRequest: {
             name: string;
@@ -11783,6 +12120,22 @@ export interface components {
             temporaryMediaIds?: null | string[];
             scentNotes?: components["schemas"]["ScentNoteDto"][];
             attributes?: null | components["schemas"]["ProductAttributeDto"][];
+        };
+        CreateReturnRequestDetailDto: {
+            /** Format: uuid */
+            orderDetailId: string;
+            /** Format: int32 */
+            returnedQuantity?: number;
+        };
+        CreateReturnRequestDto: {
+            /** Format: uuid */
+            orderId: string;
+            reason: string;
+            /** Format: decimal */
+            requestedRefundAmount?: number;
+            customerNote?: null | string;
+            temporaryMediaIds?: null | string[];
+            returnItems: components["schemas"]["CreateReturnRequestDetailDto"][];
         };
         CreateReviewRequest: {
             /** Format: uuid */
@@ -11872,8 +12225,7 @@ export interface components {
             /** Format: int32 */
             noteId?: number;
             noteName?: string;
-            /** Format: int32 */
-            preferenceLevel?: number;
+            noteType?: components["schemas"]["NoteType"];
         };
         /** @enum {string} */
         DeliveryMethod: "Delivery" | "PickupInStore";
@@ -11921,18 +12273,19 @@ export interface components {
             enableRangeProcessing?: boolean;
         };
         ForgotPasswordRequest: {
-            email?: string;
-            clientUri?: string;
+            /** Format: email */
+            email: string;
+            clientUri: string;
         };
         FulfillOrderItemRequest: {
             /** Format: uuid */
-            orderDetailId?: string;
-            scannedBatchCode?: string;
+            orderDetailId: string;
+            scannedBatchCode: string;
             /** Format: int32 */
             quantity?: number;
         };
         FulfillOrderRequest: {
-            items?: components["schemas"]["FulfillOrderItemRequest"][];
+            items: components["schemas"]["FulfillOrderItemRequest"][];
         };
         /** @enum {string} */
         Gender: "Male" | "Female" | "Unisex";
@@ -11967,14 +12320,8 @@ export interface components {
             /** Format: decimal */
             totalPrice?: number;
         };
-        GetLoyaltyPointResponse: {
-            /** Format: uuid */
-            userId?: string;
-            /** Format: int32 */
-            pointBalance?: number;
-        };
         GoogleLoginRequest: {
-            idToken?: string;
+            idToken: string;
         };
         /** Format: binary */
         IFormFile: string;
@@ -11997,7 +12344,7 @@ export interface components {
             batches?: components["schemas"]["BatchResponse"][];
         };
         /** @enum {string} */
-        ImportStatus: "Pending" | "InProgress" | "Completed" | "Canceled";
+        ImportStatus: "Pending" | "InProgress" | "Completed" | "Cancelled";
         ImportTicketListItem: {
             /** Format: uuid */
             id?: string;
@@ -12070,6 +12417,42 @@ export interface components {
         LoginRequest: {
             credential: string;
             password: string;
+        };
+        LoyaltyTransactionHistoryItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            userId?: string;
+            /** Format: uuid */
+            voucherId?: null | string;
+            /** Format: uuid */
+            orderId?: null | string;
+            transactionType?: components["schemas"]["LoyaltyTransactionType"];
+            /** Format: int32 */
+            pointsChanged?: number;
+            /** Format: int32 */
+            absolutePoints?: number;
+            reason?: string;
+        };
+        LoyaltyTransactionTotalsResponse: {
+            /** Format: uuid */
+            userId?: string;
+            /** Format: int32 */
+            totalEarnedPoints?: number;
+            /** Format: int32 */
+            totalSpentPoints?: number;
+            /** Format: int32 */
+            pointBalance?: number;
+            /** Format: int32 */
+            totalTransactions?: number;
+        };
+        /** @enum {string} */
+        LoyaltyTransactionType: "Spend" | "Earn";
+        ManualChangeRequest: {
+            transactionType?: components["schemas"]["LoyaltyTransactionType"];
+            /** Format: int32 */
+            points?: number;
+            reason: string;
         };
         MediaResponse: {
             /** Format: uuid */
@@ -12197,7 +12580,7 @@ export interface components {
             orderDetails?: components["schemas"]["OrderDetailResponse"][];
         };
         /** @enum {string} */
-        OrderStatus: "Pending" | "Processing" | "Delivering" | "Delivered" | "Canceled" | "Returned";
+        OrderStatus: "Pending" | "Processing" | "Delivering" | "Delivered" | "Returning" | "Cancelled" | "Returned";
         /** @enum {string} */
         OrderType: "Online" | "Offline";
         PagedResultOfAvailableVoucherResponse: {
@@ -12241,6 +12624,19 @@ export interface components {
         };
         PagedResultOfImportTicketListItem: {
             items: components["schemas"]["ImportTicketListItem"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
+        PagedResultOfLoyaltyTransactionHistoryItemResponse: {
+            items: components["schemas"]["LoyaltyTransactionHistoryItemResponse"][];
             /** Format: int32 */
             pageNumber: number;
             /** Format: int32 */
@@ -12425,10 +12821,6 @@ export interface components {
             orderId?: string;
             items?: components["schemas"]["PickListItemResponse"][];
         };
-        PointsRequest: {
-            /** Format: int32 */
-            points?: number;
-        };
         PreviewOrderResponse: {
             items?: components["schemas"]["OrderDetailListItems"][];
             /** Format: decimal */
@@ -12448,7 +12840,11 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
-        ProcessCancelRequestDto: {
+        ProcessCancelRequest: {
+            isApproved?: boolean;
+            staffNote?: null | string;
+        };
+        ProcessInitialReturnDto: {
             isApproved?: boolean;
             staffNote?: null | string;
         };
@@ -12651,6 +13047,38 @@ export interface components {
             /** Format: int32 */
             Status?: number;
         };
+        ReceiptItemDto: {
+            productName?: string;
+            variantInfo?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: decimal */
+            unitPrice?: number;
+            /** Format: decimal */
+            subtotal?: number;
+        };
+        ReceiptResponse: {
+            /** Format: uuid */
+            orderId?: string;
+            /** Format: date-time */
+            orderDate?: string;
+            orderStatus?: string;
+            staffName?: string;
+            customerName?: string;
+            recipientPhone?: string;
+            recipientAddress?: string;
+            items?: components["schemas"]["ReceiptItemDto"][];
+            /** Format: decimal */
+            subtotal?: number;
+            /** Format: decimal */
+            discount?: number;
+            /** Format: decimal */
+            tax?: number;
+            /** Format: decimal */
+            total?: number;
+            paymentMethod?: string;
+            note?: null | string;
+        };
         RecipientInfoResponse: {
             /** Format: uuid */
             id?: string;
@@ -12673,6 +13101,17 @@ export interface components {
             provinceId?: number;
             provinceName?: string;
             fullAddress?: string;
+        };
+        RecordInspectionDetailDto: {
+            /** Format: uuid */
+            detailId: string;
+            isRestocked?: boolean;
+            note?: null | string;
+        };
+        RecordInspectionDto: {
+            /** Format: decimal */
+            approvedRefundAmount?: number;
+            inspectionResults: components["schemas"]["RecordInspectionDetailDto"][];
         };
         RedeemableVoucherResponse: {
             /** Format: uuid */
@@ -12706,6 +13145,9 @@ export interface components {
             password?: string;
             clientUri?: string;
         };
+        RejectInspectionDto: {
+            note: string;
+        };
         ReservedBatchResponse: {
             /** Format: uuid */
             batchId?: string;
@@ -12716,13 +13158,13 @@ export interface components {
             expiryDate?: string;
         };
         ResetPasswordRequest: {
-            password?: string;
-            confirmPassword?: string;
-            email?: string;
-            token?: string;
+            password: string;
+            confirmPassword: string;
+            /** Format: email */
+            email: string;
+            token: string;
         };
-        /** @enum {string} */
-        ResponseErrorType: "BadRequest" | "Unauthorized" | "Forbidden" | "NotFound" | "Conflict" | "InternalError";
+        ResponseErrorType: number;
         RevenueSummaryResponse: {
             /** Format: date-time */
             fromDate?: string;
@@ -12765,12 +13207,11 @@ export interface components {
             rating?: number;
             comment?: string;
             images?: components["schemas"]["MediaResponse"][];
+            staffFeedbackComment?: null | string;
             /** Format: uuid */
-            moderatedByStaffId?: null | string;
-            moderatedByStaffName?: null | string;
+            staffFeedbackByStaffId?: null | string;
             /** Format: date-time */
-            moderatedAt?: null | string;
-            moderationReason?: null | string;
+            staffFeedbackAt?: null | string;
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
@@ -12793,8 +13234,6 @@ export interface components {
             imageCount?: number;
             /** Format: date-time */
             createdAt?: string;
-            /** Format: date-time */
-            moderatedAt?: string;
         };
         ReviewResponse: {
             /** Format: uuid */
@@ -12811,6 +13250,9 @@ export interface components {
             /** Format: int32 */
             rating?: number;
             comment?: string;
+            staffFeedbackComment?: null | string;
+            /** Format: date-time */
+            staffFeedbackAt?: null | string;
             images?: components["schemas"]["MediaResponse"][];
             /** Format: date-time */
             createdAt?: string;
@@ -12860,6 +13302,8 @@ export interface components {
             status?: components["schemas"]["ShippingStatus"];
             /** Format: int32 */
             leadTime?: null | number;
+            /** Format: date-time */
+            shippedDate?: null | string;
         };
         ShippingStatus: number;
         StaffLookupItem: {
@@ -12868,6 +13312,9 @@ export interface components {
             userName?: string;
             fullName?: string;
             email?: string;
+        };
+        StartInspectionDto: {
+            inspectionNote?: null | string;
         };
         StockAdjustmentDetailResponse: {
             /** Format: uuid */
@@ -12921,7 +13368,7 @@ export interface components {
             updatedAt?: null | string;
         };
         /** @enum {string} */
-        StockAdjustmentStatus: "Pending" | "InProgress" | "Completed" | "Canceled";
+        StockAdjustmentStatus: "Pending" | "InProgress" | "Completed" | "Cancelled";
         StockResponse: {
             /** Format: uuid */
             id?: string;
@@ -12969,9 +13416,7 @@ export interface components {
         };
         SwapDamagedStockRequest: {
             /** Format: uuid */
-            orderDetailId?: string;
-            /** Format: uuid */
-            damagedReservationId?: string;
+            damagedReservationId: string;
             damageNote?: null | string;
         };
         SwapDamagedStockResponse: {
@@ -13105,6 +13550,11 @@ export interface components {
         UpdateImportStatusRequest: {
             status?: components["schemas"]["ImportStatus"];
         };
+        UpdateNotePreferenceRequest: {
+            /** Format: int32 */
+            noteId?: number;
+            noteType?: components["schemas"]["NoteType"];
+        };
         UpdateOlfactoryFamilyRequest: {
             name: string;
         };
@@ -13115,7 +13565,6 @@ export interface components {
         };
         UpdateOrderStatusRequest: {
             status?: components["schemas"]["OrderStatus"];
-            reason?: null | string;
             note?: null | string;
         };
         UpdateProductRequest: {
@@ -13142,22 +13591,16 @@ export interface components {
             minBudget?: null | number;
             /** Format: decimal */
             maxBudget?: null | number;
-            notePreferenceIds?: number[];
+            notePreferenceIds?: components["schemas"]["UpdateNotePreferenceRequest"][];
             familyPreferenceIds?: number[];
             attributePreferenceIds?: number[];
-        };
-        UpdateReviewRequest: {
-            /** Format: int32 */
-            rating?: number;
-            comment: string;
-            temporaryMediaIdsToAdd?: null | string[];
-            mediaIdsToDelete?: null | string[];
         };
         UpdateScentNoteRequest: {
             name: string;
         };
         UpdateStockAdjustmentStatusRequest: {
             status?: components["schemas"]["StockAdjustmentStatus"];
+            note?: null | string;
         };
         UpdateSupplierRequest: {
             name: string;
@@ -13328,7 +13771,7 @@ export interface components {
             attributes?: null | components["schemas"]["ProductAttributeResponse"][];
         };
         /** @enum {string} */
-        VariantStatus: "Active" | "Inactive" | "Discontinued" | "out_of_stock";
+        VariantStatus: "Active" | "Inactive" | "Discontinued";
         VariantSummaryItem: {
             /** Format: uuid */
             id?: string;

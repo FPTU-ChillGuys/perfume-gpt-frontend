@@ -269,7 +269,7 @@ class ImportStockService {
       }
 
       const response = await apiInstance.POST(
-        `/api/importtickets/upload-excel`,
+        `/api/importtickets/excel-parser`,
         {
           body: {
             ExcelFile: "",
@@ -306,9 +306,8 @@ class ImportStockService {
 
   async downloadImportTemplate(): Promise<Blob> {
     try {
-      //const response = await axiosInstance.get(`${this.IMPORT_ENDPOINT}/download-template`,{responseType: "blob",},);
       const response = await apiInstance.GET(
-        `/api/importtickets/download-template`,
+        `/api/importtickets/excel-template`,
         {
           parseAs: "blob",
         },

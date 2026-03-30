@@ -29,9 +29,9 @@ import {
 import { Search, CheckCircle, Cancel, Visibility } from "@mui/icons-material";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
-  orderCancelRequestService,
+  orderService,
   type OrderCancelRequest,
-} from "../services/orderCancelRequestService";
+} from "../services/orderService";
 import { useToast } from "../hooks/useToast";
 
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"] as const;
@@ -81,7 +81,7 @@ export const OrderCancelRequestsPage = () => {
     setIsLoading(true);
     setError("");
     try {
-      const result = await orderCancelRequestService.getAll({
+      const result = await orderService.getAllCancelRequests({
         Status: statusFilter as any,
         PageNumber: page + 1,
         PageSize: rowsPerPage,
@@ -110,11 +110,14 @@ export const OrderCancelRequestsPage = () => {
     if (!selected?.id) return;
     setIsSaving(true);
     try {
-      await orderCancelRequestService.process(selected.id, {
+      await orderService.processCancelRequest(selected.id, {
         isApproved: isApproving,
         staffNote: note || null,
       });
-      showToast(isApproving ? "Duyệt yêu cầu thành công" : "Từ chối yêu cầu thành công", "success");
+      showToast(
+        isApproving ? "Duyệt yêu cầu thành công" : "Từ chối yêu cầu thành công",
+        "success",
+      );
       setProcessDialogOpen(false);
       load();
     } catch (err: any) {
@@ -133,7 +136,10 @@ export const OrderCancelRequestsPage = () => {
 
         <Tabs
           value={tabIndex}
-          onChange={(_, v) => { setTabIndex(v); setPage(0); }}
+          onChange={(_, v) => {
+            setTabIndex(v);
+            setPage(0);
+          }}
           sx={{ mb: 2 }}
         >
           <Tab label="Tất cả" />
@@ -142,18 +148,34 @@ export const OrderCancelRequestsPage = () => {
           <Tab label="Từ chối" />
         </Tabs>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell><strong>Mã đơn</strong></TableCell>
-                <TableCell><strong>Khách hàng</strong></TableCell>
-                <TableCell><strong>Lý do</strong></TableCell>
-                <TableCell><strong>Ngày yêu cầu</strong></TableCell>
-                <TableCell><strong>Trạng thái</strong></TableCell>
-                <TableCell align="center"><strong>Thao tác</strong></TableCell>
+                <TableCell>
+                  <strong>Mã đơn</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Khách hàng</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Lý do</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Ngày yêu cầu</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Trạng thái</strong>
+                </TableCell>
+                <TableCell align="center">
+                  <strong>Thao tác</strong>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -165,7 +187,11 @@ export const OrderCancelRequestsPage = () => {
                 </TableRow>
               ) : requests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                  <TableCell
+                    colSpan={6}
+                    align="center"
+                    sx={{ py: 4, color: "text.secondary" }}
+                  >
                     Không có yêu cầu hủy nào
                   </TableCell>
                 </TableRow>
@@ -178,7 +204,9 @@ export const OrderCancelRequestsPage = () => {
                     <TableCell>{r.requestedByEmail || "—"}</TableCell>
                     <TableCell sx={{ maxWidth: 200 }}>
                       <Tooltip title={r.reason || ""}>
-                        <Typography variant="body2" noWrap>{r.reason || "—"}</Typography>
+                        <Typography variant="body2" noWrap>
+                          {r.reason || "—"}
+                        </Typography>
                       </Tooltip>
                     </TableCell>
                     <TableCell>{formatDate(r.createdAt)}</TableCell>
@@ -193,7 +221,10 @@ export const OrderCancelRequestsPage = () => {
                       <Tooltip title="Xem chi tiết">
                         <IconButton
                           size="small"
-                          onClick={() => { setSelected(r); setDetailOpen(true); }}
+                          onClick={() => {
+                            setSelected(r);
+                            setDetailOpen(true);
+                          }}
                         >
                           <Visibility fontSize="small" />
                         </IconButton>
@@ -201,12 +232,20 @@ export const OrderCancelRequestsPage = () => {
                       {r.status === "Pending" && (
                         <>
                           <Tooltip title="Duyệt">
-                            <IconButton size="small" color="success" onClick={() => openProcess(r, true)}>
+                            <IconButton
+                              size="small"
+                              color="success"
+                              onClick={() => openProcess(r, true)}
+                            >
                               <CheckCircle fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Từ chối">
-                            <IconButton size="small" color="error" onClick={() => openProcess(r, false)}>
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => openProcess(r, false)}
+                            >
                               <Cancel fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -224,36 +263,78 @@ export const OrderCancelRequestsPage = () => {
             page={page}
             onPageChange={(_, p) => setPage(p)}
             rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value));
+              setPage(0);
+            }}
             labelRowsPerPage="Số hàng:"
-            labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} / ${count}`
+            }
           />
         </TableContainer>
       </Box>
 
       {/* Detail Dialog */}
-      <Dialog open={detailOpen} onClose={() => setDetailOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Chi tiết yêu cầu hủy</DialogTitle>
         <DialogContent dividers>
           {selected && (
             <Stack spacing={1.5}>
-              <Box><Typography variant="caption" color="text.secondary">Mã đơn hàng</Typography>
-                <Typography fontWeight={600}>{selected.orderId}</Typography></Box>
-              <Box><Typography variant="caption" color="text.secondary">Người yêu cầu</Typography>
-                <Typography>{selected.requestedByEmail || "—"}</Typography></Box>
-              <Box><Typography variant="caption" color="text.secondary">Lý do hủy</Typography>
-                <Typography>{selected.reason || "—"}</Typography></Box>
-              <Box><Typography variant="caption" color="text.secondary">Ngày yêu cầu</Typography>
-                <Typography>{formatDate(selected.createdAt)}</Typography></Box>
-              <Box><Typography variant="caption" color="text.secondary">Trạng thái</Typography>
-                <Chip label={statusLabel(selected.status)} color={statusColor(selected.status)} size="small" /></Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Mã đơn hàng
+                </Typography>
+                <Typography fontWeight={600}>{selected.orderId}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Người yêu cầu
+                </Typography>
+                <Typography>{selected.requestedByEmail || "—"}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Lý do hủy
+                </Typography>
+                <Typography>{selected.reason || "—"}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Ngày yêu cầu
+                </Typography>
+                <Typography>{formatDate(selected.createdAt)}</Typography>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary">
+                  Trạng thái
+                </Typography>
+                <Chip
+                  label={statusLabel(selected.status)}
+                  color={statusColor(selected.status)}
+                  size="small"
+                />
+              </Box>
               {selected.staffNote && (
-                <Box><Typography variant="caption" color="text.secondary">Ghi chú xử lý</Typography>
-                  <Typography>{selected.staffNote}</Typography></Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Ghi chú xử lý
+                  </Typography>
+                  <Typography>{selected.staffNote}</Typography>
+                </Box>
               )}
               {selected.updatedAt && (
-                <Box><Typography variant="caption" color="text.secondary">Ngày xử lý</Typography>
-                  <Typography>{formatDate(selected.updatedAt)}</Typography></Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Ngày xử lý
+                  </Typography>
+                  <Typography>{formatDate(selected.updatedAt)}</Typography>
+                </Box>
               )}
             </Stack>
           )}
@@ -264,7 +345,12 @@ export const OrderCancelRequestsPage = () => {
       </Dialog>
 
       {/* Process Dialog */}
-      <Dialog open={processDialogOpen} onClose={() => setProcessDialogOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={processDialogOpen}
+        onClose={() => setProcessDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle>
           {isApproving ? "✅ Duyệt yêu cầu hủy" : "❌ Từ chối yêu cầu hủy"}
         </DialogTitle>
@@ -285,14 +371,23 @@ export const OrderCancelRequestsPage = () => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setProcessDialogOpen(false)} disabled={isSaving}>Hủy</Button>
+          <Button
+            onClick={() => setProcessDialogOpen(false)}
+            disabled={isSaving}
+          >
+            Hủy
+          </Button>
           <Button
             variant="contained"
             color={isApproving ? "success" : "error"}
             onClick={handleProcess}
             disabled={isSaving}
           >
-            {isSaving ? <CircularProgress size={20} color="inherit" /> : "Xác nhận"}
+            {isSaving ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              "Xác nhận"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
