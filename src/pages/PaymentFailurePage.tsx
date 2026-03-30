@@ -22,6 +22,12 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import type { PaymentMethod } from "@/types/checkout";
 import { useToast } from "@/hooks/useToast";
+import codIcon from "@/assets/cod.png";
+import storeIcon from "@/assets/store.png";
+import vnpayIcon from "@/assets/vnpay.jpg";
+import momoIcon from "@/assets/momo.png";
+
+type DeliveryMethod = "Delivery" | "PickupInStore";
 
 const formatCurrency = (value?: string | number) => {
   const numValue =
@@ -65,19 +71,32 @@ const PAYMENT_METHODS: {
   value: PaymentMethod;
   label: string;
   description: string;
+  icon: string;
 }[] = [
   {
     value: "CashOnDelivery",
     label: "Thanh toán khi nhận hàng",
     description: "Thanh toán bằng tiền mặt khi nhận hàng",
+    icon: codIcon,
   },
   {
     value: "CashInStore",
     label: "Thanh toán tại cửa hàng",
     description: "Thanh toán trực tiếp tại cửa hàng",
+    icon: storeIcon,
   },
-  { value: "VnPay", label: "VnPay", description: "Thanh toán qua VnPay" },
-  { value: "Momo", label: "Momo", description: "Thanh toán qua Momo" },
+  {
+    value: "VnPay",
+    label: "VNPay",
+    description: "Thanh toán qua VNPay",
+    icon: vnpayIcon,
+  },
+  {
+    value: "Momo",
+    label: "MoMo",
+    description: "Thanh toán qua MoMo",
+    icon: momoIcon,
+  },
 ];
 
 export const PaymentFailurePage = () => {
@@ -86,15 +105,37 @@ export const PaymentFailurePage = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<DeliveryMethod>(
+    "Delivery",
+  );
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("CashOnDelivery");
 
+  const allowedPaymentMethods = PAYMENT_METHODS.filter((method) =>
+    deliveryMethod === "PickupInStore"
+      ? method.value !== "CashOnDelivery"
+      : method.value !== "CashInStore",
+  );
+
   useEffect(() => {
+    const method = searchParams.get("deliveryMethod");
+    if (method === "PickupInStore" || method === "Delivery") {
+      setDeliveryMethod(method);
+      setPaymentMethod(method === "PickupInStore" ? "CashInStore" : "CashOnDelivery");
+    }
+
     // Simulate loading state
     setTimeout(() => {
       setIsLoading(false);
     }, 500);
-  }, []);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const allowedValues = allowedPaymentMethods.map((m) => m.value);
+    if (!allowedValues.includes(paymentMethod)) {
+      setPaymentMethod(allowedValues[0] ?? "VnPay");
+    }
+  }, [allowedPaymentMethods, paymentMethod]);
 
   const orderId = searchParams.get("orderId") || searchParams.get("orderId");
   const paymentId = searchParams.get("paymentId"); // Get paymentId from URL params
@@ -322,22 +363,38 @@ export const PaymentFailurePage = () => {
                         setPaymentMethod(e.target.value as PaymentMethod)
                       }
                     >
-                      {PAYMENT_METHODS.map((method) => (
+                      {allowedPaymentMethods.map((method) => (
                         <FormControlLabel
                           key={method.value}
                           value={method.value}
                           control={<Radio size="small" />}
                           label={
-                            <Box>
-                              <Typography variant="body2" fontWeight={600}>
-                                {method.label}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
+                            <Box display="flex" alignItems="center" gap={1.5} py={0.5}>
+                              <Box
+                                component="img"
+                                src={method.icon}
+                                alt={method.label}
+                                sx={{
+                                  width: 36,
+                                  height: 36,
+                                  objectFit: "contain",
+                                  borderRadius: 1,
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                  bgcolor: "#fff",
+                                  p: 0.5,
+                                  flexShrink: 0,
+                                }}
                               >
-                                {method.description}
-                              </Typography>
+                              </Box>
+                              <Box>
+                                <Typography variant="body2" fontWeight={600}>
+                                  {method.label}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {method.description}
+                                </Typography>
+                              </Box>
                             </Box>
                           }
                           sx={{

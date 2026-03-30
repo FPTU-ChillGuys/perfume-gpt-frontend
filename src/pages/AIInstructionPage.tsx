@@ -185,10 +185,10 @@ export default function AIInstructionPage() {
                         </Box>
 
                         {/* Table */}
-                        <TableContainer>
+                        <TableContainer component={Paper}>
                             <Table>
-                                <TableHead sx={{ bgcolor: "#f8f9fa" }}>
-                                    <TableRow>
+                                <TableHead>
+                                    <TableRow sx={{ bgcolor: "grey.50" }}>
                                         <TableCell>
                                             <TableSortLabel
                                                 active={orderBy === "instructionType"}

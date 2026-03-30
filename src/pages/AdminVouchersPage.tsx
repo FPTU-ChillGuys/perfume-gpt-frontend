@@ -69,6 +69,7 @@ export const AdminVouchersPage = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -100,6 +101,15 @@ export const AdminVouchersPage = () => {
   useEffect(() => {
     loadVouchers();
   }, [loadVouchers]);
+
+  // Debounce search input: commit to `search` after 400ms of no typing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(0);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const openCreate = () => {
     setEditingVoucher(null);
@@ -181,8 +191,8 @@ export const AdminVouchersPage = () => {
           <TextField
             placeholder="Tìm theo mã voucher..."
             size="small"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            value={searchInput}
+            onChange={(e) => { setSearchInput(e.target.value); }}
             InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
             sx={{ width: 300 }}
           />

@@ -913,10 +913,10 @@ export const ContentManagementPage = () => {
               </Alert>
             )}
 
-            <TableContainer>
+            <TableContainer component={Paper}>
               <Table size="small">
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ bgcolor: "grey.50" }}>
                     <TableCell width={80}>Hình</TableCell>
                     <TableCell>Tên sản phẩm</TableCell>
                     <TableCell>Thương hiệu</TableCell>

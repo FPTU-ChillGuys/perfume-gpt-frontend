@@ -121,7 +121,7 @@ export default function RichTextEditor({
       </Typography>
 
       <Typography variant="caption" color="text.secondary" display="block" mb={1.25}>
-        Phim tat: Ctrl+B (in dam), Ctrl+I (in nghieng), Enter (xuong dong)
+        Phím tắt: Ctrl+B (in đậm), Ctrl+I (in nghiêng), Enter (xuống dòng)
       </Typography>
 
       <Box

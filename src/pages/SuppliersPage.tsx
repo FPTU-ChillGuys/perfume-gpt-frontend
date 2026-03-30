@@ -30,6 +30,8 @@ import {
   type CreateSupplierRequest,
 } from "../services/supplierService";
 import { useToast } from "../hooks/useToast";
+import ConfirmDialog from "../components/common/ConfirmDialog";
+import { useDebounce } from "../hooks/useDebounce";
 
 const defaultForm: CreateSupplierRequest = {
   name: "",
@@ -46,6 +48,7 @@ export const SuppliersPage = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -60,7 +63,7 @@ export const SuppliersPage = () => {
     setError("");
     try {
       const result = await supplierService.getAll({
-        SearchTerm: search || undefined,
+        SearchTerm: debouncedSearch || undefined,
         PageNumber: page + 1,
         PageSize: rowsPerPage,
       });
@@ -71,7 +74,7 @@ export const SuppliersPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [search, page, rowsPerPage]);
+  }, [debouncedSearch, page, rowsPerPage]);
 
   useEffect(() => {
     load();
@@ -147,6 +150,7 @@ export const SuppliersPage = () => {
             size="small"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+            inputProps={{ "aria-label": "Tìm kiếm nhà cung cấp" }}
             InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
             sx={{ width: 300 }}
           />
@@ -187,12 +191,12 @@ export const SuppliersPage = () => {
                     <TableCell>{s.address || "—"}</TableCell>
                     <TableCell align="center">
                       <Tooltip title="Sửa">
-                        <IconButton size="small" onClick={() => openEdit(s)}>
+                        <IconButton size="small" aria-label="Sửa nhà cung cấp" onClick={() => openEdit(s)}>
                           <Edit fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Xóa">
-                        <IconButton size="small" color="error" onClick={() => setConfirmDeleteId(s.id!)}>
+                        <IconButton size="small" aria-label="Xóa nhà cung cấp" color="error" onClick={() => setConfirmDeleteId(s.id!)}>
                           <Delete fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -264,22 +268,14 @@ export const SuppliersPage = () => {
       </Dialog>
 
       {/* Confirm Delete */}
-      <Dialog open={confirmDeleteId != null} onClose={() => setConfirmDeleteId(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>Xác nhận xóa</DialogTitle>
-        <DialogContent>
-          <Typography>Bạn có chắc muốn xóa nhà cung cấp này không?</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmDeleteId(null)}>Hủy</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => confirmDeleteId != null && handleDelete(confirmDeleteId)}
-          >
-            Xóa
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ConfirmDialog
+        open={confirmDeleteId != null}
+        title="Xóa nhà cung cấp"
+        description="Bạn có chắc muốn xóa nhà cung cấp này không?"
+        confirmText="Xóa"
+        onConfirm={() => confirmDeleteId != null && handleDelete(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+      />
     </AdminLayout>
   );
 };

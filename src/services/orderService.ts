@@ -13,6 +13,7 @@ import type {
   PaymentMethod,
   CreateInStoreOrderRequest,
 } from "@/types/checkout";
+import type { components } from "@/types/api/v1";
 
 interface GetMyOrdersParams {
   Status?: OrderStatus;
@@ -28,6 +29,29 @@ interface GetMyOrdersParams {
 }
 
 interface GetAllOrdersParams extends GetMyOrdersParams {
+  SortBy?: string;
+  SortOrder?: string;
+  IsDescending?: boolean;
+}
+
+export type OrderCancelRequest =
+  components["schemas"]["OrderCancelRequestResponse"];
+export type ProcessCancelRequestBody =
+  components["schemas"]["ProcessCancelRequest"];
+
+export interface PagedCancelRequests {
+  items: OrderCancelRequest[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+interface GetOrderCancelRequestsParams {
+  Status?: components["schemas"]["CancelRequestStatus"];
+  IsRefundRequired?: boolean;
+  PageNumber?: number;
+  PageSize?: number;
   SortBy?: string;
   SortOrder?: string;
   IsDescending?: boolean;
@@ -91,6 +115,70 @@ class OrderService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch orders",
+      );
+    }
+  }
+
+  async getAllCancelRequests(
+    params?: GetOrderCancelRequestsParams,
+  ): Promise<PagedCancelRequests> {
+    try {
+      const response = await apiInstance.GET("/api/ordercancelrequests", {
+        params: {
+          query: params,
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to load cancel requests",
+        );
+      }
+
+      const payload = response.data.payload;
+      return {
+        items: payload?.items || [],
+        totalCount: payload?.totalCount || 0,
+        pageNumber: payload?.pageNumber || 1,
+        pageSize: payload?.pageSize || 10,
+        totalPages: payload?.totalPages || 1,
+      };
+    } catch (error: any) {
+      console.error("Error fetching cancel requests:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load cancel requests",
+      );
+    }
+  }
+
+  async processCancelRequest(
+    id: string,
+    body: ProcessCancelRequestBody,
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/ordercancelrequests/{id}/process",
+        {
+          params: { path: { id } },
+          body,
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to process cancel request",
+        );
+      }
+
+      return response.data.message || "Xử lý thành công";
+    } catch (error: any) {
+      console.error("Error processing cancel request:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to process cancel request",
       );
     }
   }
@@ -305,7 +393,7 @@ class OrderService {
   ): Promise<CheckoutResponse> {
     try {
       const response = await apiInstance.POST(
-        "/api/payments/retry/{paymentId}",
+        "/api/payments/{paymentId}/retry",
         {
           params: {
             path: {
@@ -344,14 +432,14 @@ class OrderService {
   ): Promise<boolean> {
     try {
       const response = await apiInstance.PUT(
-        "/api/payments/confirm/{paymentId}",
+        "/api/payments/{paymentId}/confirm",
         {
           params: {
             path: { paymentId },
-            query: {
-              isSuccess,
-              failureReason,
-            },
+          },
+          body: {
+            isSuccess,
+            failureReason,
           },
         },
       );

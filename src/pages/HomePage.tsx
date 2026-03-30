@@ -13,6 +13,8 @@ import {
   normalizeTrendProducts,
 } from "../utils/productCardMapper";
 
+const HOME_SECTION_PAGE_SIZE = 10;
+
 export const HomePage = () => {
   const [newArrivals, setNewArrivals] = useState<ProductCardProps[]>([]);
   const [bestsellers, setBestsellers] = useState<ProductCardProps[]>([]);
@@ -35,8 +37,8 @@ export const HomePage = () => {
 
       try {
         const [newArrivalsPage, bestsellersPage] = await Promise.all([
-          productService.getNewArrivals(),
-          productService.getBestSellers(),
+          productService.getNewArrivals({ PageSize: HOME_SECTION_PAGE_SIZE }),
+          productService.getBestSellers({ PageSize: HOME_SECTION_PAGE_SIZE }),
         ]);
 
         if (!isMounted) {
@@ -97,7 +99,9 @@ export const HomePage = () => {
 
         // If both unavailable, leave trendingProducts empty (section hidden)
         if (products && products.length > 0) {
-          setTrendingProducts(normalizeTrendProducts(products));
+          setTrendingProducts(
+            normalizeTrendProducts(products).slice(0, HOME_SECTION_PAGE_SIZE),
+          );
         }
       } catch (e) {
         console.warn("Failed to fetch trending products", e);
@@ -127,18 +131,19 @@ export const HomePage = () => {
           viewMoreHref="/products?source=trending&sourceLabel=Trending%20%28Weekly%29"
         />
       )}
-      <ProductSection
-        title="Bestsellers"
-        products={bestsellers}
-        isLoading={isLoading}
-        viewMoreHref="/products?source=bestsellers&sourceLabel=Bestsellers"
-      />
 
       <ProductSection
         title="New Arrivals"
         products={newArrivals}
         isLoading={isLoading}
         viewMoreHref="/products?source=new-arrivals&sourceLabel=New%20Arrivals"
+      />
+
+      <ProductSection
+        title="Bestsellers"
+        products={bestsellers}
+        isLoading={isLoading}
+        viewMoreHref="/products?source=bestsellers&sourceLabel=Bestsellers"
       />
 
       <FeatureSection />

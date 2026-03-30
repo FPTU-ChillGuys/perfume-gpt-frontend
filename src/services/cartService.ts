@@ -23,7 +23,7 @@ class CartService {
   private readonly ITEMS_ENDPOINT = "/api/cart/items";
   private readonly TOTAL_ENDPOINT = "/api/cart/total";
   private readonly CLEAR_ENDPOINT = "/api/cart/clear";
-  private readonly ADD_TO_CART_ENDPOINT = "/api/cart/items/add-to-cart";
+  private readonly ADD_TO_CART_ENDPOINT = "/api/cart/items";
 
   async getCartWithTotals(
     voucherId?: string,
@@ -111,14 +111,12 @@ class CartService {
         params: query ? { query } : undefined,
       });
 
-      const payload = response.data.payload;
+      const payload = response.data?.payload;
       const rawMessage = (response.data?.message || "").trim();
       const warningMessage = PROMOTION_WARNING_REGEX.test(rawMessage)
         ? rawMessage
         : undefined;
 
-      // Some backend flows may return warning messages for mixed promotion
-      // carts; as long as payload exists, we still use it to keep UI totals usable.
       if (payload) {
         return {
           subtotal: Number(
@@ -175,17 +173,14 @@ class CartService {
 
   async updateCartItem(cartItemId: string, quantity: number) {
     try {
-      const response = await apiInstance.PUT(
-        `/api/cart/items/{id}/update-cart-item`,
-        {
-          params: {
-            path: {
-              id: cartItemId,
-            },
+      const response = await apiInstance.PUT(`/api/cart/items/{id}`, {
+        params: {
+          path: {
+            id: cartItemId,
           },
-          body: { quantity },
         },
-      );
+        body: { quantity },
+      });
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to update cart item");
@@ -202,16 +197,13 @@ class CartService {
 
   async removeCartItem(cartItemId: string) {
     try {
-      const response = await apiInstance.DELETE(
-        `/api/cart/items/{id}/remove-from-cart`,
-        {
-          params: {
-            path: {
-              id: cartItemId,
-            },
+      const response = await apiInstance.DELETE(`/api/cart/items/{id}`, {
+        params: {
+          path: {
+            id: cartItemId,
           },
         },
-      );
+      });
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to remove cart item");

@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
   Checkbox,
+  Alert,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -491,6 +492,7 @@ export const CartPage = () => {
                                 >
                                   <IconButton
                                     size="small"
+                                    aria-label="Giảm số lượng"
                                     onClick={() =>
                                       handleQuantityChange(item.cartItemId, -1)
                                     }
@@ -511,6 +513,7 @@ export const CartPage = () => {
                                   </Typography>
                                   <IconButton
                                     size="small"
+                                    aria-label="Tăng số lượng"
                                     onClick={() =>
                                       handleQuantityChange(item.cartItemId, 1)
                                     }

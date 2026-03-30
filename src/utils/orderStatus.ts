@@ -6,7 +6,8 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   Processing: "Đang xử lý",
   Delivering: "Đang giao hàng",
   Delivered: "Đã giao hàng",
-  Canceled: "Đã hủy",
+  Returning: "Đang hoàn trả",
+  Cancelled: "Đã hủy",
   Returned: "Đã trả hàng",
 };
 
@@ -32,7 +33,8 @@ export const orderStatusColors: Record<
   Processing: "secondary", // ⚪ Xám/Tím nhạt - Đang xử lý tại kho
   Delivering: "info", // 🔵 Xanh dương - Đang giao hàng (VẬN CHUYỂN)
   Delivered: "success", // 🟢 Xanh lá - Đã giao hàng
-  Canceled: "error", // 🔴 Đỏ - Đã hủy
+  Returning: "warning", // 🟠 Cam - Đang trong quy trình hoàn trả
+  Cancelled: "error", // 🔴 Đỏ - Đã hủy
   Returned: "default", // Hồng sẽ được áp qua sx để đồng nhất mọi màn hình
 };
 
