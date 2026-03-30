@@ -31,6 +31,11 @@ type PaginatedQuery = {
   IsDescending?: boolean;
 };
 
+type HomeProductQuery = Pick<
+  PaginatedQuery,
+  "PageNumber" | "PageSize" | "IsDescending"
+>;
+
 type SemanticProductSearchQuery = {
   searchText?: string;
   GenderValueId?: number | null;
@@ -244,14 +249,14 @@ class ProductService {
     }
   }
 
-  async getBestSellers(): Promise<PagedProductList> {
+  async getBestSellers(query?: HomeProductQuery): Promise<PagedProductList> {
     try {
       const response = await apiInstance.GET("/api/products/best-sellers", {
         params: {
           query: {
-            PageNumber: 1,
-            PageSize: 24,
-            IsDescending: true,
+            PageNumber: query?.PageNumber ?? 1,
+            PageSize: query?.PageSize ?? 24,
+            IsDescending: query?.IsDescending ?? true,
           },
         },
       });
@@ -275,14 +280,14 @@ class ProductService {
     }
   }
 
-  async getNewArrivals(): Promise<PagedProductList> {
+  async getNewArrivals(query?: HomeProductQuery): Promise<PagedProductList> {
     try {
       const response = await apiInstance.GET("/api/products/new-arrivals", {
         params: {
           query: {
-            PageNumber: 1,
-            PageSize: 24,
-            IsDescending: true,
+            PageNumber: query?.PageNumber ?? 1,
+            PageSize: query?.PageSize ?? 24,
+            IsDescending: query?.IsDescending ?? true,
           },
         },
       });
