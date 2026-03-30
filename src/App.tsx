@@ -130,19 +130,32 @@ const CampaignManagementPage = lazy(() =>
   })),
 );
 const VerifyEmailPage = lazy(() =>
-  import("./pages/VerifyEmailPage").then((m) => ({ default: m.VerifyEmailPage })),
+  import("./pages/VerifyEmailPage").then((m) => ({
+    default: m.VerifyEmailPage,
+  })),
 );
 const AdminVouchersPage = lazy(() =>
-  import("./pages/AdminVouchersPage").then((m) => ({ default: m.AdminVouchersPage })),
+  import("./pages/AdminVouchersPage").then((m) => ({
+    default: m.AdminVouchersPage,
+  })),
 );
 const OrderCancelRequestsPage = lazy(() =>
-  import("./pages/OrderCancelRequestsPage").then((m) => ({ default: m.OrderCancelRequestsPage })),
+  import("./pages/OrderCancelRequestsPage").then((m) => ({
+    default: m.OrderCancelRequestsPage,
+  })),
+);
+const OrderReturnRequestsPage = lazy(() =>
+  import("./pages/OrderReturnRequestsPage").then((m) => ({
+    default: m.OrderReturnRequestsPage,
+  })),
 );
 const SuppliersPage = lazy(() =>
   import("./pages/SuppliersPage").then((m) => ({ default: m.SuppliersPage })),
 );
 const LoyaltyTransactionsPage = lazy(() =>
-  import("./pages/LoyaltyTransactionsPage").then((m) => ({ default: m.LoyaltyTransactionsPage })),
+  import("./pages/LoyaltyTransactionsPage").then((m) => ({
+    default: m.LoyaltyTransactionsPage,
+  })),
 );
 
 const PageLoader = () => (
@@ -432,6 +445,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/return-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderReturnRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/suppliers"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -479,6 +500,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
                             <OrderManagementDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/return-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderReturnRequestsPage />
                           </RoleBasedRoute>
                         }
                       />

@@ -34,6 +34,7 @@ import {
   Category as CategoryIcon,
   ShoppingCart as ShoppingCartIcon,
   Cancel as CancelIcon,
+  AssignmentReturn as AssignmentReturnIcon,
   Slideshow as SlideshowIcon,
   SmartToy as BotIcon,
   Quiz as QuizIcon,
@@ -106,6 +107,12 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
+    text: "Yêu cầu trả hàng",
+    icon: <AssignmentReturnIcon />,
+    path: "/admin/return-requests",
+    roles: ["admin"],
+  },
+  {
     text: "Quản lý đơn hàng",
     icon: <ShoppingCartIcon />,
     path: "/admin/orders",
@@ -127,6 +134,12 @@ const menuItems: MenuItem[] = [
     text: "Quản lý đơn hàng",
     icon: <ShoppingCartIcon />,
     path: "/staff/orders",
+    roles: ["staff"],
+  },
+  {
+    text: "Yêu cầu trả hàng",
+    icon: <AssignmentReturnIcon />,
+    path: "/staff/return-requests",
     roles: ["staff"],
   },
   {
