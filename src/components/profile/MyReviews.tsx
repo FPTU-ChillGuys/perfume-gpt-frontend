@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Skeleton,
   Stack,
   ToggleButton,
   ToggleButtonGroup,
@@ -18,6 +19,7 @@ import {
   type ReviewStatus,
 } from "@/types/review";
 import { ReviewCard } from "@/components/review/ReviewCard";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 interface MyReviewsProps {
   reviews: ReviewResponse[];
@@ -43,6 +45,7 @@ export const MyReviews = ({
 }: MyReviewsProps) => {
   const [statusFilter, setStatusFilter] = useState<ReviewStatus | "all">("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteTarget, setConfirmDeleteTarget] = useState<ReviewResponse | null>(null);
   const filtered = useMemo(() => {
     const sorted = [...reviews].sort((a, b) => {
       const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -57,14 +60,17 @@ export const MyReviews = ({
 
   const handleDelete = async (review: ReviewResponse) => {
     if (!review.id) return;
-    if (!window.confirm("Bạn chắc chắn muốn xoá đánh giá này?")) {
-      return;
-    }
-    setDeletingId(review.id);
+    setConfirmDeleteTarget(review);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteTarget?.id) return;
+    setDeletingId(confirmDeleteTarget.id);
     try {
-      await onDelete(review);
+      await onDelete(confirmDeleteTarget);
     } finally {
       setDeletingId(null);
+      setConfirmDeleteTarget(null);
     }
   };
 
@@ -117,16 +123,7 @@ export const MyReviews = ({
       {isLoading ? (
         <Stack spacing={2}>
           {Array.from({ length: 2 }).map((_, idx) => (
-            <Box
-              key={idx}
-              sx={{
-                borderRadius: 3,
-                border: "1px solid",
-                borderColor: "divider",
-                height: 160,
-                bgcolor: "grey.50",
-              }}
-            />
+            <Skeleton key={idx} variant="rounded" height={160} sx={{ borderRadius: 3 }} />
           ))}
         </Stack>
       ) : filtered.length === 0 ? (
@@ -175,6 +172,16 @@ export const MyReviews = ({
           ))}
         </Stack>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteTarget}
+        title="Xoá đánh giá"
+        description="Bạn chắc chắn muốn xoá đánh giá này? Hành động này không thể hoàn tác."
+        confirmText="Xoá"
+        loading={!!deletingId}
+        onConfirm={handleConfirmDelete}
+        onClose={() => setConfirmDeleteTarget(null)}
+      />
     </Box>
   );
 };

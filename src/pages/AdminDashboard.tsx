@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
@@ -57,6 +58,7 @@ const StatCard = ({ label, value, icon, color, bg }: StatCardProps) => (
 
 const AdminDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
@@ -174,7 +176,22 @@ const AdminDashboard = () => {
                 ) : (
                   <Stack divider={<Divider />}>
                     {topProducts.map((p, i) => (
-                      <Box key={p.productId ?? i} sx={{ display: "flex", alignItems: "center", py: 1.2, gap: 1.5 }}>
+                      <Box
+                        key={p.productId ?? i}
+                        onClick={() => navigate("/admin/products")}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          py: 1.2,
+                          gap: 1.5,
+                          cursor: "pointer",
+                          borderRadius: 1,
+                          px: 0.5,
+                          mx: -0.5,
+                          transition: "background 0.15s",
+                          "&:hover": { bgcolor: "action.hover" },
+                        }}
+                      >
                         <Typography variant="body2" color="text.secondary" sx={{ minWidth: 20 }}>
                           #{i + 1}
                         </Typography>
@@ -215,7 +232,22 @@ const AdminDashboard = () => {
                 ) : (
                   <Stack divider={<Divider />}>
                     {lowStock.map((s, i) => (
-                      <Box key={s.productId ?? i} sx={{ display: "flex", alignItems: "center", py: 1.2, gap: 1.5 }}>
+                      <Box
+                        key={s.productId ?? i}
+                        onClick={() => navigate("/admin/inventory")}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          py: 1.2,
+                          gap: 1.5,
+                          cursor: "pointer",
+                          borderRadius: 1,
+                          px: 0.5,
+                          mx: -0.5,
+                          transition: "background 0.15s",
+                          "&:hover": { bgcolor: "action.hover" },
+                        }}
+                      >
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Typography variant="body2" fontWeight={600} noWrap>
                             {s.productName}

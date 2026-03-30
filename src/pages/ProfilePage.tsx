@@ -80,6 +80,7 @@ const ProfilePage = () => {
     loadUserInfo();
     loadAvatar();
     loadProfile();
+    loadMyReviews();
   }, []);
 
   useEffect(() => {
@@ -133,7 +134,7 @@ const ProfilePage = () => {
       const data = await addressService.getAddresses();
       setAddresses(data);
     } catch (err: any) {
-      console.error("Error loading addresses:", err);
+      showToast(err?.message || "Không thể tải danh sách địa chỉ", "error");
     } finally {
       setIsLoadingAddresses(false);
     }
@@ -349,9 +350,8 @@ const ProfilePage = () => {
               onPickAvatar={handlePickAvatar}
               onDeleteAvatar={handleDeleteAvatar}
             />
-            {(myReviews.length > 0 || isLoadingReviews) && (
-              <Box mt={4}>
-                <MyReviews
+            <Box mt={4}>
+              <MyReviews
                   reviews={myReviews}
                   isLoading={isLoadingReviews}
                   onRefresh={loadMyReviews}
@@ -359,7 +359,6 @@ const ProfilePage = () => {
                   onDelete={handleDeleteReview}
                 />
               </Box>
-            )}
           </>
         );
     }
