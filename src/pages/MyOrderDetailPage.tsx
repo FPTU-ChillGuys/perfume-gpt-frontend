@@ -80,7 +80,8 @@ const STATUS_TO_STEP: Record<OrderStatus, number> = {
   Processing: 1,
   Delivering: 3,
   Delivered: 4,
-  Canceled: -1,
+  Returning: -2,
+  Cancelled: -1,
   Returned: -2,
 };
 
@@ -123,7 +124,7 @@ const OrderStepper = ({
   // If already paid, ensure at least step 1 is active regardless of status
   const baseStep = STATUS_TO_STEP[status] ?? 0;
   const activeStep = paidAt && baseStep < 1 ? 1 : baseStep;
-  const isCanceled = status === "Canceled";
+  const isCanceled = status === "Cancelled";
   const isReturned = status === "Returned";
   const isSpecial = isCanceled || isReturned;
 

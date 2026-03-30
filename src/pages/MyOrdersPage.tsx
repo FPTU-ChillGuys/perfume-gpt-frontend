@@ -60,7 +60,7 @@ const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: orderStatusLabels["Processing"], value: "Processing" },
   { label: orderStatusLabels["Delivering"], value: "Delivering" },
   { label: orderStatusLabels["Delivered"], value: "Delivered" },
-  { label: orderStatusLabels["Canceled"], value: "Canceled" },
+  { label: orderStatusLabels["Cancelled"], value: "Cancelled" },
   { label: orderStatusLabels["Returned"], value: "Returned" },
 ];
 
