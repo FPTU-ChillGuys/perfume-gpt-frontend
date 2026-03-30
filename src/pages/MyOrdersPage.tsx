@@ -107,6 +107,7 @@ export const MyOrdersPage = () => {
   );
   const [actionOrderId, setActionOrderId] = useState<string | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
@@ -211,10 +212,21 @@ export const MyOrdersPage = () => {
   const handleConfirmCancelOrder = async () => {
     if (!cancelOrderId) return;
 
+    const reason = cancelReason.trim();
+    if (!reason) {
+      showToast("Vui lòng nhập lý do hủy đơn hàng", "warning");
+      return;
+    }
+
     try {
       setActionOrderId(cancelOrderId);
-      await orderService.cancelOrder(cancelOrderId);
-      showToast("Đã hủy đơn hàng", "success");
+      await orderService.cancelOrder(cancelOrderId, reason);
+      showToast(
+        cancelBehavior?.mode === "direct"
+          ? "Đã hủy đơn hàng thành công"
+          : "Đã gửi yêu cầu hủy đơn thành công",
+        "success",
+      );
       await loadOrders();
     } catch (error) {
       showToast(
@@ -224,22 +236,53 @@ export const MyOrdersPage = () => {
     } finally {
       setActionOrderId(null);
       setCancelOrderId(null);
+      setCancelReason("");
     }
   };
 
-  const handleRequestCancelOrder = (orderId?: string | null) => {
+  const openCancelDialog = (orderId?: string | null) => {
     if (!orderId) return;
-    showToast(
-      "Yêu cầu hủy đã được ghi nhận. Vui lòng chờ Staff xác nhận.",
-      "info",
-    );
+    setCancelOrderId(orderId);
+    setCancelReason("");
   };
+
+  const getCancelBehavior = (order: OrderListItem) => {
+    const isPending = order.status === "Pending";
+    const isProcessing = order.status === "Processing";
+    const isPaid = order.paymentStatus === "Paid";
+
+    if (isPending && !isPaid) {
+      return {
+        mode: "direct" as const,
+        buttonLabel: "Hủy đơn ngay",
+        note: "Đơn hàng đang ở trạng thái chờ xử lý và chưa thanh toán, hệ thống sẽ hủy ngay sau khi bạn xác nhận.",
+      };
+    }
+
+    if ((isPending && isPaid) || isProcessing) {
+      return {
+        mode: "request" as const,
+        buttonLabel: "Gửi yêu cầu hủy",
+        note: "Đơn hàng này cần duyệt yêu cầu hủy. Sau khi gửi, Staff/Admin sẽ xem xét và phản hồi.",
+      };
+    }
+
+    return null;
+  };
+
+  const selectedOrder = useMemo(
+    () => orders.find((item) => item.id === cancelOrderId) ?? null,
+    [orders, cancelOrderId],
+  );
+  const cancelBehavior = selectedOrder
+    ? getCancelBehavior(selectedOrder)
+    : null;
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
     <MainLayout>
-      <Box sx={{ bgcolor: "#f5f5f5", py: 4, flex: 1 }}>
+      <Box sx={{ bgcolor: "white", py: 4, flex: 1 }}>
         <Container maxWidth="lg">
           <Paper
             elevation={0}
@@ -458,27 +501,19 @@ export const MyOrdersPage = () => {
                           justifyContent="flex-end"
                           spacing={1}
                         >
-                          {order.status === "Pending" && (
+                          {getCancelBehavior(order) && (
                             <Button
                               size="small"
-                              color="error"
+                              color={
+                                getCancelBehavior(order)?.mode === "direct"
+                                  ? "error"
+                                  : "warning"
+                              }
                               variant="outlined"
                               disabled={actionOrderId === order.id}
-                              onClick={() => setCancelOrderId(order.id ?? null)}
+                              onClick={() => openCancelDialog(order.id)}
                             >
-                              {actionOrderId === order.id
-                                ? "Đang hủy..."
-                                : "Hủy đơn hàng"}
-                            </Button>
-                          )}
-                          {order.status === "Processing" && (
-                            <Button
-                              size="small"
-                              color="warning"
-                              variant="outlined"
-                              onClick={() => handleRequestCancelOrder(order.id)}
-                            >
-                              Yêu cầu hủy đơn
+                              {getCancelBehavior(order)?.buttonLabel}
                             </Button>
                           )}
                           <Button
@@ -578,25 +613,60 @@ export const MyOrdersPage = () => {
 
       <Dialog
         open={Boolean(cancelOrderId)}
-        onClose={() => setCancelOrderId(null)}
+        onClose={() => {
+          setCancelOrderId(null);
+          setCancelReason("");
+        }}
         maxWidth="xs"
         fullWidth
       >
-        <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
+        <DialogTitle>
+          {cancelBehavior?.mode === "direct"
+            ? "Xác nhận hủy đơn hàng"
+            : "Gửi yêu cầu hủy đơn"}
+        </DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Bạn có chắc chắn muốn hủy đơn hàng này không?
-          </DialogContentText>
+          <Stack spacing={1.5}>
+            <DialogContentText>
+              {cancelBehavior?.note ||
+                "Bạn có chắc chắn muốn gửi yêu cầu hủy đơn này không?"}
+            </DialogContentText>
+            <TextField
+              label="Lý do hủy *"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              fullWidth
+              multiline
+              minRows={3}
+              size="small"
+              placeholder="Nhập lý do hủy đơn hàng"
+            />
+          </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCancelOrderId(null)}>Đóng</Button>
           <Button
-            color="error"
+            onClick={() => {
+              setCancelOrderId(null);
+              setCancelReason("");
+            }}
+          >
+            Đóng
+          </Button>
+          <Button
+            color={cancelBehavior?.mode === "direct" ? "error" : "warning"}
             variant="contained"
             onClick={handleConfirmCancelOrder}
-            disabled={!cancelOrderId || actionOrderId === cancelOrderId}
+            disabled={
+              !cancelOrderId ||
+              actionOrderId === cancelOrderId ||
+              cancelReason.trim().length === 0
+            }
           >
-            {actionOrderId === cancelOrderId ? "Đang hủy..." : "Xác nhận hủy"}
+            {actionOrderId === cancelOrderId
+              ? "Đang gửi..."
+              : cancelBehavior?.mode === "direct"
+                ? "Xác nhận hủy"
+                : "Gửi yêu cầu"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -22,6 +22,7 @@ import {
   Dashboard as DashboardIcon,
   Inventory as InventoryIcon,
   LocalShipping as ShipmentIcon,
+  Campaign as CampaignIcon,
   Assessment as ReportsIcon,
   People as PeopleIcon,
   Logout as LogoutIcon,
@@ -32,6 +33,7 @@ import {
   AddBox as AddBoxIcon,
   Category as CategoryIcon,
   ShoppingCart as ShoppingCartIcon,
+  Cancel as CancelIcon,
   Slideshow as SlideshowIcon,
   SmartToy as BotIcon,
   Quiz as QuizIcon,
@@ -68,6 +70,24 @@ const menuItems: MenuItem[] = [
     roles: ["staff"],
   },
   {
+    text: "Banner & nội dung",
+    icon: <SlideshowIcon />,
+    path: "/admin/content",
+    roles: ["admin"],
+  },
+  {
+    text: "Chiến lược khuyến mãi",
+    icon: <CampaignIcon />,
+    path: "/admin/campaigns",
+    roles: ["admin"],
+  },
+  {
+    text: "Quản lý Voucher",
+    icon: <LocalOfferIcon />,
+    path: "/admin/vouchers",
+    roles: ["admin"],
+  },
+  {
     text: "Quản lý người dùng",
     icon: <PeopleIcon />,
     path: "#",
@@ -80,15 +100,9 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
-    text: "Banner & nội dung",
-    icon: <SlideshowIcon />,
-    path: "/admin/content",
-    roles: ["admin"],
-  },
-  {
-    text: "Nhập hàng",
-    icon: <AddBoxIcon />,
-    path: "/admin/import-stock",
+    text: "Yêu cầu hủy đơn",
+    icon: <CancelIcon />,
+    path: "/admin/cancel-requests",
     roles: ["admin"],
   },
   {
@@ -116,17 +130,24 @@ const menuItems: MenuItem[] = [
     roles: ["staff"],
   },
   {
+    text: "Nhà cung cấp",
+    icon: <PeopleIcon />,
+    path: "/admin/suppliers",
+    roles: ["admin"],
+  },
+  {
+    text: "Nhập hàng",
+    icon: <AddBoxIcon />,
+    path: "/admin/import-stock",
+    roles: ["admin"],
+  },
+  {
     text: "Quản lý kho",
     icon: <InventoryIcon />,
     path: "/admin/inventory",
     roles: ["admin"],
   },
-  {
-    text: "Chiến lược khuyến mãi",
-    icon: <LocalOfferIcon />,
-    path: "/admin/campaigns",
-    roles: ["admin"],
-  },
+
   {
     text: "Quản lý kho",
     icon: <InventoryIcon />,
@@ -146,7 +167,7 @@ const menuItems: MenuItem[] = [
     roles: ["admin"],
   },
   {
-    text: "Quiz",
+    text: "Survey",
     icon: <QuizIcon />,
     path: "/admin/quiz",
     roles: ["admin"],
@@ -167,24 +188,6 @@ const menuItems: MenuItem[] = [
     text: "AI Acceptance",
     icon: <ThumbsUpDownIcon />,
     path: "/admin/ai-acceptance",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý Voucher",
-    icon: <LocalOfferIcon />,
-    path: "/admin/vouchers",
-    roles: ["admin"],
-  },
-  {
-    text: "Yêu cầu hủy đơn",
-    icon: <ShoppingCartIcon />,
-    path: "/admin/cancel-requests",
-    roles: ["admin"],
-  },
-  {
-    text: "Nhà cung cấp",
-    icon: <PeopleIcon />,
-    path: "/admin/suppliers",
     roles: ["admin"],
   },
 ];
