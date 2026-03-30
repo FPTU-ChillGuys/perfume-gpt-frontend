@@ -8,6 +8,7 @@ import {
   Divider,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { ShoppingCartOutlined } from "@mui/icons-material";
 import { cartService } from "@/services/cartService";
 import type { CartItem } from "@/types/cart";
 
@@ -115,8 +116,10 @@ export const CartDropdown = ({
               flexDirection: "column",
               alignItems: "center",
               py: 4,
+              gap: 1,
             }}
           >
+            <ShoppingCartOutlined sx={{ fontSize: 40, color: "text.disabled" }} />
             <Typography variant="body2" color="text.secondary">
               Giỏ hàng trống
             </Typography>
@@ -167,7 +170,7 @@ export const CartDropdown = ({
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
-                        alt={item.variantName || "Product"}
+                        alt={item.variantName || "Sản phẩm"}
                         style={{
                           width: "100%",
                           height: "100%",
@@ -176,7 +179,7 @@ export const CartDropdown = ({
                       />
                     ) : (
                       <Typography variant="caption" color="text.secondary">
-                        No Image
+                        Không có ảnh
                       </Typography>
                     )}
                   </Box>
