@@ -56,9 +56,9 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                     </Box>
                 ) : (
                     <TableContainer component={Paper} elevation={0} variant="outlined">
-                        <Table size="medium">
+                        <Table>
                             <TableHead>
-                                <TableRow sx={{ backgroundColor: "grey.100" }}>
+                                <TableRow sx={{ bgcolor: "grey.50" }}>
                                     <TableCell><strong>SKU</strong></TableCell>
                                     <TableCell><strong>Volume</strong></TableCell>
                                     <TableCell><strong>Type</strong></TableCell>

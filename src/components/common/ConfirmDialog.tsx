@@ -6,6 +6,7 @@ import {
   Typography,
   Button,
 } from "@mui/material";
+import type { ButtonProps } from "@mui/material";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface ConfirmDialogProps {
   description?: string;
   confirmText?: string;
   cancelText?: string;
+  confirmColor?: ButtonProps["color"];
   loading?: boolean;
   onConfirm: () => void;
   onClose: () => void;
@@ -24,6 +26,7 @@ export default function ConfirmDialog({
   description,
   confirmText = "Xác nhận",
   cancelText = "Huỷ",
+  confirmColor = "error",
   loading = false,
   onConfirm,
   onClose,
@@ -44,7 +47,7 @@ export default function ConfirmDialog({
         </Button>
         <Button
           variant="contained"
-          color="error"
+          color={confirmColor}
           onClick={onConfirm}
           disabled={loading}
         >

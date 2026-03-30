@@ -300,10 +300,10 @@ const ProductManagement = () => {
               </Box>
             ) : (
               <>
-                <TableContainer>
+                <TableContainer component={Paper}>
                   <Table>
                     <TableHead>
-                      <TableRow>
+                      <TableRow sx={{ bgcolor: "grey.50" }}>
                         <TableCell width="120">Hình ảnh</TableCell>
                         <TableCell>Tên sản phẩm</TableCell>
                         <TableCell>Thương hiệu</TableCell>
