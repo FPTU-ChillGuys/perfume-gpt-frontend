@@ -4945,6 +4945,115 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/olfactoryfamilies/lookup": {
         parameters: {
             query?: never;
@@ -5278,7 +5387,48 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: {
+            parameters: {
+                query?: {
+                    CustomerId?: string;
+                    Status?: components["schemas"]["ReturnRequestStatus"];
+                    IsRefunded?: boolean;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                    };
+                };
+            };
+        };
         put?: never;
         post: {
             parameters: {
@@ -5308,6 +5458,135 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/my-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    CustomerId?: string;
+                    Status?: components["schemas"]["ReturnRequestStatus"];
+                    IsRefunded?: boolean;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11573,6 +11852,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfOrderReturnRequestResponse: {
+            payload?: null | components["schemas"]["OrderReturnRequestResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfPagedResultOfAvailableVoucherResponse: {
             payload?: null | components["schemas"]["PagedResultOfAvailableVoucherResponse"];
             success?: boolean;
@@ -11617,6 +11903,13 @@ export interface components {
         };
         BaseResponseOfPagedResultOfOrderListItem: {
             payload?: null | components["schemas"]["PagedResultOfOrderListItem"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfPagedResultOfOrderReturnRequestResponse: {
+            payload?: null | components["schemas"]["PagedResultOfOrderReturnRequestResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -12121,12 +12414,6 @@ export interface components {
             scentNotes?: components["schemas"]["ScentNoteDto"][];
             attributes?: null | components["schemas"]["ProductAttributeDto"][];
         };
-        CreateReturnRequestDetailDto: {
-            /** Format: uuid */
-            orderDetailId: string;
-            /** Format: int32 */
-            returnedQuantity?: number;
-        };
         CreateReturnRequestDto: {
             /** Format: uuid */
             orderId: string;
@@ -12135,7 +12422,6 @@ export interface components {
             requestedRefundAmount?: number;
             customerNote?: null | string;
             temporaryMediaIds?: null | string[];
-            returnItems: components["schemas"]["CreateReturnRequestDetailDto"][];
         };
         CreateReviewRequest: {
             /** Format: uuid */
@@ -12542,6 +12828,7 @@ export interface components {
             totalAmount?: number;
             /** Format: int32 */
             itemCount?: number;
+            isReturnalbe?: boolean;
             shippingStatus?: null | components["schemas"]["ShippingStatus"];
             /** Format: date-time */
             createdAt?: string;
@@ -12578,6 +12865,38 @@ export interface components {
             shippingInfo?: null | components["schemas"]["ShippingInfoResponse"];
             recipientInfo?: null | components["schemas"]["RecipientInfoResponse"];
             orderDetails?: components["schemas"]["OrderDetailResponse"][];
+        };
+        OrderReturnRequestResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            orderId?: string;
+            /** Format: uuid */
+            customerId?: string;
+            customerEmail?: null | string;
+            /** Format: uuid */
+            processedById?: null | string;
+            processedByName?: null | string;
+            /** Format: uuid */
+            inspectedById?: null | string;
+            inspectedByName?: null | string;
+            reason?: string;
+            customerNote?: null | string;
+            staffNote?: null | string;
+            inspectionNote?: null | string;
+            status?: components["schemas"]["ReturnRequestStatus"];
+            /** Format: decimal */
+            requestedRefundAmount?: number;
+            /** Format: decimal */
+            approvedRefundAmount?: null | number;
+            isRefunded?: boolean;
+            vnpTransactionNo?: null | string;
+            isRestocked?: boolean;
+            proofImages?: components["schemas"]["MediaResponse"][];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: null | string;
         };
         /** @enum {string} */
         OrderStatus: "Pending" | "Processing" | "Delivering" | "Delivered" | "Returning" | "Cancelled" | "Returned";
@@ -12663,6 +12982,19 @@ export interface components {
         };
         PagedResultOfOrderListItem: {
             items: components["schemas"]["OrderListItem"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
+        PagedResultOfOrderReturnRequestResponse: {
+            items: components["schemas"]["OrderReturnRequestResponse"][];
             /** Format: int32 */
             pageNumber: number;
             /** Format: int32 */
@@ -13102,16 +13434,11 @@ export interface components {
             provinceName?: string;
             fullAddress?: string;
         };
-        RecordInspectionDetailDto: {
-            /** Format: uuid */
-            detailId: string;
-            isRestocked?: boolean;
-            note?: null | string;
-        };
         RecordInspectionDto: {
             /** Format: decimal */
             approvedRefundAmount?: number;
-            inspectionResults: components["schemas"]["RecordInspectionDetailDto"][];
+            isRestocked?: boolean;
+            inspectionNote?: null | string;
         };
         RedeemableVoucherResponse: {
             /** Format: uuid */
@@ -13165,6 +13492,8 @@ export interface components {
             token: string;
         };
         ResponseErrorType: number;
+        /** @enum {string} */
+        ReturnRequestStatus: "Pending" | "ApprovedForReturn" | "Inspecting" | "ReadyForRefund" | "Completed" | "Rejected";
         RevenueSummaryResponse: {
             /** Format: date-time */
             fromDate?: string;
@@ -13667,6 +13996,7 @@ export interface components {
             id?: string;
             type?: components["schemas"]["OrderType"];
             status?: components["schemas"]["OrderStatus"];
+            isReturnable?: boolean;
             paymentStatus?: components["schemas"]["PaymentStatus"];
             /** Format: decimal */
             totalAmount?: number;

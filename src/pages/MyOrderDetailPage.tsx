@@ -4,7 +4,6 @@ import {
   Alert,
   Box,
   Button,
-  Checkbox,
   Chip,
   CircularProgress,
   Container,
@@ -13,7 +12,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  FormControlLabel,
   IconButton,
   Paper,
   Stack,
@@ -40,8 +38,6 @@ import {
   Person,
   CancelOutlined,
   AssignmentReturn,
-  CheckCircle,
-  RadioButtonUnchecked,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { AppBreadcrumbs } from "@/components/common/AppBreadcrumbs";
@@ -62,16 +58,6 @@ import {
 import { orderStatusLabels } from "@/utils/orderStatus";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
-
-type ReturnItemSelection = {
-  orderDetailId: string;
-  variantName?: string;
-  imageUrl?: string | null;
-  unitPrice: number;
-  maxQuantity: number;
-  quantity: number;
-  selected: boolean;
-};
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -346,7 +332,6 @@ export const MyOrderDetailPage = () => {
   );
   const [returnReason, setReturnReason] = useState("");
   const [returnNote, setReturnNote] = useState("");
-  const [returnItems, setReturnItems] = useState<ReturnItemSelection[]>([]);
   const [returnImages, setReturnImages] = useState<File[]>([]);
   const [activeReturnImageIndex, setActiveReturnImageIndex] = useState(0);
   const [isSubmittingReturnRequest, setIsSubmittingReturnRequest] =
@@ -490,11 +475,8 @@ export const MyOrderDetailPage = () => {
   }, [order?.paymentTransactions]);
 
   const requestedRefundAmount = useMemo(
-    () =>
-      returnItems
-        .filter((item) => item.selected && item.quantity > 0)
-        .reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
-    [returnItems],
+    () => Number(order?.totalAmount ?? 0),
+    [order?.totalAmount],
   );
 
   const returnImagePreviews = useMemo(
@@ -524,27 +506,6 @@ export const MyOrderDetailPage = () => {
       setActiveReturnImageIndex(returnImagePreviews.length - 1);
     }
   }, [returnImagePreviews.length, activeReturnImageIndex]);
-
-  useEffect(() => {
-    if (!order?.orderDetails?.length) {
-      setReturnItems([]);
-      return;
-    }
-
-    setReturnItems(
-      order.orderDetails
-        .filter((item) => Boolean(item.id))
-        .map((item) => ({
-          orderDetailId: item.id!,
-          variantName: item.variantName,
-          imageUrl: item.imageUrl,
-          unitPrice: Number(item.unitPrice ?? 0),
-          maxQuantity: Number(item.quantity ?? 0),
-          quantity: Number(item.quantity ?? 0),
-          selected: false,
-        })),
-    );
-  }, [order?.orderDetails]);
 
   const handleCancelOrder = async () => {
     if (!order?.id) return;
@@ -580,41 +541,6 @@ export const MyOrderDetailPage = () => {
     }
   };
 
-  const handleReturnItemToggle = (orderDetailId: string, checked: boolean) => {
-    setReturnItems((prev) =>
-      prev.map((item) =>
-        item.orderDetailId === orderDetailId
-          ? {
-              ...item,
-              selected: checked,
-              quantity: checked
-                ? Math.max(1, Math.min(item.quantity, item.maxQuantity))
-                : item.quantity,
-            }
-          : item,
-      ),
-    );
-  };
-
-  const handleReturnQuantityChange = (
-    orderDetailId: string,
-    quantity: number,
-  ) => {
-    setReturnItems((prev) =>
-      prev.map((item) => {
-        if (item.orderDetailId !== orderDetailId) {
-          return item;
-        }
-
-        const bounded = Math.max(1, Math.min(quantity, item.maxQuantity));
-        return {
-          ...item,
-          quantity: Number.isFinite(bounded) ? bounded : 1,
-        };
-      }),
-    );
-  };
-
   const handleReturnImagesChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -644,14 +570,6 @@ export const MyOrderDetailPage = () => {
       return;
     }
 
-    const selectedItems = returnItems.filter(
-      (item) => item.selected && item.quantity > 0,
-    );
-    if (!selectedItems.length) {
-      showToast("Vui lòng chọn ít nhất một sản phẩm để trả hàng", "warning");
-      return;
-    }
-
     try {
       setIsSubmittingReturnRequest(true);
 
@@ -666,12 +584,8 @@ export const MyOrderDetailPage = () => {
         orderId: order.id,
         reason,
         customerNote: returnNote.trim() || null,
-        requestedRefundAmount,
+        requestedRefundAmount: requestedRefundAmount || undefined,
         temporaryMediaIds: temporaryMediaIds.length ? temporaryMediaIds : null,
-        returnItems: selectedItems.map((item) => ({
-          orderDetailId: item.orderDetailId,
-          returnedQuantity: item.quantity,
-        })),
       });
 
       showToast("Đã gửi yêu cầu trả hàng thành công", "success");
@@ -904,119 +818,31 @@ export const MyOrderDetailPage = () => {
                           gap={2}
                         >
                           <Stack spacing={1.5}>
-                            {returnItems.map((item) => (
-                              <Box
-                                key={item.orderDetailId}
-                                sx={{
-                                  p: 1.5,
-                                  border: "1px solid",
-                                  borderColor: item.selected
-                                    ? "#ee4d2d"
-                                    : "divider",
-                                  borderRadius: 1.5,
-                                  bgcolor: item.selected ? "#fff8f6" : "#fff",
-                                }}
+                            <Alert severity="info" sx={{ mb: 0.5 }}>
+                              Yêu cầu trả hàng hiện áp dụng cho toàn bộ đơn. Hệ
+                              thống sẽ gửi theo mã đơn hàng và xử lý toàn bộ sản
+                              phẩm trong đơn.
+                            </Alert>
+
+                            <Box
+                              sx={{
+                                p: 1.5,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                borderRadius: 1.5,
+                                bgcolor: "#fafafa",
+                              }}
+                            >
+                              <Typography variant="body2" fontWeight={700}>
+                                Mã đơn: {order.id?.slice(0, 8) || "-"}...
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
                               >
-                                <Stack
-                                  direction={{ xs: "column", sm: "row" }}
-                                  spacing={1.5}
-                                  alignItems={{
-                                    xs: "flex-start",
-                                    sm: "center",
-                                  }}
-                                >
-                                  <Box
-                                    display="flex"
-                                    alignItems="center"
-                                    gap={1.25}
-                                    flex={1}
-                                  >
-                                    {item.imageUrl ? (
-                                      <Box
-                                        component="img"
-                                        src={item.imageUrl}
-                                        alt={item.variantName}
-                                        sx={{
-                                          width: 56,
-                                          height: 56,
-                                          borderRadius: 1,
-                                          objectFit: "cover",
-                                          border: "1px solid",
-                                          borderColor: "divider",
-                                          flexShrink: 0,
-                                        }}
-                                      />
-                                    ) : (
-                                      <Box
-                                        sx={{
-                                          width: 56,
-                                          height: 56,
-                                          borderRadius: 1,
-                                          bgcolor: "grey.100",
-                                          flexShrink: 0,
-                                        }}
-                                      />
-                                    )}
-                                    <Box>
-                                      <Typography
-                                        fontWeight={700}
-                                        variant="body2"
-                                      >
-                                        {item.variantName || "Sản phẩm"}
-                                      </Typography>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        Tối đa: {item.maxQuantity} | Đơn giá:{" "}
-                                        {fmt(item.unitPrice)}
-                                      </Typography>
-                                    </Box>
-                                  </Box>
-
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox
-                                        checked={item.selected}
-                                        icon={<RadioButtonUnchecked />}
-                                        checkedIcon={<CheckCircle />}
-                                        onChange={(e) =>
-                                          handleReturnItemToggle(
-                                            item.orderDetailId,
-                                            e.target.checked,
-                                          )
-                                        }
-                                        sx={{
-                                          color: "#c8c8c8",
-                                          "&.Mui-checked": { color: "#ee4d2d" },
-                                        }}
-                                      />
-                                    }
-                                    label="Chọn trả"
-                                    sx={{ mr: 0 }}
-                                  />
-
-                                  <TextField
-                                    size="small"
-                                    type="number"
-                                    label="Số lượng trả"
-                                    value={item.quantity}
-                                    disabled={!item.selected}
-                                    onChange={(e) =>
-                                      handleReturnQuantityChange(
-                                        item.orderDetailId,
-                                        Number(e.target.value || 1),
-                                      )
-                                    }
-                                    inputProps={{
-                                      min: 1,
-                                      max: item.maxQuantity,
-                                    }}
-                                    sx={{ width: 140 }}
-                                  />
-                                </Stack>
-                              </Box>
-                            ))}
+                                Tổng sản phẩm: {order.orderDetails?.length || 0}
+                              </Typography>
+                            </Box>
 
                             <TextField
                               label="Lý do trả hàng *"

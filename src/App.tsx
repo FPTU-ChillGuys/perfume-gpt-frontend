@@ -80,6 +80,11 @@ const MyOrderDetailPage = lazy(() =>
     default: m.MyOrderDetailPage,
   })),
 );
+const MyReturnRequestsPage = lazy(() =>
+  import("./pages/MyReturnRequestsPage").then((m) => ({
+    default: m.MyReturnRequestsPage,
+  })),
+);
 const OrderManagementPage = lazy(() =>
   import("./pages/OrderManagementPage").then((m) => ({
     default: m.OrderManagementPage,
@@ -299,6 +304,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
                             <MyOrderDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-return-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyReturnRequestsPage />
                           </RoleBasedRoute>
                         }
                       />

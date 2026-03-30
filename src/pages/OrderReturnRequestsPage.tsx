@@ -28,28 +28,17 @@ import {
   Typography,
   Checkbox,
 } from "@mui/material";
+import ImageIcon from "@mui/icons-material/Image";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
   orderService,
   type OrderReturnRequest,
-  type OrderReturnRequestDetail,
   type ReturnRequestStatus,
 } from "../services/orderService";
 import { useToast } from "../hooks/useToast";
 import type { OrderResponse } from "../types/order";
 
 type ReturnTabStatus = "All" | ReturnRequestStatus;
-
-type InspectionRow = {
-  detailId: string;
-  orderDetailId?: string;
-  variantName: string;
-  requestedQuantity: number;
-  unitPrice: number;
-  approved: boolean;
-  isRestocked: boolean;
-  note: string;
-};
 
 const STATUS_OPTIONS: ReturnTabStatus[] = [
   "All",
@@ -58,7 +47,7 @@ const STATUS_OPTIONS: ReturnTabStatus[] = [
   "Inspecting",
   "ReadyForRefund",
   "Rejected",
-  "Refunded",
+  "Completed",
 ];
 
 const statusLabel = (status?: string) => {
@@ -67,6 +56,7 @@ const statusLabel = (status?: string) => {
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
   if (status === "Rejected") return "Từ chối";
+  if (status === "Completed") return "Đã hoàn tất";
   if (status === "Refunded") return "Đã hoàn tiền";
   return status || "-";
 };
@@ -79,6 +69,7 @@ const statusColor = (
   if (status === "Inspecting") return "info";
   if (status === "ReadyForRefund") return "success";
   if (status === "Rejected") return "error";
+  if (status === "Completed") return "success";
   if (status === "Refunded") return "success";
   return "default";
 };
@@ -94,13 +85,29 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-const toRequestQuantity = (item: OrderReturnRequestDetail) => {
-  return Math.max(
-    0,
-    toNumber(item.returnedQuantity ?? item.requestedQuantity ?? item.quantity),
-  );
-};
+/* ─── Image Lightbox ─── */
+const ImageLightbox = ({
+  open,
+  imageUrl,
+  onClose,
+}: {
+  open: boolean;
+  imageUrl: string;
+  onClose: () => void;
+}) => (
+  <Dialog open={open} onClose={onClose} maxWidth="md">
+    <DialogContent sx={{ p: 1 }}>
+      <Box
+        component="img"
+        src={imageUrl}
+        alt="Ảnh minh chứng"
+        sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
+      />
+    </DialogContent>
+  </Dialog>
+);
 
+/* ─── Main Page Component ─── */
 export const OrderReturnRequestsPage = () => {
   const { showToast } = useToast();
 
@@ -114,6 +121,7 @@ export const OrderReturnRequestsPage = () => {
   const [error, setError] = useState("");
 
   const [detailOpen, setDetailOpen] = useState(false);
+  const [refundConfirmOpen, setRefundConfirmOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] =
     useState<OrderReturnRequest | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(
@@ -124,7 +132,13 @@ export const OrderReturnRequestsPage = () => {
   const [reviewNote, setReviewNote] = useState("");
   const [inspectionStartNote, setInspectionStartNote] = useState("");
   const [inspectionFailNote, setInspectionFailNote] = useState("");
-  const [inspectionRows, setInspectionRows] = useState<InspectionRow[]>([]);
+  const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState(0);
+  const [inspectionRestocked, setInspectionRestocked] = useState(false);
+  const [inspectionResultNote, setInspectionResultNote] = useState("");
+
+  // Image lightbox
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState("");
 
   const statusFilter =
     STATUS_OPTIONS[tabIndex] === "All" ? undefined : STATUS_OPTIONS[tabIndex];
@@ -147,6 +161,8 @@ export const OrderReturnRequestsPage = () => {
         Status: statusFilter,
         PageNumber: page + 1,
         PageSize: rowsPerPage,
+        SortBy: "createdAt",
+        SortOrder: "desc",
       });
       setRequests(result.items || []);
       setTotalCount(result.totalCount || 0);
@@ -167,56 +183,21 @@ export const OrderReturnRequestsPage = () => {
 
   useEffect(() => {
     if (!selectedRequest) {
-      setInspectionRows([]);
+      setInspectionApprovedRefund(0);
+      setInspectionRestocked(false);
+      setInspectionResultNote("");
       return;
     }
 
-    const requestItems = selectedRequest.returnItems || [];
-    const orderDetails = selectedOrder?.orderDetails || [];
-
-    const rows: InspectionRow[] = requestItems
-      .map((item, index) => {
-        const detailId = item.id;
-        if (!detailId) {
-          return null;
-        }
-
-        const orderDetail = orderDetails.find(
-          (d) => d.id === item.orderDetailId,
-        );
-        const unitPrice = toNumber(item.unitPrice ?? orderDetail?.unitPrice);
-        const requestedQuantity = toRequestQuantity(item);
-
-        return {
-          detailId,
-          orderDetailId: item.orderDetailId,
-          variantName:
-            item.variantName ||
-            orderDetail?.variantName ||
-            `Sản phẩm ${index + 1}`,
-          requestedQuantity,
-          unitPrice,
-          approved: requestedQuantity > 0,
-          isRestocked: false,
-          note: item.note || "",
-        } as InspectionRow;
-      })
-      .filter((item): item is InspectionRow => item !== null);
-
-    setInspectionRows(rows);
-  }, [selectedRequest, selectedOrder]);
-
-  const approvedRefundAmount = useMemo(
-    () =>
-      inspectionRows
-        .filter((item) => item.approved)
-        .reduce(
-          (sum, item) =>
-            sum + item.unitPrice * Math.max(item.requestedQuantity, 0),
-          0,
-        ),
-    [inspectionRows],
-  );
+    setInspectionApprovedRefund(
+      toNumber(
+        selectedRequest.approvedRefundAmount ??
+          selectedRequest.requestedRefundAmount,
+      ),
+    );
+    setInspectionRestocked(Boolean(selectedRequest.isRestocked));
+    setInspectionResultNote(selectedRequest.inspectionNote || "");
+  }, [selectedRequest]);
 
   const openDetail = async (request: OrderReturnRequest) => {
     setSelectedRequest(request);
@@ -226,19 +207,24 @@ export const OrderReturnRequestsPage = () => {
     setInspectionFailNote("");
     setDetailOpen(true);
 
-    if (!request.orderId) {
-      return;
-    }
-
     setIsOrderLoading(true);
     try {
-      const order = await orderService.getOrderById(request.orderId);
-      setSelectedOrder(order);
+      // Fetch the full return request details (list API doesn't include returnDetails)
+      if (request.id) {
+        const fullRequest = await orderService.getReturnRequestById(request.id);
+        setSelectedRequest(fullRequest);
+      }
+
+      // Also fetch the order details for additional context
+      if (request.orderId) {
+        const order = await orderService.getOrderById(request.orderId);
+        setSelectedOrder(order);
+      }
     } catch (loadError) {
       showToast(
         loadError instanceof Error
           ? loadError.message
-          : "Không thể tải chi tiết đơn hàng",
+          : "Không thể tải chi tiết",
         "error",
       );
     } finally {
@@ -253,17 +239,35 @@ export const OrderReturnRequestsPage = () => {
     setReviewNote("");
     setInspectionStartNote("");
     setInspectionFailNote("");
-    setInspectionRows([]);
+    setInspectionApprovedRefund(0);
+    setInspectionRestocked(false);
+    setInspectionResultNote("");
   };
 
   const refreshAfterAction = async (successMessage: string) => {
     showToast(successMessage, "success");
     await load();
-    closeDetail();
+    if (selectedRequest?.id) {
+      try {
+        const fullRequest = await orderService.getReturnRequestById(
+          selectedRequest.id,
+        );
+        setSelectedRequest(fullRequest);
+      } catch {
+        closeDetail();
+      }
+    } else {
+      closeDetail();
+    }
   };
 
   const handleReview = async (isApproved: boolean) => {
     if (!selectedRequest?.id) {
+      return;
+    }
+
+    if (!isApproved && !reviewNote.trim()) {
+      showToast("Vui lòng nhập ghi chú khi từ chối", "warning");
       return;
     }
 
@@ -316,21 +320,17 @@ export const OrderReturnRequestsPage = () => {
       return;
     }
 
-    const approvedItems = inspectionRows.filter((item) => item.approved);
-    if (!approvedItems.length) {
-      showToast("Vui lòng chọn ít nhất một sản phẩm đạt kiểm định", "warning");
+    if (inspectionApprovedRefund < 0) {
+      showToast("Số tiền hoàn được duyệt không hợp lệ", "warning");
       return;
     }
 
     setIsSaving(true);
     try {
       await orderService.completeReturnInspection(selectedRequest.id, {
-        approvedRefundAmount,
-        inspectionResults: approvedItems.map((item) => ({
-          detailId: item.detailId,
-          isRestocked: item.isRestocked,
-          note: item.note.trim() || null,
-        })),
+        approvedRefundAmount: inspectionApprovedRefund,
+        isRestocked: inspectionRestocked,
+        inspectionNote: inspectionResultNote.trim() || null,
       });
       await refreshAfterAction("Đã hoàn tất kiểm định");
     } catch (actionError) {
@@ -373,12 +373,20 @@ export const OrderReturnRequestsPage = () => {
     }
   };
 
-  const handleRefund = async () => {
+  const handleRefund = () => {
+    if (!selectedRequest?.id) {
+      return;
+    }
+    setRefundConfirmOpen(true);
+  };
+
+  const executeRefund = async () => {
     if (!selectedRequest?.id) {
       return;
     }
 
     setIsSaving(true);
+    setRefundConfirmOpen(false);
     try {
       await orderService.refundReturnRequest(selectedRequest.id);
       await refreshAfterAction("Đã hoàn tiền cho khách hàng");
@@ -553,20 +561,49 @@ export const OrderReturnRequestsPage = () => {
         </TableContainer>
       </Box>
 
+      {/* ─── Detail Dialog ─── */}
       <Dialog open={detailOpen} onClose={closeDetail} fullWidth maxWidth="lg">
-        <DialogTitle>Chi tiết yêu cầu trả hàng</DialogTitle>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Typography variant="h6" fontWeight={700} component="span">
+            Chi tiết yêu cầu trả hàng
+          </Typography>
+          {selectedRequest?.status && (
+            <Chip
+              size="small"
+              label={statusLabel(selectedRequest.status)}
+              color={statusColor(selectedRequest.status)}
+            />
+          )}
+        </DialogTitle>
         <DialogContent dividers>
           {!selectedRequest ? null : (
-            <Stack spacing={2}>
+            <Stack spacing={2.5}>
+              {/* ─── Request Info Card ─── */}
               <Box
                 sx={{
-                  p: 2,
+                  p: 2.5,
                   border: "1px solid",
                   borderColor: "divider",
                   borderRadius: 2,
                   bgcolor: "grey.50",
                 }}
               >
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={700}
+                  mb={2}
+                  sx={{ color: "#333" }}
+                >
+                  Thông tin yêu cầu
+                </Typography>
                 <Box
                   display="grid"
                   gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr 1fr" }}
@@ -576,16 +613,22 @@ export const OrderReturnRequestsPage = () => {
                     <Typography variant="caption" color="text.secondary">
                       Mã yêu cầu
                     </Typography>
-                    <Typography fontWeight={700}>
-                      {selectedRequest.id || "-"}
+                    <Typography
+                      fontWeight={700}
+                      sx={{ fontFamily: "monospace", fontSize: 13 }}
+                    >
+                      {selectedRequest.id?.slice(0, 8) || "-"}...
                     </Typography>
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
                       Mã đơn hàng
                     </Typography>
-                    <Typography fontWeight={700}>
-                      {selectedRequest.orderId || "-"}
+                    <Typography
+                      fontWeight={700}
+                      sx={{ fontFamily: "monospace", fontSize: 13 }}
+                    >
+                      {selectedRequest.orderId?.slice(0, 8) || "-"}...
                     </Typography>
                   </Box>
                   <Box>
@@ -620,10 +663,47 @@ export const OrderReturnRequestsPage = () => {
                     <Typography variant="caption" color="text.secondary">
                       Tiền yêu cầu hoàn
                     </Typography>
-                    <Typography>
+                    <Typography fontWeight={700} color="#ee4d2d">
                       {formatCurrency(selectedRequest.requestedRefundAmount)}
                     </Typography>
                   </Box>
+                  {selectedRequest.approvedRefundAmount != null &&
+                    selectedRequest.approvedRefundAmount > 0 && (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Tiền được duyệt hoàn
+                        </Typography>
+                        <Typography fontWeight={700} color="success.main">
+                          {formatCurrency(selectedRequest.approvedRefundAmount)}
+                        </Typography>
+                      </Box>
+                    )}
+                  {selectedRequest.processedByName && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Người xử lý
+                      </Typography>
+                      <Typography>{selectedRequest.processedByName}</Typography>
+                    </Box>
+                  )}
+                  {selectedRequest.inspectedByName && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Người kiểm định
+                      </Typography>
+                      <Typography>{selectedRequest.inspectedByName}</Typography>
+                    </Box>
+                  )}
+                  {selectedRequest.updatedAt && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Cập nhật lần cuối
+                      </Typography>
+                      <Typography>
+                        {formatDate(selectedRequest.updatedAt)}
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
 
                 <Box mt={2}>
@@ -641,53 +721,245 @@ export const OrderReturnRequestsPage = () => {
                     <Typography>{selectedRequest.customerNote}</Typography>
                   </Box>
                 )}
+
+                {selectedRequest.staffNote && (
+                  <Box mt={1}>
+                    <Typography variant="caption" color="text.secondary">
+                      Ghi chú nhân viên
+                    </Typography>
+                    <Typography>{selectedRequest.staffNote}</Typography>
+                  </Box>
+                )}
+
+                {selectedRequest.inspectionNote && (
+                  <Box mt={1}>
+                    <Typography variant="caption" color="text.secondary">
+                      Ghi chú kiểm định
+                    </Typography>
+                    <Typography>{selectedRequest.inspectionNote}</Typography>
+                  </Box>
+                )}
               </Box>
 
+              {/* ─── Product Items (Card Style) ─── */}
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                  Sản phẩm yêu cầu trả
+                  Sản phẩm trong đơn
                 </Typography>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "grey.50" }}>
-                      <TableCell>Sản phẩm</TableCell>
-                      <TableCell align="center">Số lượng</TableCell>
-                      <TableCell align="right">Đơn giá</TableCell>
-                      <TableCell align="right">Tổng</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {(selectedRequest.returnItems || []).map((item, index) => {
-                      const quantity = toRequestQuantity(item);
-                      const orderDetail = selectedOrder?.orderDetails?.find(
-                        (orderItem) => orderItem.id === item.orderDetailId,
-                      );
-                      const unitPrice = toNumber(
-                        item.unitPrice ?? orderDetail?.unitPrice,
-                      );
-                      const name =
-                        item.variantName ||
-                        orderDetail?.variantName ||
-                        `Sản phẩm ${index + 1}`;
+                <Stack spacing={0} divider={<Divider />}>
+                  {(selectedOrder?.orderDetails || []).map((item, index) => {
+                    const quantity = toNumber(item.quantity);
+                    const unitPrice = toNumber(item.unitPrice);
+                    const name = item.variantName || `Sản phẩm ${index + 1}`;
+                    const imageUrl = item.imageUrl || null;
+                    const total = unitPrice * quantity;
 
-                      return (
-                        <TableRow
-                          key={item.id || `${item.orderDetailId}-${index}`}
+                    return (
+                      <Box
+                        key={item.id || index}
+                        sx={{
+                          py: 1.5,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 2,
+                          }}
                         >
-                          <TableCell>{name}</TableCell>
-                          <TableCell align="center">x{quantity}</TableCell>
-                          <TableCell align="right">
-                            {formatCurrency(unitPrice)}
-                          </TableCell>
-                          <TableCell align="right">
-                            {formatCurrency(unitPrice * quantity)}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                          <Box
+                            sx={{
+                              flex: 1,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 1.5,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
+                            >
+                              {/* Product Image */}
+                              {imageUrl ? (
+                                <Box
+                                  component="img"
+                                  src={imageUrl}
+                                  alt={name}
+                                  sx={{
+                                    width: 72,
+                                    height: 72,
+                                    borderRadius: 1.5,
+                                    objectFit: "cover",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              ) : (
+                                <Box
+                                  sx={{
+                                    width: 72,
+                                    height: 72,
+                                    borderRadius: 1.5,
+                                    bgcolor: "grey.100",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <ImageIcon
+                                    sx={{ color: "grey.400", fontSize: 28 }}
+                                  />
+                                </Box>
+                              )}
+
+                              {/* Product Info */}
+                              <Box flex={1} minWidth={0}>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={600}
+                                  sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                  }}
+                                >
+                                  {name}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Số lượng: {quantity}
+                                </Typography>
+                                {unitPrice > 0 && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
+                                    Đơn giá: {formatCurrency(unitPrice)}
+                                  </Typography>
+                                )}
+                              </Box>
+
+                              {/* Price */}
+                              {total > 0 && (
+                                <Typography
+                                  variant="body1"
+                                  fontWeight={700}
+                                  color="#ee4d2d"
+                                  sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
+                                >
+                                  {formatCurrency(total)}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                  {!(selectedOrder?.orderDetails || []).length && (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ py: 1 }}
+                    >
+                      Không tải được chi tiết sản phẩm của đơn hàng.
+                    </Typography>
+                  )}
+                </Stack>
+
+                {/* Total */}
+                {selectedRequest.requestedRefundAmount != null &&
+                  selectedRequest.requestedRefundAmount > 0 && (
+                    <Box
+                      display="flex"
+                      justifyContent="flex-end"
+                      alignItems="center"
+                      mt={1.5}
+                      pt={1.5}
+                      sx={{
+                        borderTop: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Typography variant="body2" color="text.secondary" mr={2}>
+                        Tổng tiền yêu cầu hoàn:
+                      </Typography>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={700}
+                        color="#ee4d2d"
+                      >
+                        {formatCurrency(selectedRequest.requestedRefundAmount)}
+                      </Typography>
+                    </Box>
+                  )}
               </Paper>
+
+              {/* ─── Proof Images ─── */}
+              {selectedRequest.proofImages &&
+                selectedRequest.proofImages.length > 0 && (
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                      Ảnh minh chứng ({selectedRequest.proofImages.length} ảnh)
+                    </Typography>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      flexWrap="wrap"
+                      useFlexGap
+                    >
+                      {selectedRequest.proofImages.map((img, imgIndex) =>
+                        img.url ? (
+                          <Box
+                            key={img.id || imgIndex}
+                            onClick={() => {
+                              setLightboxImage(img.url!);
+                              setLightboxOpen(true);
+                            }}
+                            sx={{
+                              cursor: "pointer",
+                              borderRadius: 1.5,
+                              overflow: "hidden",
+                              border: "2px solid",
+                              borderColor: "divider",
+                              transition: "all 0.2s",
+                              "&:hover": {
+                                borderColor: "#ee4d2d",
+                                transform: "scale(1.03)",
+                                boxShadow: 2,
+                              },
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src={img.url}
+                              alt={img.altText || `Ảnh ${imgIndex + 1}`}
+                              sx={{
+                                width: 100,
+                                height: 100,
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                            />
+                          </Box>
+                        ) : null,
+                      )}
+                    </Stack>
+                  </Paper>
+                )}
 
               {isOrderLoading && (
                 <Box textAlign="center" py={1}>
@@ -695,6 +967,7 @@ export const OrderReturnRequestsPage = () => {
                 </Box>
               )}
 
+              {/* ─── Pending: Review ─── */}
               {selectedRequest.status === "Pending" && (
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
@@ -738,6 +1011,7 @@ export const OrderReturnRequestsPage = () => {
                 </Paper>
               )}
 
+              {/* ─── ApprovedForReturn: Start Inspection ─── */}
               {selectedRequest.status === "ApprovedForReturn" && (
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
@@ -768,130 +1042,54 @@ export const OrderReturnRequestsPage = () => {
                 </Paper>
               )}
 
+              {/* ─── Inspecting: Complete / Fail ─── */}
               {selectedRequest.status === "Inspecting" && (
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                    Kết quả kiểm định
+                    Hoàn tất kiểm định
                   </Typography>
 
-                  <Stack spacing={1.25}>
-                    {inspectionRows.map((row) => (
-                      <Box
-                        key={row.detailId}
-                        sx={{
-                          p: 1.25,
-                          border: "1px solid",
-                          borderColor: row.approved
-                            ? "success.light"
-                            : "divider",
-                          borderRadius: 1.5,
-                          bgcolor: row.approved ? "#f5fff8" : "#fff",
-                        }}
-                      >
-                        <Stack
-                          direction={{ xs: "column", md: "row" }}
-                          spacing={1.25}
-                          alignItems={{ xs: "flex-start", md: "center" }}
-                        >
-                          <Box flex={1}>
-                            <Typography fontWeight={700} variant="body2">
-                              {row.variantName}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {`Số lượng: ${row.requestedQuantity} | Đơn giá: ${formatCurrency(row.unitPrice)}`}
-                            </Typography>
-                          </Box>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Số tiền hoàn được duyệt"
+                    value={inspectionApprovedRefund}
+                    onChange={(event) =>
+                      setInspectionApprovedRefund(toNumber(event.target.value))
+                    }
+                    inputProps={{ min: 0 }}
+                  />
 
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={row.approved}
-                                onChange={(event) =>
-                                  setInspectionRows((prev) =>
-                                    prev.map((item) =>
-                                      item.detailId === row.detailId
-                                        ? {
-                                            ...item,
-                                            approved: event.target.checked,
-                                          }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                              />
-                            }
-                            label="Đạt"
-                          />
-
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={row.isRestocked}
-                                disabled={!row.approved}
-                                onChange={(event) =>
-                                  setInspectionRows((prev) =>
-                                    prev.map((item) =>
-                                      item.detailId === row.detailId
-                                        ? {
-                                            ...item,
-                                            isRestocked: event.target.checked,
-                                          }
-                                        : item,
-                                    ),
-                                  )
-                                }
-                              />
-                            }
-                            label="Nhập lại kho"
-                          />
-
-                          <TextField
-                            size="small"
-                            label="Ghi chú"
-                            value={row.note}
-                            onChange={(event) =>
-                              setInspectionRows((prev) =>
-                                prev.map((item) =>
-                                  item.detailId === row.detailId
-                                    ? { ...item, note: event.target.value }
-                                    : item,
-                                ),
-                              )
-                            }
-                            sx={{ minWidth: 220 }}
-                          />
-                        </Stack>
-                      </Box>
-                    ))}
-                  </Stack>
-
-                  <Divider sx={{ my: 2 }} />
-
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
-                  >
-                    <Typography variant="body2" color="text.secondary">
-                      Số tiền hoàn được duyệt
-                    </Typography>
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight={700}
-                      color="#ee4d2d"
-                    >
-                      {formatCurrency(approvedRefundAmount)}
-                    </Typography>
-                  </Box>
+                  <FormControlLabel
+                    sx={{ mt: 1.5 }}
+                    control={
+                      <Checkbox
+                        checked={inspectionRestocked}
+                        onChange={(event) =>
+                          setInspectionRestocked(event.target.checked)
+                        }
+                      />
+                    }
+                    label="Nhập lại kho"
+                  />
 
                   <TextField
                     fullWidth
                     multiline
                     minRows={2}
-                    label="Lý do từ chối kiểm định (nếu cần)"
+                    label="Ghi chú kiểm định (tuỳ chọn)"
+                    value={inspectionResultNote}
+                    onChange={(event) =>
+                      setInspectionResultNote(event.target.value)
+                    }
+                    sx={{ mt: 2 }}
+                  />
+
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={2}
+                    label="Lý do từ chối kiểm định (nếu có)"
                     value={inspectionFailNote}
                     onChange={(event) =>
                       setInspectionFailNote(event.target.value)
@@ -913,7 +1111,7 @@ export const OrderReturnRequestsPage = () => {
                       }}
                       disabled={isSaving}
                     >
-                      Fail Inspection
+                      Từ chối kiểm định
                     </Button>
                     <Button
                       variant="contained"
@@ -923,12 +1121,13 @@ export const OrderReturnRequestsPage = () => {
                       }}
                       disabled={isSaving}
                     >
-                      Complete Inspection
+                      Hoàn tất kiểm định
                     </Button>
                   </Stack>
                 </Paper>
               )}
 
+              {/* ─── ReadyForRefund: Refund ─── */}
               {selectedRequest.status === "ReadyForRefund" && (
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" fontWeight={700} mb={1}>
@@ -959,6 +1158,45 @@ export const OrderReturnRequestsPage = () => {
           <Button onClick={closeDetail}>Đóng</Button>
         </DialogActions>
       </Dialog>
+
+      {/* ─── Refund Confirmation Dialog ─── */}
+      <Dialog
+        open={refundConfirmOpen}
+        onClose={() => !isSaving && setRefundConfirmOpen(false)}
+      >
+        <DialogTitle>Xác nhận hoàn tiền</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc chắn muốn xác nhận hoàn tiền cho yêu cầu này không? Hành
+            động này không thể hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setRefundConfirmOpen(false)}
+            disabled={isSaving}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() => {
+              void executeRefund();
+            }}
+            disabled={isSaving}
+          >
+            {isSaving ? <CircularProgress size={24} /> : "Xác nhận hoàn tiền"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ─── Image Lightbox ─── */}
+      <ImageLightbox
+        open={lightboxOpen}
+        imageUrl={lightboxImage}
+        onClose={() => setLightboxOpen(false)}
+      />
     </AdminLayout>
   );
 };

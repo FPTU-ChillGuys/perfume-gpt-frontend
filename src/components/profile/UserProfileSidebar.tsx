@@ -20,6 +20,7 @@ import {
   Edit as EditIcon,
   ExpandLess,
   ExpandMore,
+  AssignmentReturn as ReturnIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -56,6 +57,11 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
       label: "Đơn Mua",
       icon: <OrderIcon fontSize="small" />,
       path: "/my-orders",
+    },
+    {
+      label: "Trả Hàng/Hoàn Tiền",
+      icon: <ReturnIcon fontSize="small" />,
+      path: "/my-return-requests",
     },
     {
       label: "Kho Voucher",
@@ -247,4 +253,4 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
 };
 
 // Icon components used inside the sidebar (kept local for clarity)
-export { PersonIcon, LocationIcon, LockIcon, OrderIcon, VoucherIcon };
+export { PersonIcon, LocationIcon, LockIcon, OrderIcon, VoucherIcon, ReturnIcon };

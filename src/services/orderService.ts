@@ -49,8 +49,13 @@ export interface PagedCancelRequests {
 
 export type CreateReturnRequestDto =
   components["schemas"]["CreateReturnRequestDto"];
-export type CreateReturnRequestDetailDto =
-  components["schemas"]["CreateReturnRequestDetailDto"];
+export interface CreateReturnRequestPayload {
+  orderId: string;
+  reason: string;
+  requestedRefundAmount?: number;
+  customerNote?: string | null;
+  temporaryMediaIds?: string[] | null;
+}
 export type TemporaryMediaResponse =
   components["schemas"]["TemporaryMediaResponse"];
 export type ProcessInitialReturnDto =
@@ -65,26 +70,25 @@ export type ReturnRequestStatus =
   | "Inspecting"
   | "ReadyForRefund"
   | "Rejected"
+  | "Completed"
   | "Refunded"
   | string;
 
-export interface OrderReturnRequestDetail {
+export interface ProofImage {
   id?: string;
-  orderDetailId?: string;
-  requestedQuantity?: number;
-  returnedQuantity?: number;
-  quantity?: number;
-  isRestocked?: boolean;
-  note?: string | null;
-  variantName?: string | null;
-  productName?: string | null;
-  unitPrice?: number;
+  url?: string;
+  altText?: string | null;
+  displayOrder?: number;
+  isPrimary?: boolean;
 }
 
 export interface OrderReturnRequest {
   id?: string;
   orderId?: string;
+  customerId?: string;
   requestedByEmail?: string | null;
+  processedByName?: string | null;
+  inspectedByName?: string | null;
   reason?: string | null;
   customerNote?: string | null;
   staffNote?: string | null;
@@ -92,9 +96,11 @@ export interface OrderReturnRequest {
   status?: ReturnRequestStatus;
   requestedRefundAmount?: number;
   approvedRefundAmount?: number;
+  isRefunded?: boolean;
+  isRestocked?: boolean;
   createdAt?: string;
   updatedAt?: string | null;
-  returnItems?: OrderReturnRequestDetail[];
+  proofImages?: ProofImage[];
   [key: string]: unknown;
 }
 
@@ -155,55 +161,45 @@ class OrderService {
     return undefined;
   }
 
-  private normalizeReturnDetail(item: unknown): OrderReturnRequestDetail {
+  private normalizeProofImage(img: unknown): ProofImage {
     return {
-      id: this.getValue<string>(item, ["id", "Id", "detailId", "DetailId"]),
-      orderDetailId: this.getValue<string>(item, [
-        "orderDetailId",
-        "OrderDetailId",
-      ]),
-      requestedQuantity: Number(
-        this.getValue<number>(item, [
-          "requestedQuantity",
-          "RequestedQuantity",
-        ]) ?? 0,
+      id: this.getValue<string>(img, ["id", "Id"]),
+      url: this.getValue<string>(img, ["url", "Url"]),
+      altText:
+        this.getValue<string | null>(img, ["altText", "AltText"]) ?? null,
+      displayOrder: Number(
+        this.getValue<number>(img, ["displayOrder", "DisplayOrder"]) ?? 0,
       ),
-      returnedQuantity: Number(
-        this.getValue<number>(item, ["returnedQuantity", "ReturnedQuantity"]) ??
-          0,
-      ),
-      quantity: Number(
-        this.getValue<number>(item, ["quantity", "Quantity"]) ?? 0,
-      ),
-      isRestocked: Boolean(
-        this.getValue<boolean>(item, ["isRestocked", "IsRestocked"]),
-      ),
-      note: this.getValue<string | null>(item, ["note", "Note"]) ?? null,
-      variantName:
-        this.getValue<string | null>(item, ["variantName", "VariantName"]) ??
-        null,
-      productName:
-        this.getValue<string | null>(item, ["productName", "ProductName"]) ??
-        null,
-      unitPrice: Number(
-        this.getValue<number>(item, ["unitPrice", "UnitPrice"]) ?? 0,
+      isPrimary: Boolean(
+        this.getValue<boolean>(img, ["isPrimary", "IsPrimary"]),
       ),
     };
   }
 
   private normalizeReturnRequest(item: unknown): OrderReturnRequest {
-    const rawItems =
-      this.getValue<unknown[]>(item, ["returnItems", "ReturnItems"]) ||
-      this.getValue<unknown[]>(item, ["details", "Details"]) ||
-      [];
+    const rawProofImages =
+      this.getValue<unknown[]>(item, ["proofImages", "ProofImages"]) || [];
 
     return {
       id: this.getValue<string>(item, ["id", "Id"]),
       orderId: this.getValue<string>(item, ["orderId", "OrderId"]),
+      customerId: this.getValue<string>(item, ["customerId", "CustomerId"]),
       requestedByEmail:
         this.getValue<string | null>(item, [
           "requestedByEmail",
           "RequestedByEmail",
+          "customerEmail",
+          "CustomerEmail",
+        ]) ?? null,
+      processedByName:
+        this.getValue<string | null>(item, [
+          "processedByName",
+          "ProcessedByName",
+        ]) ?? null,
+      inspectedByName:
+        this.getValue<string | null>(item, [
+          "inspectedByName",
+          "InspectedByName",
         ]) ?? null,
       reason: this.getValue<string | null>(item, ["reason", "Reason"]) ?? null,
       customerNote:
@@ -231,12 +227,18 @@ class OrderService {
           "ApprovedRefundAmount",
         ]) ?? 0,
       ),
+      isRefunded: Boolean(
+        this.getValue<boolean>(item, ["isRefunded", "IsRefunded"]),
+      ),
+      isRestocked: Boolean(
+        this.getValue<boolean>(item, ["isRestocked", "IsRestocked"]),
+      ),
       createdAt:
         this.getValue<string>(item, ["createdAt", "CreatedAt"]) ||
         new Date().toISOString(),
       updatedAt:
         this.getValue<string | null>(item, ["updatedAt", "UpdatedAt"]) ?? null,
-      returnItems: rawItems.map((detail) => this.normalizeReturnDetail(detail)),
+      proofImages: rawProofImages.map((img) => this.normalizeProofImage(img)),
     };
   }
 
@@ -404,6 +406,8 @@ class OrderService {
             pageNumber?: number;
             pageSize?: number;
             totalPages?: number;
+            sortBy?: string;
+            sortOrder?: string;
           }
         | unknown[]
         | null;
@@ -453,12 +457,114 @@ class OrderService {
     }
   }
 
+  async getMyReturnRequests(
+    params?: GetOrderReturnRequestsParams,
+  ): Promise<PagedReturnRequests> {
+    try {
+      const query = new URLSearchParams();
+
+      if (params?.Status && params.Status !== "All") {
+        query.set("Status", params.Status);
+      }
+      if (params?.PageNumber) {
+        query.set("PageNumber", String(params.PageNumber));
+      }
+      if (params?.PageSize) {
+        query.set("PageSize", String(params.PageSize));
+      }
+      if (params?.SortBy) {
+        query.set("SortBy", params.SortBy);
+      }
+      if (params?.SortOrder) {
+        query.set("SortOrder", params.SortOrder);
+      }
+      if (typeof params?.IsDescending === "boolean") {
+        query.set("IsDescending", String(params.IsDescending));
+      }
+
+      const accessToken = localStorage.getItem("accessToken");
+      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/my-requests${query.size ? `?${query.toString()}` : ""}`;
+
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        throw new Error(
+          data?.message || "Không thể tải yêu cầu trả hàng của bạn",
+        );
+      }
+
+      const payload = data.payload as
+        | {
+            items?: unknown[];
+            totalCount?: number;
+            pageNumber?: number;
+            pageSize?: number;
+            totalPages?: number;
+            sortBy?: string;
+            sortOrder?: string;
+          }
+        | unknown[]
+        | null;
+
+      const items = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : [];
+
+      const normalizedItems = items.map((item) =>
+        this.normalizeReturnRequest(item),
+      );
+
+      return {
+        items: normalizedItems,
+        totalCount:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.totalCount ?? normalizedItems.length)
+            : normalizedItems.length,
+        pageNumber:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.pageNumber ?? params?.PageNumber ?? 1)
+            : Number(params?.PageNumber ?? 1),
+        pageSize:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(
+                payload.pageSize ?? params?.PageSize ?? normalizedItems.length,
+              )
+            : Number((params?.PageSize ?? normalizedItems.length) || 10),
+        totalPages:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.totalPages ?? 1)
+            : 1,
+      };
+    } catch (error: any) {
+      console.error("Error fetching my return requests:", error);
+      throw new Error(error?.message || "Không thể tải yêu cầu trả hàng");
+    }
+  }
+
   async reviewReturnRequest(
     id: string,
     body: ProcessInitialReturnDto,
   ): Promise<string> {
     try {
-      const response = await apiInstance.POST(
+      const { data, error, response } = await apiInstance.POST(
         "/api/orderreturnrequests/{id}/review",
         {
           params: { path: { id } },
@@ -466,11 +572,15 @@ class OrderService {
         },
       );
 
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể duyệt yêu cầu");
+      if (error) {
+        throw new Error((error as any)?.message || "Không thể duyệt yêu cầu");
       }
 
-      return response.data.message || "Xử lý yêu cầu thành công";
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể duyệt yêu cầu");
+      }
+
+      return data.message || "Xử lý yêu cầu thành công";
     } catch (error: any) {
       console.error("Error reviewing return request:", error);
       throw new Error(error?.message || "Không thể duyệt yêu cầu");
@@ -482,7 +592,7 @@ class OrderService {
     body: StartInspectionDto,
   ): Promise<string> {
     try {
-      const response = await apiInstance.POST(
+      const { data, error, response } = await apiInstance.POST(
         "/api/orderreturnrequests/{id}/start-inspection",
         {
           params: { path: { id } },
@@ -490,13 +600,17 @@ class OrderService {
         },
       );
 
-      if (!response.data?.success) {
+      if (error) {
         throw new Error(
-          response.data?.message || "Không thể bắt đầu kiểm định",
+          (error as any)?.message || "Không thể bắt đầu kiểm định",
         );
       }
 
-      return response.data.message || "Đã bắt đầu kiểm định";
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể bắt đầu kiểm định");
+      }
+
+      return data.message || "Đã bắt đầu kiểm định";
     } catch (error: any) {
       console.error("Error starting inspection:", error);
       throw new Error(error?.message || "Không thể bắt đầu kiểm định");
@@ -508,7 +622,7 @@ class OrderService {
     body: RecordInspectionDto,
   ): Promise<string> {
     try {
-      const response = await apiInstance.POST(
+      const { data, error, response } = await apiInstance.POST(
         "/api/orderreturnrequests/{id}/complete-inspection",
         {
           params: { path: { id } },
@@ -516,13 +630,17 @@ class OrderService {
         },
       );
 
-      if (!response.data?.success) {
+      if (error) {
         throw new Error(
-          response.data?.message || "Không thể hoàn tất kiểm định",
+          (error as any)?.message || "Không thể hoàn tất kiểm định",
         );
       }
 
-      return response.data.message || "Hoàn tất kiểm định thành công";
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể hoàn tất kiểm định");
+      }
+
+      return data.message || "Hoàn tất kiểm định thành công";
     } catch (error: any) {
       console.error("Error completing inspection:", error);
       throw new Error(error?.message || "Không thể hoàn tất kiểm định");
@@ -534,7 +652,7 @@ class OrderService {
     body: RejectInspectionDto,
   ): Promise<string> {
     try {
-      const response = await apiInstance.POST(
+      const { data, error, response } = await apiInstance.POST(
         "/api/orderreturnrequests/{id}/fail-inspection",
         {
           params: { path: { id } },
@@ -542,33 +660,71 @@ class OrderService {
         },
       );
 
-      if (!response.data?.success) {
+      if (error) {
         throw new Error(
-          response.data?.message || "Không thể từ chối kiểm định",
+          (error as any)?.message || "Không thể từ chối kiểm định",
         );
       }
 
-      return response.data.message || "Đã từ chối yêu cầu";
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể từ chối kiểm định");
+      }
+
+      return data.message || "Đã từ chối yêu cầu";
     } catch (error: any) {
       console.error("Error failing inspection:", error);
       throw new Error(error?.message || "Không thể từ chối kiểm định");
     }
   }
 
+  async getReturnRequestById(id: string): Promise<OrderReturnRequest> {
+    try {
+      const { data, error, response } = await apiInstance.GET(
+        "/api/orderreturnrequests/{id}",
+        {
+          params: { path: { id } },
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          (error as any)?.message || "Không thể tải chi tiết yêu cầu trả hàng",
+        );
+      }
+
+      if (!data?.success || !data.payload) {
+        throw new Error(
+          data?.message || "Không thể tải chi tiết yêu cầu trả hàng",
+        );
+      }
+
+      return this.normalizeReturnRequest(data.payload);
+    } catch (error: any) {
+      console.error("Error fetching return request by ID:", error);
+      throw new Error(
+        error?.message || "Không thể tải chi tiết yêu cầu trả hàng",
+      );
+    }
+  }
+
   async refundReturnRequest(id: string): Promise<string> {
     try {
-      const response = await apiInstance.POST(
+      const { data, error, response } = await apiInstance.POST(
         "/api/orderreturnrequests/{id}/refund",
         {
           params: { path: { id } },
         },
       );
 
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || "Không thể hoàn tiền");
+      if (error) {
+        throw new Error((error as any)?.message || "Không thể hoàn tiền");
       }
 
-      return response.data.message || "Hoàn tiền thành công";
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể hoàn tiền");
+      }
+
+      return data.message || "Hoàn tiền thành công";
     } catch (error: any) {
       console.error("Error refunding return request:", error);
       throw new Error(error?.message || "Không thể hoàn tiền");
@@ -660,10 +816,20 @@ class OrderService {
     throw new Error(lastErrorMessage);
   }
 
-  async createReturnRequest(payload: CreateReturnRequestDto): Promise<string> {
+  async createReturnRequest(
+    payload: CreateReturnRequestPayload,
+  ): Promise<string> {
     try {
+      const requestBody: CreateReturnRequestDto = {
+        orderId: payload.orderId,
+        reason: payload.reason,
+        customerNote: payload.customerNote ?? null,
+        requestedRefundAmount: payload.requestedRefundAmount,
+        temporaryMediaIds: payload.temporaryMediaIds ?? null,
+      };
+
       const response = await apiInstance.POST("/api/orderreturnrequests", {
-        body: payload,
+        body: requestBody,
       });
 
       if (!response.data?.success) {
