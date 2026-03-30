@@ -242,10 +242,10 @@ export default function QuizManagementPage() {
                         </Box>
 
                         {/* Table */}
-                        <TableContainer>
+                        <TableContainer component={Paper}>
                             <Table>
-                                <TableHead sx={{ bgcolor: "#f8f9fa" }}>
-                                    <TableRow>
+                                <TableHead>
+                                    <TableRow sx={{ bgcolor: "grey.50" }}>
                                         <TableCell sx={{ fontWeight: "bold", width: 48 }} />
                                         <TableCell sx={{ fontWeight: "bold" }}>Câu hỏi</TableCell>
                                         <TableCell sx={{ fontWeight: "bold", width: 130 }}>Loại</TableCell>
