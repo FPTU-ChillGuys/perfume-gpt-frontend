@@ -70,17 +70,17 @@ export default function SurveyResultView({ result, userId, onReviewAnswers, onRe
             </Box>
 
             {/* Product list */}
-            {result.products.length > 0 && (
+            {result.products?.length > 0 && (
                 <>
                     <Divider sx={{ mb: 3 }}>
                         <Chip
                             icon={<SparkleIcon />}
-                            label={`${result.products.length} sản phẩm phù hợp`}
+                            label={`${result.products?.length} sản phẩm phù hợp`}
                             color="primary"
                         />
                     </Divider>
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {result.products.map((p) => (
+                        {result.products?.map((p) => (
                             <SurveyProductCard key={p.id} product={p} userId={userId} />
                         ))}
                     </Box>

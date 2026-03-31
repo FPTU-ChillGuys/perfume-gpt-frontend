@@ -735,8 +735,8 @@ const ProductDetailPage = () => {
     return typeof meta?.gender === "string" ? meta.gender : "";
   }, [information]);
 
-  const detailFields = useMemo(
-    () => [
+  const detailFields = useMemo(() => {
+    const fields = [
       {
         label: "Thương hiệu",
         value: information?.brandName || productDetail?.brandName || "",
@@ -749,11 +749,49 @@ const ProductDetailPage = () => {
       },
       { label: "Phong cách", value: information?.style || "" },
       { label: "Nhóm hương", value: information?.scentGroup || "" },
-      { label: "Hương đầu", value: information?.topNotes || "" },
-      { label: "Hương giữa", value: information?.heartNotes || "" },
-      { label: "Hương cuối", value: information?.baseNotes || "" },
-    ],
-    [information, productDetail, productGender],
+    ];
+
+    // Scent Notes from productDetail
+    if (productDetail?.scentNotes && productDetail.scentNotes.length > 0) {
+      const top = productDetail.scentNotes.filter(n => n.type === "Top").map(n => n.name).join(", ");
+      const heart = productDetail.scentNotes.filter(n => n.type === "Heart").map(n => n.name).join(", ");
+      const base = productDetail.scentNotes.filter(n => n.type === "Base").map(n => n.name).join(", ");
+
+      if (top) fields.push({ label: "Hương đầu (Note)", value: top });
+      if (heart) fields.push({ label: "Hương giữa (Note)", value: heart });
+      if (base) fields.push({ label: "Hương cuối (Note)", value: base });
+    } else {
+      // Fallback to information if notes aren't in productDetail.scentNotes
+      fields.push({ label: "Hương đầu", value: information?.topNotes || "" });
+      fields.push({ label: "Hương giữa", value: information?.heartNotes || "" });
+      fields.push({ label: "Hương cuối", value: information?.baseNotes || "" });
+    }
+
+    // Olfactory Families
+    if (productDetail?.olfactoryFamilies && productDetail.olfactoryFamilies.length > 0) {
+      fields.push({
+        label: "Nhóm hương (Family)",
+        value: productDetail.olfactoryFamilies.map(f => f.name).join(", ")
+      });
+    }
+
+    // Attributes (Product level)
+    if (productDetail?.attributes && productDetail.attributes.length > 0) {
+      productDetail.attributes.forEach(attr => {
+        fields.push({ label: attr.attribute || "Thuộc tính", value: attr.value || "" });
+      });
+    }
+
+    // Attributes (Variant level)
+    if (selectedVariantDetail?.attributes && selectedVariantDetail.attributes.length > 0) {
+      selectedVariantDetail.attributes.forEach(attr => {
+        fields.push({ label: `${attr.attribute} (Phiên bản)`, value: attr.value || "" });
+      });
+    }
+
+    return fields;
+  },
+    [information, productDetail, productGender, selectedVariantDetail],
   );
 
   const description =
@@ -869,6 +907,57 @@ const ProductDetailPage = () => {
             >
               {shippingContent}
             </Typography>
+          )}
+          {isAuthenticated && (
+            <Box mt={6} pt={4} borderTop="4px solid #f0f0f0">
+              <Typography variant="h5" fontWeight={700} color="error" gutterBottom>
+                Dữ liệu kỹ thuật (Debug)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" mb={2}>
+                Phần này chỉ hiển thị khi đã đăng nhập (Dành cho việc thử nghiệm Backend trên nhánh test)
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                    Product Detail (JSON)
+                  </Typography>
+                  <Box
+                    component="pre"
+                    sx={{
+                      p: 2,
+                      bgcolor: "#1a1a1a",
+                      color: "#00ff00",
+                      borderRadius: 1,
+                      overflow: "auto",
+                      maxHeight: 400,
+                      fontSize: "0.75rem"
+                    }}
+                  >
+                    {JSON.stringify(productDetail, null, 2)}
+                  </Box>
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                    Additional Information (JSON)
+                  </Typography>
+                  <Box
+                    component="pre"
+                    sx={{
+                      p: 2,
+                      bgcolor: "#1a1a1a",
+                      color: "#00ff00",
+                      borderRadius: 1,
+                      overflow: "auto",
+                      maxHeight: 400,
+                      fontSize: "0.75rem"
+                    }}
+                  >
+                    {JSON.stringify(information, null, 2)}
+                  </Box>
+                </Grid>
+              </Grid>
+            </Box>
           )}
         </Box>
       </Box>
