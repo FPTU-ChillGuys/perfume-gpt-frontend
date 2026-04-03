@@ -159,7 +159,6 @@ const OrderStepper = ({
 
   return (
     <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
-      {/* Canceled / Returned banner */}
       {isSpecial && (
         <Box
           display="flex"
@@ -612,7 +611,7 @@ export const MyOrderDetailPage = () => {
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <MainLayout>
-      <Box sx={{ bgcolor: "#f5f5f5", py: 4, flex: 1 }}>
+      <Box sx={{ bgcolor: "white", py: 4, flex: 1 }}>
         <Container maxWidth="lg">
           <AppBreadcrumbs
             items={[

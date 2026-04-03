@@ -144,13 +144,11 @@ class AuthService {
     const response = await apiInstance.GET(
       `${this.AUTH_ENDPOINT}/verify-email`,
       {
-        params: { query: { email, token } },
+        params: { query: { Email: email, token } },
       },
     );
     if (response.error !== undefined || !response.data?.success) {
-      throw new Error(
-        response.data?.message || "Xác thực email thất bại.",
-      );
+      throw new Error(response.data?.message || "Xác thực email thất bại.");
     }
     return response.data.message || "Xác thực email thành công!";
   }
@@ -179,9 +177,7 @@ class AuthService {
       { body: { email, token, password, confirmPassword } },
     );
     if (response.error !== undefined || !response.data?.success) {
-      throw new Error(
-        response.data?.message || "Đặt lại mật khẩu thất bại.",
-      );
+      throw new Error(response.data?.message || "Đặt lại mật khẩu thất bại.");
     }
     return response.data.message || "Mật khẩu đã được đặt lại thành công.";
   }
