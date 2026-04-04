@@ -1172,6 +1172,39 @@ class OrderService {
     }
   }
 
+  async getShippingOrderInfoUrl(trackingNumbers: string[]): Promise<string> {
+    const normalizedTrackingNumbers = trackingNumbers
+      .map((tracking) => tracking.trim())
+      .filter(Boolean);
+
+    if (!normalizedTrackingNumbers.length) {
+      throw new Error("Không có mã vận đơn để in phiếu");
+    }
+
+    try {
+      const response = await apiInstance.POST("/api/shippings/order-info-url", {
+        body: {
+          trackingNumbers: normalizedTrackingNumbers,
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Không lấy được link in phiếu",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error getting shipping order info URL:", error);
+      throw new Error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Không lấy được link in phiếu",
+      );
+    }
+  }
+
   async updateOrderStatus(
     orderId: string,
     status: OrderStatus,

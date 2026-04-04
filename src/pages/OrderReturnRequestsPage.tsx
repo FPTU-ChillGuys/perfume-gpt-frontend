@@ -40,7 +40,7 @@ const STATUS_OPTIONS: ReturnTabStatus[] = [
 
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
-  if (status === "ApprovedForReturn") return "Đã duyệt trả";
+  if (status === "ApprovedForReturn") return "Đã duyệt";
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
   if (status === "Rejected") return "Từ chối";

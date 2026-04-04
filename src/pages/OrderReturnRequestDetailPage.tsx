@@ -22,6 +22,7 @@ import {
 import ArrowBack from "@mui/icons-material/ArrowBack";
 import ImageIcon from "@mui/icons-material/Image";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
+import LocalPrintshopOutlinedIcon from "@mui/icons-material/LocalPrintshopOutlined";
 import Sync from "@mui/icons-material/Sync";
 import momoLogo from "@/assets/momo.png";
 import vnpayLogo from "@/assets/vnpay.jpg";
@@ -178,6 +179,7 @@ export const OrderReturnRequestDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isSyncingShipping, setIsSyncingShipping] = useState(false);
+  const [isGeneratingLabelUrl, setIsGeneratingLabelUrl] = useState(false);
 
   const [reviewNote, setReviewNote] = useState("");
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -398,6 +400,44 @@ export const OrderReturnRequestDetailPage = () => {
     }
   };
 
+  const handlePrintShippingLabel = async () => {
+    const trackingNumber = request?.returnShippingInfo?.trackingNumber?.trim();
+
+    if (!trackingNumber) {
+      showToast("Không có mã vận đơn để in phiếu", "error");
+      return;
+    }
+
+    try {
+      setIsGeneratingLabelUrl(true);
+      const printUrl = await orderService.getShippingOrderInfoUrl([
+        trackingNumber,
+      ]);
+      const printWindow = window.open(
+        printUrl,
+        "_blank",
+        "noopener,noreferrer",
+      );
+
+      if (!printWindow) {
+        showToast(
+          "Trình duyệt đang chặn popup. Vui lòng cho phép popup để in phiếu.",
+          "error",
+        );
+        return;
+      }
+
+      showToast("Đã mở link in phiếu vận chuyển", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể mở link in phiếu",
+        "error",
+      );
+    } finally {
+      setIsGeneratingLabelUrl(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <Paper sx={{ overflow: "hidden", borderRadius: 2 }}>
@@ -434,6 +474,20 @@ export const OrderReturnRequestDetailPage = () => {
                 alignItems="center"
                 flexWrap="wrap"
               >
+                {request.returnShippingInfo?.trackingNumber && (
+                  <Tooltip title="In phiếu gửi trả">
+                    <span>
+                      <IconButton
+                        size="small"
+                        onClick={handlePrintShippingLabel}
+                        disabled={isGeneratingLabelUrl || isLoading}
+                        aria-label="In phiếu gửi trả"
+                      >
+                        <LocalPrintshopOutlinedIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                )}
                 <IconButton
                   size="small"
                   onClick={handleSyncShippingStatus}
@@ -512,11 +566,6 @@ export const OrderReturnRequestDetailPage = () => {
                   >
                     Thông tin yêu cầu
                   </Typography>
-                  <Chip
-                    size="small"
-                    label={statusLabel(request.status)}
-                    color={statusColor(request.status)}
-                  />
                 </Stack>
 
                 <Box

@@ -16,6 +16,7 @@ import {
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ImageIcon from "@mui/icons-material/Image";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
+import LocalPrintshopOutlinedIcon from "@mui/icons-material/LocalPrintshopOutlined";
 import Sync from "@mui/icons-material/Sync";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService, type OrderReturnRequest } from "@/services/orderService";
@@ -150,6 +151,7 @@ export const MyReturnRequestDetailPage = () => {
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncingShipping, setIsSyncingShipping] = useState(false);
+  const [isGeneratingLabelUrl, setIsGeneratingLabelUrl] = useState(false);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedMediaUrl, setSelectedMediaUrl] = useState("");
@@ -216,6 +218,44 @@ export const MyReturnRequestDetailPage = () => {
     }
   };
 
+  const handlePrintShippingLabel = async () => {
+    const trackingNumber = request?.returnShippingInfo?.trackingNumber?.trim();
+
+    if (!trackingNumber) {
+      showToast("Không có mã vận đơn để in phiếu", "error");
+      return;
+    }
+
+    try {
+      setIsGeneratingLabelUrl(true);
+      const printUrl = await orderService.getShippingOrderInfoUrl([
+        trackingNumber,
+      ]);
+      const printWindow = window.open(
+        printUrl,
+        "_blank",
+        "noopener,noreferrer",
+      );
+
+      if (!printWindow) {
+        showToast(
+          "Trình duyệt đang chặn popup. Vui lòng cho phép popup để in phiếu.",
+          "error",
+        );
+        return;
+      }
+
+      showToast("Đã mở link in phiếu vận chuyển", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể mở link in phiếu",
+        "error",
+      );
+    } finally {
+      setIsGeneratingLabelUrl(false);
+    }
+  };
+
   return (
     <MainLayout>
       <Box sx={{ bgcolor: "white", py: 4, flex: 1 }}>
@@ -276,6 +316,20 @@ export const MyReturnRequestDetailPage = () => {
                       flexWrap="wrap"
                       justifyContent="flex-end"
                     >
+                      {request.returnShippingInfo?.trackingNumber && (
+                        <Tooltip title="In phiếu gửi trả">
+                          <span>
+                            <IconButton
+                              size="small"
+                              onClick={handlePrintShippingLabel}
+                              disabled={isGeneratingLabelUrl || isLoading}
+                              aria-label="In phiếu gửi trả"
+                            >
+                              <LocalPrintshopOutlinedIcon />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      )}
                       <IconButton
                         size="small"
                         onClick={handleSyncShippingStatus}
@@ -359,11 +413,6 @@ export const MyReturnRequestDetailPage = () => {
                         >
                           Thông tin yêu cầu
                         </Typography>
-                        <Chip
-                          size="small"
-                          label={statusLabel(request.status)}
-                          color={statusColor(request.status)}
-                        />
                       </Stack>
 
                       <Box

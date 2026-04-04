@@ -32,7 +32,7 @@ import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 const STATUS_TABS: { label: string; value: ReturnRequestStatus | "All" }[] = [
   { label: "Tất cả", value: "All" },
   { label: "Chờ duyệt", value: "Pending" },
-  { label: "Đã duyệt trả", value: "ApprovedForReturn" },
+  { label: "Đã duyệt", value: "ApprovedForReturn" },
   { label: "Đang kiểm định", value: "Inspecting" },
   { label: "Chờ hoàn tiền", value: "ReadyForRefund" },
   { label: "Từ chối", value: "Rejected" },
@@ -41,7 +41,7 @@ const STATUS_TABS: { label: string; value: ReturnRequestStatus | "All" }[] = [
 
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
-  if (status === "ApprovedForReturn") return "Đã duyệt trả";
+  if (status === "ApprovedForReturn") return "Đã duyệt";
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
   if (status === "Rejected") return "Từ chối";
