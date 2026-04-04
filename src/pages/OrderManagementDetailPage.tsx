@@ -14,6 +14,7 @@ import {
   DialogTitle,
   Divider,
   FormControlLabel,
+  IconButton,
   MenuItem,
   Paper,
   Select,
@@ -39,11 +40,11 @@ import {
   Person,
   Phone,
   Receipt,
+  Sync,
   StarBorder,
   LocationOn,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
-import { AppBreadcrumbs } from "@/components/common/AppBreadcrumbs";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
 import type { PaymentMethod } from "@/types/checkout";
@@ -77,6 +78,7 @@ const STATUS_TO_STEP: Record<OrderStatus, number> = {
   Delivered: 4,
   Returning: -2,
   Cancelled: -1,
+  Partial_Returned: -2,
   Returned: -2,
 };
 
@@ -95,6 +97,7 @@ const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
   Delivered: [],
   Returning: ["Returned"],
   Cancelled: [],
+  Partial_Returned: [],
   Returned: [],
 };
 
@@ -325,6 +328,7 @@ export const OrderManagementDetailPage = () => {
   >({});
   const [isPackagingConfirmed, setIsPackagingConfirmed] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isSyncingShipping, setIsSyncingShipping] = useState(false);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -536,6 +540,28 @@ export const OrderManagementDetailPage = () => {
     }
   };
 
+  const handleSyncShippingStatus = async () => {
+    if (!orderId) {
+      return;
+    }
+
+    try {
+      setIsSyncingShipping(true);
+      await orderService.syncMyShippingStatus();
+      await loadOrder();
+      showToast("Đã đồng bộ trạng thái vận chuyển", "success");
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Không thể đồng bộ trạng thái vận chuyển",
+        "error",
+      );
+    } finally {
+      setIsSyncingShipping(false);
+    }
+  };
+
   const toggleBatchDetails = (detailId?: string) => {
     if (!detailId) return;
     setExpandedBatches((prev) => ({
@@ -547,14 +573,6 @@ export const OrderManagementDetailPage = () => {
   return (
     <AdminLayout>
       <Box>
-        <AppBreadcrumbs
-          items={[
-            { label: "Quản trị", href: "/admin" },
-            { label: "Quản lý đơn hàng", href: "/admin/orders" },
-            { label: "Chi tiết đơn hàng" },
-          ]}
-          sx={{ mb: 2 }}
-        />
         <Paper sx={{ overflow: "hidden", borderRadius: 2 }}>
           {isLoading ? (
             <Box
@@ -603,8 +621,29 @@ export const OrderManagementDetailPage = () => {
                   alignItems="center"
                   flexWrap="wrap"
                 >
+                  <IconButton
+                    size="small"
+                    onClick={handleSyncShippingStatus}
+                    disabled={isSyncingShipping}
+                    aria-label="Đồng bộ trạng thái vận chuyển"
+                  >
+                    <Sync
+                      sx={{
+                        animation: isSyncingShipping
+                          ? "sync-spin 0.9s linear infinite"
+                          : "none",
+                        "@keyframes sync-spin": {
+                          from: { transform: "rotate(0deg)" },
+                          to: { transform: "rotate(360deg)" },
+                        },
+                      }}
+                    />
+                  </IconButton>
                   <Typography variant="body2" color="text.secondary">
-                    Mã đơn: <b>{(order.id ?? "").toUpperCase()}</b>
+                    Mã đơn:{" "}
+                    <b>
+                      {(order.code || order.id || orderId || "-").toUpperCase()}
+                    </b>
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     |

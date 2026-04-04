@@ -22,6 +22,7 @@ import {
   Typography,
 } from "@mui/material";
 import ImageIcon from "@mui/icons-material/Image";
+import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import { MainLayout } from "@/layouts/MainLayout";
 import {
   orderService,
@@ -55,6 +56,18 @@ const statusLabel = (status?: string) => {
   return status || "-";
 };
 
+const returnReasonLabel = (reason?: string | null) => {
+  if (!reason) return "Không có lý do";
+
+  if (reason === "DamagedProduct") return "Hàng bể vỡ / hư hỏng";
+  if (reason === "WrongItemReceived") return "Người bán gửi sai hàng";
+  if (reason === "ItemNotAsDescribed") return "Hàng không đúng mô tả";
+  if (reason === "ChangedMind") return "Đổi ý, không còn nhu cầu";
+  if (reason === "AllergicReaction") return "Không phù hợp / kích ứng";
+
+  return reason;
+};
+
 const statusColor = (
   status?: string,
 ): "default" | "warning" | "info" | "success" | "error" => {
@@ -74,24 +87,48 @@ const formatDate = (value?: string | null) =>
 const formatCurrency = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;
 
+const toNumber = (value: unknown) => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 /* ─── Image Lightbox ─── */
-const ImageLightbox = ({
+const isVideoMedia = (url: string, mimeType?: string | null) => {
+  if (mimeType?.toLowerCase().startsWith("video/")) {
+    return true;
+  }
+
+  return /\.(mp4|mov|webm|mkv|avi|m4v)(\?.*)?$/i.test(url);
+};
+
+const MediaPreviewDialog = ({
   open,
-  imageUrl,
+  mediaUrl,
+  mimeType,
   onClose,
 }: {
   open: boolean;
-  imageUrl: string;
+  mediaUrl: string;
+  mimeType?: string | null;
   onClose: () => void;
 }) => (
   <Dialog open={open} onClose={onClose} maxWidth="md">
     <DialogContent sx={{ p: 1 }}>
-      <Box
-        component="img"
-        src={imageUrl}
-        alt="Ảnh minh chứng"
-        sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
-      />
+      {isVideoMedia(mediaUrl, mimeType) ? (
+        <Box
+          component="video"
+          src={mediaUrl}
+          controls
+          sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
+        />
+      ) : (
+        <Box
+          component="img"
+          src={mediaUrl}
+          alt="Ảnh minh chứng"
+          sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
+        />
+      )}
     </DialogContent>
   </Dialog>
 );
@@ -116,7 +153,10 @@ export const MyReturnRequestsPage = () => {
   const [isDetailLoading, setIsDetailLoading] = useState(false);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState("");
+  const [selectedMediaUrl, setSelectedMediaUrl] = useState("");
+  const [selectedMediaMimeType, setSelectedMediaMimeType] = useState<
+    string | null
+  >(null);
 
   const loadRequests = useCallback(async () => {
     setIsLoading(true);
@@ -292,7 +332,7 @@ export const MyReturnRequestsPage = () => {
                                 color="text.secondary"
                                 sx={{ fontFamily: "monospace" }}
                               >
-                                Đơn hàng: #{request.orderId?.slice(0, 8) || "-"}
+                                Đơn hàng: #{request.orderId || "-"}
                               </Typography>
                             </Tooltip>
                             <Typography variant="body2" color="text.secondary">
@@ -324,7 +364,7 @@ export const MyReturnRequestsPage = () => {
                             sx={{ maxWidth: "60%" }}
                           >
                             <strong>Lý do:</strong>{" "}
-                            {request.reason || "Không có lý do"}
+                            {returnReasonLabel(request.reason)}
                           </Typography>
                           <Stack
                             direction="row"
@@ -421,250 +461,458 @@ export const MyReturnRequestsPage = () => {
       </Box>
 
       {/* Detail Dialog */}
-      <Dialog open={detailOpen} onClose={closeDetail} fullWidth maxWidth="md">
+      <Dialog open={detailOpen} onClose={closeDetail} fullWidth maxWidth="lg">
         <DialogTitle
-          sx={{ borderBottom: "1px solid", borderColor: "divider", pb: 2 }}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
         >
-          Chi tiết yêu cầu hoàn trả
+          <Typography variant="h6" fontWeight={700} component="span">
+            Chi tiết yêu cầu trả hàng
+          </Typography>
+          {selectedRequest?.status && (
+            <Chip
+              size="small"
+              label={statusLabel(selectedRequest.status)}
+              color={statusColor(selectedRequest.status)}
+            />
+          )}
         </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
+        <DialogContent dividers>
           {isDetailLoading || !selectedRequest ? (
             <Box textAlign="center" py={4}>
               <CircularProgress />
             </Box>
           ) : (
-            <Stack spacing={3}>
-              <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
+            <Stack spacing={2.5}>
+              <Box
+                sx={{
+                  p: 2.5,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  bgcolor: "grey.50",
+                }}
               >
-                <Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Mã đơn hàng: {selectedRequest.orderId}
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={700}
+                  mb={2}
+                  sx={{ color: "#333" }}
+                >
+                  Thông tin yêu cầu
+                </Typography>
+                <Box
+                  display="grid"
+                  gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr 1fr" }}
+                  gap={2}
+                >
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Mã yêu cầu
+                    </Typography>
+                    <Typography
+                      fontWeight={700}
+                      sx={{ fontFamily: "monospace", fontSize: 13 }}
+                    >
+                      {selectedRequest.id || "-"}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Mã đơn hàng
+                    </Typography>
+                    <Typography
+                      fontWeight={700}
+                      sx={{ fontFamily: "monospace", fontSize: 13 }}
+                    >
+                      {selectedRequest.orderId || "-"}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Trạng thái
+                    </Typography>
+                    <Box>
+                      <Chip
+                        size="small"
+                        label={statusLabel(selectedRequest.status)}
+                        color={statusColor(selectedRequest.status)}
+                      />
+                    </Box>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Người yêu cầu
+                    </Typography>
+                    <Typography>
+                      {selectedRequest.requestedByEmail || "-"}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Ngày tạo
+                    </Typography>
+                    <Typography>
+                      {formatDate(selectedRequest.createdAt)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary">
+                      Tiền yêu cầu hoàn
+                    </Typography>
+                    <Typography fontWeight={700} color="#ee4d2d">
+                      {formatCurrency(selectedRequest.requestedRefundAmount)}
+                    </Typography>
+                  </Box>
+                  {selectedRequest.approvedRefundAmount != null &&
+                    selectedRequest.approvedRefundAmount > 0 && (
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Tiền được duyệt hoàn
+                        </Typography>
+                        <Typography fontWeight={700} color="success.main">
+                          {formatCurrency(selectedRequest.approvedRefundAmount)}
+                        </Typography>
+                      </Box>
+                    )}
+                  {selectedRequest.processedByName && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Người xử lý
+                      </Typography>
+                      <Typography>{selectedRequest.processedByName}</Typography>
+                    </Box>
+                  )}
+                  {selectedRequest.inspectedByName && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Người kiểm định
+                      </Typography>
+                      <Typography>{selectedRequest.inspectedByName}</Typography>
+                    </Box>
+                  )}
+                  {selectedRequest.updatedAt && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Cập nhật lần cuối
+                      </Typography>
+                      <Typography>
+                        {formatDate(selectedRequest.updatedAt)}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+
+                <Box mt={2}>
+                  <Typography variant="caption" color="text.secondary">
+                    Lý do trả hàng
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Ngày yêu cầu: {formatDate(selectedRequest.createdAt)}
+                  <Typography>
+                    {returnReasonLabel(selectedRequest.reason)}
                   </Typography>
                 </Box>
-                <Chip
-                  label={statusLabel(selectedRequest.status)}
-                  color={statusColor(selectedRequest.status)}
-                />
-              </Stack>
 
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Lý do từ khách hàng
-                </Typography>
-                <Paper variant="outlined" sx={{ p: 2, bgcolor: "grey.50" }}>
-                  <Typography variant="body2">
-                    <strong>Lý do:</strong> {selectedRequest.reason}
-                  </Typography>
-                  {selectedRequest.customerNote && (
-                    <Typography variant="body2" mt={1}>
-                      <strong>Ghi chú thêm:</strong>{" "}
-                      {selectedRequest.customerNote}
+                {selectedRequest.customerNote && (
+                  <Box mt={1}>
+                    <Typography variant="caption" color="text.secondary">
+                      Ghi chú khách hàng
                     </Typography>
-                  )}
-                </Paper>
+                    <Typography>{selectedRequest.customerNote}</Typography>
+                  </Box>
+                )}
+
+                {selectedRequest.staffNote && (
+                  <Box mt={1}>
+                    <Typography variant="caption" color="text.secondary">
+                      Ghi chú nhân viên
+                    </Typography>
+                    <Typography>{selectedRequest.staffNote}</Typography>
+                  </Box>
+                )}
+
+                {selectedRequest.inspectionNote && (
+                  <Box mt={1}>
+                    <Typography variant="caption" color="text.secondary">
+                      Ghi chú kiểm định
+                    </Typography>
+                    <Typography>{selectedRequest.inspectionNote}</Typography>
+                  </Box>
+                )}
               </Box>
 
-              {/* Feedback responses from Admin/Staff */}
-              {(selectedRequest.staffNote ||
-                selectedRequest.inspectionNote) && (
-                <Box>
-                  <Typography
-                    variant="subtitle2"
-                    color="error.main"
-                    gutterBottom
-                  >
-                    Phản hồi từ cửa hàng
-                  </Typography>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      bgcolor: "#fff4f4",
-                      borderColor: "error.light",
-                    }}
-                  >
-                    {selectedRequest.staffNote && (
-                      <Typography variant="body2">
-                        <strong>Ghi chú duyệt:</strong>{" "}
-                        {selectedRequest.staffNote}
-                      </Typography>
-                    )}
-                    {selectedRequest.inspectionNote && (
-                      <Typography
-                        variant="body2"
-                        mt={selectedRequest.staffNote ? 1 : 0}
-                      >
-                        <strong>Ghi chú kiểm định:</strong>{" "}
-                        {selectedRequest.inspectionNote}
-                      </Typography>
-                    )}
-                  </Paper>
-                </Box>
-              )}
-
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Sản phẩm yêu cầu hoàn
+              <Paper variant="outlined" sx={{ p: 2 }}>
+                <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                  Sản phẩm trong đơn
                 </Typography>
-                <Stack spacing={1}>
-                  {(selectedOrder?.orderDetails || []).map((item, idx) => {
-                    const qty = Number(item.quantity ?? 0);
-                    const price = Number(item.unitPrice ?? 0);
-                    const imageUrl = item.imageUrl;
+                <Stack spacing={0} divider={<Divider />}>
+                  {(selectedOrder?.orderDetails || []).map((item, index) => {
+                    const quantity = toNumber(item.quantity);
+                    const unitPrice = toNumber(item.unitPrice);
+                    const name = item.variantName || `Sản phẩm ${index + 1}`;
+                    const imageUrl = item.imageUrl || null;
+                    const totalItem = unitPrice * quantity;
 
                     return (
-                      <Box
-                        key={item.id || idx}
-                        sx={{
-                          display: "flex",
-                          gap: 2,
-                          p: 1.5,
-                          border: "1px solid",
-                          borderColor: "divider",
-                          borderRadius: 1,
-                        }}
-                      >
-                        {imageUrl ? (
-                          <Box
-                            component="img"
-                            src={imageUrl}
-                            sx={{
-                              width: 64,
-                              height: 64,
-                              borderRadius: 1,
-                              objectFit: "cover",
-                              flexShrink: 0,
-                            }}
-                          />
-                        ) : (
+                      <Box key={item.id || index} sx={{ py: 1.5 }}>
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: 2,
+                          }}
+                        >
                           <Box
                             sx={{
-                              width: 64,
-                              height: 64,
-                              borderRadius: 1,
-                              bgcolor: "grey.100",
+                              flex: 1,
                               display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
+                              flexDirection: "column",
+                              gap: 1.5,
                             }}
                           >
-                            <ImageIcon sx={{ color: "grey.300" }} />
-                          </Box>
-                        )}
-                        <Box flex={1}>
-                          <Typography variant="body2" fontWeight={600}>
-                            {item.variantName || `Sản phẩm ${idx + 1}`}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color="text.secondary"
-                            display="block"
-                          >
-                            Số lượng: {qty}
-                          </Typography>
-                          {price > 0 && (
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 2,
+                              }}
                             >
-                              Đơn giá: {formatCurrency(price)}
-                            </Typography>
-                          )}
+                              {imageUrl ? (
+                                <Box
+                                  component="img"
+                                  src={imageUrl}
+                                  alt={name}
+                                  sx={{
+                                    width: 72,
+                                    height: 72,
+                                    borderRadius: 1.5,
+                                    objectFit: "cover",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    flexShrink: 0,
+                                  }}
+                                />
+                              ) : (
+                                <Box
+                                  sx={{
+                                    width: 72,
+                                    height: 72,
+                                    borderRadius: 1.5,
+                                    bgcolor: "grey.100",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <ImageIcon
+                                    sx={{ color: "grey.400", fontSize: 28 }}
+                                  />
+                                </Box>
+                              )}
+
+                              <Box flex={1} minWidth={0}>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={600}
+                                  sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                  }}
+                                >
+                                  {name}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  Số lượng: {quantity}
+                                </Typography>
+                                {unitPrice > 0 && (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                  >
+                                    Đơn giá: {formatCurrency(unitPrice)}
+                                  </Typography>
+                                )}
+                              </Box>
+
+                              {totalItem > 0 && (
+                                <Typography
+                                  variant="body1"
+                                  fontWeight={700}
+                                  color="#ee4d2d"
+                                  sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
+                                >
+                                  {formatCurrency(totalItem)}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
                         </Box>
-                        {price > 0 && (
-                          <Typography
-                            variant="body2"
-                            fontWeight={600}
-                            color="#ee4d2d"
-                          >
-                            {formatCurrency(price * qty)}
-                          </Typography>
-                        )}
                       </Box>
                     );
                   })}
                   {!(selectedOrder?.orderDetails || []).length && (
-                    <Typography variant="body2" color="text.secondary">
-                      Không tải được danh sách sản phẩm của đơn hàng.
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ py: 1 }}
+                    >
+                      Không tải được chi tiết sản phẩm của đơn hàng.
                     </Typography>
                   )}
                 </Stack>
-              </Box>
 
-              {/* Status Tracking */}
-              <Box>
-                <Typography variant="subtitle2" gutterBottom>
-                  Thông tin hoàn tiền
-                </Typography>
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">
-                    Tiền yêu cầu hoàn:
-                  </Typography>
-                  <Typography variant="body2" fontWeight={600}>
-                    {formatCurrency(selectedRequest.requestedRefundAmount)}
-                  </Typography>
-                </Stack>
-                {selectedRequest.approvedRefundAmount !== null && (
-                  <Stack direction="row" justifyContent="space-between" mt={1}>
-                    <Typography variant="body2" color="text.secondary">
-                      Tiền được duyệt hoàn:
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      fontWeight={700}
-                      color="success.main"
+                {selectedRequest.requestedRefundAmount != null &&
+                  selectedRequest.requestedRefundAmount > 0 && (
+                    <Box
+                      display="flex"
+                      justifyContent="flex-end"
+                      alignItems="center"
+                      mt={1.5}
+                      pt={1.5}
+                      sx={{
+                        borderTop: "1px solid",
+                        borderColor: "divider",
+                      }}
                     >
-                      {formatCurrency(selectedRequest.approvedRefundAmount)}
-                    </Typography>
-                  </Stack>
-                )}
-              </Box>
+                      <Typography variant="body2" color="text.secondary" mr={2}>
+                        Tổng tiền yêu cầu hoàn:
+                      </Typography>
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight={700}
+                        color="#ee4d2d"
+                      >
+                        {formatCurrency(selectedRequest.requestedRefundAmount)}
+                      </Typography>
+                    </Box>
+                  )}
+              </Paper>
 
-              {/* Attachments */}
               {selectedRequest.proofImages &&
                 selectedRequest.proofImages.length > 0 && (
-                  <Box>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Ảnh minh chứng
+                  <Paper variant="outlined" sx={{ p: 2 }}>
+                    <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
+                      Ảnh/Video minh chứng ({selectedRequest.proofImages.length}
+                      )
                     </Typography>
-                    <Stack direction="row" spacing={1.5} flexWrap="wrap">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      flexWrap="wrap"
+                      useFlexGap
+                    >
                       {selectedRequest.proofImages.map((imgDef, idx) => {
-                        const img =
+                        const mediaUrl =
                           typeof imgDef === "string"
                             ? imgDef
                             : (imgDef as any).url;
-                        if (!img) return null;
+                        const mimeType =
+                          typeof imgDef === "string"
+                            ? null
+                            : ((imgDef as any).mimeType ?? null);
+                        if (!mediaUrl) return null;
+
+                        const isVideo = isVideoMedia(mediaUrl, mimeType);
+
                         return (
                           <Box
                             key={idx}
-                            component="img"
-                            src={img}
                             onClick={() => {
-                              setSelectedImage(img);
+                              setSelectedMediaUrl(mediaUrl);
+                              setSelectedMediaMimeType(mimeType);
                               setLightboxOpen(true);
                             }}
                             sx={{
-                              width: 80,
-                              height: 80,
-                              borderRadius: 1,
-                              objectFit: "cover",
                               cursor: "pointer",
-                              border: "1px solid",
+                              borderRadius: 1.5,
+                              overflow: "hidden",
+                              border: "2px solid",
                               borderColor: "divider",
-                              "&:hover": { opacity: 0.8 },
+                              transition: "all 0.2s",
+                              "&:hover": {
+                                borderColor: "#ee4d2d",
+                                transform: "scale(1.03)",
+                                boxShadow: 2,
+                              },
+                              position: "relative",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              bgcolor: "grey.100",
                             }}
-                          />
+                          >
+                            {isVideo ? (
+                              <>
+                                <Box
+                                  component="video"
+                                  src={mediaUrl}
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                  sx={{
+                                    width: 100,
+                                    height: 100,
+                                    objectFit: "cover",
+                                    display: "block",
+                                  }}
+                                />
+                                <PlayCircleOutlineIcon
+                                  sx={{
+                                    fontSize: 36,
+                                    color: "common.white",
+                                    position: "absolute",
+                                    top: "50%",
+                                    left: "50%",
+                                    transform: "translate(-50%, -50%)",
+                                    textShadow: "0 2px 8px rgba(0,0,0,0.45)",
+                                  }}
+                                />
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 4,
+                                    left: 0,
+                                    right: 0,
+                                    textAlign: "center",
+                                    color: "common.white",
+                                    bgcolor: "rgba(0,0,0,0.45)",
+                                  }}
+                                >
+                                  Video
+                                </Typography>
+                              </>
+                            ) : (
+                              <Box
+                                component="img"
+                                src={mediaUrl}
+                                sx={{
+                                  width: 100,
+                                  height: 100,
+                                  objectFit: "cover",
+                                  display: "block",
+                                }}
+                              />
+                            )}
+                          </Box>
                         );
                       })}
                     </Stack>
-                  </Box>
+                  </Paper>
                 )}
             </Stack>
           )}
@@ -673,9 +921,10 @@ export const MyReturnRequestsPage = () => {
           <Button onClick={closeDetail}>Đóng</Button>
         </DialogActions>
       </Dialog>
-      <ImageLightbox
+      <MediaPreviewDialog
         open={lightboxOpen}
-        imageUrl={selectedImage}
+        mediaUrl={selectedMediaUrl}
+        mimeType={selectedMediaMimeType}
         onClose={() => setLightboxOpen(false)}
       />
     </MainLayout>

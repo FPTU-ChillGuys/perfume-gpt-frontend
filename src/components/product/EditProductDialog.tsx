@@ -492,14 +492,16 @@ export default function EditProductDialog({
                   ) {
                     attributeOption = {
                       id: firstAttr.attributeId,
+                      internalCode: `ATTR_${firstAttr.attributeId}`,
                       name:
                         firstAttr.attribute ||
                         `Attribute ${firstAttr.attributeId}`,
                       description: firstAttr.description || undefined,
                     };
                     if (
+                      attributeOption &&
                       !fallbackAttributes.some(
-                        (item) => item.id === attributeOption!.id,
+                        (item) => item.id === firstAttr.attributeId,
                       )
                     ) {
                       fallbackAttributes.push(attributeOption);

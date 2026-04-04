@@ -67,6 +67,9 @@ const formatDate = (dateStr?: string) => {
   return new Date(dateStr).toLocaleString("vi-VN");
 };
 
+const getDisplayOrderCode = (order?: OrderListItem | null) =>
+  order?.code || order?.id || "-";
+
 export const OrderManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -144,26 +147,22 @@ export const OrderManagementPage = () => {
   };
 
   const handleExportCsv = () => {
-    exportToCsv(
-      orders,
-      `don-hang-${new Date().toISOString().slice(0, 10)}`,
-      [
-        { key: "id", header: "Mã đơn hàng" },
-        { key: "customerName", header: "Khách hàng" },
-        { key: "customerId", header: "Mã khách hàng" },
-        { key: "status", header: "Trạng thái" },
-        { key: "totalAmount", header: "Tổng tiền" },
-        { key: "type", header: "Loại" },
-        { key: "createdAt", header: "Ngày tạo" },
-      ],
-    );
+    exportToCsv(orders, `don-hang-${new Date().toISOString().slice(0, 10)}`, [
+      { key: "code", header: "Mã đơn hàng" },
+      { key: "customerName", header: "Khách hàng" },
+      { key: "customerId", header: "Mã khách hàng" },
+      { key: "status", header: "Trạng thái" },
+      { key: "totalAmount", header: "Tổng tiền" },
+      { key: "type", header: "Loại" },
+      { key: "createdAt", header: "Ngày tạo" },
+    ]);
   };
 
-  const handleCopyOrderId = async (orderId?: string | null) => {
-    if (!orderId) return;
+  const handleCopyOrderCode = async (orderCode?: string | null) => {
+    if (!orderCode) return;
 
     try {
-      await navigator.clipboard.writeText(orderId);
+      await navigator.clipboard.writeText(orderCode);
       showToast("Đã sao chép mã đơn hàng", "success");
     } catch {
       showToast("Không thể sao chép mã đơn hàng", "error");
@@ -409,23 +408,25 @@ export const OrderManagementPage = () => {
                   >
                     <TableCell sx={{ maxWidth: 260 }}>
                       <Box display="flex" alignItems="center" gap={0.5}>
-                        <Tooltip title={order.id || ""}>
+                        <Tooltip title={getDisplayOrderCode(order)}>
                           <Typography
                             variant="body2"
                             fontWeight={500}
                             sx={{ fontFamily: "monospace" }}
                             noWrap
                           >
-                            {order.id || "-"}
+                            {getDisplayOrderCode(order)}
                           </Typography>
                         </Tooltip>
-                        {!!order.id && (
+                        {!!(order.code || order.id) && (
                           <Tooltip title="Sao chép mã đơn">
                             <IconButton
                               size="small"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                void handleCopyOrderId(order.id);
+                                void handleCopyOrderCode(
+                                  order.code || order.id,
+                                );
                               }}
                             >
                               <ContentCopyIcon sx={{ fontSize: 14 }} />

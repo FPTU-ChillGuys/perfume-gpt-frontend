@@ -1,4 +1,5 @@
 import { apiInstance } from "@/lib/api";
+import { getStoredAccessToken } from "@/utils/authStorage";
 import type {
   OrderListItem,
   OrderStatus,
@@ -49,11 +50,19 @@ export interface PagedCancelRequests {
 
 export type CreateReturnRequestDto =
   components["schemas"]["CreateReturnRequestDto"];
+export type ReturnOrderReason = components["schemas"]["ReturnOrderReason"];
+export type ContactAddressInformation =
+  components["schemas"]["ContactAddressInformation"];
 export interface CreateReturnRequestPayload {
   orderId: string;
-  reason: string;
-  requestedRefundAmount?: number;
+  reason: ReturnOrderReason;
+  returnItems: {
+    orderDetailId: string;
+    quantity: number;
+  }[];
   customerNote?: string | null;
+  savedAddressId?: string | null;
+  recipient?: ContactAddressInformation | null;
   temporaryMediaIds?: string[] | null;
 }
 export type TemporaryMediaResponse =
@@ -80,6 +89,7 @@ export interface ProofImage {
   altText?: string | null;
   displayOrder?: number;
   isPrimary?: boolean;
+  mimeType?: string | null;
 }
 
 export interface OrderReturnRequest {
@@ -173,6 +183,8 @@ class OrderService {
       isPrimary: Boolean(
         this.getValue<boolean>(img, ["isPrimary", "IsPrimary"]),
       ),
+      mimeType:
+        this.getValue<string | null>(img, ["mimeType", "MimeType"]) ?? null,
     };
   }
 
@@ -242,6 +254,50 @@ class OrderService {
     };
   }
 
+  private normalizeOrderListItem(item: unknown): OrderListItem {
+    const fallbackId = this.getValue<string>(item, [
+      "id",
+      "Id",
+      "orderId",
+      "OrderId",
+    ]);
+
+    const fallbackCode = this.getValue<string>(item, [
+      "code",
+      "Code",
+      "orderCode",
+      "OrderCode",
+    ]);
+
+    return {
+      ...(item as OrderListItem),
+      id: fallbackId,
+      code: fallbackCode || fallbackId || "",
+    };
+  }
+
+  private normalizeOrderResponse(item: unknown): OrderResponse {
+    const fallbackId = this.getValue<string>(item, [
+      "id",
+      "Id",
+      "orderId",
+      "OrderId",
+    ]);
+
+    const fallbackCode = this.getValue<string>(item, [
+      "code",
+      "Code",
+      "orderCode",
+      "OrderCode",
+    ]);
+
+    return {
+      ...(item as OrderResponse),
+      id: fallbackId,
+      code: fallbackCode || fallbackId || "",
+    };
+  }
+
   async getMyOrders(
     params?: GetMyOrdersParams,
   ): Promise<{ items: OrderListItem[]; totalCount: number }> {
@@ -256,8 +312,12 @@ class OrderService {
         throw new Error(response.data?.message || "Failed to fetch orders");
       }
 
+      const items = (response.data.payload.items || []).map((item) =>
+        this.normalizeOrderListItem(item),
+      );
+
       return {
-        items: response.data.payload.items || [],
+        items,
         totalCount: response.data.payload.totalCount || 0,
       };
     } catch (error: any) {
@@ -282,7 +342,13 @@ class OrderService {
         throw new Error(response.data?.message || "Failed to fetch orders");
       }
 
-      return response.data.payload;
+      const payload = response.data.payload;
+      return {
+        ...payload,
+        items: (payload.items || []).map((item) =>
+          this.normalizeOrderListItem(item),
+        ),
+      };
     } catch (error: any) {
       console.error("Error fetching all orders:", error);
       throw new Error(
@@ -382,7 +448,7 @@ class OrderService {
         query.set("IsDescending", String(params.IsDescending));
       }
 
-      const accessToken = localStorage.getItem("accessToken");
+      const accessToken = getStoredAccessToken();
       const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests${query.size ? `?${query.toString()}` : ""}`;
 
       const response = await fetch(endpoint, {
@@ -482,7 +548,7 @@ class OrderService {
         query.set("IsDescending", String(params.IsDescending));
       }
 
-      const accessToken = localStorage.getItem("accessToken");
+      const accessToken = getStoredAccessToken();
       const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/my-requests${query.size ? `?${query.toString()}` : ""}`;
 
       const response = await fetch(endpoint, {
@@ -731,21 +797,22 @@ class OrderService {
     }
   }
 
-  async uploadTemporaryReturnImages(
+  async uploadTemporaryReturnMedia(
     files: File[],
   ): Promise<TemporaryMediaResponse[]> {
     if (!files.length) {
       return [];
     }
 
-    const accessToken = localStorage.getItem("accessToken");
-    const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/images/temporary`;
-    let lastErrorMessage = "Không thể tải ảnh tạm thời";
+    const accessToken = getStoredAccessToken();
+    const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/videos/temporary`;
+    let lastErrorMessage = "Không thể tải tệp đính kèm tạm thời";
 
     const tryUpload = async (
       buildFormData: (fileList: File[]) => FormData,
+      endpointUrl = endpoint,
     ): Promise<TemporaryMediaResponse[] | null> => {
-      const response = await fetch(endpoint, {
+      const response = await fetch(endpointUrl, {
         method: "POST",
         headers: accessToken
           ? {
@@ -780,7 +847,7 @@ class OrderService {
     const strategyA = await tryUpload((fileList) => {
       const formData = new FormData();
       fileList.forEach((file) => {
-        formData.append("Images", file);
+        formData.append("Videos", file);
       });
       return formData;
     });
@@ -792,7 +859,7 @@ class OrderService {
     const strategyB = await tryUpload((fileList) => {
       const formData = new FormData();
       fileList.forEach((file, index) => {
-        formData.append(`Images[${index}]`, file);
+        formData.append(`Videos[${index}]`, file);
       });
       return formData;
     });
@@ -804,7 +871,7 @@ class OrderService {
     const strategyC = await tryUpload((fileList) => {
       const formData = new FormData();
       fileList.forEach((file, index) => {
-        formData.append(`Images[${index}].ImageFile`, file);
+        formData.append(`Videos[${index}].VideoFile`, file);
       });
       return formData;
     });
@@ -813,7 +880,27 @@ class OrderService {
       return strategyC;
     }
 
+    // Backward-compatible fallback for older return media endpoint contracts.
+    const fallbackEndpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/images/temporary`;
+    const fallback = await tryUpload((fileList) => {
+      const formData = new FormData();
+      fileList.forEach((file) => {
+        formData.append("Images", file);
+      });
+      return formData;
+    }, fallbackEndpoint);
+
+    if (fallback) {
+      return fallback;
+    }
+
     throw new Error(lastErrorMessage);
+  }
+
+  async uploadTemporaryReturnImages(
+    files: File[],
+  ): Promise<TemporaryMediaResponse[]> {
+    return this.uploadTemporaryReturnMedia(files);
   }
 
   async createReturnRequest(
@@ -823,8 +910,10 @@ class OrderService {
       const requestBody: CreateReturnRequestDto = {
         orderId: payload.orderId,
         reason: payload.reason,
+        returnItems: payload.returnItems,
         customerNote: payload.customerNote ?? null,
-        requestedRefundAmount: payload.requestedRefundAmount,
+        savedAddressId: payload.savedAddressId ?? null,
+        recipient: payload.recipient ?? null,
         temporaryMediaIds: payload.temporaryMediaIds ?? null,
       };
 
@@ -930,7 +1019,7 @@ class OrderService {
         );
       }
 
-      return response.data.payload;
+      return this.normalizeOrderResponse(response.data.payload);
     } catch (error: any) {
       console.error("Error fetching order details:", error);
       throw new Error(
@@ -958,13 +1047,37 @@ class OrderService {
         );
       }
 
-      return response.data.payload;
+      return this.normalizeOrderResponse(response.data.payload);
     } catch (error: any) {
       console.error("Error fetching my order details:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch order details",
+      );
+    }
+  }
+
+  async syncMyShippingStatus(): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/shippings/me/sync-shipping-status",
+        {},
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to sync shipping status",
+        );
+      }
+
+      return response.data.message || "Shipping status synced successfully";
+    } catch (error: any) {
+      console.error("Error syncing shipping status:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to sync shipping status",
       );
     }
   }
@@ -1007,7 +1120,7 @@ class OrderService {
           path: { orderId },
         },
         body: {
-          reason: reason ?? null,
+          reason: (reason || undefined) as any,
         },
       });
 

@@ -5837,6 +5837,7 @@ export interface paths {
                 content: {
                     "application/x-www-form-urlencoded": {
                         Videos?: components["schemas"]["IFormFile"][];
+                        Images?: components["schemas"]["IFormFile"][];
                     };
                 };
             };
@@ -7075,6 +7076,50 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payments/momo-return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Found */
+                302: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13157,6 +13202,8 @@ export interface components {
             requestedQuantity?: number;
             /** Format: decimal */
             unitPrice?: number;
+            /** Format: decimal */
+            refundableAmount?: number;
         };
         OrderReturnRequestResponse: {
             /** Format: uuid */
@@ -13184,6 +13231,7 @@ export interface components {
             isRefunded?: boolean;
             vnpTransactionNo?: null | string;
             isRestocked?: boolean;
+            returnShippingInfo?: null | components["schemas"]["ReturnShippingInfoResponse"];
             returnDetails?: null | components["schemas"]["OrderReturnRequestDetailResponse"][];
             proofImages?: null | components["schemas"]["MediaResponse"][];
             /** Format: date-time */
@@ -13798,6 +13846,20 @@ export interface components {
         ReturnOrderReason: "DamagedProduct" | "WrongItemReceived" | "ItemNotAsDescribed" | "ChangedMind" | "AllergicReaction";
         /** @enum {string} */
         ReturnRequestStatus: "Pending" | "ApprovedForReturn" | "Inspecting" | "ReadyForRefund" | "Completed" | "Rejected";
+        ReturnShippingInfoResponse: {
+            /** Format: uuid */
+            id?: string;
+            carrierName?: components["schemas"]["CarrierName"];
+            trackingNumber?: null | string;
+            type?: components["schemas"]["ShippingType"];
+            /** Format: decimal */
+            shippingFee?: number;
+            status?: components["schemas"]["ShippingStatus"];
+            /** Format: date-time */
+            estimatedDeliveryDate?: null | string;
+            /** Format: date-time */
+            shippedDate?: null | string;
+        };
         RevenueSummaryResponse: {
             /** Format: date-time */
             fromDate?: string;
@@ -13954,7 +14016,8 @@ export interface components {
             /** Format: date-time */
             shippedDate?: null | string;
         };
-        ShippingStatus: number;
+        /** @enum {string} */
+        ShippingStatus: "Pending" | "Delivering" | "Delivered" | "Cancelled" | "Returning" | "Returned";
         /** @enum {string} */
         ShippingType: "Forward" | "Return";
         StaffLookupItem: {

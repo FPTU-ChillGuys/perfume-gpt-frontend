@@ -36,7 +36,7 @@ class CampaignService {
       | {
           message?: string;
           errors?: string[] | null;
-          errorType?: string;
+          errorType?: string | number | null;
         }
       | null
       | undefined,
@@ -49,8 +49,8 @@ class CampaignService {
       messageParts.push(base.message);
     }
 
-    if (base?.errorType) {
-      messageParts.push(`Type: ${base.errorType}`);
+    if (base?.errorType !== undefined && base?.errorType !== null) {
+      messageParts.push(`Type: ${String(base.errorType)}`);
     }
 
     if (base?.errors && base.errors.length > 0) {

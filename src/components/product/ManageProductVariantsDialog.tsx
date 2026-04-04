@@ -87,7 +87,6 @@ const VARIANT_STATUS: { value: VariantStatus; label: string }[] = [
   { value: "Active", label: "Đang bán" },
   { value: "Inactive", label: "Tạm dừng" },
   { value: "Discontinued", label: "Ngừng bán" },
-  { value: "out_of_stock", label: "Hết hàng" },
 ];
 
 const createEmptyAttributeSelection = (): AttributeSelection => ({
@@ -974,14 +973,14 @@ export default function ManageProductVariantsDialog({
 
     const trimmedBarcode = formValues.barCode.trim();
     const payload: UpdateVariantRequest & {
-      barcode?: string;
+      barcode: string;
       retailPrice: number | null;
       mediaIdsToDelete?: string[] | null;
       temporaryMediaIdsToAdd?: string[] | null;
       lowStockThreshold?: number;
     } = {
       sku: formValues.sku.trim(),
-      ...(trimmedBarcode ? { barcode: trimmedBarcode } : {}),
+      barcode: trimmedBarcode,
       volumeMl: Number(formValues.volumeMl),
       concentrationId: selectedConcentration!.id,
       type: formValues.type as VariantType,

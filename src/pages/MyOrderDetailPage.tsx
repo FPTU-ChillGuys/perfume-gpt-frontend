@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -12,8 +13,13 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   IconButton,
+  MenuItem,
   Paper,
+  Radio,
+  RadioGroup,
+  Select,
   Stack,
   Table,
   TableBody,
@@ -23,32 +29,42 @@ import {
   TableRow,
   TextField,
   Typography,
+  Tooltip,
 } from "@mui/material";
 import {
   ArrowBack,
-  ArrowBackIosNew,
-  ArrowForwardIos,
+  PhotoCameraOutlined,
+  VideocamOutlined,
+  Sync,
   Receipt,
   Payments,
   LocalShipping,
   MoveToInbox,
   StarBorder,
+  Person,
   LocationOn,
   Phone,
-  Person,
   CancelOutlined,
   AssignmentReturn,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
-import { AppBreadcrumbs } from "@/components/common/AppBreadcrumbs";
 import { orderService } from "@/services/orderService";
+import type { ReturnOrderReason } from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
 import { productService } from "@/services/productService";
 import { userService } from "@/services/userService";
+import { addressService } from "@/services/addressService";
 import { useToast } from "@/hooks/useToast";
 import type { UserCredentials } from "@/services/userService";
 import type { PaymentMethod } from "@/types/checkout";
 import type { OrderResponse, CarrierName, OrderStatus } from "@/types/order";
+import type { components } from "@/types/api/v1";
+import type {
+  AddressResponse,
+  DistrictResponse,
+  ProvinceResponse,
+  WardResponse,
+} from "@/types/address";
 import {
   getReviewStatus,
   type ReviewResponse,
@@ -90,6 +106,7 @@ const STATUS_TO_STEP: Record<OrderStatus, number> = {
   Delivered: 4,
   Returning: -2,
   Cancelled: -1,
+  Partial_Returned: -2,
   Returned: -2,
 };
 
@@ -100,6 +117,25 @@ const STEPS = [
   { label: "Chờ Giao Hàng", Icon: MoveToInbox },
   { label: "Đánh Giá", Icon: StarBorder },
 ];
+
+const RETURN_REASON_OPTIONS: { value: ReturnOrderReason; label: string }[] = [
+  { value: "DamagedProduct", label: "Hàng bể vỡ / hư hỏng" },
+  { value: "WrongItemReceived", label: "Người bán gửi sai hàng" },
+  { value: "ItemNotAsDescribed", label: "Hàng không đúng mô tả" },
+  { value: "AllergicReaction", label: "Không phù hợp / kích ứng" },
+  { value: "ChangedMind", label: "Đổi ý, không còn nhu cầu" },
+];
+
+const CANCEL_REASON_SUGGESTIONS = [
+  "Tôi muốn thay đổi sản phẩm trong đơn",
+  "Tôi muốn đổi địa chỉ nhận hàng",
+  "Tôi không còn nhu cầu mua nữa",
+  "Tôi đã đặt nhầm sản phẩm",
+  "Tôi muốn thay đổi phương thức thanh toán",
+];
+
+const MAX_RETURN_IMAGES = 6;
+const MAX_RETURN_VIDEOS = 1;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -325,20 +361,46 @@ export const MyOrderDetailPage = () => {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isSyncingShipping, setIsSyncingShipping] = useState(false);
 
-  const [isReturnRequestMode, setIsReturnRequestMode] = useState(
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(
     Boolean(locationState.requestReturn),
   );
-  const [returnReason, setReturnReason] = useState("");
+  const [returnReason, setReturnReason] = useState<ReturnOrderReason | "">("");
   const [returnNote, setReturnNote] = useState("");
-  const [returnImages, setReturnImages] = useState<File[]>([]);
-  const [activeReturnImageIndex, setActiveReturnImageIndex] = useState(0);
+  const [returnMediaFiles, setReturnMediaFiles] = useState<File[]>([]);
+  const [returnItemQuantities, setReturnItemQuantities] = useState<
+    Record<string, number>
+  >({});
+  const [pickupAddressMode, setPickupAddressMode] = useState<
+    "saved" | "custom"
+  >("saved");
+  const [savedAddresses, setSavedAddresses] = useState<AddressResponse[]>([]);
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState("");
+  const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
+  const [districts, setDistricts] = useState<DistrictResponse[]>([]);
+  const [wards, setWards] = useState<WardResponse[]>([]);
+  const [selectedProvince, setSelectedProvince] =
+    useState<ProvinceResponse | null>(null);
+  const [selectedDistrict, setSelectedDistrict] =
+    useState<DistrictResponse | null>(null);
+  const [selectedWard, setSelectedWard] = useState<WardResponse | null>(null);
+  const [customRecipient, setCustomRecipient] = useState({
+    contactName: "",
+    contactPhoneNumber: "",
+    fullAddress: "",
+  });
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [isLoadingWards, setIsLoadingWards] = useState(false);
+  const [returnFormError, setReturnFormError] = useState("");
   const [isSubmittingReturnRequest, setIsSubmittingReturnRequest] =
     useState(false);
 
   useEffect(() => {
     if (locationState.requestReturn) {
-      setIsReturnRequestMode(true);
+      setIsReturnDialogOpen(true);
     }
   }, [locationState.requestReturn]);
 
@@ -473,18 +535,113 @@ export const MyOrderDetailPage = () => {
     return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
   }, [order?.paymentTransactions]);
 
-  const requestedRefundAmount = useMemo(
-    () => Number(order?.totalAmount ?? 0),
-    [order?.totalAmount],
-  );
-
   const returnImagePreviews = useMemo(
     () =>
-      returnImages.map((file) => ({
-        name: file.name,
-        url: URL.createObjectURL(file),
-      })),
-    [returnImages],
+      returnMediaFiles
+        .filter((file) => file.type.startsWith("image/"))
+        .map((file) => ({
+          name: file.name,
+          url: URL.createObjectURL(file),
+        })),
+    [returnMediaFiles],
+  );
+
+  const returnVideoPreviews = useMemo(
+    () =>
+      returnMediaFiles
+        .filter((file) => file.type.startsWith("video/"))
+        .map((file) => ({
+          name: file.name,
+          url: URL.createObjectURL(file),
+        })),
+    [returnMediaFiles],
+  );
+
+  const returnImageFiles = useMemo(
+    () => returnMediaFiles.filter((file) => file.type.startsWith("image/")),
+    [returnMediaFiles],
+  );
+
+  const returnVideoFiles = useMemo(
+    () => returnMediaFiles.filter((file) => file.type.startsWith("video/")),
+    [returnMediaFiles],
+  );
+
+  const selectedReturnItems = useMemo(
+    () =>
+      (order?.orderDetails ?? [])
+        .map((item) => {
+          const id = item.id ?? "";
+          const max = Number(item.quantity ?? 0);
+          const requested = Math.min(
+            Math.max(0, Number(returnItemQuantities[id] ?? 0)),
+            max,
+          );
+          return {
+            orderDetailId: id,
+            requested,
+            max,
+            item,
+          };
+        })
+        .filter((entry) => Boolean(entry.orderDetailId) && entry.requested > 0),
+    [order?.orderDetails, returnItemQuantities],
+  );
+
+  const estimatedRefundAmount = useMemo(
+    () =>
+      selectedReturnItems.reduce(
+        (sum, entry) =>
+          sum + Number(entry.item.unitPrice ?? 0) * Number(entry.requested),
+        0,
+      ),
+    [selectedReturnItems],
+  );
+
+  const isReturnAddressValid = useMemo(() => {
+    if (pickupAddressMode === "saved") {
+      return Boolean(selectedSavedAddressId);
+    }
+
+    return Boolean(
+      customRecipient.contactName.trim() &&
+      customRecipient.contactPhoneNumber.trim() &&
+      customRecipient.fullAddress.trim() &&
+      selectedProvince?.ProvinceID &&
+      selectedProvince.ProvinceName &&
+      selectedDistrict?.DistrictID &&
+      selectedDistrict.DistrictName &&
+      selectedWard?.WardCode &&
+      selectedWard.WardName,
+    );
+  }, [
+    customRecipient.contactName,
+    customRecipient.contactPhoneNumber,
+    customRecipient.fullAddress,
+    pickupAddressMode,
+    selectedDistrict?.DistrictID,
+    selectedDistrict?.DistrictName,
+    selectedProvince?.ProvinceID,
+    selectedProvince?.ProvinceName,
+    selectedSavedAddressId,
+    selectedWard?.WardCode,
+    selectedWard?.WardName,
+  ]);
+
+  const canSubmitReturnRequest = useMemo(
+    () =>
+      Boolean(
+        returnReason &&
+        selectedReturnItems.length > 0 &&
+        returnVideoFiles.length > 0 &&
+        isReturnAddressValid,
+      ),
+    [
+      isReturnAddressValid,
+      returnVideoFiles.length,
+      returnReason,
+      selectedReturnItems.length,
+    ],
   );
 
   useEffect(() => {
@@ -492,19 +649,43 @@ export const MyOrderDetailPage = () => {
       returnImagePreviews.forEach((preview) =>
         URL.revokeObjectURL(preview.url),
       );
+      returnVideoPreviews.forEach((preview) =>
+        URL.revokeObjectURL(preview.url),
+      );
     };
-  }, [returnImagePreviews]);
+  }, [returnImagePreviews, returnVideoPreviews]);
 
   useEffect(() => {
-    if (!returnImagePreviews.length) {
-      setActiveReturnImageIndex(0);
+    if (!isReturnDialogOpen) {
       return;
     }
 
-    if (activeReturnImageIndex > returnImagePreviews.length - 1) {
-      setActiveReturnImageIndex(returnImagePreviews.length - 1);
-    }
-  }, [returnImagePreviews.length, activeReturnImageIndex]);
+    const loadAddressData = async () => {
+      setIsLoadingAddresses(true);
+      setIsLoadingProvinces(true);
+      try {
+        const [addresses, provinceData] = await Promise.all([
+          addressService.getAddresses().catch(() => [] as AddressResponse[]),
+          addressService.getProvinces().catch(() => [] as ProvinceResponse[]),
+        ]);
+        setSavedAddresses(addresses);
+        setProvinces(provinceData);
+
+        const defaultAddress =
+          addresses.find((address) => address.isDefault) ?? addresses[0];
+        setSelectedSavedAddressId(defaultAddress?.id ?? "");
+
+        if (!addresses.length) {
+          setPickupAddressMode("custom");
+        }
+      } finally {
+        setIsLoadingAddresses(false);
+        setIsLoadingProvinces(false);
+      }
+    };
+
+    void loadAddressData();
+  }, [isReturnDialogOpen]);
 
   const handleCancelOrder = async () => {
     if (!order?.id) return;
@@ -540,22 +721,201 @@ export const MyOrderDetailPage = () => {
     }
   };
 
-  const handleReturnImagesChange = (
+  const resetReturnDialogState = () => {
+    setReturnReason("");
+    setReturnNote("");
+    setReturnMediaFiles([]);
+    setReturnItemQuantities({});
+    setPickupAddressMode(savedAddresses.length ? "saved" : "custom");
+    setReturnFormError("");
+    setSelectedProvince(null);
+    setSelectedDistrict(null);
+    setSelectedWard(null);
+    setDistricts([]);
+    setWards([]);
+    setCustomRecipient({
+      contactName: "",
+      contactPhoneNumber: "",
+      fullAddress: "",
+    });
+  };
+
+  const openReturnRequestDialog = () => {
+    setIsReturnDialogOpen(true);
+    setReturnFormError("");
+  };
+
+  const closeReturnRequestDialog = () => {
+    setIsReturnDialogOpen(false);
+    resetReturnDialogState();
+  };
+
+  const handleReturnImageChange = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const fileList = Array.from(event.target.files || []);
+    const fileList = Array.from(event.target.files || []).filter((file) =>
+      file.type.startsWith("image/"),
+    );
     if (!fileList.length) {
       return;
     }
 
-    setReturnImages((prev) => [...prev, ...fileList].slice(0, 8));
+    setReturnMediaFiles((prev) => {
+      const existingImages = prev.filter((file) =>
+        file.type.startsWith("image/"),
+      );
+      const existingVideos = prev.filter((file) =>
+        file.type.startsWith("video/"),
+      );
+      const nextImages = [...existingImages, ...fileList].slice(
+        0,
+        MAX_RETURN_IMAGES,
+      );
+
+      if (existingImages.length + fileList.length > MAX_RETURN_IMAGES) {
+        showToast(`Chỉ tối đa ${MAX_RETURN_IMAGES} hình ảnh`, "warning");
+      }
+
+      return [...nextImages, ...existingVideos];
+    });
     event.target.value = "";
   };
 
-  const handleRemoveReturnImage = (index: number) => {
-    setReturnImages((prev) =>
+  const handleReturnVideoChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const fileList = Array.from(event.target.files || []).filter((file) =>
+      file.type.startsWith("video/"),
+    );
+    if (!fileList.length) {
+      return;
+    }
+
+    setReturnMediaFiles((prev) => {
+      const existingImages = prev.filter((file) =>
+        file.type.startsWith("image/"),
+      );
+      const existingVideos = prev.filter((file) =>
+        file.type.startsWith("video/"),
+      );
+      const nextVideos = [...existingVideos, ...fileList].slice(
+        0,
+        MAX_RETURN_VIDEOS,
+      );
+
+      if (existingVideos.length + fileList.length > MAX_RETURN_VIDEOS) {
+        showToast(`Chỉ tối đa ${MAX_RETURN_VIDEOS} video`, "warning");
+      }
+
+      return [...existingImages, ...nextVideos];
+    });
+    event.target.value = "";
+  };
+
+  const handleRemoveReturnMedia = (index: number) => {
+    setReturnMediaFiles((prev) =>
       prev.filter((_, currentIndex) => currentIndex !== index),
     );
+  };
+
+  const handleReturnQuantityChange = (
+    orderDetailId: string,
+    max: number,
+    value: string,
+  ) => {
+    const numeric = Number(value);
+    const nextValue = Number.isFinite(numeric)
+      ? Math.min(Math.max(0, Math.floor(numeric)), max)
+      : 0;
+    setReturnItemQuantities((prev) => ({
+      ...prev,
+      [orderDetailId]: nextValue,
+    }));
+  };
+
+  const handleProvinceChange = async (
+    _: unknown,
+    newValue: ProvinceResponse | null,
+  ) => {
+    setSelectedProvince(newValue);
+    setSelectedDistrict(null);
+    setSelectedWard(null);
+    setDistricts([]);
+    setWards([]);
+
+    if (!newValue?.ProvinceID) {
+      return;
+    }
+
+    setIsLoadingDistricts(true);
+    try {
+      const data = await addressService.getDistricts(newValue.ProvinceID);
+      setDistricts(data);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách quận/huyện",
+        "error",
+      );
+    } finally {
+      setIsLoadingDistricts(false);
+    }
+  };
+
+  const handleDistrictChange = async (
+    _: unknown,
+    newValue: DistrictResponse | null,
+  ) => {
+    setSelectedDistrict(newValue);
+    setSelectedWard(null);
+    setWards([]);
+
+    if (!newValue?.DistrictID) {
+      return;
+    }
+
+    setIsLoadingWards(true);
+    try {
+      const data = await addressService.getWards(newValue.DistrictID);
+      setWards(data);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách phường/xã",
+        "error",
+      );
+    } finally {
+      setIsLoadingWards(false);
+    }
+  };
+
+  const handleWardChange = (_: unknown, newValue: WardResponse | null) => {
+    setSelectedWard(newValue);
+  };
+
+  const handleSyncShippingStatus = async () => {
+    if (!orderId) {
+      return;
+    }
+
+    try {
+      setIsSyncingShipping(true);
+      await orderService.syncMyShippingStatus();
+      const refreshed = await orderService.getMyOrderById(orderId);
+      setOrder(refreshed);
+      showToast("Đã đồng bộ trạng thái vận chuyển", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể đồng bộ trạng thái vận chuyển",
+        "error",
+      );
+    } finally {
+      setIsSyncingShipping(false);
+    }
   };
 
   const handleSubmitReturnRequest = async () => {
@@ -563,17 +923,68 @@ export const MyOrderDetailPage = () => {
       return;
     }
 
-    const reason = returnReason.trim();
-    if (!reason) {
-      showToast("Vui lòng nhập lý do trả hàng", "warning");
+    if (!returnReason) {
+      setReturnFormError("Vui lòng chọn lý do trả hàng");
       return;
+    }
+
+    if (!selectedReturnItems.length) {
+      setReturnFormError(
+        "Vui lòng chọn ít nhất 1 sản phẩm và số lượng muốn trả",
+      );
+      return;
+    }
+
+    if (!returnVideoFiles.length) {
+      setReturnFormError("Vui lòng tải lên ít nhất 1 video");
+      return;
+    }
+
+    let savedAddressId: string | null | undefined = null;
+    let recipient: components["schemas"]["ContactAddressInformation"] | null =
+      null;
+
+    if (pickupAddressMode === "saved") {
+      if (!selectedSavedAddressId) {
+        setReturnFormError("Vui lòng chọn địa chỉ lấy hàng");
+        return;
+      }
+      savedAddressId = selectedSavedAddressId;
+    } else {
+      if (
+        !customRecipient.contactName.trim() ||
+        !customRecipient.contactPhoneNumber.trim() ||
+        !customRecipient.fullAddress.trim() ||
+        !selectedProvince?.ProvinceID ||
+        !selectedProvince.ProvinceName ||
+        !selectedDistrict?.DistrictID ||
+        !selectedDistrict.DistrictName ||
+        !selectedWard?.WardCode ||
+        !selectedWard.WardName
+      ) {
+        setReturnFormError("Vui lòng điền đầy đủ địa chỉ lấy hàng");
+        return;
+      }
+
+      recipient = {
+        contactName: customRecipient.contactName.trim(),
+        contactPhoneNumber: customRecipient.contactPhoneNumber.trim(),
+        fullAddress: customRecipient.fullAddress.trim(),
+        provinceId: selectedProvince.ProvinceID,
+        provinceName: selectedProvince.ProvinceName,
+        districtId: selectedDistrict.DistrictID,
+        districtName: selectedDistrict.DistrictName,
+        wardCode: selectedWard.WardCode,
+        wardName: selectedWard.WardName,
+      };
     }
 
     try {
       setIsSubmittingReturnRequest(true);
+      setReturnFormError("");
 
-      const uploadedMedias = returnImages.length
-        ? await orderService.uploadTemporaryReturnImages(returnImages)
+      const uploadedMedias = returnMediaFiles.length
+        ? await orderService.uploadTemporaryReturnMedia(returnMediaFiles)
         : [];
       const temporaryMediaIds = uploadedMedias
         .map((media) => media.id)
@@ -581,17 +992,19 @@ export const MyOrderDetailPage = () => {
 
       await orderService.createReturnRequest({
         orderId: order.id,
-        reason,
+        reason: returnReason,
+        returnItems: selectedReturnItems.map((entry) => ({
+          orderDetailId: entry.orderDetailId,
+          quantity: entry.requested,
+        })),
         customerNote: returnNote.trim() || null,
-        requestedRefundAmount: requestedRefundAmount || undefined,
+        savedAddressId,
+        recipient,
         temporaryMediaIds: temporaryMediaIds.length ? temporaryMediaIds : null,
       });
 
       showToast("Đã gửi yêu cầu trả hàng thành công", "success");
-      setIsReturnRequestMode(false);
-      setReturnReason("");
-      setReturnNote("");
-      setReturnImages([]);
+      closeReturnRequestDialog();
       if (orderId) {
         const refreshed = await orderService.getMyOrderById(orderId);
         setOrder(refreshed);
@@ -613,14 +1026,6 @@ export const MyOrderDetailPage = () => {
     <MainLayout>
       <Box sx={{ bgcolor: "white", py: 4, flex: 1 }}>
         <Container maxWidth="lg">
-          <AppBreadcrumbs
-            items={[
-              { label: "Trang chủ", href: "/" },
-              { label: "Đơn hàng của tôi", href: "/my-orders" },
-              { label: "Chi tiết đơn hàng" },
-            ]}
-            sx={{ mb: 2 }}
-          />
           <Paper
             elevation={0}
             sx={{
@@ -693,6 +1098,24 @@ export const MyOrderDetailPage = () => {
                       flexWrap="wrap"
                       justifyContent="flex-end"
                     >
+                      <IconButton
+                        size="small"
+                        onClick={handleSyncShippingStatus}
+                        disabled={isSyncingShipping}
+                        aria-label="Đồng bộ trạng thái vận chuyển"
+                      >
+                        <Sync
+                          sx={{
+                            animation: isSyncingShipping
+                              ? "sync-spin 0.9s linear infinite"
+                              : "none",
+                            "@keyframes sync-spin": {
+                              from: { transform: "rotate(0deg)" },
+                              to: { transform: "rotate(360deg)" },
+                            },
+                          }}
+                        />
+                      </IconButton>
                       <Typography
                         variant="body2"
                         color="text.secondary"
@@ -700,7 +1123,12 @@ export const MyOrderDetailPage = () => {
                       >
                         MÃ ĐƠN HÀNG:{" "}
                         <b style={{ color: "#333" }}>
-                          {(order.id ?? "").toUpperCase()}
+                          {(
+                            order.code ||
+                            order.id ||
+                            orderId ||
+                            "-"
+                          ).toUpperCase()}
                         </b>
                       </Typography>
                       <Divider orientation="vertical" flexItem />
@@ -727,65 +1155,6 @@ export const MyOrderDetailPage = () => {
                     />
                   </Box>
 
-                  {(cancelBehavior ||
-                    (order.status === "Delivered" && isOrderReturnable)) && (
-                    <Box
-                      sx={{
-                        px: 3,
-                        py: 2,
-                        borderBottom: "1px solid",
-                        borderColor: "divider",
-                        bgcolor: "#fffaf7",
-                      }}
-                    >
-                      <Stack
-                        direction={{ xs: "column", sm: "row" }}
-                        spacing={1.5}
-                        justifyContent="space-between"
-                        alignItems={{ xs: "flex-start", sm: "center" }}
-                      >
-                        <Typography variant="body2" color="text.secondary">
-                          {isReturnRequestMode
-                            ? "Bạn đang tạo yêu cầu trả hàng cho đơn này."
-                            : "Bạn có thể xử lý hủy đơn hoặc yêu cầu trả hàng ngay tại trang chi tiết."}
-                        </Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap">
-                          {cancelBehavior && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color={
-                                cancelBehavior.mode === "direct"
-                                  ? "error"
-                                  : "warning"
-                              }
-                              onClick={() => setIsCancelDialogOpen(true)}
-                            >
-                              {cancelBehavior.buttonLabel}
-                            </Button>
-                          )}
-                          {order.status === "Delivered" &&
-                            isOrderReturnable && (
-                              <Button
-                                size="small"
-                                variant={
-                                  isReturnRequestMode ? "contained" : "outlined"
-                                }
-                                color="warning"
-                                onClick={() =>
-                                  setIsReturnRequestMode((prev) => !prev)
-                                }
-                              >
-                                {isReturnRequestMode
-                                  ? "Ẩn yêu cầu trả hàng"
-                                  : "Yêu cầu trả hàng"}
-                              </Button>
-                            )}
-                        </Stack>
-                      </Stack>
-                    </Box>
-                  )}
-
                   <Box
                     sx={{
                       p: 3,
@@ -794,299 +1163,6 @@ export const MyOrderDetailPage = () => {
                       gap: 3,
                     }}
                   >
-                    {isReturnRequestMode && order.status === "Delivered" && (
-                      <Paper
-                        variant="outlined"
-                        sx={{ p: 2.5, borderRadius: 2 }}
-                      >
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={700}
-                          mb={2}
-                          color="#ee4d2d"
-                        >
-                          Tạo yêu cầu trả hàng
-                        </Typography>
-
-                        <Box
-                          display="grid"
-                          gridTemplateColumns={{
-                            xs: "1fr",
-                            md: "1.25fr 0.75fr",
-                          }}
-                          gap={2}
-                        >
-                          <Stack spacing={1.5}>
-                            <Alert severity="info" sx={{ mb: 0.5 }}>
-                              Yêu cầu trả hàng hiện áp dụng cho toàn bộ đơn. Hệ
-                              thống sẽ gửi theo mã đơn hàng và xử lý toàn bộ sản
-                              phẩm trong đơn.
-                            </Alert>
-
-                            <Box
-                              sx={{
-                                p: 1.5,
-                                border: "1px solid",
-                                borderColor: "divider",
-                                borderRadius: 1.5,
-                                bgcolor: "#fafafa",
-                              }}
-                            >
-                              <Typography variant="body2" fontWeight={700}>
-                                Mã đơn: {order.id?.slice(0, 8) || "-"}...
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                Tổng sản phẩm: {order.orderDetails?.length || 0}
-                              </Typography>
-                            </Box>
-
-                            <TextField
-                              label="Lý do trả hàng *"
-                              value={returnReason}
-                              onChange={(e) => setReturnReason(e.target.value)}
-                              fullWidth
-                              multiline
-                              minRows={2}
-                            />
-
-                            <TextField
-                              label="Ghi chú thêm (tuỳ chọn)"
-                              value={returnNote}
-                              onChange={(e) => setReturnNote(e.target.value)}
-                              fullWidth
-                              multiline
-                              minRows={2}
-                            />
-                          </Stack>
-
-                          <Paper
-                            variant="outlined"
-                            sx={{
-                              p: 1.5,
-                              borderRadius: 1.5,
-                              bgcolor: "#fcfcfc",
-                            }}
-                          >
-                            <Stack spacing={1.25}>
-                              <Typography
-                                variant="body2"
-                                fontWeight={700}
-                                color="#ee4d2d"
-                              >
-                                Ảnh tình trạng sản phẩm
-                              </Typography>
-
-                              <Button
-                                variant="outlined"
-                                component="label"
-                                size="small"
-                              >
-                                Tải ảnh
-                                <input
-                                  hidden
-                                  type="file"
-                                  accept="image/*"
-                                  multiple
-                                  onChange={handleReturnImagesChange}
-                                />
-                              </Button>
-
-                              {returnImagePreviews.length > 0 && (
-                                <Stack spacing={1}>
-                                  <Box
-                                    sx={{
-                                      position: "relative",
-                                      borderRadius: 1.25,
-                                      overflow: "hidden",
-                                      border: "1px solid",
-                                      borderColor: "divider",
-                                      bgcolor: "#fff",
-                                      height: 190,
-                                    }}
-                                  >
-                                    <Box
-                                      component="img"
-                                      src={
-                                        returnImagePreviews[
-                                          activeReturnImageIndex
-                                        ]?.url
-                                      }
-                                      alt={
-                                        returnImagePreviews[
-                                          activeReturnImageIndex
-                                        ]?.name
-                                      }
-                                      sx={{
-                                        width: "100%",
-                                        height: "100%",
-                                        objectFit: "cover",
-                                      }}
-                                    />
-
-                                    {returnImagePreviews.length > 1 && (
-                                      <>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() =>
-                                            setActiveReturnImageIndex((prev) =>
-                                              prev === 0
-                                                ? returnImagePreviews.length - 1
-                                                : prev - 1,
-                                            )
-                                          }
-                                          sx={{
-                                            position: "absolute",
-                                            left: 6,
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            bgcolor: "rgba(255,255,255,0.9)",
-                                          }}
-                                        >
-                                          <ArrowBackIosNew fontSize="small" />
-                                        </IconButton>
-                                        <IconButton
-                                          size="small"
-                                          onClick={() =>
-                                            setActiveReturnImageIndex((prev) =>
-                                              prev ===
-                                              returnImagePreviews.length - 1
-                                                ? 0
-                                                : prev + 1,
-                                            )
-                                          }
-                                          sx={{
-                                            position: "absolute",
-                                            right: 6,
-                                            top: "50%",
-                                            transform: "translateY(-50%)",
-                                            bgcolor: "rgba(255,255,255,0.9)",
-                                          }}
-                                        >
-                                          <ArrowForwardIos fontSize="small" />
-                                        </IconButton>
-                                      </>
-                                    )}
-                                  </Box>
-
-                                  <Stack
-                                    direction="row"
-                                    spacing={1}
-                                    sx={{ overflowX: "auto", pb: 0.5 }}
-                                  >
-                                    {returnImagePreviews.map(
-                                      (preview, index) => (
-                                        <Box
-                                          key={`${preview.name}-${index}`}
-                                          sx={{
-                                            width: 52,
-                                            height: 52,
-                                            borderRadius: 1,
-                                            overflow: "hidden",
-                                            border: "2px solid",
-                                            borderColor:
-                                              activeReturnImageIndex === index
-                                                ? "#ee4d2d"
-                                                : "transparent",
-                                            flexShrink: 0,
-                                            cursor: "pointer",
-                                          }}
-                                          onClick={() =>
-                                            setActiveReturnImageIndex(index)
-                                          }
-                                        >
-                                          <Box
-                                            component="img"
-                                            src={preview.url}
-                                            alt={preview.name}
-                                            sx={{
-                                              width: "100%",
-                                              height: "100%",
-                                              objectFit: "cover",
-                                            }}
-                                          />
-                                        </Box>
-                                      ),
-                                    )}
-                                  </Stack>
-
-                                  <Stack
-                                    direction="row"
-                                    spacing={1}
-                                    flexWrap="wrap"
-                                    useFlexGap
-                                  >
-                                    {returnImagePreviews.map(
-                                      (preview, index) => (
-                                        <Chip
-                                          key={`name-${preview.name}-${index}`}
-                                          label={preview.name}
-                                          onDelete={() =>
-                                            handleRemoveReturnImage(index)
-                                          }
-                                          size="small"
-                                          sx={{ maxWidth: 220 }}
-                                        />
-                                      ),
-                                    )}
-                                  </Stack>
-                                </Stack>
-                              )}
-
-                              <Divider />
-
-                              <Box
-                                display="flex"
-                                justifyContent="space-between"
-                                alignItems="center"
-                              >
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  Số tiền hoàn dự kiến
-                                </Typography>
-                                <Typography
-                                  variant="subtitle1"
-                                  fontWeight={700}
-                                  color="#ee4d2d"
-                                >
-                                  {fmt(requestedRefundAmount)}
-                                </Typography>
-                              </Box>
-
-                              <Stack
-                                direction="row"
-                                spacing={1}
-                                justifyContent="flex-end"
-                                pt={0.5}
-                              >
-                                <Button
-                                  variant="text"
-                                  onClick={() => setIsReturnRequestMode(false)}
-                                  disabled={isSubmittingReturnRequest}
-                                >
-                                  Huỷ
-                                </Button>
-                                <Button
-                                  variant="contained"
-                                  color="warning"
-                                  onClick={handleSubmitReturnRequest}
-                                  disabled={isSubmittingReturnRequest}
-                                >
-                                  {isSubmittingReturnRequest
-                                    ? "Đang gửi yêu cầu..."
-                                    : "Gửi yêu cầu trả hàng"}
-                                </Button>
-                              </Stack>
-                            </Stack>
-                          </Paper>
-                        </Box>
-                      </Paper>
-                    )}
-
                     {/* ── Delivery & carrier ──────────────────────────────── */}
                     {(order.recipientInfo || order.shippingInfo) && (
                       <Paper
@@ -1415,6 +1491,38 @@ export const MyOrderDetailPage = () => {
                         </Box>
                       </Stack>
                     </Paper>
+
+                    {(cancelBehavior ||
+                      (order.status === "Delivered" && isOrderReturnable)) && (
+                      <Box display="flex" justifyContent="flex-end">
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                          {cancelBehavior && (
+                            <Button
+                              variant="outlined"
+                              color={
+                                cancelBehavior.mode === "direct"
+                                  ? "error"
+                                  : "warning"
+                              }
+                              onClick={() => setIsCancelDialogOpen(true)}
+                            >
+                              {cancelBehavior.buttonLabel}
+                            </Button>
+                          )}
+
+                          {order.status === "Delivered" &&
+                            isOrderReturnable && (
+                              <Button
+                                variant="contained"
+                                color="warning"
+                                onClick={openReturnRequestDialog}
+                              >
+                                Yêu cầu trả hàng
+                              </Button>
+                            )}
+                        </Stack>
+                      </Box>
+                    )}
                   </Box>
                 </Box>
               )}
@@ -1422,6 +1530,555 @@ export const MyOrderDetailPage = () => {
           </Paper>
         </Container>
       </Box>
+
+      <Dialog
+        open={isCancelDialogOpen}
+        onClose={() => {
+          if (isCancelling) return;
+          setIsCancelDialogOpen(false);
+          setCancelReason("");
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {cancelBehavior?.mode === "direct"
+            ? "Xác nhận hủy đơn hàng"
+            : "Gửi yêu cầu hủy đơn"}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              {cancelBehavior?.note ||
+                "Vui lòng chọn hoặc nhập lý do để tiếp tục."}
+            </Typography>
+
+            <TextField
+              label="Lý do hủy *"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              fullWidth
+              multiline
+              minRows={3}
+              size="small"
+              placeholder="Nhập lý do hủy đơn hàng"
+            />
+
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {CANCEL_REASON_SUGGESTIONS.map((reason) => {
+                const isSelected = cancelReason.trim() === reason;
+                return (
+                  <Chip
+                    key={reason}
+                    clickable
+                    label={reason}
+                    color={isSelected ? "warning" : "default"}
+                    onClick={() => setCancelReason(reason)}
+                    sx={{ maxWidth: "100%" }}
+                  />
+                );
+              })}
+            </Stack>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setIsCancelDialogOpen(false);
+              setCancelReason("");
+            }}
+            disabled={isCancelling}
+          >
+            Đóng
+          </Button>
+          <Button
+            color={cancelBehavior?.mode === "direct" ? "error" : "warning"}
+            variant="contained"
+            onClick={handleCancelOrder}
+            disabled={isCancelling || cancelReason.trim().length === 0}
+          >
+            {isCancelling
+              ? "Đang xử lý..."
+              : cancelBehavior?.mode === "direct"
+                ? "Xác nhận hủy"
+                : "Gửi yêu cầu"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={isReturnDialogOpen}
+        onClose={closeReturnRequestDialog}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Tạo yêu cầu trả hàng</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 0.5 }}>
+            {returnFormError && (
+              <Alert severity="warning">{returnFormError}</Alert>
+            )}
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1.25}>
+                1. Chọn sản phẩm và số lượng muốn trả
+              </Typography>
+              <Stack spacing={1.25}>
+                {(order?.orderDetails ?? []).map((item, index) => {
+                  const detailId = item.id ?? "";
+                  const maxQty = Number(item.quantity ?? 0);
+                  const selectedQty = Number(
+                    returnItemQuantities[detailId] ?? 0,
+                  );
+
+                  return (
+                    <Box
+                      key={detailId || `${item.variantName}-${index}`}
+                      sx={{
+                        p: 1.25,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        borderRadius: 1.5,
+                      }}
+                    >
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1.25}
+                        justifyContent="space-between"
+                        alignItems={{ xs: "flex-start", sm: "center" }}
+                      >
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          alignItems="center"
+                        >
+                          {item.imageUrl ? (
+                            <Box
+                              component="img"
+                              src={item.imageUrl}
+                              alt={item.variantName}
+                              sx={{
+                                width: 52,
+                                height: 52,
+                                borderRadius: 1,
+                                objectFit: "cover",
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 52,
+                                height: 52,
+                                borderRadius: 1,
+                                bgcolor: "grey.100",
+                              }}
+                            />
+                          )}
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>
+                              {item.variantName}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Đã mua: {maxQty}
+                            </Typography>
+                          </Box>
+                        </Stack>
+
+                        <TextField
+                          label="Số lượng trả"
+                          size="small"
+                          type="number"
+                          value={selectedQty}
+                          onChange={(e) =>
+                            handleReturnQuantityChange(
+                              detailId,
+                              maxQty,
+                              e.target.value,
+                            )
+                          }
+                          disabled={!detailId}
+                          inputProps={{ min: 0, max: maxQty }}
+                          sx={{ width: { xs: "100%", sm: 150 } }}
+                        />
+                      </Stack>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                2. Lý do trả hàng
+              </Typography>
+              <RadioGroup
+                value={returnReason}
+                onChange={(e) =>
+                  setReturnReason(e.target.value as ReturnOrderReason)
+                }
+              >
+                {RETURN_REASON_OPTIONS.map((option) => (
+                  <FormControlLabel
+                    key={option.value}
+                    value={option.value}
+                    control={<Radio />}
+                    label={option.label}
+                  />
+                ))}
+              </RadioGroup>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                3. Mô tả thêm và bằng chứng (ảnh/video)
+              </Typography>
+              <Stack spacing={1.25}>
+                <TextField
+                  label="Mô tả thêm (tuỳ chọn)"
+                  value={returnNote}
+                  onChange={(e) => setReturnNote(e.target.value)}
+                  fullWidth
+                  multiline
+                  minRows={3}
+                />
+                <Stack direction="row" spacing={1.5}>
+                  <Box
+                    component="label"
+                    sx={{
+                      border: "1px dashed",
+                      borderColor: "divider",
+                      borderRadius: 2,
+                      p: 1.5,
+                      width: 164,
+                      textAlign: "center",
+                      cursor: "not-allowed",
+                      bgcolor: "#fafafa",
+                      opacity: 0.6,
+                    }}
+                  >
+                    <PhotoCameraOutlined sx={{ color: "text.secondary" }} />
+                    <Typography variant="body2" mt={0.5}>
+                      Thêm Hình ảnh
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {returnImageFiles.length}/{MAX_RETURN_IMAGES}
+                    </Typography>
+                    <input
+                      hidden
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      disabled
+                    />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", mt: 0.5 }}
+                    >
+                      Sắp hỗ trợ
+                    </Typography>
+                  </Box>
+
+                  <Box
+                    component="label"
+                    sx={{
+                      border: "1px dashed",
+                      borderColor: "divider",
+                      borderRadius: 2,
+                      p: 1.5,
+                      width: 164,
+                      textAlign: "center",
+                      cursor:
+                        returnVideoFiles.length >= MAX_RETURN_VIDEOS
+                          ? "not-allowed"
+                          : "pointer",
+                      bgcolor: "#fafafa",
+                      opacity:
+                        returnVideoFiles.length >= MAX_RETURN_VIDEOS ? 0.6 : 1,
+                    }}
+                  >
+                    <VideocamOutlined sx={{ color: "text.secondary" }} />
+                    <Typography variant="body2" mt={0.5}>
+                      Thêm Video
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {returnVideoFiles.length}/{MAX_RETURN_VIDEOS}
+                    </Typography>
+                    <input
+                      hidden
+                      type="file"
+                      accept="video/*"
+                      onChange={handleReturnVideoChange}
+                      disabled={returnVideoFiles.length >= MAX_RETURN_VIDEOS}
+                    />
+                  </Box>
+                </Stack>
+
+                {!!returnMediaFiles.length && (
+                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                    {returnMediaFiles.map((file, index) => (
+                      <Chip
+                        key={`${file.name}-${index}`}
+                        label={file.name}
+                        size="small"
+                        onDelete={() => handleRemoveReturnMedia(index)}
+                        sx={{ maxWidth: 260 }}
+                      />
+                    ))}
+                  </Stack>
+                )}
+
+                {!!returnImagePreviews.length && (
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ overflowX: "auto", pb: 0.5 }}
+                  >
+                    {returnImagePreviews.map((preview, index) => (
+                      <Box
+                        key={`${preview.name}-${index}`}
+                        component="img"
+                        src={preview.url}
+                        alt={preview.name}
+                        sx={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: 1,
+                          objectFit: "cover",
+                          border: "1px solid",
+                          borderColor: "divider",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ))}
+                  </Stack>
+                )}
+
+                {!!returnVideoPreviews.length && (
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{ overflowX: "auto", pb: 0.5 }}
+                  >
+                    {returnVideoPreviews.map((preview, index) => (
+                      <Box
+                        key={`${preview.name}-${index}`}
+                        sx={{
+                          position: "relative",
+                          width: 96,
+                          height: 64,
+                          borderRadius: 1,
+                          overflow: "hidden",
+                          border: "1px solid",
+                          borderColor: "divider",
+                          flexShrink: 0,
+                          bgcolor: "grey.100",
+                        }}
+                      >
+                        <Box
+                          component="video"
+                          src={preview.url}
+                          muted
+                          preload="metadata"
+                          sx={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                            display: "block",
+                          }}
+                        />
+                        <VideocamOutlined
+                          sx={{
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            color: "common.white",
+                            fontSize: 26,
+                            textShadow: "0 2px 6px rgba(0,0,0,0.45)",
+                          }}
+                        />
+                      </Box>
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                4. Địa chỉ lấy hàng
+              </Typography>
+              <Stack spacing={1.25}>
+                <RadioGroup
+                  row
+                  value={pickupAddressMode}
+                  onChange={(e) =>
+                    setPickupAddressMode(e.target.value as "saved" | "custom")
+                  }
+                >
+                  <FormControlLabel
+                    value="saved"
+                    control={<Radio />}
+                    label="Chọn địa chỉ hiện có"
+                  />
+                  <FormControlLabel
+                    value="custom"
+                    control={<Radio />}
+                    label="Nhập địa chỉ mới"
+                  />
+                </RadioGroup>
+
+                {pickupAddressMode === "saved" ? (
+                  <>
+                    {isLoadingAddresses ? (
+                      <CircularProgress size={20} />
+                    ) : (
+                      <Select
+                        fullWidth
+                        size="small"
+                        value={selectedSavedAddressId}
+                        onChange={(e) =>
+                          setSelectedSavedAddressId(e.target.value)
+                        }
+                        displayEmpty
+                      >
+                        <MenuItem value="" disabled>
+                          Chọn địa chỉ lấy hàng
+                        </MenuItem>
+                        {savedAddresses.map((address) => (
+                          <MenuItem key={address.id} value={address.id || ""}>
+                            {`${address.recipientName} | ${address.recipientPhoneNumber} | ${address.street}, ${address.ward}, ${address.district}, ${address.city}`}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    )}
+                  </>
+                ) : (
+                  <Stack spacing={1.25}>
+                    <TextField
+                      label="Tên liên hệ *"
+                      size="small"
+                      value={customRecipient.contactName}
+                      onChange={(e) =>
+                        setCustomRecipient((prev) => ({
+                          ...prev,
+                          contactName: e.target.value,
+                        }))
+                      }
+                    />
+                    <TextField
+                      label="Số điện thoại *"
+                      size="small"
+                      value={customRecipient.contactPhoneNumber}
+                      onChange={(e) =>
+                        setCustomRecipient((prev) => ({
+                          ...prev,
+                          contactPhoneNumber: e.target.value,
+                        }))
+                      }
+                    />
+                    <Autocomplete
+                      options={provinces}
+                      value={selectedProvince}
+                      loading={isLoadingProvinces}
+                      getOptionLabel={(option) => option.ProvinceName || ""}
+                      onChange={handleProvinceChange}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Tỉnh/Thành phố *"
+                          size="small"
+                        />
+                      )}
+                    />
+                    <Autocomplete
+                      options={districts}
+                      value={selectedDistrict}
+                      loading={isLoadingDistricts}
+                      disabled={!selectedProvince}
+                      getOptionLabel={(option) => option.DistrictName || ""}
+                      onChange={handleDistrictChange}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Quận/Huyện *"
+                          size="small"
+                        />
+                      )}
+                    />
+                    <Autocomplete
+                      options={wards}
+                      value={selectedWard}
+                      loading={isLoadingWards}
+                      disabled={!selectedDistrict}
+                      getOptionLabel={(option) => option.WardName || ""}
+                      onChange={handleWardChange}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Phường/Xã *"
+                          size="small"
+                        />
+                      )}
+                    />
+                    <TextField
+                      label="Số nhà, tên đường *"
+                      size="small"
+                      value={customRecipient.fullAddress}
+                      onChange={(e) =>
+                        setCustomRecipient((prev) => ({
+                          ...prev,
+                          fullAddress: e.target.value,
+                        }))
+                      }
+                    />
+                  </Stack>
+                )}
+              </Stack>
+            </Paper>
+
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+            >
+              <Typography variant="body2" color="text.secondary">
+                Tạm tính hoàn tiền
+              </Typography>
+              <Typography variant="subtitle1" fontWeight={700} color="#ee4d2d">
+                {fmt(estimatedRefundAmount)}
+              </Typography>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions
+          sx={{
+            px: 3,
+            py: 2,
+            borderTop: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Button
+            onClick={closeReturnRequestDialog}
+            disabled={isSubmittingReturnRequest}
+          >
+            Đóng
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleSubmitReturnRequest}
+            disabled={isSubmittingReturnRequest || !canSubmitReturnRequest}
+          >
+            {isSubmittingReturnRequest ? "Đang gửi..." : "Gửi yêu cầu"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <ReviewEditorDialog
         open={isReviewDialogOpen}
@@ -1434,6 +2091,9 @@ export const MyOrderDetailPage = () => {
           setSelectedReview(null);
         }}
         onSuccess={() => {
+          setIsReviewDialogOpen(false);
+          setReviewDialogTarget(null);
+          setSelectedReview(null);
           void productReviewService
             .getMyReviews()
             .then(setMyReviews)

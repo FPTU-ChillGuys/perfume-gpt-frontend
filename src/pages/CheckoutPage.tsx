@@ -500,8 +500,8 @@ export const CheckoutPage = () => {
         if (useNewAddress) {
           // Nhập địa chỉ mới -> truyền đầy đủ thông tin recipient
           request.recipient = {
-            recipientName: newAddress.recipientName,
-            recipientPhoneNumber: newAddress.recipientPhoneNumber,
+            contactName: newAddress.recipientName,
+            contactPhoneNumber: newAddress.recipientPhoneNumber,
             districtId: newAddress.districtId || 0,
             districtName: newAddress.districtName,
             wardCode: newAddress.wardCode,
@@ -517,8 +517,8 @@ export const CheckoutPage = () => {
       } else {
         // Nhận tại cửa hàng -> không cần thông tin địa chỉ giao hàng
         request.recipient = {
-          recipientName: "",
-          recipientPhoneNumber: "",
+          contactName: "",
+          contactPhoneNumber: "",
           districtId: 0,
           districtName: "",
           wardCode: "",

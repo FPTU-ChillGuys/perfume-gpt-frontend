@@ -29,6 +29,7 @@ import {
   Checkbox,
 } from "@mui/material";
 import ImageIcon from "@mui/icons-material/Image";
+import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
   orderService,
@@ -61,6 +62,18 @@ const statusLabel = (status?: string) => {
   return status || "-";
 };
 
+const returnReasonLabel = (reason?: string | null) => {
+  if (!reason) return "-";
+
+  if (reason === "DamagedProduct") return "Hàng bể vỡ / hư hỏng";
+  if (reason === "WrongItemReceived") return "Người bán gửi sai hàng";
+  if (reason === "ItemNotAsDescribed") return "Hàng không đúng mô tả";
+  if (reason === "ChangedMind") return "Đổi ý, không còn nhu cầu";
+  if (reason === "AllergicReaction") return "Không phù hợp / kích ứng";
+
+  return reason;
+};
+
 const statusColor = (
   status?: string,
 ): "default" | "warning" | "info" | "success" | "error" => {
@@ -85,24 +98,51 @@ const toNumber = (value: unknown) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
-/* ─── Image Lightbox ─── */
-const ImageLightbox = ({
+const REJECT_REASON_SUGGESTIONS = [
+  "Yêu cầu quá thời hạn hỗ trợ đổi trả",
+  "Sản phẩm không đủ điều kiện đổi trả theo chính sách",
+  "Bằng chứng cung cấp chưa đủ để xác minh",
+  "Sản phẩm có dấu hiệu đã qua sử dụng không đúng quy định",
+  "Thông tin yêu cầu chưa đầy đủ, vui lòng gửi lại",
+];
+
+/* ─── Media Preview ─── */
+const isVideoMedia = (url: string, mimeType?: string | null) => {
+  if (mimeType?.toLowerCase().startsWith("video/")) {
+    return true;
+  }
+
+  return /\.(mp4|mov|webm|mkv|avi|m4v)(\?.*)?$/i.test(url);
+};
+
+const MediaPreviewDialog = ({
   open,
-  imageUrl,
+  mediaUrl,
+  mimeType,
   onClose,
 }: {
   open: boolean;
-  imageUrl: string;
+  mediaUrl: string;
+  mimeType?: string | null;
   onClose: () => void;
 }) => (
   <Dialog open={open} onClose={onClose} maxWidth="md">
     <DialogContent sx={{ p: 1 }}>
-      <Box
-        component="img"
-        src={imageUrl}
-        alt="Ảnh minh chứng"
-        sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
-      />
+      {isVideoMedia(mediaUrl, mimeType) ? (
+        <Box
+          component="video"
+          src={mediaUrl}
+          controls
+          sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
+        />
+      ) : (
+        <Box
+          component="img"
+          src={mediaUrl}
+          alt="Ảnh minh chứng"
+          sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
+        />
+      )}
     </DialogContent>
   </Dialog>
 );
@@ -130,6 +170,8 @@ export const OrderReturnRequestsPage = () => {
   const [isOrderLoading, setIsOrderLoading] = useState(false);
 
   const [reviewNote, setReviewNote] = useState("");
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
   const [inspectionStartNote, setInspectionStartNote] = useState("");
   const [inspectionFailNote, setInspectionFailNote] = useState("");
   const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState(0);
@@ -138,7 +180,10 @@ export const OrderReturnRequestsPage = () => {
 
   // Image lightbox
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxImage, setLightboxImage] = useState("");
+  const [lightboxMediaUrl, setLightboxMediaUrl] = useState("");
+  const [lightboxMediaMimeType, setLightboxMediaMimeType] = useState<
+    string | null
+  >(null);
 
   const statusFilter =
     STATUS_OPTIONS[tabIndex] === "All" ? undefined : STATUS_OPTIONS[tabIndex];
@@ -203,6 +248,8 @@ export const OrderReturnRequestsPage = () => {
     setSelectedRequest(request);
     setSelectedOrder(null);
     setReviewNote("");
+    setRejectDialogOpen(false);
+    setRejectReason("");
     setInspectionStartNote("");
     setInspectionFailNote("");
     setDetailOpen(true);
@@ -237,6 +284,8 @@ export const OrderReturnRequestsPage = () => {
     setSelectedRequest(null);
     setSelectedOrder(null);
     setReviewNote("");
+    setRejectDialogOpen(false);
+    setRejectReason("");
     setInspectionStartNote("");
     setInspectionFailNote("");
     setInspectionApprovedRefund(0);
@@ -261,34 +310,67 @@ export const OrderReturnRequestsPage = () => {
     }
   };
 
-  const handleReview = async (isApproved: boolean) => {
+  const handleReview = async (
+    isApproved: boolean,
+    note?: string | null,
+  ): Promise<boolean> => {
     if (!selectedRequest?.id) {
-      return;
+      return false;
     }
 
-    if (!isApproved && !reviewNote.trim()) {
+    const finalNote = (note ?? reviewNote).trim();
+
+    if (!isApproved && !finalNote) {
       showToast("Vui lòng nhập ghi chú khi từ chối", "warning");
-      return;
+      return false;
     }
 
     setIsSaving(true);
     try {
       await orderService.reviewReturnRequest(selectedRequest.id, {
         isApproved,
-        staffNote: reviewNote.trim() || null,
+        staffNote: finalNote || null,
       });
       await refreshAfterAction(
         isApproved
           ? "Đã duyệt yêu cầu trả hàng"
           : "Đã từ chối yêu cầu trả hàng",
       );
+      return true;
     } catch (actionError) {
       showToast(
         actionError instanceof Error ? actionError.message : "Xử lý thất bại",
         "error",
       );
+      return false;
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const openRejectDialog = () => {
+    setRejectReason("");
+    setRejectDialogOpen(true);
+  };
+
+  const closeRejectDialog = () => {
+    if (isSaving) {
+      return;
+    }
+    setRejectDialogOpen(false);
+    setRejectReason("");
+  };
+
+  const confirmReject = async () => {
+    if (!rejectReason.trim()) {
+      showToast("Vui lòng nhập hoặc chọn lý do từ chối", "warning");
+      return;
+    }
+
+    const success = await handleReview(false, rejectReason);
+    if (success) {
+      setRejectDialogOpen(false);
+      setRejectReason("");
     }
   };
 
@@ -516,13 +598,13 @@ export const OrderReturnRequestsPage = () => {
                     }}
                   >
                     <TableCell>
-                      <strong>{request.orderId?.slice(0, 8) || "-"}</strong>
+                      <strong>{request.orderId || "-"}</strong>
                     </TableCell>
                     <TableCell>{request.requestedByEmail || "-"}</TableCell>
                     <TableCell sx={{ maxWidth: 240 }}>
-                      <Tooltip title={request.reason || ""}>
+                      <Tooltip title={returnReasonLabel(request.reason)}>
                         <Typography variant="body2" noWrap>
-                          {request.reason || "-"}
+                          {returnReasonLabel(request.reason)}
                         </Typography>
                       </Tooltip>
                     </TableCell>
@@ -617,7 +699,7 @@ export const OrderReturnRequestsPage = () => {
                       fontWeight={700}
                       sx={{ fontFamily: "monospace", fontSize: 13 }}
                     >
-                      {selectedRequest.id?.slice(0, 8) || "-"}...
+                      {selectedRequest.id || "-"}
                     </Typography>
                   </Box>
                   <Box>
@@ -628,7 +710,7 @@ export const OrderReturnRequestsPage = () => {
                       fontWeight={700}
                       sx={{ fontFamily: "monospace", fontSize: 13 }}
                     >
-                      {selectedRequest.orderId?.slice(0, 8) || "-"}...
+                      {selectedRequest.orderId || "-"}
                     </Typography>
                   </Box>
                   <Box>
@@ -710,7 +792,9 @@ export const OrderReturnRequestsPage = () => {
                   <Typography variant="caption" color="text.secondary">
                     Lý do trả hàng
                   </Typography>
-                  <Typography>{selectedRequest.reason || "-"}</Typography>
+                  <Typography>
+                    {returnReasonLabel(selectedRequest.reason)}
+                  </Typography>
                 </Box>
 
                 {selectedRequest.customerNote && (
@@ -913,7 +997,8 @@ export const OrderReturnRequestsPage = () => {
                 selectedRequest.proofImages.length > 0 && (
                   <Paper variant="outlined" sx={{ p: 2 }}>
                     <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                      Ảnh minh chứng ({selectedRequest.proofImages.length} ảnh)
+                      Ảnh/Video minh chứng ({selectedRequest.proofImages.length}
+                      )
                     </Typography>
                     <Stack
                       direction="row"
@@ -926,7 +1011,8 @@ export const OrderReturnRequestsPage = () => {
                           <Box
                             key={img.id || imgIndex}
                             onClick={() => {
-                              setLightboxImage(img.url!);
+                              setLightboxMediaUrl(img.url!);
+                              setLightboxMediaMimeType(img.mimeType ?? null);
                               setLightboxOpen(true);
                             }}
                             sx={{
@@ -941,19 +1027,67 @@ export const OrderReturnRequestsPage = () => {
                                 transform: "scale(1.03)",
                                 boxShadow: 2,
                               },
+                              position: "relative",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              bgcolor: "grey.100",
                             }}
                           >
-                            <Box
-                              component="img"
-                              src={img.url}
-                              alt={img.altText || `Ảnh ${imgIndex + 1}`}
-                              sx={{
-                                width: 100,
-                                height: 100,
-                                objectFit: "cover",
-                                display: "block",
-                              }}
-                            />
+                            {isVideoMedia(img.url, img.mimeType) ? (
+                              <>
+                                <Box
+                                  component="video"
+                                  src={img.url}
+                                  muted
+                                  playsInline
+                                  preload="metadata"
+                                  sx={{
+                                    width: 100,
+                                    height: 100,
+                                    objectFit: "cover",
+                                    display: "block",
+                                  }}
+                                />
+                                <PlayCircleOutlineIcon
+                                  sx={{
+                                    fontSize: 36,
+                                    color: "common.white",
+                                    position: "absolute",
+                                    top: "50%",
+                                    left: "50%",
+                                    transform: "translate(-50%, -50%)",
+                                    textShadow: "0 2px 8px rgba(0,0,0,0.45)",
+                                  }}
+                                />
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    position: "absolute",
+                                    bottom: 4,
+                                    left: 0,
+                                    right: 0,
+                                    textAlign: "center",
+                                    color: "common.white",
+                                    bgcolor: "rgba(0,0,0,0.45)",
+                                  }}
+                                >
+                                  Video
+                                </Typography>
+                              </>
+                            ) : (
+                              <Box
+                                component="img"
+                                src={img.url}
+                                alt={img.altText || `Ảnh ${imgIndex + 1}`}
+                                sx={{
+                                  width: 100,
+                                  height: 100,
+                                  objectFit: "cover",
+                                  display: "block",
+                                }}
+                              />
+                            )}
                           </Box>
                         ) : null,
                       )}
@@ -971,28 +1105,18 @@ export const OrderReturnRequestsPage = () => {
               {selectedRequest.status === "Pending" && (
                 <Paper variant="outlined" sx={{ p: 2 }}>
                   <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                    Duyệt yêu cầu ban đầu
+                    Duyệt yêu cầu
                   </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    minRows={3}
-                    label="Ghi chú xử lý (tuỳ chọn)"
-                    value={reviewNote}
-                    onChange={(event) => setReviewNote(event.target.value)}
-                  />
                   <Stack
                     direction="row"
                     spacing={1}
                     justifyContent="flex-end"
-                    mt={2}
+                    mt={1}
                   >
                     <Button
                       variant="outlined"
                       color="error"
-                      onClick={() => {
-                        void handleReview(false);
-                      }}
+                      onClick={openRejectDialog}
                       disabled={isSaving}
                     >
                       Từ chối
@@ -1191,10 +1315,72 @@ export const OrderReturnRequestsPage = () => {
         </DialogActions>
       </Dialog>
 
+      {/* ─── Reject Reason Dialog ─── */}
+      <Dialog
+        open={rejectDialogOpen}
+        onClose={closeRejectDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Nhập lý do từ chối</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Bạn có thể nhập lý do hoặc chọn nhanh một gợi ý bên dưới.
+          </Typography>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Lý do từ chối"
+            value={rejectReason}
+            onChange={(event) => setRejectReason(event.target.value)}
+          />
+
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            useFlexGap
+            mt={1.5}
+          >
+            {REJECT_REASON_SUGGESTIONS.map((reason) => {
+              const isSelected = rejectReason.trim() === reason;
+              return (
+                <Chip
+                  key={reason}
+                  clickable
+                  color={isSelected ? "primary" : "default"}
+                  label={reason}
+                  onClick={() => setRejectReason(reason)}
+                  sx={{ maxWidth: "100%" }}
+                />
+              );
+            })}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeRejectDialog} disabled={isSaving}>
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => {
+              void confirmReject();
+            }}
+            disabled={isSaving || !rejectReason.trim()}
+          >
+            Xác nhận từ chối
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* ─── Image Lightbox ─── */}
-      <ImageLightbox
+      <MediaPreviewDialog
         open={lightboxOpen}
-        imageUrl={lightboxImage}
+        mediaUrl={lightboxMediaUrl}
+        mimeType={lightboxMediaMimeType}
         onClose={() => setLightboxOpen(false)}
       />
     </AdminLayout>

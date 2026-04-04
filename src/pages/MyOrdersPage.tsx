@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   Divider,
   FormControl,
@@ -68,6 +67,14 @@ const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: orderStatusLabels["Cancelled"], value: "Cancelled" },
   { label: orderStatusLabels["Partial_Returned"], value: "Partial_Returned" },
   { label: "Trả hàng/Hoàn tiền", value: "Returning" },
+];
+
+const CANCEL_REASON_SUGGESTIONS = [
+  "Tôi muốn thay đổi sản phẩm trong đơn",
+  "Tôi muốn đổi địa chỉ nhận hàng",
+  "Tôi không còn nhu cầu mua nữa",
+  "Tôi đã đặt nhầm sản phẩm",
+  "Tôi muốn thay đổi phương thức thanh toán",
 ];
 
 const formatCurrency = (value?: number | null) => {
@@ -191,11 +198,14 @@ export const MyOrdersPage = () => {
     });
   };
 
-  const handleCopyOrderId = async (orderId?: string | null) => {
-    if (!orderId) return;
+  const getDisplayOrderCode = (order?: OrderListItemWithReturnable | null) =>
+    order?.code || order?.id || "-";
+
+  const handleCopyOrderCode = async (orderCode?: string | null) => {
+    if (!orderCode) return;
 
     try {
-      await navigator.clipboard.writeText(orderId);
+      await navigator.clipboard.writeText(orderCode);
       showToast("Đã sao chép mã đơn hàng", "success");
     } catch {
       showToast("Không thể sao chép mã đơn hàng", "error");
@@ -417,20 +427,22 @@ export const MyOrdersPage = () => {
                             spacing={1}
                             alignItems="center"
                           >
-                            <Tooltip title={order.id || ""}>
+                            <Tooltip title={getDisplayOrderCode(order)}>
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
                                 sx={{ fontFamily: "monospace" }}
                               >
-                                #{order.id || "-"}
+                                #{getDisplayOrderCode(order)}
                               </Typography>
                             </Tooltip>
-                            {!!order.id && (
+                            {!!(order.code || order.id) && (
                               <Tooltip title="Sao chép mã đơn">
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleCopyOrderId(order.id)}
+                                  onClick={() =>
+                                    handleCopyOrderCode(order.code || order.id)
+                                  }
                                 >
                                   <ContentCopyIcon sx={{ fontSize: 14 }} />
                                 </IconButton>
@@ -644,10 +656,11 @@ export const MyOrdersPage = () => {
       <Dialog
         open={Boolean(cancelOrderId)}
         onClose={() => {
+          if (actionOrderId === cancelOrderId) return;
           setCancelOrderId(null);
           setCancelReason("");
         }}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
       >
         <DialogTitle>
@@ -656,11 +669,11 @@ export const MyOrdersPage = () => {
             : "Gửi yêu cầu hủy đơn"}
         </DialogTitle>
         <DialogContent>
-          <Stack spacing={1.5}>
-            <DialogContentText>
+          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
               {cancelBehavior?.note ||
-                "Bạn có chắc chắn muốn gửi yêu cầu hủy đơn này không?"}
-            </DialogContentText>
+                "Vui lòng chọn hoặc nhập lý do để tiếp tục."}
+            </Typography>
             <TextField
               label="Lý do hủy *"
               value={cancelReason}
@@ -671,6 +684,22 @@ export const MyOrdersPage = () => {
               size="small"
               placeholder="Nhập lý do hủy đơn hàng"
             />
+
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {CANCEL_REASON_SUGGESTIONS.map((reason) => {
+                const isSelected = cancelReason.trim() === reason;
+                return (
+                  <Chip
+                    key={reason}
+                    clickable
+                    label={reason}
+                    color={isSelected ? "warning" : "default"}
+                    onClick={() => setCancelReason(reason)}
+                    sx={{ maxWidth: "100%" }}
+                  />
+                );
+              })}
+            </Stack>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -679,6 +708,7 @@ export const MyOrdersPage = () => {
               setCancelOrderId(null);
               setCancelReason("");
             }}
+            disabled={actionOrderId === cancelOrderId}
           >
             Đóng
           </Button>

@@ -3,14 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Box,
-  Breadcrumbs,
   Button,
   CircularProgress,
   Container,
   Divider,
   Grid,
   IconButton,
-  Link,
   Stack,
   Tab,
   Tabs,
@@ -1032,21 +1030,6 @@ const ProductDetailPage = () => {
 
     return (
       <>
-        <Box mb={2}>
-          <Breadcrumbs separator="/">
-            <Link
-              underline="hover"
-              color="inherit"
-              component="button"
-              onClick={() => navigate("/")}
-              sx={{ cursor: "pointer" }}
-            >
-              Trang chủ
-            </Link>
-            <Typography color="text.primary">{productName}</Typography>
-          </Breadcrumbs>
-        </Box>
-
         <Grid container spacing={4}>
           <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
             {/* Main image — fixed height so no-image placeholder is same size */}

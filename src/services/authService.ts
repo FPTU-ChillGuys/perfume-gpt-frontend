@@ -2,6 +2,13 @@ import { apiInstance } from "@/lib/api";
 import { jwtDecode } from "jwt-decode";
 import type { LoginRequest, User } from "../types/auth";
 import { getUserFromToken, isTokenExpired } from "../utils/jwt";
+import {
+  clearStoredAuth,
+  getStoredAccessToken,
+  getStoredUser,
+  migrateLegacyAuthToSession,
+  setStoredAuth,
+} from "@/utils/authStorage";
 
 type GoogleIdTokenPayload = {
   name?: string;
@@ -39,9 +46,8 @@ class AuthService {
       throw new Error("Invalid token format");
     }
 
-    // Store token and user info
-    localStorage.setItem("accessToken", accessToken);
-    localStorage.setItem("user", JSON.stringify(user));
+    // Store token and user info in tab-scoped storage.
+    setStoredAuth(accessToken, JSON.stringify(user));
 
     return user;
   }
@@ -75,9 +81,8 @@ class AuthService {
         avatarUrl: user.avatarUrl || googlePayload.picture,
       };
 
-      // Store token and user info
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("user", JSON.stringify(enrichedUser));
+      // Store token and user info in tab-scoped storage.
+      setStoredAuth(accessToken, JSON.stringify(enrichedUser));
 
       return enrichedUser;
     } catch (error: any) {
@@ -91,13 +96,14 @@ class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
+    clearStoredAuth();
   }
 
   getCurrentUser(): User | null {
-    const token = localStorage.getItem("accessToken");
-    const userStr = localStorage.getItem("user");
+    migrateLegacyAuthToSession();
+
+    const token = getStoredAccessToken();
+    const userStr = getStoredUser();
 
     if (!token || !userStr) {
       return null;
@@ -183,13 +189,13 @@ class AuthService {
   }
 
   isAuthenticated(): boolean {
-    const token = localStorage.getItem("accessToken");
+    const token = getStoredAccessToken();
     if (!token) return false;
     return !isTokenExpired(token);
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem("accessToken");
+    return getStoredAccessToken();
   }
 }
 

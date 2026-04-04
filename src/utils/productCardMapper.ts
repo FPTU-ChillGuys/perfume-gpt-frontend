@@ -6,19 +6,17 @@ import type {
   VariantPagedItem,
 } from "@/types/product";
 
-export type VariantCardSource =
-  | VariantPagedItem
-  | (ProductVariant & {
-      primaryImage?: VariantPagedItem["primaryImage"] | null;
-    });
+export type VariantCardSource = VariantPagedItem | ProductVariant;
 
 const getVariantImageUrl = (variant?: VariantCardSource) => {
   if (!variant) {
     return undefined;
   }
 
-  if (variant.primaryImage?.url) {
-    return variant.primaryImage.url;
+  if ("variantImageUrl" in variant && variant.variantImageUrl) {
+    return typeof variant.variantImageUrl === "string"
+      ? variant.variantImageUrl
+      : undefined;
   }
 
   if ("media" in variant && variant.media?.length) {
@@ -62,6 +60,10 @@ export const mapProductToCard = (
       : undefined;
   const rawPrice = variant?.basePrice ?? minVariantPrice ?? 0;
   const price = Number(rawPrice);
+  const productPrimaryImageUrl =
+    typeof product.primaryImage?.url === "string"
+      ? product.primaryImage.url
+      : undefined;
 
   return {
     id: product.id,
@@ -69,8 +71,7 @@ export const mapProductToCard = (
     name: product.name ?? "Đang cập nhật",
     salePrice: Number.isFinite(price) ? price : 0,
     maxPrice: maxVariantPrice,
-    imageUrl:
-      product.primaryImage?.url ?? getVariantImageUrl(variant) ?? undefined,
+    imageUrl: productPrimaryImageUrl ?? getVariantImageUrl(variant),
     variantId: variant?.id,
     numberOfVariants: product.numberOfVariants ?? 0,
   };
@@ -83,15 +84,7 @@ export const withVariantPrimaryImage = (
     return undefined;
   }
 
-  const primaryImage =
-    variant.media?.find((media) => media?.isPrimary) ||
-    variant.media?.[0] ||
-    null;
-
-  return {
-    ...variant,
-    primaryImage,
-  };
+  return variant;
 };
 
 /**
