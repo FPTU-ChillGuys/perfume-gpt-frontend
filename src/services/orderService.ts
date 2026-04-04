@@ -72,6 +72,10 @@ export type ProcessInitialReturnDto =
 export type StartInspectionDto = components["schemas"]["StartInspectionDto"];
 export type RecordInspectionDto = components["schemas"]["RecordInspectionDto"];
 export type RejectInspectionDto = components["schemas"]["RejectInspectionDto"];
+export type ReturnRefundMethod = Extract<
+  PaymentMethod,
+  "VnPay" | "Momo" | "CashInStore"
+>;
 
 export type ReturnRequestStatus =
   | "Pending"
@@ -92,9 +96,21 @@ export interface ProofImage {
   mimeType?: string | null;
 }
 
+export interface ReturnShippingInfo {
+  id?: string;
+  carrierName?: string | null;
+  trackingNumber?: string | null;
+  type?: string | null;
+  shippingFee?: number;
+  status?: string | null;
+  estimatedDeliveryDate?: string | null;
+  shippedDate?: string | null;
+}
+
 export interface OrderReturnRequest {
   id?: string;
   orderId?: string;
+  orderCode: string;
   customerId?: string;
   requestedByEmail?: string | null;
   processedByName?: string | null;
@@ -111,6 +127,7 @@ export interface OrderReturnRequest {
   createdAt?: string;
   updatedAt?: string | null;
   proofImages?: ProofImage[];
+  returnShippingInfo?: ReturnShippingInfo;
   [key: string]: unknown;
 }
 
@@ -188,13 +205,45 @@ class OrderService {
     };
   }
 
+  private normalizeReturnShippingInfo(info: unknown): ReturnShippingInfo {
+    return {
+      id: this.getValue<string>(info, ["id", "Id"]),
+      carrierName:
+        this.getValue<string | null>(info, ["carrierName", "CarrierName"]) ??
+        null,
+      trackingNumber:
+        this.getValue<string | null>(info, [
+          "trackingNumber",
+          "TrackingNumber",
+        ]) ?? null,
+      type: this.getValue<string | null>(info, ["type", "Type"]) ?? null,
+      shippingFee: Number(
+        this.getValue<number>(info, ["shippingFee", "ShippingFee"]) ?? 0,
+      ),
+      status: this.getValue<string | null>(info, ["status", "Status"]) ?? null,
+      estimatedDeliveryDate:
+        this.getValue<string | null>(info, [
+          "estimatedDeliveryDate",
+          "EstimatedDeliveryDate",
+        ]) ?? null,
+      shippedDate:
+        this.getValue<string | null>(info, ["shippedDate", "ShippedDate"]) ??
+        null,
+    };
+  }
+
   private normalizeReturnRequest(item: unknown): OrderReturnRequest {
     const rawProofImages =
       this.getValue<unknown[]>(item, ["proofImages", "ProofImages"]) || [];
+    const rawReturnShippingInfo = this.getValue<unknown>(item, [
+      "returnShippingInfo",
+      "ReturnShippingInfo",
+    ]);
 
     return {
       id: this.getValue<string>(item, ["id", "Id"]),
       orderId: this.getValue<string>(item, ["orderId", "OrderId"]),
+      orderCode: this.getValue<string>(item, ["orderCode", "OrderCode"]) || "",
       customerId: this.getValue<string>(item, ["customerId", "CustomerId"]),
       requestedByEmail:
         this.getValue<string | null>(item, [
@@ -251,6 +300,9 @@ class OrderService {
       updatedAt:
         this.getValue<string | null>(item, ["updatedAt", "UpdatedAt"]) ?? null,
       proofImages: rawProofImages.map((img) => this.normalizeProofImage(img)),
+      returnShippingInfo: rawReturnShippingInfo
+        ? this.normalizeReturnShippingInfo(rawReturnShippingInfo)
+        : undefined,
     };
   }
 
@@ -773,20 +825,30 @@ class OrderService {
     }
   }
 
-  async refundReturnRequest(id: string): Promise<string> {
+  async refundReturnRequest(
+    id: string,
+    refundMethod: ReturnRefundMethod,
+  ): Promise<string> {
     try {
-      const { data, error, response } = await apiInstance.POST(
-        "/api/orderreturnrequests/{id}/refund",
-        {
-          params: { path: { id } },
+      const accessToken = getStoredAccessToken();
+      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/${id}/refund`;
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+              }
+            : {}),
         },
-      );
+        body: JSON.stringify({ refundMethod }),
+      });
 
-      if (error) {
-        throw new Error((error as any)?.message || "Không thể hoàn tiền");
-      }
+      const data = await response.json().catch(() => null);
 
-      if (!data?.success) {
+      if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Không thể hoàn tiền");
       }
 
@@ -1074,6 +1136,34 @@ class OrderService {
       return response.data.message || "Shipping status synced successfully";
     } catch (error: any) {
       console.error("Error syncing shipping status:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to sync shipping status",
+      );
+    }
+  }
+
+  async syncShippingStatusByUserId(userId: string): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/shippings/user/{userId}/sync-shipping-status",
+        {
+          params: {
+            path: { userId },
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to sync shipping status",
+        );
+      }
+
+      return response.data.message || "Shipping status synced successfully";
+    } catch (error: any) {
+      console.error("Error syncing shipping status by user id:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||

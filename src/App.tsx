@@ -85,6 +85,11 @@ const MyReturnRequestsPage = lazy(() =>
     default: m.MyReturnRequestsPage,
   })),
 );
+const MyReturnRequestDetailPage = lazy(() =>
+  import("./pages/MyReturnRequestDetailPage").then((m) => ({
+    default: m.MyReturnRequestDetailPage,
+  })),
+);
 const OrderManagementPage = lazy(() =>
   import("./pages/OrderManagementPage").then((m) => ({
     default: m.OrderManagementPage,
@@ -152,6 +157,11 @@ const OrderCancelRequestsPage = lazy(() =>
 const OrderReturnRequestsPage = lazy(() =>
   import("./pages/OrderReturnRequestsPage").then((m) => ({
     default: m.OrderReturnRequestsPage,
+  })),
+);
+const OrderReturnRequestDetailPage = lazy(() =>
+  import("./pages/OrderReturnRequestDetailPage").then((m) => ({
+    default: m.OrderReturnRequestDetailPage,
   })),
 );
 const SuppliersPage = lazy(() =>
@@ -316,6 +326,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/my-return-requests/:returnRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyReturnRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/loyalty"
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
@@ -466,6 +484,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/return-requests/:returnRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderReturnRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/suppliers"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -521,6 +547,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
                             <OrderReturnRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/return-requests/:returnRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderReturnRequestDetailPage />
                           </RoleBasedRoute>
                         }
                       />

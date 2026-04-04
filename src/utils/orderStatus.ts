@@ -16,6 +16,7 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
   Unpaid: "Chưa thanh toán",
   Paid: "Đã thanh toán",
+  Partial_Refunded: "Hoàn tiền một phần",
   Refunded: "Đã hoàn tiền",
 };
 
@@ -60,6 +61,7 @@ export const paymentStatusColors: Record<
 > = {
   Unpaid: "warning", // 🟠 Cam - Chưa thanh toán (thay vì đỏ)
   Paid: "success", // 🟢 Xanh lá - Đã thanh toán
+  Partial_Refunded: "secondary", // 🟣 Tím nhạt - Hoàn tiền một phần
   Refunded: "info", // 🔵 Xanh dương nhạt - Đã hoàn tiền
 };
 

@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
   Chip,
   CircularProgress,
   Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   Divider,
   FormControl,
   MenuItem,
@@ -21,8 +18,6 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import ImageIcon from "@mui/icons-material/Image";
-import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import { MainLayout } from "@/layouts/MainLayout";
 import {
   orderService,
@@ -32,7 +27,6 @@ import {
 import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
 import { useToast } from "@/hooks/useToast";
-import type { OrderResponse } from "@/types/order";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 
 const STATUS_TABS: { label: string; value: ReturnRequestStatus | "All" }[] = [
@@ -87,54 +81,9 @@ const formatDate = (value?: string | null) =>
 const formatCurrency = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;
 
-const toNumber = (value: unknown) => {
-  const parsed = Number(value ?? 0);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-/* ─── Image Lightbox ─── */
-const isVideoMedia = (url: string, mimeType?: string | null) => {
-  if (mimeType?.toLowerCase().startsWith("video/")) {
-    return true;
-  }
-
-  return /\.(mp4|mov|webm|mkv|avi|m4v)(\?.*)?$/i.test(url);
-};
-
-const MediaPreviewDialog = ({
-  open,
-  mediaUrl,
-  mimeType,
-  onClose,
-}: {
-  open: boolean;
-  mediaUrl: string;
-  mimeType?: string | null;
-  onClose: () => void;
-}) => (
-  <Dialog open={open} onClose={onClose} maxWidth="md">
-    <DialogContent sx={{ p: 1 }}>
-      {isVideoMedia(mediaUrl, mimeType) ? (
-        <Box
-          component="video"
-          src={mediaUrl}
-          controls
-          sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
-        />
-      ) : (
-        <Box
-          component="img"
-          src={mediaUrl}
-          alt="Ảnh minh chứng"
-          sx={{ maxWidth: "100%", maxHeight: "80vh", display: "block" }}
-        />
-      )}
-    </DialogContent>
-  </Dialog>
-);
-
 export const MyReturnRequestsPage = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
 
   const [requests, setRequests] = useState<OrderReturnRequest[]>([]);
@@ -143,20 +92,6 @@ export const MyReturnRequestsPage = () => {
   const [pageSize, setPageSize] = useState(10);
   const [status, setStatus] = useState<ReturnRequestStatus | "All">("All");
   const [isLoading, setIsLoading] = useState(false);
-
-  const [detailOpen, setDetailOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] =
-    useState<OrderReturnRequest | null>(null);
-  const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(
-    null,
-  );
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
-
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [selectedMediaUrl, setSelectedMediaUrl] = useState("");
-  const [selectedMediaMimeType, setSelectedMediaMimeType] = useState<
-    string | null
-  >(null);
 
   const loadRequests = useCallback(async () => {
     setIsLoading(true);
@@ -172,7 +107,6 @@ export const MyReturnRequestsPage = () => {
       setRequests(items);
       setTotalCount(count);
     } catch (error) {
-      console.error("Failed to load return requests", error);
       showToast(
         error instanceof Error
           ? error.message
@@ -191,40 +125,6 @@ export const MyReturnRequestsPage = () => {
   useEffect(() => {
     void loadRequests();
   }, [loadRequests]);
-
-  const handleOpenDetail = async (request: OrderReturnRequest) => {
-    setSelectedRequest(request);
-    setSelectedOrder(null);
-    setDetailOpen(true);
-    setIsDetailLoading(true);
-    try {
-      let loadedRequest = request;
-      if (request.id) {
-        const fullRequest = await orderService.getReturnRequestById(request.id);
-        setSelectedRequest(fullRequest);
-        loadedRequest = fullRequest;
-      }
-
-      const orderId = loadedRequest.orderId || request.orderId;
-      if (orderId) {
-        const order = await orderService.getMyOrderById(orderId);
-        setSelectedOrder(order);
-      }
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Không thể tải chi tiết",
-        "error",
-      );
-    } finally {
-      setIsDetailLoading(false);
-    }
-  };
-
-  const closeDetail = () => {
-    setDetailOpen(false);
-    setSelectedRequest(null);
-    setSelectedOrder(null);
-  };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
@@ -245,7 +145,6 @@ export const MyReturnRequestsPage = () => {
           >
             <UserProfileSidebar userInfo={userInfo} />
 
-            {/* Main content */}
             <Box
               sx={{
                 flex: 1,
@@ -326,13 +225,13 @@ export const MyReturnRequestsPage = () => {
                             spacing={1}
                             alignItems="center"
                           >
-                            <Tooltip title={request.orderId || ""}>
+                            <Tooltip title={request.orderCode || ""}>
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
                                 sx={{ fontFamily: "monospace" }}
                               >
-                                Đơn hàng: #{request.orderId || "-"}
+                                Đơn hàng: #{request.orderCode || "-"}
                               </Typography>
                             </Tooltip>
                             <Typography variant="body2" color="text.secondary">
@@ -391,7 +290,8 @@ export const MyReturnRequestsPage = () => {
                             size="small"
                             variant="outlined"
                             onClick={() => {
-                              void handleOpenDetail(request);
+                              if (!request.id) return;
+                              navigate(`/my-return-requests/${request.id}`);
                             }}
                             sx={{
                               borderColor: "#ee4d2d",
@@ -459,474 +359,6 @@ export const MyReturnRequestsPage = () => {
           </Paper>
         </Container>
       </Box>
-
-      {/* Detail Dialog */}
-      <Dialog open={detailOpen} onClose={closeDetail} fullWidth maxWidth="lg">
-        <DialogTitle
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            borderBottom: "1px solid",
-            borderColor: "divider",
-          }}
-        >
-          <Typography variant="h6" fontWeight={700} component="span">
-            Chi tiết yêu cầu trả hàng
-          </Typography>
-          {selectedRequest?.status && (
-            <Chip
-              size="small"
-              label={statusLabel(selectedRequest.status)}
-              color={statusColor(selectedRequest.status)}
-            />
-          )}
-        </DialogTitle>
-        <DialogContent dividers>
-          {isDetailLoading || !selectedRequest ? (
-            <Box textAlign="center" py={4}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Stack spacing={2.5}>
-              <Box
-                sx={{
-                  p: 2.5,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  bgcolor: "grey.50",
-                }}
-              >
-                <Typography
-                  variant="subtitle2"
-                  fontWeight={700}
-                  mb={2}
-                  sx={{ color: "#333" }}
-                >
-                  Thông tin yêu cầu
-                </Typography>
-                <Box
-                  display="grid"
-                  gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr 1fr" }}
-                  gap={2}
-                >
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Mã yêu cầu
-                    </Typography>
-                    <Typography
-                      fontWeight={700}
-                      sx={{ fontFamily: "monospace", fontSize: 13 }}
-                    >
-                      {selectedRequest.id || "-"}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Mã đơn hàng
-                    </Typography>
-                    <Typography
-                      fontWeight={700}
-                      sx={{ fontFamily: "monospace", fontSize: 13 }}
-                    >
-                      {selectedRequest.orderId || "-"}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Trạng thái
-                    </Typography>
-                    <Box>
-                      <Chip
-                        size="small"
-                        label={statusLabel(selectedRequest.status)}
-                        color={statusColor(selectedRequest.status)}
-                      />
-                    </Box>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Người yêu cầu
-                    </Typography>
-                    <Typography>
-                      {selectedRequest.requestedByEmail || "-"}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Ngày tạo
-                    </Typography>
-                    <Typography>
-                      {formatDate(selectedRequest.createdAt)}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Tiền yêu cầu hoàn
-                    </Typography>
-                    <Typography fontWeight={700} color="#ee4d2d">
-                      {formatCurrency(selectedRequest.requestedRefundAmount)}
-                    </Typography>
-                  </Box>
-                  {selectedRequest.approvedRefundAmount != null &&
-                    selectedRequest.approvedRefundAmount > 0 && (
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          Tiền được duyệt hoàn
-                        </Typography>
-                        <Typography fontWeight={700} color="success.main">
-                          {formatCurrency(selectedRequest.approvedRefundAmount)}
-                        </Typography>
-                      </Box>
-                    )}
-                  {selectedRequest.processedByName && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Người xử lý
-                      </Typography>
-                      <Typography>{selectedRequest.processedByName}</Typography>
-                    </Box>
-                  )}
-                  {selectedRequest.inspectedByName && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Người kiểm định
-                      </Typography>
-                      <Typography>{selectedRequest.inspectedByName}</Typography>
-                    </Box>
-                  )}
-                  {selectedRequest.updatedAt && (
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Cập nhật lần cuối
-                      </Typography>
-                      <Typography>
-                        {formatDate(selectedRequest.updatedAt)}
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-
-                <Box mt={2}>
-                  <Typography variant="caption" color="text.secondary">
-                    Lý do trả hàng
-                  </Typography>
-                  <Typography>
-                    {returnReasonLabel(selectedRequest.reason)}
-                  </Typography>
-                </Box>
-
-                {selectedRequest.customerNote && (
-                  <Box mt={1}>
-                    <Typography variant="caption" color="text.secondary">
-                      Ghi chú khách hàng
-                    </Typography>
-                    <Typography>{selectedRequest.customerNote}</Typography>
-                  </Box>
-                )}
-
-                {selectedRequest.staffNote && (
-                  <Box mt={1}>
-                    <Typography variant="caption" color="text.secondary">
-                      Ghi chú nhân viên
-                    </Typography>
-                    <Typography>{selectedRequest.staffNote}</Typography>
-                  </Box>
-                )}
-
-                {selectedRequest.inspectionNote && (
-                  <Box mt={1}>
-                    <Typography variant="caption" color="text.secondary">
-                      Ghi chú kiểm định
-                    </Typography>
-                    <Typography>{selectedRequest.inspectionNote}</Typography>
-                  </Box>
-                )}
-              </Box>
-
-              <Paper variant="outlined" sx={{ p: 2 }}>
-                <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                  Sản phẩm trong đơn
-                </Typography>
-                <Stack spacing={0} divider={<Divider />}>
-                  {(selectedOrder?.orderDetails || []).map((item, index) => {
-                    const quantity = toNumber(item.quantity);
-                    const unitPrice = toNumber(item.unitPrice);
-                    const name = item.variantName || `Sản phẩm ${index + 1}`;
-                    const imageUrl = item.imageUrl || null;
-                    const totalItem = unitPrice * quantity;
-
-                    return (
-                      <Box key={item.id || index} sx={{ py: 1.5 }}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: 2,
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              flex: 1,
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 1.5,
-                            }}
-                          >
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 2,
-                              }}
-                            >
-                              {imageUrl ? (
-                                <Box
-                                  component="img"
-                                  src={imageUrl}
-                                  alt={name}
-                                  sx={{
-                                    width: 72,
-                                    height: 72,
-                                    borderRadius: 1.5,
-                                    objectFit: "cover",
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              ) : (
-                                <Box
-                                  sx={{
-                                    width: 72,
-                                    height: 72,
-                                    borderRadius: 1.5,
-                                    bgcolor: "grey.100",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  <ImageIcon
-                                    sx={{ color: "grey.400", fontSize: 28 }}
-                                  />
-                                </Box>
-                              )}
-
-                              <Box flex={1} minWidth={0}>
-                                <Typography
-                                  variant="body2"
-                                  fontWeight={600}
-                                  sx={{
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                  }}
-                                >
-                                  {name}
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  Số lượng: {quantity}
-                                </Typography>
-                                {unitPrice > 0 && (
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    display="block"
-                                  >
-                                    Đơn giá: {formatCurrency(unitPrice)}
-                                  </Typography>
-                                )}
-                              </Box>
-
-                              {totalItem > 0 && (
-                                <Typography
-                                  variant="body1"
-                                  fontWeight={700}
-                                  color="#ee4d2d"
-                                  sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
-                                >
-                                  {formatCurrency(totalItem)}
-                                </Typography>
-                              )}
-                            </Box>
-                          </Box>
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                  {!(selectedOrder?.orderDetails || []).length && (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ py: 1 }}
-                    >
-                      Không tải được chi tiết sản phẩm của đơn hàng.
-                    </Typography>
-                  )}
-                </Stack>
-
-                {selectedRequest.requestedRefundAmount != null &&
-                  selectedRequest.requestedRefundAmount > 0 && (
-                    <Box
-                      display="flex"
-                      justifyContent="flex-end"
-                      alignItems="center"
-                      mt={1.5}
-                      pt={1.5}
-                      sx={{
-                        borderTop: "1px solid",
-                        borderColor: "divider",
-                      }}
-                    >
-                      <Typography variant="body2" color="text.secondary" mr={2}>
-                        Tổng tiền yêu cầu hoàn:
-                      </Typography>
-                      <Typography
-                        variant="subtitle1"
-                        fontWeight={700}
-                        color="#ee4d2d"
-                      >
-                        {formatCurrency(selectedRequest.requestedRefundAmount)}
-                      </Typography>
-                    </Box>
-                  )}
-              </Paper>
-
-              {selectedRequest.proofImages &&
-                selectedRequest.proofImages.length > 0 && (
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                      Ảnh/Video minh chứng ({selectedRequest.proofImages.length}
-                      )
-                    </Typography>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      flexWrap="wrap"
-                      useFlexGap
-                    >
-                      {selectedRequest.proofImages.map((imgDef, idx) => {
-                        const mediaUrl =
-                          typeof imgDef === "string"
-                            ? imgDef
-                            : (imgDef as any).url;
-                        const mimeType =
-                          typeof imgDef === "string"
-                            ? null
-                            : ((imgDef as any).mimeType ?? null);
-                        if (!mediaUrl) return null;
-
-                        const isVideo = isVideoMedia(mediaUrl, mimeType);
-
-                        return (
-                          <Box
-                            key={idx}
-                            onClick={() => {
-                              setSelectedMediaUrl(mediaUrl);
-                              setSelectedMediaMimeType(mimeType);
-                              setLightboxOpen(true);
-                            }}
-                            sx={{
-                              cursor: "pointer",
-                              borderRadius: 1.5,
-                              overflow: "hidden",
-                              border: "2px solid",
-                              borderColor: "divider",
-                              transition: "all 0.2s",
-                              "&:hover": {
-                                borderColor: "#ee4d2d",
-                                transform: "scale(1.03)",
-                                boxShadow: 2,
-                              },
-                              position: "relative",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              bgcolor: "grey.100",
-                            }}
-                          >
-                            {isVideo ? (
-                              <>
-                                <Box
-                                  component="video"
-                                  src={mediaUrl}
-                                  muted
-                                  playsInline
-                                  preload="metadata"
-                                  sx={{
-                                    width: 100,
-                                    height: 100,
-                                    objectFit: "cover",
-                                    display: "block",
-                                  }}
-                                />
-                                <PlayCircleOutlineIcon
-                                  sx={{
-                                    fontSize: 36,
-                                    color: "common.white",
-                                    position: "absolute",
-                                    top: "50%",
-                                    left: "50%",
-                                    transform: "translate(-50%, -50%)",
-                                    textShadow: "0 2px 8px rgba(0,0,0,0.45)",
-                                  }}
-                                />
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    position: "absolute",
-                                    bottom: 4,
-                                    left: 0,
-                                    right: 0,
-                                    textAlign: "center",
-                                    color: "common.white",
-                                    bgcolor: "rgba(0,0,0,0.45)",
-                                  }}
-                                >
-                                  Video
-                                </Typography>
-                              </>
-                            ) : (
-                              <Box
-                                component="img"
-                                src={mediaUrl}
-                                sx={{
-                                  width: 100,
-                                  height: 100,
-                                  objectFit: "cover",
-                                  display: "block",
-                                }}
-                              />
-                            )}
-                          </Box>
-                        );
-                      })}
-                    </Stack>
-                  </Paper>
-                )}
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDetail}>Đóng</Button>
-        </DialogActions>
-      </Dialog>
-      <MediaPreviewDialog
-        open={lightboxOpen}
-        mediaUrl={selectedMediaUrl}
-        mimeType={selectedMediaMimeType}
-        onClose={() => setLightboxOpen(false)}
-      />
     </MainLayout>
   );
 };

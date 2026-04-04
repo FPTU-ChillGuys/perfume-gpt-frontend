@@ -5796,7 +5796,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProcessRefundRequest"];
+                    "text/json": components["schemas"]["ProcessRefundRequest"];
+                    "application/*+json": components["schemas"]["ProcessRefundRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -13132,6 +13138,8 @@ export interface components {
             /** Format: decimal */
             unitPrice?: number;
             /** Format: decimal */
+            refunablePrice?: number;
+            /** Format: decimal */
             total?: number;
             reservedBatches: components["schemas"]["ReservedBatchResponse"][];
         };
@@ -13210,6 +13218,7 @@ export interface components {
             id?: string;
             /** Format: uuid */
             orderId?: string;
+            orderCode: string;
             /** Format: uuid */
             customerId?: string;
             customerEmail?: null | string;
@@ -13480,7 +13489,7 @@ export interface components {
         /** @enum {string} */
         PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore";
         /** @enum {string} */
-        PaymentStatus: "Unpaid" | "Paid" | "Refunded";
+        PaymentStatus: "Unpaid" | "Paid" | "Partial_Refunded" | "Refunded";
         PickListBatchInfo: {
             /** Format: uuid */
             reservationId?: string;
@@ -13531,10 +13540,14 @@ export interface components {
         ProcessCancelRequest: {
             isApproved?: boolean;
             staffNote?: null | string;
+            refundMethod?: components["schemas"]["PaymentMethod"];
         };
         ProcessInitialReturnDto: {
             isApproved?: boolean;
             staffNote?: null | string;
+        };
+        ProcessRefundRequest: {
+            refundMethod?: components["schemas"]["PaymentMethod"];
         };
         ProductAttributeDto: {
             /** Format: int32 */
@@ -14381,6 +14394,7 @@ export interface components {
         UserOrderResponse: {
             /** Format: uuid */
             id?: string;
+            code: string;
             type?: components["schemas"]["OrderType"];
             status?: components["schemas"]["OrderStatus"];
             isReturnable?: boolean;
