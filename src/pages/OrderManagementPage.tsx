@@ -52,7 +52,8 @@ const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: orderStatusLabels.Processing, value: "Processing" },
   { label: orderStatusLabels.Delivering, value: "Delivering" },
   { label: orderStatusLabels.Delivered, value: "Delivered" },
-  { label: orderStatusLabels.Canceled, value: "Canceled" },
+  { label: orderStatusLabels.Returning, value: "Returning" },
+  { label: orderStatusLabels.Cancelled, value: "Cancelled" },
   { label: orderStatusLabels.Returned, value: "Returned" },
 ];
 
@@ -149,7 +150,7 @@ export const OrderManagementPage = () => {
       [
         { key: "id", header: "Mã đơn hàng" },
         { key: "customerName", header: "Khách hàng" },
-        { key: "customerEmail", header: "Email" },
+        { key: "customerId", header: "Mã khách hàng" },
         { key: "status", header: "Trạng thái" },
         { key: "totalAmount", header: "Tổng tiền" },
         { key: "type", header: "Loại" },

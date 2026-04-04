@@ -54,6 +54,11 @@ import {
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 
+type OrderListItemWithReturnable = OrderListItem & {
+  isReturnable?: boolean;
+  isReturnalbe?: boolean;
+};
+
 const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: "Tất cả", value: "" },
   { label: orderStatusLabels["Pending"], value: "Pending" },
@@ -61,7 +66,8 @@ const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: orderStatusLabels["Delivering"], value: "Delivering" },
   { label: orderStatusLabels["Delivered"], value: "Delivered" },
   { label: orderStatusLabels["Cancelled"], value: "Cancelled" },
-  { label: orderStatusLabels["Returned"], value: "Returned" },
+  { label: orderStatusLabels["Partial_Returned"], value: "Partial_Returned" },
+  { label: "Trả hàng/Hoàn tiền", value: "Returning" },
 ];
 
 const formatCurrency = (value?: number | null) => {
@@ -80,7 +86,7 @@ export const MyOrdersPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
-  const [orders, setOrders] = useState<OrderListItem[]>([]);
+  const [orders, setOrders] = useState<OrderListItemWithReturnable[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
@@ -124,7 +130,7 @@ export const MyOrdersPage = () => {
         SortBy: "CreatedAt",
         SortOrder: "desc",
       });
-      setOrders(items);
+      setOrders(items as OrderListItemWithReturnable[]);
       setTotalCount(count);
     } catch (error) {
       console.error("Failed to load my orders", error);
@@ -176,6 +182,13 @@ export const MyOrdersPage = () => {
   const handleOpenDetail = (orderId?: string | null) => {
     if (!orderId) return;
     navigate(`/my-orders/${orderId}`, { state: { status } });
+  };
+
+  const handleOpenReturnRequest = (orderId?: string | null) => {
+    if (!orderId) return;
+    navigate(`/my-orders/${orderId}`, {
+      state: { status, requestReturn: true },
+    });
   };
 
   const handleCopyOrderId = async (orderId?: string | null) => {
@@ -254,7 +267,7 @@ export const MyOrdersPage = () => {
     if (isPending && !isPaid) {
       return {
         mode: "direct" as const,
-        buttonLabel: "Hủy đơn ngay",
+        buttonLabel: "Hủy đơn hàng",
         note: "Đơn hàng đang ở trạng thái chờ xử lý và chưa thanh toán, hệ thống sẽ hủy ngay sau khi bạn xác nhận.",
       };
     }
@@ -262,12 +275,16 @@ export const MyOrdersPage = () => {
     if ((isPending && isPaid) || isProcessing) {
       return {
         mode: "request" as const,
-        buttonLabel: "Gửi yêu cầu hủy",
+        buttonLabel: "Yêu cầu hủy đơn hàng",
         note: "Đơn hàng này cần duyệt yêu cầu hủy. Sau khi gửi, Staff/Admin sẽ xem xét và phản hồi.",
       };
     }
 
     return null;
+  };
+
+  const isOrderReturnable = (order: OrderListItemWithReturnable) => {
+    return Boolean(order.isReturnable ?? order.isReturnalbe);
   };
 
   const selectedOrder = useMemo(
@@ -531,6 +548,19 @@ export const MyOrdersPage = () => {
                           >
                             Xem chi tiết
                           </Button>
+                          {order.status === "Delivered" &&
+                            isOrderReturnable(order) && (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="warning"
+                                onClick={() =>
+                                  handleOpenReturnRequest(order.id)
+                                }
+                              >
+                                Yêu cầu trả hàng
+                              </Button>
+                            )}
                           {order.status === "Delivered" && (
                             <Button
                               size="small"

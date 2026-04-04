@@ -1,4 +1,12 @@
-import { Box, Container, Typography, Paper, Stack, Button, CircularProgress } from "@mui/material";
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  Stack,
+  Button,
+  CircularProgress,
+} from "@mui/material";
 import { useAuth } from "../hooks/useAuth";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { useEffect, useState } from "react";
@@ -13,7 +21,9 @@ const StaffDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [pendingCount, setPendingCount] = useState<number | null>(null);
-  const [deliveredTodayCount, setDeliveredTodayCount] = useState<number | null>(null);
+  const [deliveredTodayCount, setDeliveredTodayCount] = useState<number | null>(
+    null,
+  );
 
   useEffect(() => {
     const today = new Date();
@@ -21,8 +31,8 @@ const StaffDashboard = () => {
     fromDate.setHours(0, 0, 0, 0);
 
     Promise.all([
-      orderService.getOrders({ Status: "Pending", PageSize: 1 }),
-      orderService.getOrders({
+      orderService.getAllOrders({ Status: "Pending", PageSize: 1 }),
+      orderService.getAllOrders({
         Status: "Delivered",
         FromDate: fromDate.toISOString(),
         ToDate: today.toISOString(),
@@ -35,10 +45,26 @@ const StaffDashboard = () => {
   }, []);
 
   const staffLinks = [
-    { label: "Xử lý đơn hàng", icon: <AssignmentIcon />, path: "/admin/orders" },
-    { label: "Quản lý kho hàng", icon: <InventoryIcon />, path: "/admin/inventory" },
-    { label: "Hỗ trợ khách hàng", icon: <SupportAgentIcon />, path: "/admin/conversations" },
-    { label: "Xem báo cáo", icon: <BarChartIcon />, path: "/admin/inventory/logs" },
+    {
+      label: "Xử lý đơn hàng",
+      icon: <AssignmentIcon />,
+      path: "/admin/orders",
+    },
+    {
+      label: "Quản lý kho hàng",
+      icon: <InventoryIcon />,
+      path: "/admin/inventory",
+    },
+    {
+      label: "Hỗ trợ khách hàng",
+      icon: <SupportAgentIcon />,
+      path: "/admin/conversations",
+    },
+    {
+      label: "Xem báo cáo",
+      icon: <BarChartIcon />,
+      path: "/admin/inventory/logs",
+    },
   ];
 
   return (
@@ -66,7 +92,9 @@ const StaffDashboard = () => {
                 transition: "box-shadow 0.15s",
                 "&:hover": { boxShadow: 4 },
               }}
-              onClick={() => navigate("/admin/orders", { state: { status: "Pending" } })}
+              onClick={() =>
+                navigate("/admin/orders", { state: { status: "Pending" } })
+              }
             >
               <Typography variant="h6" gutterBottom>
                 Đơn hàng chờ xử lý
@@ -87,7 +115,9 @@ const StaffDashboard = () => {
                 transition: "box-shadow 0.15s",
                 "&:hover": { boxShadow: 4 },
               }}
-              onClick={() => navigate("/admin/orders", { state: { status: "Delivered" } })}
+              onClick={() =>
+                navigate("/admin/orders", { state: { status: "Delivered" } })
+              }
             >
               <Typography variant="h6" gutterBottom>
                 Giao thành công hôm nay
@@ -126,4 +156,3 @@ const StaffDashboard = () => {
 };
 
 export default StaffDashboard;
-

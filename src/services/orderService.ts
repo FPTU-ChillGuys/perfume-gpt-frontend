@@ -47,9 +47,83 @@ export interface PagedCancelRequests {
   totalPages: number;
 }
 
+export type CreateReturnRequestDto =
+  components["schemas"]["CreateReturnRequestDto"];
+export interface CreateReturnRequestPayload {
+  orderId: string;
+  reason: string;
+  requestedRefundAmount?: number;
+  customerNote?: string | null;
+  temporaryMediaIds?: string[] | null;
+}
+export type TemporaryMediaResponse =
+  components["schemas"]["TemporaryMediaResponse"];
+export type ProcessInitialReturnDto =
+  components["schemas"]["ProcessInitialReturnDto"];
+export type StartInspectionDto = components["schemas"]["StartInspectionDto"];
+export type RecordInspectionDto = components["schemas"]["RecordInspectionDto"];
+export type RejectInspectionDto = components["schemas"]["RejectInspectionDto"];
+
+export type ReturnRequestStatus =
+  | "Pending"
+  | "ApprovedForReturn"
+  | "Inspecting"
+  | "ReadyForRefund"
+  | "Rejected"
+  | "Completed"
+  | "Refunded"
+  | string;
+
+export interface ProofImage {
+  id?: string;
+  url?: string;
+  altText?: string | null;
+  displayOrder?: number;
+  isPrimary?: boolean;
+}
+
+export interface OrderReturnRequest {
+  id?: string;
+  orderId?: string;
+  customerId?: string;
+  requestedByEmail?: string | null;
+  processedByName?: string | null;
+  inspectedByName?: string | null;
+  reason?: string | null;
+  customerNote?: string | null;
+  staffNote?: string | null;
+  inspectionNote?: string | null;
+  status?: ReturnRequestStatus;
+  requestedRefundAmount?: number;
+  approvedRefundAmount?: number;
+  isRefunded?: boolean;
+  isRestocked?: boolean;
+  createdAt?: string;
+  updatedAt?: string | null;
+  proofImages?: ProofImage[];
+  [key: string]: unknown;
+}
+
+export interface PagedReturnRequests {
+  items: OrderReturnRequest[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 interface GetOrderCancelRequestsParams {
   Status?: components["schemas"]["CancelRequestStatus"];
   IsRefundRequired?: boolean;
+  PageNumber?: number;
+  PageSize?: number;
+  SortBy?: string;
+  SortOrder?: string;
+  IsDescending?: boolean;
+}
+
+interface GetOrderReturnRequestsParams {
+  Status?: ReturnRequestStatus;
   PageNumber?: number;
   PageSize?: number;
   SortBy?: string;
@@ -68,6 +142,106 @@ interface FulfillOrderRequest {
 }
 
 class OrderService {
+  private getValue<T = unknown>(
+    source: unknown,
+    keys: string[],
+  ): T | undefined {
+    if (!source || typeof source !== "object") {
+      return undefined;
+    }
+
+    const objectSource = source as Record<string, unknown>;
+    for (const key of keys) {
+      const value = objectSource[key];
+      if (value !== undefined) {
+        return value as T;
+      }
+    }
+
+    return undefined;
+  }
+
+  private normalizeProofImage(img: unknown): ProofImage {
+    return {
+      id: this.getValue<string>(img, ["id", "Id"]),
+      url: this.getValue<string>(img, ["url", "Url"]),
+      altText:
+        this.getValue<string | null>(img, ["altText", "AltText"]) ?? null,
+      displayOrder: Number(
+        this.getValue<number>(img, ["displayOrder", "DisplayOrder"]) ?? 0,
+      ),
+      isPrimary: Boolean(
+        this.getValue<boolean>(img, ["isPrimary", "IsPrimary"]),
+      ),
+    };
+  }
+
+  private normalizeReturnRequest(item: unknown): OrderReturnRequest {
+    const rawProofImages =
+      this.getValue<unknown[]>(item, ["proofImages", "ProofImages"]) || [];
+
+    return {
+      id: this.getValue<string>(item, ["id", "Id"]),
+      orderId: this.getValue<string>(item, ["orderId", "OrderId"]),
+      customerId: this.getValue<string>(item, ["customerId", "CustomerId"]),
+      requestedByEmail:
+        this.getValue<string | null>(item, [
+          "requestedByEmail",
+          "RequestedByEmail",
+          "customerEmail",
+          "CustomerEmail",
+        ]) ?? null,
+      processedByName:
+        this.getValue<string | null>(item, [
+          "processedByName",
+          "ProcessedByName",
+        ]) ?? null,
+      inspectedByName:
+        this.getValue<string | null>(item, [
+          "inspectedByName",
+          "InspectedByName",
+        ]) ?? null,
+      reason: this.getValue<string | null>(item, ["reason", "Reason"]) ?? null,
+      customerNote:
+        this.getValue<string | null>(item, ["customerNote", "CustomerNote"]) ??
+        null,
+      staffNote:
+        this.getValue<string | null>(item, ["staffNote", "StaffNote"]) ?? null,
+      inspectionNote:
+        this.getValue<string | null>(item, [
+          "inspectionNote",
+          "InspectionNote",
+        ]) ?? null,
+      status:
+        this.getValue<ReturnRequestStatus>(item, ["status", "Status"]) ??
+        "Pending",
+      requestedRefundAmount: Number(
+        this.getValue<number>(item, [
+          "requestedRefundAmount",
+          "RequestedRefundAmount",
+        ]) ?? 0,
+      ),
+      approvedRefundAmount: Number(
+        this.getValue<number>(item, [
+          "approvedRefundAmount",
+          "ApprovedRefundAmount",
+        ]) ?? 0,
+      ),
+      isRefunded: Boolean(
+        this.getValue<boolean>(item, ["isRefunded", "IsRefunded"]),
+      ),
+      isRestocked: Boolean(
+        this.getValue<boolean>(item, ["isRestocked", "IsRestocked"]),
+      ),
+      createdAt:
+        this.getValue<string>(item, ["createdAt", "CreatedAt"]) ||
+        new Date().toISOString(),
+      updatedAt:
+        this.getValue<string | null>(item, ["updatedAt", "UpdatedAt"]) ?? null,
+      proofImages: rawProofImages.map((img) => this.normalizeProofImage(img)),
+    };
+  }
+
   async getMyOrders(
     params?: GetMyOrdersParams,
   ): Promise<{ items: OrderListItem[]; totalCount: number }> {
@@ -179,6 +353,498 @@ class OrderService {
         error.response?.data?.message ||
           error.message ||
           "Failed to process cancel request",
+      );
+    }
+  }
+
+  async getAllReturnRequests(
+    params?: GetOrderReturnRequestsParams,
+  ): Promise<PagedReturnRequests> {
+    try {
+      const query = new URLSearchParams();
+
+      if (params?.Status && params.Status !== "All") {
+        query.set("Status", params.Status);
+      }
+      if (params?.PageNumber) {
+        query.set("PageNumber", String(params.PageNumber));
+      }
+      if (params?.PageSize) {
+        query.set("PageSize", String(params.PageSize));
+      }
+      if (params?.SortBy) {
+        query.set("SortBy", params.SortBy);
+      }
+      if (params?.SortOrder) {
+        query.set("SortOrder", params.SortOrder);
+      }
+      if (typeof params?.IsDescending === "boolean") {
+        query.set("IsDescending", String(params.IsDescending));
+      }
+
+      const accessToken = localStorage.getItem("accessToken");
+      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests${query.size ? `?${query.toString()}` : ""}`;
+
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Không thể tải yêu cầu trả hàng");
+      }
+
+      const payload = data.payload as
+        | {
+            items?: unknown[];
+            totalCount?: number;
+            pageNumber?: number;
+            pageSize?: number;
+            totalPages?: number;
+            sortBy?: string;
+            sortOrder?: string;
+          }
+        | unknown[]
+        | null;
+
+      const items = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : [];
+
+      const normalizedItems = items.map((item) =>
+        this.normalizeReturnRequest(item),
+      );
+
+      return {
+        items: normalizedItems,
+        totalCount:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.totalCount ?? normalizedItems.length)
+            : normalizedItems.length,
+        pageNumber:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.pageNumber ?? params?.PageNumber ?? 1)
+            : Number(params?.PageNumber ?? 1),
+        pageSize:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(
+                payload.pageSize ?? params?.PageSize ?? normalizedItems.length,
+              )
+            : Number((params?.PageSize ?? normalizedItems.length) || 10),
+        totalPages:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.totalPages ?? 1)
+            : 1,
+      };
+    } catch (error: any) {
+      console.error("Error fetching return requests:", error);
+      throw new Error(error?.message || "Không thể tải yêu cầu trả hàng");
+    }
+  }
+
+  async getMyReturnRequests(
+    params?: GetOrderReturnRequestsParams,
+  ): Promise<PagedReturnRequests> {
+    try {
+      const query = new URLSearchParams();
+
+      if (params?.Status && params.Status !== "All") {
+        query.set("Status", params.Status);
+      }
+      if (params?.PageNumber) {
+        query.set("PageNumber", String(params.PageNumber));
+      }
+      if (params?.PageSize) {
+        query.set("PageSize", String(params.PageSize));
+      }
+      if (params?.SortBy) {
+        query.set("SortBy", params.SortBy);
+      }
+      if (params?.SortOrder) {
+        query.set("SortOrder", params.SortOrder);
+      }
+      if (typeof params?.IsDescending === "boolean") {
+        query.set("IsDescending", String(params.IsDescending));
+      }
+
+      const accessToken = localStorage.getItem("accessToken");
+      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/my-requests${query.size ? `?${query.toString()}` : ""}`;
+
+      const response = await fetch(endpoint, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        throw new Error(
+          data?.message || "Không thể tải yêu cầu trả hàng của bạn",
+        );
+      }
+
+      const payload = data.payload as
+        | {
+            items?: unknown[];
+            totalCount?: number;
+            pageNumber?: number;
+            pageSize?: number;
+            totalPages?: number;
+            sortBy?: string;
+            sortOrder?: string;
+          }
+        | unknown[]
+        | null;
+
+      const items = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.items)
+          ? payload.items
+          : [];
+
+      const normalizedItems = items.map((item) =>
+        this.normalizeReturnRequest(item),
+      );
+
+      return {
+        items: normalizedItems,
+        totalCount:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.totalCount ?? normalizedItems.length)
+            : normalizedItems.length,
+        pageNumber:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.pageNumber ?? params?.PageNumber ?? 1)
+            : Number(params?.PageNumber ?? 1),
+        pageSize:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(
+                payload.pageSize ?? params?.PageSize ?? normalizedItems.length,
+              )
+            : Number((params?.PageSize ?? normalizedItems.length) || 10),
+        totalPages:
+          typeof payload === "object" &&
+          payload !== null &&
+          !Array.isArray(payload)
+            ? Number(payload.totalPages ?? 1)
+            : 1,
+      };
+    } catch (error: any) {
+      console.error("Error fetching my return requests:", error);
+      throw new Error(error?.message || "Không thể tải yêu cầu trả hàng");
+    }
+  }
+
+  async reviewReturnRequest(
+    id: string,
+    body: ProcessInitialReturnDto,
+  ): Promise<string> {
+    try {
+      const { data, error, response } = await apiInstance.POST(
+        "/api/orderreturnrequests/{id}/review",
+        {
+          params: { path: { id } },
+          body,
+        },
+      );
+
+      if (error) {
+        throw new Error((error as any)?.message || "Không thể duyệt yêu cầu");
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể duyệt yêu cầu");
+      }
+
+      return data.message || "Xử lý yêu cầu thành công";
+    } catch (error: any) {
+      console.error("Error reviewing return request:", error);
+      throw new Error(error?.message || "Không thể duyệt yêu cầu");
+    }
+  }
+
+  async startReturnInspection(
+    id: string,
+    body: StartInspectionDto,
+  ): Promise<string> {
+    try {
+      const { data, error, response } = await apiInstance.POST(
+        "/api/orderreturnrequests/{id}/start-inspection",
+        {
+          params: { path: { id } },
+          body,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          (error as any)?.message || "Không thể bắt đầu kiểm định",
+        );
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể bắt đầu kiểm định");
+      }
+
+      return data.message || "Đã bắt đầu kiểm định";
+    } catch (error: any) {
+      console.error("Error starting inspection:", error);
+      throw new Error(error?.message || "Không thể bắt đầu kiểm định");
+    }
+  }
+
+  async completeReturnInspection(
+    id: string,
+    body: RecordInspectionDto,
+  ): Promise<string> {
+    try {
+      const { data, error, response } = await apiInstance.POST(
+        "/api/orderreturnrequests/{id}/complete-inspection",
+        {
+          params: { path: { id } },
+          body,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          (error as any)?.message || "Không thể hoàn tất kiểm định",
+        );
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể hoàn tất kiểm định");
+      }
+
+      return data.message || "Hoàn tất kiểm định thành công";
+    } catch (error: any) {
+      console.error("Error completing inspection:", error);
+      throw new Error(error?.message || "Không thể hoàn tất kiểm định");
+    }
+  }
+
+  async failReturnInspection(
+    id: string,
+    body: RejectInspectionDto,
+  ): Promise<string> {
+    try {
+      const { data, error, response } = await apiInstance.POST(
+        "/api/orderreturnrequests/{id}/fail-inspection",
+        {
+          params: { path: { id } },
+          body,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          (error as any)?.message || "Không thể từ chối kiểm định",
+        );
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể từ chối kiểm định");
+      }
+
+      return data.message || "Đã từ chối yêu cầu";
+    } catch (error: any) {
+      console.error("Error failing inspection:", error);
+      throw new Error(error?.message || "Không thể từ chối kiểm định");
+    }
+  }
+
+  async getReturnRequestById(id: string): Promise<OrderReturnRequest> {
+    try {
+      const { data, error, response } = await apiInstance.GET(
+        "/api/orderreturnrequests/{id}",
+        {
+          params: { path: { id } },
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          (error as any)?.message || "Không thể tải chi tiết yêu cầu trả hàng",
+        );
+      }
+
+      if (!data?.success || !data.payload) {
+        throw new Error(
+          data?.message || "Không thể tải chi tiết yêu cầu trả hàng",
+        );
+      }
+
+      return this.normalizeReturnRequest(data.payload);
+    } catch (error: any) {
+      console.error("Error fetching return request by ID:", error);
+      throw new Error(
+        error?.message || "Không thể tải chi tiết yêu cầu trả hàng",
+      );
+    }
+  }
+
+  async refundReturnRequest(id: string): Promise<string> {
+    try {
+      const { data, error, response } = await apiInstance.POST(
+        "/api/orderreturnrequests/{id}/refund",
+        {
+          params: { path: { id } },
+        },
+      );
+
+      if (error) {
+        throw new Error((error as any)?.message || "Không thể hoàn tiền");
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể hoàn tiền");
+      }
+
+      return data.message || "Hoàn tiền thành công";
+    } catch (error: any) {
+      console.error("Error refunding return request:", error);
+      throw new Error(error?.message || "Không thể hoàn tiền");
+    }
+  }
+
+  async uploadTemporaryReturnImages(
+    files: File[],
+  ): Promise<TemporaryMediaResponse[]> {
+    if (!files.length) {
+      return [];
+    }
+
+    const accessToken = localStorage.getItem("accessToken");
+    const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/images/temporary`;
+    let lastErrorMessage = "Không thể tải ảnh tạm thời";
+
+    const tryUpload = async (
+      buildFormData: (fileList: File[]) => FormData,
+    ): Promise<TemporaryMediaResponse[] | null> => {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: accessToken
+          ? {
+              Authorization: `Bearer ${accessToken}`,
+            }
+          : undefined,
+        body: buildFormData(files),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        lastErrorMessage =
+          data?.message ||
+          (Array.isArray(data?.errors) ? data.errors.join("; ") : "") ||
+          lastErrorMessage;
+        return null;
+      }
+
+      const payload = data.payload as
+        | { data?: TemporaryMediaResponse[] | null }
+        | TemporaryMediaResponse[]
+        | null;
+
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+
+      return payload?.data || [];
+    };
+
+    const strategyA = await tryUpload((fileList) => {
+      const formData = new FormData();
+      fileList.forEach((file) => {
+        formData.append("Images", file);
+      });
+      return formData;
+    });
+
+    if (strategyA) {
+      return strategyA;
+    }
+
+    const strategyB = await tryUpload((fileList) => {
+      const formData = new FormData();
+      fileList.forEach((file, index) => {
+        formData.append(`Images[${index}]`, file);
+      });
+      return formData;
+    });
+
+    if (strategyB) {
+      return strategyB;
+    }
+
+    const strategyC = await tryUpload((fileList) => {
+      const formData = new FormData();
+      fileList.forEach((file, index) => {
+        formData.append(`Images[${index}].ImageFile`, file);
+      });
+      return formData;
+    });
+
+    if (strategyC) {
+      return strategyC;
+    }
+
+    throw new Error(lastErrorMessage);
+  }
+
+  async createReturnRequest(
+    payload: CreateReturnRequestPayload,
+  ): Promise<string> {
+    try {
+      const requestBody: CreateReturnRequestDto = {
+        orderId: payload.orderId,
+        reason: payload.reason,
+        customerNote: payload.customerNote ?? null,
+        requestedRefundAmount: payload.requestedRefundAmount,
+        temporaryMediaIds: payload.temporaryMediaIds ?? null,
+      };
+
+      const response = await apiInstance.POST("/api/orderreturnrequests", {
+        body: requestBody,
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Không thể tạo yêu cầu trả hàng",
+        );
+      }
+
+      return response.data.message || "Đã tạo yêu cầu trả hàng";
+    } catch (error: any) {
+      console.error("Error creating return request:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể tạo yêu cầu trả hàng",
       );
     }
   }

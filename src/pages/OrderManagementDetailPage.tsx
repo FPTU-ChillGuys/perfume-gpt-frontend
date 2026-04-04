@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -12,6 +13,7 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
+  FormControlLabel,
   MenuItem,
   Paper,
   Select,
@@ -73,7 +75,8 @@ const STATUS_TO_STEP: Record<OrderStatus, number> = {
   Processing: 1,
   Delivering: 3,
   Delivered: 4,
-  Canceled: -1,
+  Returning: -2,
+  Cancelled: -1,
   Returned: -2,
 };
 
@@ -86,11 +89,12 @@ const STEPS = [
 ];
 
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
-  Pending: ["Processing", "Canceled"],
-  Processing: ["Canceled"],
+  Pending: ["Processing", "Cancelled"],
+  Processing: ["Cancelled"],
   Delivering: ["Delivered", "Returned"],
   Delivered: [],
-  Canceled: [],
+  Returning: ["Returned"],
+  Cancelled: [],
   Returned: [],
 };
 
@@ -126,7 +130,7 @@ const OrderStepper = ({
 }: StepperProps) => {
   const baseStep = STATUS_TO_STEP[status] ?? 0;
   const activeStep = paidAt && baseStep < 1 ? 1 : baseStep;
-  const isCanceled = status === "Canceled";
+  const isCanceled = status === "Cancelled";
   const isReturned = status === "Returned";
   const isSpecial = isCanceled || isReturned;
 
@@ -285,10 +289,13 @@ interface FulfillInputItem {
   quantity: string;
 }
 
-interface ProcessingOrderDetail {
+interface AutoFulfillItem {
   id: string;
   variantName?: string;
-  quantity?: number;
+  orderQuantity: number;
+  reservedQuantity: number;
+  scannedBatchCode: string;
+  quantity: number;
 }
 
 export const OrderManagementDetailPage = () => {
@@ -316,7 +323,7 @@ export const OrderManagementDetailPage = () => {
   const [expandedBatches, setExpandedBatches] = useState<
     Record<string, boolean>
   >({});
-  const [fulfillInputs, setFulfillInputs] = useState<FulfillInputItem[]>([]);
+  const [isPackagingConfirmed, setIsPackagingConfirmed] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   const loadOrder = async () => {
@@ -329,15 +336,7 @@ export const OrderManagementDetailPage = () => {
       setOrder(data);
       setSelectedStatus("");
       setNote("");
-      setFulfillInputs(
-        (data.orderDetails ?? [])
-          .filter((detail) => Boolean(detail.id))
-          .map((detail) => ({
-            orderDetailId: detail.id!,
-            scannedBatchCode: "",
-            quantity: "",
-          })),
-      );
+      setIsPackagingConfirmed(false);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Không thể tải chi tiết đơn hàng",
@@ -374,7 +373,7 @@ export const OrderManagementDetailPage = () => {
     return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
   }, [order?.paymentTransactions]);
 
-  const processingOrderDetails = useMemo<ProcessingOrderDetail[]>(() => {
+  const autoFulfillItems = useMemo<AutoFulfillItem[]>(() => {
     if (order?.status !== "Processing") {
       return [];
     }
@@ -384,45 +383,62 @@ export const OrderManagementDetailPage = () => {
       .map((detail) => ({
         id: detail.id!,
         variantName: detail.variantName,
-        quantity: detail.quantity,
+        orderQuantity: Number(detail.quantity ?? 0),
+        reservedQuantity: Number(
+          (detail.reservedBatches ?? []).reduce(
+            (sum, batch) => sum + Number(batch.reservedQuantity ?? 0),
+            0,
+          ),
+        ),
+        scannedBatchCode:
+          (detail.reservedBatches ?? [])
+            .find(
+              (batch) =>
+                Boolean(batch.batchCode) &&
+                Number(batch.reservedQuantity ?? 0) > 0,
+            )
+            ?.batchCode?.trim() ||
+          (detail.reservedBatches ?? [])
+            .find((batch) => Boolean(batch.batchCode))
+            ?.batchCode?.trim() ||
+          "",
+        quantity: Number(detail.quantity ?? 0),
       }));
   }, [order?.orderDetails, order?.status]);
 
-  const hasInvalidFulfillInput = useMemo(() => {
+  const autoFulfillError = useMemo(() => {
     if (order?.status !== "Processing") {
-      return false;
+      return null;
     }
 
-    if (processingOrderDetails.length === 0) {
-      return true;
+    if (autoFulfillItems.length === 0) {
+      return "Không tìm thấy order detail để đóng gói";
     }
 
-    return processingOrderDetails.some((detail) => {
-      const row = fulfillInputs.find(
-        (input) => input.orderDetailId === detail.id,
-      );
-      if (!row) {
-        return true;
-      }
-
-      const qty = Number(row.quantity);
-      return !row.scannedBatchCode.trim() || !Number.isFinite(qty) || qty <= 0;
-    });
-  }, [fulfillInputs, order?.status, processingOrderDetails]);
-
-  const handleFulfillInputChange = (
-    orderDetailId: string,
-    field: "scannedBatchCode" | "quantity",
-    value: string,
-  ) => {
-    setFulfillInputs((prev) =>
-      prev.map((item) =>
-        item.orderDetailId === orderDetailId
-          ? { ...item, [field]: value }
-          : item,
-      ),
+    const missingBatch = autoFulfillItems.find(
+      (item) => !item.scannedBatchCode,
     );
-  };
+    if (missingBatch) {
+      return `Không tìm thấy mã batch giữ hàng cho sản phẩm ${missingBatch.variantName || missingBatch.id}`;
+    }
+
+    const invalidQuantity = autoFulfillItems.find(
+      (item) => !Number.isFinite(item.quantity) || item.quantity <= 0,
+    );
+    if (invalidQuantity) {
+      return `Số lượng đóng gói không hợp lệ cho sản phẩm ${invalidQuantity.variantName || invalidQuantity.id}`;
+    }
+
+    const insufficientReserved = autoFulfillItems.find(
+      (item) =>
+        item.reservedQuantity > 0 && item.quantity > item.reservedQuantity,
+    );
+    if (insufficientReserved) {
+      return `Số lượng giữ hàng không đủ cho sản phẩm ${insufficientReserved.variantName || insufficientReserved.id}`;
+    }
+
+    return null;
+  }, [autoFulfillItems, order?.status]);
 
   const handleBack = () => {
     navigate(backPath, {
@@ -455,7 +471,7 @@ export const OrderManagementDetailPage = () => {
   };
 
   const handleUpdateStatus = async () => {
-    if (selectedStatus === "Canceled") {
+    if (selectedStatus === "Cancelled") {
       setIsCancelDialogOpen(true);
       return;
     }
@@ -481,29 +497,24 @@ export const OrderManagementDetailPage = () => {
       return;
     }
 
-    if (processingOrderDetails.length === 0) {
-      showToast("Không tìm thấy order detail để đóng gói", "error");
-      return;
-    }
-
-    if (hasInvalidFulfillInput) {
+    if (!isPackagingConfirmed) {
       showToast(
-        "Vui lòng nhập mã batch và số lượng hợp lệ cho từng order detail",
-        "error",
+        "Vui lòng xác nhận đã đóng gói đúng số lô và số lượng trước khi bàn giao",
+        "warning",
       );
       return;
     }
 
-    const fulfillPayload = processingOrderDetails.map((detail) => {
-      const row = fulfillInputs.find(
-        (item) => item.orderDetailId === detail.id,
-      )!;
-      return {
-        orderDetailId: detail.id!,
-        scannedBatchCode: row.scannedBatchCode.trim(),
-        quantity: Number(row.quantity),
-      };
-    });
+    if (autoFulfillError) {
+      showToast(autoFulfillError, "error");
+      return;
+    }
+
+    const fulfillPayload = autoFulfillItems.map((item) => ({
+      orderDetailId: item.id,
+      scannedBatchCode: item.scannedBatchCode,
+      quantity: item.quantity,
+    }));
 
     try {
       setIsFulfilling(true);
@@ -978,83 +989,44 @@ export const OrderManagementDetailPage = () => {
                       <Stack spacing={2}>
                         {order.status === "Processing" && (
                           <Alert severity="info">
-                            Đơn đang ở trạng thái Đang xử lý. Vui lòng nhập mã
-                            batch và số lượng cho từng order detail khi đóng
-                            gói.
+                            Đơn đang ở trạng thái Đang xử lý. Hệ thống sẽ tự
+                            động sử dụng batch giữ hàng và số lượng của đơn,
+                            Staff chỉ cần xác nhận đã đóng gói đúng trước khi
+                            bàn giao vận chuyển.
                           </Alert>
                         )}
 
                         {order.status === "Processing" && (
                           <Stack spacing={1.5}>
-                            {processingOrderDetails.map((detail) => {
-                              const input = fulfillInputs.find(
-                                (item) => item.orderDetailId === detail.id,
-                              );
-
-                              return (
-                                <Box
-                                  key={detail.id}
-                                  sx={{
-                                    p: 1.5,
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                    borderRadius: 1,
-                                  }}
+                            <Box
+                              sx={{
+                                p: 1.5,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                borderRadius: 1,
+                              }}
+                            >
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={isPackagingConfirmed}
+                                    onChange={(e) =>
+                                      setIsPackagingConfirmed(e.target.checked)
+                                    }
+                                    disabled={isUpdating || isFulfilling}
+                                  />
+                                }
+                                label="Tôi đã đóng gói sản phẩm với đúng số lô và đủ số lượng"
+                              />
+                              {autoFulfillError && (
+                                <Typography
+                                  variant="caption"
+                                  color="error.main"
                                 >
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={600}
-                                    mb={1}
-                                  >
-                                    OrderDetailId: {detail.id}
-                                  </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    display="block"
-                                    mb={1.5}
-                                  >
-                                    {detail.variantName} - Số lượng đơn:{" "}
-                                    {detail.quantity ?? 0}
-                                  </Typography>
-                                  <Stack
-                                    direction={{ xs: "column", sm: "row" }}
-                                    spacing={1.5}
-                                  >
-                                    <TextField
-                                      label="Mã batch"
-                                      size="small"
-                                      fullWidth
-                                      value={input?.scannedBatchCode ?? ""}
-                                      onChange={(e) =>
-                                        handleFulfillInputChange(
-                                          detail.id!,
-                                          "scannedBatchCode",
-                                          e.target.value,
-                                        )
-                                      }
-                                      disabled={isUpdating || isFulfilling}
-                                    />
-                                    <TextField
-                                      label="Số lượng"
-                                      size="small"
-                                      type="number"
-                                      fullWidth
-                                      inputProps={{ min: 1 }}
-                                      value={input?.quantity ?? ""}
-                                      onChange={(e) =>
-                                        handleFulfillInputChange(
-                                          detail.id!,
-                                          "quantity",
-                                          e.target.value,
-                                        )
-                                      }
-                                      disabled={isUpdating || isFulfilling}
-                                    />
-                                  </Stack>
-                                </Box>
-                              );
-                            })}
+                                  {autoFulfillError}
+                                </Typography>
+                              )}
+                            </Box>
 
                             <Button
                               variant="contained"
@@ -1062,7 +1034,8 @@ export const OrderManagementDetailPage = () => {
                               disabled={
                                 isFulfilling ||
                                 isUpdating ||
-                                hasInvalidFulfillInput
+                                !isPackagingConfirmed ||
+                                Boolean(autoFulfillError)
                               }
                               sx={{
                                 bgcolor: "#1976d2",
@@ -1226,7 +1199,7 @@ export const OrderManagementDetailPage = () => {
             color="error"
             variant="contained"
             onClick={handleConfirmCancelStatus}
-            disabled={isUpdating || selectedStatus !== "Canceled"}
+            disabled={isUpdating || selectedStatus !== "Cancelled"}
           >
             {isUpdating ? "Đang hủy..." : "Xác nhận hủy"}
           </Button>
