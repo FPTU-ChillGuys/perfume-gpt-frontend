@@ -840,6 +840,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    TopProductsCount?: number;
                     ExpiringWithinDays?: number;
                     Top?: number;
                     FromDate?: string;
@@ -3141,7 +3142,12 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    itemIds?: string[];
+                    ItemIds?: string[];
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
                 };
                 header?: never;
                 path?: never;
@@ -3265,8 +3271,8 @@ export interface paths {
                     VoucherCode?: string;
                     ItemIds?: string[];
                     SavedAddressId?: string;
-                    "Recipient.RecipientName"?: string;
-                    "Recipient.RecipientPhoneNumber"?: string;
+                    "Recipient.ContactName"?: string;
+                    "Recipient.ContactPhoneNumber"?: string;
                     "Recipient.DistrictId"?: number;
                     "Recipient.DistrictName"?: string;
                     "Recipient.WardCode"?: string;
@@ -5474,7 +5480,6 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    CustomerId?: string;
                     Status?: components["schemas"]["ReturnRequestStatus"];
                     IsRefunded?: boolean;
                     PageNumber?: number;
@@ -5812,7 +5817,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/orderreturnrequests/images/temporary": {
+    "/api/orderreturnrequests/videos/temporary": {
         parameters: {
             query?: never;
             header?: never;
@@ -5831,7 +5836,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/x-www-form-urlencoded": {
-                        Images?: components["schemas"]["IFormFile"][];
+                        Videos?: components["schemas"]["IFormFile"][];
                     };
                 };
             };
@@ -5871,67 +5876,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/orderreturnrequests/{id}/images": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9990,6 +9934,311 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shippings/user/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Status?: components["schemas"]["ShippingStatus"];
+                    CarrierName?: components["schemas"]["CarrierName"];
+                    ShippingType?: components["schemas"]["ShippingType"];
+                    OrderId?: string;
+                    TrackingNumber?: string;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shippings/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Status?: components["schemas"]["ShippingStatus"];
+                    CarrierName?: components["schemas"]["CarrierName"];
+                    ShippingType?: components["schemas"]["ShippingType"];
+                    OrderId?: string;
+                    TrackingNumber?: string;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shippings/user/{userId}/sync-shipping-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shippings/me/sync-shipping-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shippings/order-info-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["GetOrderInfoRequest"];
+                    "text/json": components["schemas"]["GetOrderInfoRequest"];
+                    "application/*+json": components["schemas"]["GetOrderInfoRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stockadjustments": {
         parameters: {
             query?: never;
@@ -11436,18 +11685,18 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         AddressLevel4Response: {
-            data?: string[];
+            data: string[];
         };
         AddressResponse: {
             /** Format: uuid */
             id?: string;
-            recipientName?: string;
-            recipientPhoneNumber?: string;
-            street?: string;
-            ward?: string;
-            district?: string;
-            city?: string;
-            wardCode?: string;
+            recipientName: string;
+            recipientPhoneNumber: string;
+            street: string;
+            ward: string;
+            district: string;
+            city: string;
+            wardCode: string;
             /** Format: int32 */
             districtId?: number;
             /** Format: int32 */
@@ -11457,7 +11706,7 @@ export interface components {
         AdminDashboardOverviewResponse: {
             revenue?: components["schemas"]["RevenueSummaryResponse"];
             inventoryLevels?: components["schemas"]["InventoryLevelsResponse"];
-            topProducts?: components["schemas"]["TopProductResponse"][];
+            topProducts: components["schemas"]["TopProductResponse"][];
         };
         AnswerReviewRequest: {
             staffFeedbackComment: string;
@@ -11465,20 +11714,20 @@ export interface components {
         AttributeLookupItem: {
             /** Format: int32 */
             id?: number;
-            internalCode?: string;
-            name?: string;
-            description?: string;
+            internalCode: string;
+            name: string;
+            description?: null | string;
             isVariantLevel?: boolean;
         };
         AttributeValueLookupItem: {
             /** Format: int32 */
             id?: number;
-            value?: string;
+            value: string;
         };
         AvailableVoucherResponse: {
             /** Format: uuid */
             id?: string;
-            code?: string;
+            code: string;
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
@@ -11936,6 +12185,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfPagedResultOfShippingInfoListItem: {
+            payload?: null | components["schemas"]["PagedResultOfShippingInfoListItem"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfPagedResultOfStockAdjustmentListItem: {
             payload?: null | components["schemas"]["PagedResultOfStockAdjustmentListItem"];
             success?: boolean;
@@ -12121,17 +12377,17 @@ export interface components {
         BatchDetailResponse: {
             /** Format: uuid */
             variantId?: string;
-            variantSku?: string;
-            productName?: string;
+            variantSku: string;
+            productName: string;
             /** Format: int32 */
             volumeMl?: number;
-            concentrationName?: string;
+            concentrationName: string;
             isExpired?: boolean;
             /** Format: int32 */
             daysUntilExpiry?: number;
             /** Format: uuid */
             id?: string;
-            batchCode?: string;
+            batchCode: string;
             /** Format: date-time */
             manufactureDate?: string;
             /** Format: date-time */
@@ -12146,15 +12402,15 @@ export interface components {
         BatchLookupResponse: {
             /** Format: uuid */
             id?: string;
-            batchCode?: string;
+            batchCode: string;
             /** Format: uuid */
             variantId?: string;
-            sku?: string;
+            sku: string;
         };
         BatchResponse: {
             /** Format: uuid */
             id?: string;
-            batchCode?: string;
+            batchCode: string;
             /** Format: date-time */
             manufactureDate?: string;
             /** Format: date-time */
@@ -12169,20 +12425,20 @@ export interface components {
         BrandLookupItem: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         BrandResponse: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         BulkActionError: {
             /** Format: uuid */
             id?: string;
-            errorMessage?: string;
+            errorMessage: string;
         };
         BulkActionMetadata: {
-            operations?: components["schemas"]["BulkOperationResult"][];
+            operations: components["schemas"]["BulkOperationResult"][];
             hasPartialFailure?: boolean;
             allSucceeded?: boolean;
             /** Format: int32 */
@@ -12206,12 +12462,12 @@ export interface components {
             metadata?: null | components["schemas"]["BulkActionMetadata"];
         };
         BulkOperationResult: {
-            operationName?: string;
+            operationName: string;
             /** Format: int32 */
             succeededCount?: number;
             /** Format: int32 */
             failedCount?: number;
-            errors?: components["schemas"]["BulkActionError"][];
+            errors: components["schemas"]["BulkActionError"][];
             /** Format: int32 */
             totalProcessed?: number;
             hasError?: boolean;
@@ -12225,7 +12481,7 @@ export interface components {
             productVariantId?: string;
             /** Format: uuid */
             batchId?: null | string;
-            name?: string;
+            name: string;
             itemType?: components["schemas"]["PromotionType"];
             /** Format: date-time */
             startDate?: null | string;
@@ -12240,7 +12496,7 @@ export interface components {
         CampaignResponse: {
             /** Format: uuid */
             id?: string;
-            name?: string;
+            name: string;
             description?: null | string;
             /** Format: date-time */
             startDate?: string;
@@ -12254,46 +12510,61 @@ export interface components {
         /** @enum {string} */
         CampaignType: "FlashSale" | "Clearance";
         /** @enum {string} */
+        CancelOrderReason: "ChangedMind" | "FoundBetterPrice" | "WrongShippingInformation" | "PaymentIssue" | "DeliveryTooLate" | "InsufficientStock";
+        /** @enum {string} */
         CancelRequestStatus: "Pending" | "Approved" | "Rejected";
         /** @enum {string} */
         CarrierName: "GHN" | "GHTK";
         CategoriesLookupItem: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         CategoryResponse: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         ConcentrationLookupDto: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         ConcentrationResponse: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         ConfirmPaymentRequest: {
             isSuccess: boolean;
             failureReason?: null | string;
         };
+        ContactAddressInformation: {
+            contactName: string;
+            contactPhoneNumber: string;
+            /** Format: int32 */
+            districtId?: number;
+            districtName: string;
+            wardCode: string;
+            wardName: string;
+            /** Format: int32 */
+            provinceId?: number;
+            provinceName: string;
+            fullAddress: string;
+        };
         CreateAddressRequest: {
             recipientName: string;
             recipientPhoneNumber: string;
-            street?: string;
-            ward?: string;
-            district?: string;
-            city?: string;
-            isDefault?: boolean;
+            street: string;
+            ward: string;
+            district: string;
+            city: string;
             wardCode: string;
             /** Format: int32 */
             districtId?: number;
             /** Format: int32 */
             provinceId?: number;
+            isDefault?: boolean;
         };
         CreateAttributeRequest: {
             internalCode?: null | string;
@@ -12314,7 +12585,7 @@ export interface components {
             quantity?: number;
         };
         CreateBrandRequest: {
-            name?: string;
+            name: string;
         };
         CreateCampaignPromotionItemRequest: {
             /** Format: uuid */
@@ -12334,7 +12605,7 @@ export interface components {
             endDate?: string;
             type?: components["schemas"]["CampaignType"];
             items: components["schemas"]["CreateCampaignPromotionItemRequest"][];
-            vouchers?: components["schemas"]["CreateCampaignVoucherRequest"][];
+            vouchers: components["schemas"]["CreateCampaignVoucherRequest"][];
         };
         CreateCampaignVoucherRequest: {
             code: string;
@@ -12365,17 +12636,17 @@ export interface components {
             unitPrice?: number;
         };
         CreateImportTicketRequest: {
+            importDetails: components["schemas"]["CreateImportDetailRequest"][];
             /** Format: int32 */
             supplierId?: number;
             /** Format: date-time */
             expectedArrivalDate: string;
-            importDetails: components["schemas"]["CreateImportDetailRequest"][];
         };
         CreateInStoreOrderRequest: {
             voucherCode?: null | string;
             isPickupInStore?: boolean;
             orderDetails: components["schemas"]["CreateOrderDetailRequest"][];
-            recipient?: null | components["schemas"]["RecipientInformation"];
+            recipient?: null | components["schemas"]["ContactAddressInformation"];
             payment: components["schemas"]["PaymentInformation"];
         };
         CreateOlfactoryFamilyRequest: {
@@ -12395,7 +12666,7 @@ export interface components {
             deliveryMethod?: components["schemas"]["DeliveryMethod"];
             /** Format: uuid */
             savedAddressId?: null | string;
-            recipient?: null | components["schemas"]["RecipientInformation"];
+            recipient?: null | components["schemas"]["ContactAddressInformation"];
             payment: components["schemas"]["PaymentInformation"];
         };
         CreateProductRequest: {
@@ -12409,18 +12680,20 @@ export interface components {
             /** Format: int32 */
             releaseYear?: number;
             description?: null | string;
-            olfactoryFamilyIds?: number[];
+            olfactoryFamilyIds: number[];
             temporaryMediaIds?: null | string[];
-            scentNotes?: components["schemas"]["ScentNoteDto"][];
+            scentNotes: components["schemas"]["ScentNoteDto"][];
             attributes?: null | components["schemas"]["ProductAttributeDto"][];
         };
         CreateReturnRequestDto: {
             /** Format: uuid */
             orderId: string;
-            reason: string;
-            /** Format: decimal */
-            requestedRefundAmount?: number;
+            reason: components["schemas"]["ReturnOrderReason"];
+            returnItems: components["schemas"]["ReturnItemDto"][];
             customerNote?: null | string;
+            /** Format: uuid */
+            savedAddressId?: null | string;
+            recipient?: null | components["schemas"]["ContactAddressInformation"];
             temporaryMediaIds?: null | string[];
         };
         CreateReviewRequest: {
@@ -12460,7 +12733,7 @@ export interface components {
         CreateVariantRequest: {
             /** Format: uuid */
             productId: string;
-            barcode?: string;
+            barcode: string;
             sku: string;
             /** Format: int32 */
             volumeMl?: number;
@@ -12500,17 +12773,17 @@ export interface components {
         CustomerAttributePreferenceResponse: {
             /** Format: int32 */
             attributeValueId?: number;
-            attributeValueName?: string;
+            attributeValueName: string;
         };
         CustomerFamilyPreferenceRespone: {
             /** Format: int32 */
             familyId?: number;
-            familyName?: string;
+            familyName: string;
         };
         CustomerNotePreferenceResponse: {
             /** Format: int32 */
             noteId?: number;
-            noteName?: string;
+            noteName: string;
             noteType?: components["schemas"]["NoteType"];
         };
         /** @enum {string} */
@@ -12522,21 +12795,21 @@ export interface components {
             DistrictID?: number;
             /** Format: int32 */
             ProvinceID?: number;
-            DistrictName?: string;
+            DistrictName: string;
             /** Format: int32 */
             Code?: number;
             /** Format: int32 */
             Type?: number;
             /** Format: int32 */
             SupportType?: number;
-            NameExtension?: string[];
+            NameExtension: string[];
             /** Format: int32 */
             IsEnable?: number;
             CanUpdateCOD?: boolean;
             /** Format: int32 */
             Status?: number;
-            CreatedDate?: string;
-            UpdatedDate?: string;
+            CreatedDate?: null | string;
+            UpdatedDate: string;
         };
         EntityTagHeaderValue: {
             tag?: components["schemas"]["StringSegment"];
@@ -12544,8 +12817,8 @@ export interface components {
         };
         ExcelTemplateResponse: {
             /** Format: byte */
-            fileContent?: string;
-            fileName?: string;
+            fileContent: string;
+            fileName: string;
             contentType?: string;
         };
         FileContentResult: {
@@ -12580,8 +12853,8 @@ export interface components {
             cartItemId?: string;
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
-            imageUrl?: string;
+            variantName: string;
+            imageUrl: string;
             /** Format: int32 */
             volumeMl?: number;
             type?: components["schemas"]["VariantType"];
@@ -12594,7 +12867,7 @@ export interface components {
             subTotal?: number;
         };
         GetCartItemsResponse: {
-            items?: components["schemas"]["GetCartItemResponse"][];
+            items: components["schemas"]["GetCartItemResponse"][];
         };
         GetCartTotalResponse: {
             /** Format: decimal */
@@ -12606,6 +12879,9 @@ export interface components {
             /** Format: decimal */
             totalPrice?: number;
         };
+        GetOrderInfoRequest: {
+            trackingNumbers: string[];
+        };
         GoogleLoginRequest: {
             idToken: string;
         };
@@ -12616,8 +12892,8 @@ export interface components {
             id?: string;
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
-            variantSku?: string;
+            variantName: string;
+            variantSku: string;
             /** Format: int32 */
             expectedQuantity?: number;
             /** Format: decimal */
@@ -12627,16 +12903,16 @@ export interface components {
             /** Format: int32 */
             rejectedQuantity?: number;
             note?: null | string;
-            batches?: components["schemas"]["BatchResponse"][];
+            batches: components["schemas"]["BatchResponse"][];
         };
         /** @enum {string} */
         ImportStatus: "Pending" | "InProgress" | "Completed" | "Cancelled";
         ImportTicketListItem: {
             /** Format: uuid */
             id?: string;
-            createdByName?: string;
+            createdByName: string;
             verifiedByName?: null | string;
-            supplierName?: string;
+            supplierName: string;
             /** Format: date-time */
             expectedArrivalDate?: string;
             /** Format: date-time */
@@ -12652,11 +12928,11 @@ export interface components {
         ImportTicketResponse: {
             /** Format: uuid */
             id?: string;
-            createdByName?: string;
+            createdByName: string;
             verifiedByName?: null | string;
             /** Format: int32 */
             supplierId?: number;
-            supplierName?: string;
+            supplierName: string;
             /** Format: date-time */
             expectedArrivalDate?: string;
             /** Format: date-time */
@@ -12666,7 +12942,7 @@ export interface components {
             status?: components["schemas"]["ImportStatus"];
             /** Format: date-time */
             createdAt?: string;
-            importDetails?: components["schemas"]["ImportDetailResponse"][];
+            importDetails: components["schemas"]["ImportDetailResponse"][];
         };
         InventoryLevelsResponse: {
             /** Format: int32 */
@@ -12718,7 +12994,7 @@ export interface components {
             pointsChanged?: number;
             /** Format: int32 */
             absolutePoints?: number;
-            reason?: string;
+            reason: string;
         };
         LoyaltyTransactionTotalsResponse: {
             /** Format: uuid */
@@ -12735,6 +13011,8 @@ export interface components {
         /** @enum {string} */
         LoyaltyTransactionType: "Spend" | "Earn";
         ManualChangeRequest: {
+            /** Format: uuid */
+            userId?: string;
             transactionType?: components["schemas"]["LoyaltyTransactionType"];
             /** Format: int32 */
             points?: number;
@@ -12743,7 +13021,7 @@ export interface components {
         MediaResponse: {
             /** Format: uuid */
             id?: string;
-            url?: string;
+            url: string;
             altText?: null | string;
             /** Format: int32 */
             displayOrder?: number;
@@ -12757,12 +13035,12 @@ export interface components {
         OlfactoryFamilyResponse: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         OlfactoryLookupResponse: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         OrderCancelRequestResponse: {
             /** Format: uuid */
@@ -12774,7 +13052,7 @@ export interface components {
             requestedByEmail?: null | string;
             /** Format: uuid */
             processedById?: null | string;
-            reason?: string;
+            reason: string;
             staffNote?: null | string;
             status?: components["schemas"]["CancelRequestStatus"];
             isRefundRequired?: boolean;
@@ -12790,8 +13068,8 @@ export interface components {
         OrderDetailListItems: {
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
-            imageUrl?: string;
+            variantName: string;
+            imageUrl: string;
             /** Format: int32 */
             quantity?: number;
             /** Format: int32 */
@@ -12802,7 +13080,7 @@ export interface components {
             id?: string;
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
+            variantName: string;
             imageUrl?: null | string;
             /** Format: int32 */
             quantity?: number;
@@ -12810,11 +13088,12 @@ export interface components {
             unitPrice?: number;
             /** Format: decimal */
             total?: number;
-            reservedBatches?: components["schemas"]["ReservedBatchResponse"][];
+            reservedBatches: components["schemas"]["ReservedBatchResponse"][];
         };
         OrderListItem: {
             /** Format: uuid */
             id?: string;
+            code: string;
             /** Format: uuid */
             customerId?: null | string;
             customerName?: null | string;
@@ -12838,6 +13117,7 @@ export interface components {
         OrderResponse: {
             /** Format: uuid */
             id?: string;
+            code: string;
             /** Format: uuid */
             customerId?: null | string;
             customerName?: null | string;
@@ -12864,7 +13144,19 @@ export interface components {
             paymentTransactions?: null | components["schemas"]["PaymentInfoResponse"][];
             shippingInfo?: null | components["schemas"]["ShippingInfoResponse"];
             recipientInfo?: null | components["schemas"]["RecipientInfoResponse"];
-            orderDetails?: components["schemas"]["OrderDetailResponse"][];
+            orderDetails: components["schemas"]["OrderDetailResponse"][];
+        };
+        OrderReturnRequestDetailResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            orderDetailId?: string;
+            /** Format: uuid */
+            variantId?: string;
+            /** Format: int32 */
+            requestedQuantity?: number;
+            /** Format: decimal */
+            unitPrice?: number;
         };
         OrderReturnRequestResponse: {
             /** Format: uuid */
@@ -12880,7 +13172,7 @@ export interface components {
             /** Format: uuid */
             inspectedById?: null | string;
             inspectedByName?: null | string;
-            reason?: string;
+            reason: string;
             customerNote?: null | string;
             staffNote?: null | string;
             inspectionNote?: null | string;
@@ -12892,14 +13184,15 @@ export interface components {
             isRefunded?: boolean;
             vnpTransactionNo?: null | string;
             isRestocked?: boolean;
-            proofImages?: components["schemas"]["MediaResponse"][];
+            returnDetails?: null | components["schemas"]["OrderReturnRequestDetailResponse"][];
+            proofImages?: null | components["schemas"]["MediaResponse"][];
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: null | string;
         };
         /** @enum {string} */
-        OrderStatus: "Pending" | "Processing" | "Delivering" | "Delivered" | "Returning" | "Cancelled" | "Returned";
+        OrderStatus: "Pending" | "Processing" | "Delivering" | "Delivered" | "Returning" | "Cancelled" | "Partial_Returned" | "Returned";
         /** @enum {string} */
         OrderType: "Online" | "Offline";
         PagedResultOfAvailableVoucherResponse: {
@@ -13045,6 +13338,19 @@ export interface components {
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
+        PagedResultOfShippingInfoListItem: {
+            items: components["schemas"]["ShippingInfoListItem"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
         PagedResultOfStockAdjustmentListItem: {
             items: components["schemas"]["StockAdjustmentListItem"][];
             /** Format: int32 */
@@ -13113,6 +13419,7 @@ export interface components {
         PaymentInfoResponse: {
             /** Format: uuid */
             id?: string;
+            transactionType?: components["schemas"]["TransactionType"];
             status?: components["schemas"]["TransactionStatus"];
             paymentMethod?: components["schemas"]["PaymentMethod"];
             failureReason?: null | string;
@@ -13131,7 +13438,7 @@ export interface components {
             reservationId?: string;
             /** Format: uuid */
             batchId?: string;
-            batchCode?: string;
+            batchCode: string;
             note?: null | string;
             /** Format: int32 */
             reservedQuantity?: number;
@@ -13143,18 +13450,19 @@ export interface components {
             orderDetailId?: string;
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
+            variantName: string;
             /** Format: int32 */
             quantity?: number;
-            batches?: components["schemas"]["PickListBatchInfo"][];
+            batches: components["schemas"]["PickListBatchInfo"][];
         };
         PickListResponse: {
             /** Format: uuid */
             orderId?: string;
-            items?: components["schemas"]["PickListItemResponse"][];
+            code: string;
+            items: components["schemas"]["PickListItemResponse"][];
         };
         PreviewOrderResponse: {
-            items?: components["schemas"]["OrderDetailListItems"][];
+            items: components["schemas"]["OrderDetailListItems"][];
             /** Format: decimal */
             subTotal?: number;
             /** Format: decimal */
@@ -13193,49 +13501,49 @@ export interface components {
             attributeId?: number;
             /** Format: int32 */
             valueId?: number;
-            attribute?: string;
-            description?: string;
-            value?: string;
+            attribute: string;
+            description?: null | string;
+            value: string;
         };
         ProductDailySaleFigureResponse: {
             /** Format: uuid */
             productId?: string;
-            productName?: string;
-            dailySaleFigures?: components["schemas"]["VariantDailySaleFigure"][];
+            productName: string;
+            dailySaleFigures: components["schemas"]["VariantDailySaleFigure"][];
         };
         ProductFastLookResponse: {
             /** Format: uuid */
             id?: string;
-            name?: string;
+            name: string;
             description?: null | string;
-            brandName?: string;
+            brandName: string;
             gender?: components["schemas"]["Gender"];
-            variants?: components["schemas"]["VariantFastLookResponse"][];
+            variants: components["schemas"]["VariantFastLookResponse"][];
             /** Format: int32 */
             rating?: number;
             /** Format: int32 */
             reviewCount?: number;
         };
         ProductImageUploadItem: {
-            imageFile?: components["schemas"]["IFormFile"];
+            imageFile: components["schemas"]["IFormFile"];
             altText?: null | string;
             /** Format: int32 */
             displayOrder?: number;
             isPrimary?: boolean;
         };
         ProductInforResponse: {
-            productCode?: string;
-            brandName?: string;
-            origin?: string;
+            productCode: string;
+            brandName: string;
+            origin: string;
             /** Format: int32 */
             releaseYear?: number;
             gender?: components["schemas"]["Gender"];
-            scentGroup?: string;
-            style?: string;
-            topNotes?: string;
-            heartNotes?: string;
-            baseNotes?: string;
-            description?: string;
+            scentGroup: string;
+            style: string;
+            topNotes: string;
+            heartNotes: string;
+            baseNotes: string;
+            description: string;
         };
         ProductListItem: {
             /** Format: uuid */
@@ -13243,86 +13551,86 @@ export interface components {
             name?: null | string;
             /** Format: int32 */
             brandId?: number;
-            brandName?: string;
+            brandName: string;
             /** Format: int32 */
             categoryId?: number;
-            categoryName?: string;
+            categoryName: string;
             description?: null | string;
             /** Format: int32 */
             numberOfVariants?: number;
-            variantPrices?: number[];
-            tags?: string[];
+            variantPrices: number[];
+            tags?: null | string[];
             primaryImage?: null | components["schemas"]["MediaResponse"];
         };
         ProductListItemWithVariants: {
-            variants?: components["schemas"]["VariantSummaryItem"][];
+            variants: components["schemas"]["VariantSummaryItem"][];
             /** Format: uuid */
             id?: string;
             name?: null | string;
             /** Format: int32 */
             brandId?: number;
-            brandName?: string;
+            brandName: string;
             /** Format: int32 */
             categoryId?: number;
-            categoryName?: string;
+            categoryName: string;
             description?: null | string;
             /** Format: int32 */
             numberOfVariants?: number;
-            variantPrices?: number[];
-            tags?: string[];
+            variantPrices: number[];
+            tags?: null | string[];
             primaryImage?: null | components["schemas"]["MediaResponse"];
         };
         ProductLookupItem: {
             /** Format: uuid */
             id?: string;
-            name?: string;
-            brandName?: string;
+            name: string;
+            brandName: string;
             primaryImageUrl?: null | string;
         };
         ProductOlfactoryFamilyResponse: {
             /** Format: int32 */
             olfactoryFamilyId?: number;
-            name?: string;
+            name: string;
         };
         ProductResponse: {
             /** Format: uuid */
             id?: string;
             name?: null | string;
             gender?: components["schemas"]["Gender"];
-            origin?: string;
+            origin: string;
             /** Format: int32 */
             releaseYear?: number;
             /** Format: int32 */
             brandId?: number;
-            brandName?: string;
+            brandName: string;
             /** Format: int32 */
             categoryId?: number;
-            categoryName?: string;
+            categoryName: string;
             description?: null | string;
             /** Format: int32 */
             numberOfVariants?: number;
-            media?: components["schemas"]["MediaResponse"][];
-            variants?: components["schemas"]["ProductVariantResponse"][];
-            attributes?: components["schemas"]["ProductAttributeResponse"][];
-            olfactoryFamilies?: components["schemas"]["ProductOlfactoryFamilyResponse"][];
-            scentNotes?: components["schemas"]["ProductScentNoteResponse"][];
+            media: components["schemas"]["MediaResponse"][];
+            variants: components["schemas"]["ProductVariantResponse"][];
+            attributes: components["schemas"]["ProductAttributeResponse"][];
+            olfactoryFamilies: components["schemas"]["ProductOlfactoryFamilyResponse"][];
+            scentNotes: components["schemas"]["ProductScentNoteResponse"][];
         };
         ProductScentNoteResponse: {
             /** Format: int32 */
             noteId?: number;
-            name?: string;
+            name: string;
             type?: components["schemas"]["NoteType"];
         };
         ProductVariantResponse: {
             /** Format: uuid */
             id?: string;
-            barcode?: string;
-            sku?: string;
+            barcode: string;
+            sku: string;
             /** Format: int32 */
             volumeMl?: number;
             /** Format: int32 */
             concentrationId?: number;
-            concentrationName?: string;
+            concentrationName: string;
             type?: components["schemas"]["VariantType"];
             /** Format: decimal */
             basePrice?: number;
@@ -13337,8 +13645,8 @@ export interface components {
             longevity?: number;
             /** Format: uuid */
             productId?: string;
-            productName?: string;
-            media?: components["schemas"]["MediaResponse"][];
+            productName: string;
+            media: components["schemas"]["MediaResponse"][];
             campaignName?: null | string;
             voucherCode?: null | string;
             /** Format: decimal */
@@ -13352,36 +13660,36 @@ export interface components {
             minBudget?: null | number;
             /** Format: decimal */
             maxBudget?: null | number;
-            notePreferences?: components["schemas"]["CustomerNotePreferenceResponse"][];
-            familyPreferences?: components["schemas"]["CustomerFamilyPreferenceRespone"][];
-            attributePreferences?: components["schemas"]["CustomerAttributePreferenceResponse"][];
+            notePreferences: components["schemas"]["CustomerNotePreferenceResponse"][];
+            familyPreferences: components["schemas"]["CustomerFamilyPreferenceRespone"][];
+            attributePreferences: components["schemas"]["CustomerAttributePreferenceResponse"][];
         };
         /** @enum {string} */
         PromotionType: "Clearance" | "NewArrival" | "Regular";
         ProvinceResponse: {
             /** Format: int32 */
             ProvinceID?: number;
-            ProvinceName?: string;
+            ProvinceName: string;
             /** Format: int32 */
             CountryID?: number;
             /** Format: int32 */
             Code?: number;
-            NameExtension?: string[];
+            NameExtension?: null | string[];
             /** Format: int32 */
             IsEnable?: number;
             /** Format: int32 */
             RegionID?: number;
             /** Format: int32 */
             UpdatedBy?: number;
-            CreatedAt?: string;
-            UpdatedAt?: string;
+            CreatedAt?: null | string;
+            UpdatedAt?: null | string;
             CanUpdateCOD?: boolean;
             /** Format: int32 */
             Status?: number;
         };
         ReceiptItemDto: {
-            productName?: string;
-            variantInfo?: string;
+            productName: string;
+            variantInfo: string;
             /** Format: int32 */
             quantity?: number;
             /** Format: decimal */
@@ -13392,14 +13700,15 @@ export interface components {
         ReceiptResponse: {
             /** Format: uuid */
             orderId?: string;
+            code: string;
             /** Format: date-time */
             orderDate?: string;
-            orderStatus?: string;
-            staffName?: string;
-            customerName?: string;
-            recipientPhone?: string;
-            recipientAddress?: string;
-            items?: components["schemas"]["ReceiptItemDto"][];
+            orderStatus: string;
+            staffName: string;
+            customerName: string;
+            recipientPhone: string;
+            recipientAddress: string;
+            items: components["schemas"]["ReceiptItemDto"][];
             /** Format: decimal */
             subtotal?: number;
             /** Format: decimal */
@@ -13408,7 +13717,7 @@ export interface components {
             tax?: number;
             /** Format: decimal */
             total?: number;
-            paymentMethod?: string;
+            paymentMethod: string;
             note?: null | string;
         };
         RecipientInfoResponse: {
@@ -13416,23 +13725,10 @@ export interface components {
             id?: string;
             recipientName?: null | string;
             recipientPhoneNumber?: null | string;
-            districtName?: string;
-            wardName?: string;
-            provinceName?: string;
-            fullAddress?: string;
-        };
-        RecipientInformation: {
-            recipientName?: string;
-            recipientPhoneNumber?: string;
-            /** Format: int32 */
-            districtId?: number;
-            districtName?: string;
-            wardCode?: string;
-            wardName?: string;
-            /** Format: int32 */
-            provinceId?: number;
-            provinceName?: string;
-            fullAddress?: string;
+            districtName: string;
+            wardName: string;
+            provinceName: string;
+            fullAddress: string;
         };
         RecordInspectionDto: {
             /** Format: decimal */
@@ -13443,7 +13739,7 @@ export interface components {
         RedeemableVoucherResponse: {
             /** Format: uuid */
             id?: string;
-            code?: string;
+            code: string;
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
@@ -13465,12 +13761,12 @@ export interface components {
             receiverEmailOrPhone?: null | string;
         };
         RegisterRequest: {
-            fullName?: string;
+            fullName: string;
             phoneNumber: string;
             /** Format: email */
             email: string;
-            password?: string;
-            clientUri?: string;
+            password: string;
+            clientUri: string;
         };
         RejectInspectionDto: {
             note: string;
@@ -13478,7 +13774,7 @@ export interface components {
         ReservedBatchResponse: {
             /** Format: uuid */
             batchId?: string;
-            batchCode?: string;
+            batchCode: string;
             /** Format: int32 */
             reservedQuantity?: number;
             /** Format: date-time */
@@ -13492,6 +13788,14 @@ export interface components {
             token: string;
         };
         ResponseErrorType: number;
+        ReturnItemDto: {
+            /** Format: uuid */
+            orderDetailId?: string;
+            /** Format: int32 */
+            quantity?: number;
+        };
+        /** @enum {string} */
+        ReturnOrderReason: "DamagedProduct" | "WrongItemReceived" | "ItemNotAsDescribed" | "ChangedMind" | "AllergicReaction";
         /** @enum {string} */
         ReturnRequestStatus: "Pending" | "ApprovedForReturn" | "Inspecting" | "ReadyForRefund" | "Completed" | "Rejected";
         RevenueSummaryResponse: {
@@ -13515,7 +13819,7 @@ export interface components {
             id?: string;
             /** Format: uuid */
             userId?: string;
-            userFullName?: string;
+            userFullName: string;
             userProfilePictureUrl?: null | string;
             /** Format: uuid */
             orderDetailId?: string;
@@ -13527,15 +13831,15 @@ export interface components {
             unitPrice?: number;
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
-            productName?: string;
+            variantName: string;
+            productName: string;
             /** Format: int32 */
             volumeMl?: number;
-            concentrationName?: string;
+            concentrationName: string;
             /** Format: int32 */
             rating?: number;
-            comment?: string;
-            images?: components["schemas"]["MediaResponse"][];
+            comment: string;
+            images: components["schemas"]["MediaResponse"][];
             staffFeedbackComment?: null | string;
             /** Format: uuid */
             staffFeedbackByStaffId?: null | string;
@@ -13551,14 +13855,14 @@ export interface components {
             id?: string;
             /** Format: uuid */
             userId?: string;
-            userFullName?: string;
+            userFullName: string;
             userProfilePictureUrl?: null | string;
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
+            variantName: string;
             /** Format: int32 */
             rating?: number;
-            commentPreview?: string;
+            commentPreview: string;
             /** Format: int32 */
             imageCount?: number;
             /** Format: date-time */
@@ -13569,20 +13873,20 @@ export interface components {
             id?: string;
             /** Format: uuid */
             userId?: string;
-            userFullName?: string;
+            userFullName: string;
             userProfilePictureUrl?: null | string;
             /** Format: uuid */
             orderDetailId?: string;
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
+            variantName: string;
             /** Format: int32 */
             rating?: number;
-            comment?: string;
+            comment: string;
             staffFeedbackComment?: null | string;
             /** Format: date-time */
             staffFeedbackAt?: null | string;
-            images?: components["schemas"]["MediaResponse"][];
+            images: components["schemas"]["MediaResponse"][];
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
@@ -13614,12 +13918,28 @@ export interface components {
         ScentNoteLookupResponse: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
         };
         ScentNoteResponse: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
+        };
+        ShippingInfoListItem: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            orderId?: string;
+            carrierName?: components["schemas"]["CarrierName"];
+            trackingNumber?: null | string;
+            /** Format: decimal */
+            shippingFee?: number;
+            type?: components["schemas"]["ShippingType"];
+            status?: components["schemas"]["ShippingStatus"];
+            /** Format: date-time */
+            leadTime?: null | string;
+            /** Format: date-time */
+            shippedDate?: null | string;
         };
         ShippingInfoResponse: {
             /** Format: uuid */
@@ -13629,18 +13949,20 @@ export interface components {
             /** Format: decimal */
             shippingFee?: number;
             status?: components["schemas"]["ShippingStatus"];
-            /** Format: int32 */
-            leadTime?: null | number;
+            /** Format: date-time */
+            estimatedDeliveryDate?: null | string;
             /** Format: date-time */
             shippedDate?: null | string;
         };
         ShippingStatus: number;
+        /** @enum {string} */
+        ShippingType: "Forward" | "Return";
         StaffLookupItem: {
             /** Format: uuid */
             id?: string;
-            userName?: string;
-            fullName?: string;
-            email?: string;
+            userName: string;
+            fullName: string;
+            email: string;
         };
         StartInspectionDto: {
             inspectionNote?: null | string;
@@ -13650,11 +13972,11 @@ export interface components {
             id?: string;
             /** Format: uuid */
             productVariantId?: string;
-            productName?: string;
-            variantSku?: string;
+            productName: string;
+            variantSku: string;
             /** Format: uuid */
             batchId?: string;
-            batchCode?: string;
+            batchCode: string;
             /** Format: int32 */
             adjustmentQuantity?: number;
             /** Format: int32 */
@@ -13664,7 +13986,7 @@ export interface components {
         StockAdjustmentListItem: {
             /** Format: uuid */
             id?: string;
-            createdByName?: string;
+            createdByName: string;
             /** Format: date-time */
             adjustmentDate?: string;
             reason?: components["schemas"]["StockAdjustmentReason"];
@@ -13681,7 +14003,7 @@ export interface components {
             id?: string;
             /** Format: uuid */
             createdById?: string;
-            createdByName?: string;
+            createdByName: string;
             /** Format: uuid */
             verifiedById?: null | string;
             verifiedByName?: null | string;
@@ -13690,7 +14012,7 @@ export interface components {
             reason?: components["schemas"]["StockAdjustmentReason"];
             note?: null | string;
             status?: components["schemas"]["StockAdjustmentStatus"];
-            adjustmentDetails?: components["schemas"]["StockAdjustmentDetailResponse"][];
+            adjustmentDetails: components["schemas"]["StockAdjustmentDetailResponse"][];
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
@@ -13703,12 +14025,12 @@ export interface components {
             id?: string;
             /** Format: uuid */
             variantId?: string;
-            variantSku?: string;
-            productName?: string;
-            variantImageUrl?: string;
+            variantSku: string;
+            productName: string;
+            variantImageUrl: string;
             /** Format: int32 */
             volumeMl?: number;
-            concentrationName?: string;
+            concentrationName: string;
             /** Format: int32 */
             totalQuantity?: number;
             /** Format: int32 */
@@ -13731,17 +14053,17 @@ export interface components {
         SupplierLookupItem: {
             /** Format: int32 */
             id?: number;
-            name?: string;
+            name: string;
             phone?: null | string;
             contactEmail?: null | string;
         };
         SupplierResponse: {
             /** Format: int32 */
             id?: number;
-            name?: string;
-            contactEmail?: string;
-            phone?: string;
-            address?: string;
+            name: string;
+            contactEmail: string;
+            phone: string;
+            address: string;
         };
         SwapDamagedStockRequest: {
             /** Format: uuid */
@@ -13753,18 +14075,18 @@ export interface components {
             newReservationId?: string;
             /** Format: uuid */
             newBatchId?: string;
-            newBatchCode?: string;
+            newBatchCode: string;
             newLocation?: null | string;
             /** Format: int32 */
             reservedQuantity?: number;
             /** Format: date-time */
             expiryDate?: string;
-            message?: string;
+            message: string;
         };
         TemporaryMediaResponse: {
             /** Format: uuid */
             id?: string;
-            url?: string;
+            url: string;
             altText?: null | string;
             /** Format: int32 */
             displayOrder?: number;
@@ -13782,21 +14104,23 @@ export interface components {
         TopProductResponse: {
             /** Format: uuid */
             productId?: string;
-            productName?: string;
+            productName: string;
             /** Format: int32 */
             totalUnitsSold?: number;
             /** Format: decimal */
             revenue?: number;
         };
         /** @enum {string} */
-        TransactionStatus: "Pending" | "Success" | "Failed" | "Cancelled" | "Refunded";
+        TransactionStatus: "Pending" | "Success" | "Failed" | "Cancelled";
+        /** @enum {string} */
+        TransactionType: "Payment" | "Refund";
         UpdateAddressRequest: {
             recipientName: string;
             recipientPhoneNumber: string;
-            street?: string;
-            ward?: string;
-            district?: string;
-            city?: string;
+            street: string;
+            ward: string;
+            district: string;
+            city: string;
             wardCode: string;
             /** Format: int32 */
             districtId?: number;
@@ -13812,7 +14136,7 @@ export interface components {
             value: string;
         };
         UpdateBrandRequest: {
-            name?: string;
+            name: string;
         };
         UpdateCampaignPromotionItemRequest: {
             /** Format: uuid */
@@ -13834,7 +14158,7 @@ export interface components {
             endDate?: string;
             type?: components["schemas"]["CampaignType"];
             items: components["schemas"]["UpdateCampaignPromotionItemRequest"][];
-            vouchers?: components["schemas"]["UpdateCampaignVoucherRequest"][];
+            vouchers: components["schemas"]["UpdateCampaignVoucherRequest"][];
         };
         UpdateCampaignStatusRequest: {
             status?: components["schemas"]["CampaignStatus"];
@@ -13842,7 +14166,7 @@ export interface components {
         UpdateCampaignVoucherRequest: {
             /** Format: uuid */
             id?: null | string;
-            code?: string;
+            code: string;
             /** Format: decimal */
             discountValue?: number;
             targetItemType?: components["schemas"]["PromotionType"];
@@ -13870,11 +14194,11 @@ export interface components {
             unitPrice?: number;
         };
         UpdateImportRequest: {
+            importDetails: components["schemas"]["UpdateImportDetailRequest"][];
             /** Format: int32 */
             supplierId?: number;
             /** Format: date-time */
             expectedArrivalDate: string;
-            importDetails: components["schemas"]["UpdateImportDetailRequest"][];
         };
         UpdateImportStatusRequest: {
             status?: components["schemas"]["ImportStatus"];
@@ -13890,14 +14214,14 @@ export interface components {
         UpdateOrderAddressRequest: {
             /** Format: uuid */
             savedAddressId?: null | string;
-            recipientInformation?: null | components["schemas"]["RecipientInformation"];
+            recipientInformation?: null | components["schemas"]["ContactAddressInformation"];
         };
         UpdateOrderStatusRequest: {
             status?: components["schemas"]["OrderStatus"];
             note?: null | string;
         };
         UpdateProductRequest: {
-            name?: string;
+            name: string;
             /** Format: int32 */
             brandId?: number;
             /** Format: int32 */
@@ -13907,8 +14231,8 @@ export interface components {
             origin: string;
             /** Format: int32 */
             releaseYear?: number;
-            olfactoryFamilyIds?: number[];
-            scentNotes?: components["schemas"]["ScentNoteDto"][];
+            olfactoryFamilyIds: number[];
+            scentNotes: components["schemas"]["ScentNoteDto"][];
             attributes?: null | components["schemas"]["ProductAttributeDto"][];
             temporaryMediaIdsToAdd?: null | string[];
             mediaIdsToDelete?: null | string[];
@@ -13920,9 +14244,9 @@ export interface components {
             minBudget?: null | number;
             /** Format: decimal */
             maxBudget?: null | number;
-            notePreferenceIds?: components["schemas"]["UpdateNotePreferenceRequest"][];
-            familyPreferenceIds?: number[];
-            attributePreferenceIds?: number[];
+            notePreferenceIds?: null | components["schemas"]["UpdateNotePreferenceRequest"][];
+            familyPreferenceIds?: null | number[];
+            attributePreferenceIds?: null | number[];
         };
         UpdateScentNoteRequest: {
             name: string;
@@ -13940,7 +14264,7 @@ export interface components {
         };
         UpdateVariantRequest: {
             sku: string;
-            barcode?: string;
+            barcode: string;
             /** Format: int32 */
             volumeMl?: number;
             /** Format: int32 */
@@ -13960,7 +14284,7 @@ export interface components {
             attributes?: null | components["schemas"]["ProductAttributeDto"][];
         };
         UpdateVoucherRequest: {
-            code?: string;
+            code: string;
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
@@ -13979,16 +14303,16 @@ export interface components {
         };
         UsageStatus: number;
         UserCancelOrderRequest: {
-            reason?: null | string;
+            reason?: components["schemas"]["CancelOrderReason"];
         };
         UserCredentialsResponse: {
             /** Format: uuid */
             id?: string;
             /** Format: int32 */
             loyaltyPoint?: number;
-            fullName?: string;
-            phoneNumber?: string;
-            email?: string;
+            fullName: string;
+            phoneNumber: string;
+            email: string;
             profilePictureUrl?: null | string;
         };
         UserOrderResponse: {
@@ -14012,7 +14336,7 @@ export interface components {
             paymentTransactions?: null | components["schemas"]["PaymentInfoResponse"][];
             shippingInfo?: null | components["schemas"]["ShippingInfoResponse"];
             recipientInfo?: null | components["schemas"]["RecipientInfoResponse"];
-            orderDetails?: components["schemas"]["OrderDetailResponse"][];
+            orderDetails: components["schemas"]["OrderDetailResponse"][];
         };
         /** @enum {string} */
         UserRole: "admin" | "user" | "staff";
@@ -14021,16 +14345,16 @@ export interface components {
             id?: string;
             /** Format: uuid */
             voucherId?: string;
-            code?: string;
+            code: string;
             /** Format: decimal */
             discountValue?: number;
-            discountType?: string;
+            discountType: string;
             /** Format: decimal */
             minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
             isUsed?: boolean;
-            status?: string;
+            status: string;
             isExpired?: boolean;
             /** Format: date-time */
             redeemedAt?: string;
@@ -14038,7 +14362,7 @@ export interface components {
         VariantDailySaleFigure: {
             /** Format: uuid */
             variantId?: string;
-            variantName?: string;
+            variantName: string;
             /** Format: date */
             date?: string;
             /** Format: int32 */
@@ -14047,8 +14371,8 @@ export interface components {
         VariantFastLookResponse: {
             /** Format: uuid */
             id?: string;
-            sku?: string;
-            displayName?: string;
+            sku: string;
+            displayName: string;
             /** Format: decimal */
             price?: number;
             /** Format: decimal */
@@ -14058,7 +14382,7 @@ export interface components {
             media?: null | components["schemas"]["MediaResponse"];
         };
         VariantImageUploadItem: {
-            imageFile?: components["schemas"]["IFormFile"];
+            imageFile: components["schemas"]["IFormFile"];
             altText?: null | string;
             /** Format: int32 */
             displayOrder?: number;
@@ -14067,12 +14391,12 @@ export interface components {
         VariantLookupItem: {
             /** Format: uuid */
             id?: string;
-            barcode?: string;
-            sku?: string;
-            displayName?: string;
+            barcode: string;
+            sku: string;
+            displayName: string;
             /** Format: int32 */
             volumeMl?: number;
-            concentrationName?: string;
+            concentrationName: string;
             /** Format: decimal */
             basePrice?: number;
             primaryImageUrl?: null | string;
@@ -14083,13 +14407,13 @@ export interface components {
             /** Format: uuid */
             productId?: string;
             primaryImageUrl?: null | string;
-            barcode?: string;
-            sku?: string;
+            barcode: string;
+            sku: string;
             /** Format: int32 */
             volumeMl?: number;
             /** Format: int32 */
             concentrationId?: number;
-            concentrationName?: string;
+            concentrationName: string;
             type?: components["schemas"]["VariantType"];
             /** Format: decimal */
             basePrice?: number;
@@ -14105,8 +14429,8 @@ export interface components {
         VariantSummaryItem: {
             /** Format: uuid */
             id?: string;
-            displayName?: string;
-            concentrationName?: string;
+            displayName: string;
+            concentrationName: string;
         };
         /** @enum {string} */
         VariantType: "Standard" | "FullBox" | "Tester" | "Mini";
@@ -14116,7 +14440,7 @@ export interface components {
             /** Format: int32 */
             rejectedQuantity?: number;
             note?: null | string;
-            batches?: components["schemas"]["CreateBatchRequest"][];
+            batches: components["schemas"]["CreateBatchRequest"][];
         };
         VerifyImportTicketRequest: {
             importDetails: components["schemas"]["VerifyImportDetailRequest"][];
@@ -14134,7 +14458,7 @@ export interface components {
         VoucherResponse: {
             /** Format: uuid */
             id?: string;
-            code?: string;
+            code: string;
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
@@ -14160,18 +14484,18 @@ export interface components {
         /** @enum {string} */
         VoucherType: "Order" | "Product";
         WardResponse: {
-            WardCode?: string;
+            WardCode: string;
             /** Format: int32 */
             DistrictID?: number;
-            WardName?: string;
-            NameExtension?: string[];
+            WardName: string;
+            NameExtension: string[];
             CanUpdateCOD?: boolean;
             /** Format: int32 */
             SupportType?: number;
             /** Format: int32 */
             Status?: number;
-            CreatedDate?: string;
-            UpdatedDate?: string;
+            CreatedDate: string;
+            UpdatedDate: string;
         };
     };
     responses: never;

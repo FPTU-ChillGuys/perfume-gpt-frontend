@@ -66,7 +66,8 @@ const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: orderStatusLabels["Delivering"], value: "Delivering" },
   { label: orderStatusLabels["Delivered"], value: "Delivered" },
   { label: orderStatusLabels["Cancelled"], value: "Cancelled" },
-  { label: orderStatusLabels["Returned"], value: "Returned" },
+  { label: orderStatusLabels["Partial_Returned"], value: "Partial_Returned" },
+  { label: "Trả hàng/Hoàn tiền", value: "Returning" },
 ];
 
 const formatCurrency = (value?: number | null) => {

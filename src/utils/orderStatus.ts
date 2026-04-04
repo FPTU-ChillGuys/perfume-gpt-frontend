@@ -8,6 +8,7 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   Delivered: "Đã giao hàng",
   Returning: "Đang hoàn trả",
   Cancelled: "Đã hủy",
+  Partial_Returned: "Trả hàng một phần",
   Returned: "Đã trả hàng",
 };
 
@@ -35,11 +36,12 @@ export const orderStatusColors: Record<
   Delivered: "success", // 🟢 Xanh lá - Đã giao hàng
   Returning: "warning", // 🟠 Cam - Đang trong quy trình hoàn trả
   Cancelled: "error", // 🔴 Đỏ - Đã hủy
+  Partial_Returned: "default", // Hồng sẽ được áp qua sx để đồng nhất mọi màn hình
   Returned: "default", // Hồng sẽ được áp qua sx để đồng nhất mọi màn hình
 };
 
 export const getOrderStatusChipSx = (status?: OrderStatus) => {
-  if (status !== "Returned") return undefined;
+  if (status !== "Returned" && status !== "Partial_Returned") return undefined;
 
   return {
     bgcolor: "#fce7f3",
