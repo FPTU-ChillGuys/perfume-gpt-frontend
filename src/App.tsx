@@ -11,6 +11,7 @@ import { ProductQuickViewProvider } from "./contexts/ProductQuickViewContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
 import { CustomerPurchaseRoute } from "./components/common/CustomerPurchaseRoute";
+import { PublicOnlyRoute } from "./components/common/PublicOnlyRoute";
 import { ChatbotWidgetWrapper } from "./components/chatbot/ChatbotWidgetWrapper";
 import "./App.css";
 
@@ -200,7 +201,14 @@ function App() {
                     <Routes>
                       <Route path="/" element={<HomePage />} />
                       <Route path="/login" element={<LoginPage />} />
-                      <Route path="/register" element={<RegisterPage />} />
+                      <Route
+                        path="/register"
+                        element={
+                          <PublicOnlyRoute>
+                            <RegisterPage />
+                          </PublicOnlyRoute>
+                        }
+                      />
                       <Route
                         path="/forgot-password"
                         element={<ForgotPasswordPage />}

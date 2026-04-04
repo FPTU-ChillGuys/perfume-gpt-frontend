@@ -6,6 +6,7 @@ import {
   ArrowForward,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 const features = [
   {
@@ -24,6 +25,7 @@ const features = [
 
 export const FeatureSection = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   return (
     <Box sx={{ py: 8, bgcolor: "background.paper" }}>
       <Container maxWidth="xl">
@@ -67,35 +69,37 @@ export const FeatureSection = () => {
         </Grid>
 
         {/* Signup Section */}
-        <Box sx={{ maxWidth: 768, mx: "auto", textAlign: "center", mt: 6 }}>
-          <Typography variant="h4" component="h2" fontWeight="bold" mb={2}>
-            Hãy là người đầu tiên được biết
-          </Typography>
-          <Typography variant="body1" color="text.secondary" mb={4}>
-            Nhận ngay thông tin về các sản phẩm mới nhất và các ưu đãi đặc biệt
-            chỉ dành cho những khách hàng đặc biệt của PerfumeGPT
-          </Typography>
-          <Button
-            variant="outlined"
-            size="large"
-            color="secondary"
-            endIcon={<ArrowForward />}
-            sx={{
-              borderWidth: 2,
-              "&:hover": {
+        {!isAuthenticated && (
+          <Box sx={{ maxWidth: 768, mx: "auto", textAlign: "center", mt: 6 }}>
+            <Typography variant="h4" component="h2" fontWeight="bold" mb={2}>
+              Hãy là người đầu tiên được biết
+            </Typography>
+            <Typography variant="body1" color="text.secondary" mb={4}>
+              Nhận ngay thông tin về các sản phẩm mới nhất và các ưu đãi đặc
+              biệt chỉ dành cho những khách hàng đặc biệt của PerfumeGPT
+            </Typography>
+            <Button
+              variant="outlined"
+              size="large"
+              color="secondary"
+              endIcon={<ArrowForward />}
+              sx={{
                 borderWidth: 2,
-                bgcolor: "secondary.main",
-                color: "white",
-              },
-            }}
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/register");
-            }}
-          >
-            ĐĂNG KÝ NGAY
-          </Button>
-        </Box>
+                "&:hover": {
+                  borderWidth: 2,
+                  bgcolor: "secondary.main",
+                  color: "white",
+                },
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/register");
+              }}
+            >
+              ĐĂNG KÝ NGAY
+            </Button>
+          </Box>
+        )}
       </Container>
     </Box>
   );
