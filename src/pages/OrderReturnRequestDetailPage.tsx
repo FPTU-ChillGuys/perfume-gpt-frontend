@@ -586,17 +586,6 @@ export const OrderReturnRequestDetailPage = () => {
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
-                      Mã đơn hàng
-                    </Typography>
-                    <Typography
-                      fontWeight={700}
-                      sx={{ fontFamily: "monospace", fontSize: 15 }}
-                    >
-                      {request.orderCode || "-"}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
                       Trạng thái
                     </Typography>
                     <Box>
