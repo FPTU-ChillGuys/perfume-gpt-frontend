@@ -7399,6 +7399,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payments/management-transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    FromDate?: string;
+                    ToDate?: string;
+                    PaymentMethod?: components["schemas"]["PaymentMethod"];
+                    TransactionType?: components["schemas"]["TransactionType"];
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/products/{productId}/information": {
         parameters: {
             query?: never;
@@ -12278,6 +12336,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfPaymentTransactionOverviewResponse: {
+            payload?: null | components["schemas"]["PaymentTransactionOverviewResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfPickListResponse: {
             payload?: null | components["schemas"]["PickListResponse"];
             success?: boolean;
@@ -13373,6 +13438,19 @@ export interface components {
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
+        PagedResultOfPaymentTransactionAdminItemResponse: {
+            items: components["schemas"]["PaymentTransactionAdminItemResponse"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
         PagedResultOfProductListItem: {
             items: components["schemas"]["ProductListItem"][];
             /** Format: int32 */
@@ -13507,6 +13585,55 @@ export interface components {
         PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore";
         /** @enum {string} */
         PaymentStatus: "Unpaid" | "Paid" | "Partial_Refunded" | "Refunded";
+        PaymentTransactionAdminItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            orderId?: string;
+            method?: components["schemas"]["PaymentMethod"];
+            transactionType?: components["schemas"]["TransactionType"];
+            transactionStatus?: components["schemas"]["TransactionStatus"];
+            /** Format: decimal */
+            amount?: number;
+            gatewayTransactionNo?: null | string;
+            failureReason?: null | string;
+            /** Format: uuid */
+            originalPaymentId?: null | string;
+            /** Format: int32 */
+            retryAttempt?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: null | string;
+        };
+        PaymentTransactionOverviewResponse: {
+            summary: components["schemas"]["PaymentTransactionSummaryResponse"];
+            transactions: components["schemas"]["PagedResultOfPaymentTransactionAdminItemResponse"];
+        };
+        PaymentTransactionSummaryResponse: {
+            /** Format: date-time */
+            fromDate?: string;
+            /** Format: date-time */
+            toDate?: string;
+            /** Format: int32 */
+            totalTransactions?: number;
+            /** Format: int32 */
+            totalPaymentTransactions?: number;
+            /** Format: int32 */
+            totalRefundTransactions?: number;
+            /** Format: int32 */
+            pendingTransactionsCount?: number;
+            /** Format: int32 */
+            successTransactionsCount?: number;
+            /** Format: int32 */
+            failedTransactionsCount?: number;
+            /** Format: int32 */
+            cancelledTransactionsCount?: number;
+            /** Format: decimal */
+            totalPaymentAmount?: number;
+            /** Format: decimal */
+            totalRefundAmount?: number;
+        };
         PickListBatchInfo: {
             /** Format: uuid */
             reservationId?: string;
