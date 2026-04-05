@@ -75,7 +75,7 @@ export default function AIInstructionEditDialog({ open, isSaving, initialData, o
                 </IconButton>
             </DialogTitle>
 
-            <DialogContent sx={{ p: 4, bgcolor: "#f8f9fa" }}>
+            <DialogContent sx={{ p: 4, bgcolor: "background.default" }}>
                 <Typography variant="subtitle2" color="text.secondary" sx={{ m: 1, fontWeight: "bold" }}>
                     Nội dung chỉ thị (Markdown / Text)
                 </Typography>

@@ -1,4 +1,5 @@
 import { apiInstance } from "@/lib/api";
+import { getStoredAccessToken } from "@/utils/authStorage";
 import type {
   OrderListItem,
   OrderStatus,
@@ -49,23 +50,38 @@ export interface PagedCancelRequests {
 
 export type CreateReturnRequestDto =
   components["schemas"]["CreateReturnRequestDto"];
+export type ReturnOrderReason = components["schemas"]["ReturnOrderReason"];
+export type ContactAddressInformation =
+  components["schemas"]["ContactAddressInformation"];
 export interface CreateReturnRequestPayload {
   orderId: string;
-  reason: string;
-  requestedRefundAmount?: number;
+  reason: ReturnOrderReason;
+  returnItems: {
+    orderDetailId: string;
+    quantity: number;
+  }[];
   customerNote?: string | null;
+  savedAddressId?: string | null;
+  recipient?: ContactAddressInformation | null;
   temporaryMediaIds?: string[] | null;
 }
 export type TemporaryMediaResponse =
   components["schemas"]["TemporaryMediaResponse"];
+export type UpdateReturnRequestDto =
+  components["schemas"]["UpdateReturnRequestDto"];
 export type ProcessInitialReturnDto =
   components["schemas"]["ProcessInitialReturnDto"];
 export type StartInspectionDto = components["schemas"]["StartInspectionDto"];
 export type RecordInspectionDto = components["schemas"]["RecordInspectionDto"];
 export type RejectInspectionDto = components["schemas"]["RejectInspectionDto"];
+export type ReturnRefundMethod = Extract<
+  PaymentMethod,
+  "VnPay" | "Momo" | "CashInStore"
+>;
 
 export type ReturnRequestStatus =
   | "Pending"
+  | "RequestMoreInfo"
   | "ApprovedForReturn"
   | "Inspecting"
   | "ReadyForRefund"
@@ -80,11 +96,33 @@ export interface ProofImage {
   altText?: string | null;
   displayOrder?: number;
   isPrimary?: boolean;
+  mimeType?: string | null;
+}
+
+export interface ReturnShippingInfo {
+  id?: string;
+  carrierName?: string | null;
+  trackingNumber?: string | null;
+  type?: string | null;
+  shippingFee?: number;
+  status?: string | null;
+  estimatedDeliveryDate?: string | null;
+  shippedDate?: string | null;
+}
+
+export interface ReturnRequestDetail {
+  id?: string;
+  orderDetailId?: string;
+  variantId?: string;
+  requestedQuantity?: number;
+  unitPrice?: number;
+  refundableAmount?: number;
 }
 
 export interface OrderReturnRequest {
   id?: string;
   orderId?: string;
+  orderCode: string;
   customerId?: string;
   requestedByEmail?: string | null;
   processedByName?: string | null;
@@ -100,7 +138,9 @@ export interface OrderReturnRequest {
   isRestocked?: boolean;
   createdAt?: string;
   updatedAt?: string | null;
+  returnDetails?: ReturnRequestDetail[];
   proofImages?: ProofImage[];
+  returnShippingInfo?: ReturnShippingInfo;
   [key: string]: unknown;
 }
 
@@ -173,16 +213,52 @@ class OrderService {
       isPrimary: Boolean(
         this.getValue<boolean>(img, ["isPrimary", "IsPrimary"]),
       ),
+      mimeType:
+        this.getValue<string | null>(img, ["mimeType", "MimeType"]) ?? null,
+    };
+  }
+
+  private normalizeReturnShippingInfo(info: unknown): ReturnShippingInfo {
+    return {
+      id: this.getValue<string>(info, ["id", "Id"]),
+      carrierName:
+        this.getValue<string | null>(info, ["carrierName", "CarrierName"]) ??
+        null,
+      trackingNumber:
+        this.getValue<string | null>(info, [
+          "trackingNumber",
+          "TrackingNumber",
+        ]) ?? null,
+      type: this.getValue<string | null>(info, ["type", "Type"]) ?? null,
+      shippingFee: Number(
+        this.getValue<number>(info, ["shippingFee", "ShippingFee"]) ?? 0,
+      ),
+      status: this.getValue<string | null>(info, ["status", "Status"]) ?? null,
+      estimatedDeliveryDate:
+        this.getValue<string | null>(info, [
+          "estimatedDeliveryDate",
+          "EstimatedDeliveryDate",
+        ]) ?? null,
+      shippedDate:
+        this.getValue<string | null>(info, ["shippedDate", "ShippedDate"]) ??
+        null,
     };
   }
 
   private normalizeReturnRequest(item: unknown): OrderReturnRequest {
     const rawProofImages =
       this.getValue<unknown[]>(item, ["proofImages", "ProofImages"]) || [];
+    const rawReturnDetails =
+      this.getValue<unknown[]>(item, ["returnDetails", "ReturnDetails"]) || [];
+    const rawReturnShippingInfo = this.getValue<unknown>(item, [
+      "returnShippingInfo",
+      "ReturnShippingInfo",
+    ]);
 
     return {
       id: this.getValue<string>(item, ["id", "Id"]),
       orderId: this.getValue<string>(item, ["orderId", "OrderId"]),
+      orderCode: this.getValue<string>(item, ["orderCode", "OrderCode"]) || "",
       customerId: this.getValue<string>(item, ["customerId", "CustomerId"]),
       requestedByEmail:
         this.getValue<string | null>(item, [
@@ -238,7 +314,98 @@ class OrderService {
         new Date().toISOString(),
       updatedAt:
         this.getValue<string | null>(item, ["updatedAt", "UpdatedAt"]) ?? null,
+      returnDetails: rawReturnDetails.map((detail) => ({
+        id: this.getValue<string>(detail, ["id", "Id"]),
+        orderDetailId: this.getValue<string>(detail, [
+          "orderDetailId",
+          "OrderDetailId",
+        ]),
+        variantId: this.getValue<string>(detail, ["variantId", "VariantId"]),
+        requestedQuantity: Number(
+          this.getValue<number>(detail, [
+            "requestedQuantity",
+            "RequestedQuantity",
+          ]) ?? 0,
+        ),
+        unitPrice: Number(
+          this.getValue<number>(detail, ["unitPrice", "UnitPrice"]) ?? 0,
+        ),
+        refundableAmount: Number(
+          this.getValue<number>(detail, [
+            "refundableAmount",
+            "RefundableAmount",
+          ]) ?? 0,
+        ),
+      })),
       proofImages: rawProofImages.map((img) => this.normalizeProofImage(img)),
+      returnShippingInfo: rawReturnShippingInfo
+        ? this.normalizeReturnShippingInfo(rawReturnShippingInfo)
+        : undefined,
+    };
+  }
+
+  private normalizeOrderListItem(item: unknown): OrderListItem {
+    const fallbackId = this.getValue<string>(item, [
+      "id",
+      "Id",
+      "orderId",
+      "OrderId",
+    ]);
+
+    const fallbackCode = this.getValue<string>(item, [
+      "code",
+      "Code",
+      "orderCode",
+      "OrderCode",
+    ]);
+
+    const rawOrderDetails =
+      this.getValue<unknown[]>(item, ["orderDetails", "OrderDetails"]) || [];
+
+    const orderDetails = rawOrderDetails.map((detail) => ({
+      ...(detail as components["schemas"]["OrderDetailListItem"]),
+      id: this.getValue<string>(detail, ["id", "Id"]),
+      variantId: this.getValue<string>(detail, ["variantId", "VariantId"]),
+      variantName:
+        this.getValue<string>(detail, ["variantName", "VariantName"]) || "",
+      imageUrl:
+        this.getValue<string | null>(detail, ["imageUrl", "ImageUrl"]) ?? null,
+      quantity: Number(
+        this.getValue<number>(detail, ["quantity", "Quantity"]) ?? 0,
+      ),
+      unitPrice: Number(
+        this.getValue<number>(detail, ["unitPrice", "UnitPrice"]) ?? 0,
+      ),
+      total: Number(this.getValue<number>(detail, ["total", "Total"]) ?? 0),
+    }));
+
+    return {
+      ...(item as OrderListItem),
+      id: fallbackId,
+      code: fallbackCode || fallbackId || "",
+      orderDetails,
+    };
+  }
+
+  private normalizeOrderResponse(item: unknown): OrderResponse {
+    const fallbackId = this.getValue<string>(item, [
+      "id",
+      "Id",
+      "orderId",
+      "OrderId",
+    ]);
+
+    const fallbackCode = this.getValue<string>(item, [
+      "code",
+      "Code",
+      "orderCode",
+      "OrderCode",
+    ]);
+
+    return {
+      ...(item as OrderResponse),
+      id: fallbackId,
+      code: fallbackCode || fallbackId || "",
     };
   }
 
@@ -256,8 +423,12 @@ class OrderService {
         throw new Error(response.data?.message || "Failed to fetch orders");
       }
 
+      const items = (response.data.payload.items || []).map((item) =>
+        this.normalizeOrderListItem(item),
+      );
+
       return {
-        items: response.data.payload.items || [],
+        items,
         totalCount: response.data.payload.totalCount || 0,
       };
     } catch (error: any) {
@@ -282,7 +453,13 @@ class OrderService {
         throw new Error(response.data?.message || "Failed to fetch orders");
       }
 
-      return response.data.payload;
+      const payload = response.data.payload;
+      return {
+        ...payload,
+        items: (payload.items || []).map((item) =>
+          this.normalizeOrderListItem(item),
+        ),
+      };
     } catch (error: any) {
       console.error("Error fetching all orders:", error);
       throw new Error(
@@ -382,7 +559,7 @@ class OrderService {
         query.set("IsDescending", String(params.IsDescending));
       }
 
-      const accessToken = localStorage.getItem("accessToken");
+      const accessToken = getStoredAccessToken();
       const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests${query.size ? `?${query.toString()}` : ""}`;
 
       const response = await fetch(endpoint, {
@@ -482,7 +659,7 @@ class OrderService {
         query.set("IsDescending", String(params.IsDescending));
       }
 
-      const accessToken = localStorage.getItem("accessToken");
+      const accessToken = getStoredAccessToken();
       const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/my-requests${query.size ? `?${query.toString()}` : ""}`;
 
       const response = await fetch(endpoint, {
@@ -707,20 +884,60 @@ class OrderService {
     }
   }
 
-  async refundReturnRequest(id: string): Promise<string> {
+  async updateReturnRequest(
+    id: string,
+    body: UpdateReturnRequestDto,
+  ): Promise<string> {
     try {
-      const { data, error, response } = await apiInstance.POST(
-        "/api/orderreturnrequests/{id}/refund",
+      const { data, error } = await apiInstance.PUT(
+        "/api/orderreturnrequests/{id}",
         {
           params: { path: { id } },
+          body,
         },
       );
 
       if (error) {
-        throw new Error((error as any)?.message || "Không thể hoàn tiền");
+        throw new Error(
+          (error as any)?.message || "Không thể cập nhật yêu cầu trả hàng",
+        );
       }
 
       if (!data?.success) {
+        throw new Error(data?.message || "Không thể cập nhật yêu cầu trả hàng");
+      }
+
+      return data.message || "Cập nhật yêu cầu trả hàng thành công";
+    } catch (error: any) {
+      console.error("Error updating return request:", error);
+      throw new Error(error?.message || "Không thể cập nhật yêu cầu trả hàng");
+    }
+  }
+
+  async refundReturnRequest(
+    id: string,
+    refundMethod: ReturnRefundMethod,
+  ): Promise<string> {
+    try {
+      const accessToken = getStoredAccessToken();
+      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/${id}/refund`;
+
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken
+            ? {
+                Authorization: `Bearer ${accessToken}`,
+              }
+            : {}),
+        },
+        body: JSON.stringify({ refundMethod }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
         throw new Error(data?.message || "Không thể hoàn tiền");
       }
 
@@ -731,21 +948,22 @@ class OrderService {
     }
   }
 
-  async uploadTemporaryReturnImages(
+  async uploadTemporaryReturnMedia(
     files: File[],
   ): Promise<TemporaryMediaResponse[]> {
     if (!files.length) {
       return [];
     }
 
-    const accessToken = localStorage.getItem("accessToken");
-    const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/images/temporary`;
-    let lastErrorMessage = "Không thể tải ảnh tạm thời";
+    const accessToken = getStoredAccessToken();
+    const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/videos/temporary`;
+    let lastErrorMessage = "Không thể tải tệp đính kèm tạm thời";
 
     const tryUpload = async (
       buildFormData: (fileList: File[]) => FormData,
+      endpointUrl = endpoint,
     ): Promise<TemporaryMediaResponse[] | null> => {
-      const response = await fetch(endpoint, {
+      const response = await fetch(endpointUrl, {
         method: "POST",
         headers: accessToken
           ? {
@@ -780,7 +998,7 @@ class OrderService {
     const strategyA = await tryUpload((fileList) => {
       const formData = new FormData();
       fileList.forEach((file) => {
-        formData.append("Images", file);
+        formData.append("Videos", file);
       });
       return formData;
     });
@@ -792,7 +1010,7 @@ class OrderService {
     const strategyB = await tryUpload((fileList) => {
       const formData = new FormData();
       fileList.forEach((file, index) => {
-        formData.append(`Images[${index}]`, file);
+        formData.append(`Videos[${index}]`, file);
       });
       return formData;
     });
@@ -804,7 +1022,7 @@ class OrderService {
     const strategyC = await tryUpload((fileList) => {
       const formData = new FormData();
       fileList.forEach((file, index) => {
-        formData.append(`Images[${index}].ImageFile`, file);
+        formData.append(`Videos[${index}].VideoFile`, file);
       });
       return formData;
     });
@@ -813,7 +1031,27 @@ class OrderService {
       return strategyC;
     }
 
+    // Backward-compatible fallback for older return media endpoint contracts.
+    const fallbackEndpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/images/temporary`;
+    const fallback = await tryUpload((fileList) => {
+      const formData = new FormData();
+      fileList.forEach((file) => {
+        formData.append("Images", file);
+      });
+      return formData;
+    }, fallbackEndpoint);
+
+    if (fallback) {
+      return fallback;
+    }
+
     throw new Error(lastErrorMessage);
+  }
+
+  async uploadTemporaryReturnImages(
+    files: File[],
+  ): Promise<TemporaryMediaResponse[]> {
+    return this.uploadTemporaryReturnMedia(files);
   }
 
   async createReturnRequest(
@@ -823,8 +1061,10 @@ class OrderService {
       const requestBody: CreateReturnRequestDto = {
         orderId: payload.orderId,
         reason: payload.reason,
+        returnItems: payload.returnItems,
         customerNote: payload.customerNote ?? null,
-        requestedRefundAmount: payload.requestedRefundAmount,
+        savedAddressId: payload.savedAddressId ?? null,
+        recipient: payload.recipient ?? null,
         temporaryMediaIds: payload.temporaryMediaIds ?? null,
       };
 
@@ -930,7 +1170,7 @@ class OrderService {
         );
       }
 
-      return response.data.payload;
+      return this.normalizeOrderResponse(response.data.payload);
     } catch (error: any) {
       console.error("Error fetching order details:", error);
       throw new Error(
@@ -958,13 +1198,98 @@ class OrderService {
         );
       }
 
-      return response.data.payload;
+      return this.normalizeOrderResponse(response.data.payload);
     } catch (error: any) {
       console.error("Error fetching my order details:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch order details",
+      );
+    }
+  }
+
+  async syncMyShippingStatus(): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/shippings/me/sync-shipping-status",
+        {},
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to sync shipping status",
+        );
+      }
+
+      return response.data.message || "Shipping status synced successfully";
+    } catch (error: any) {
+      console.error("Error syncing shipping status:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to sync shipping status",
+      );
+    }
+  }
+
+  async syncShippingStatusByUserId(userId: string): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/shippings/user/{userId}/sync-shipping-status",
+        {
+          params: {
+            path: { userId },
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to sync shipping status",
+        );
+      }
+
+      return response.data.message || "Shipping status synced successfully";
+    } catch (error: any) {
+      console.error("Error syncing shipping status by user id:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to sync shipping status",
+      );
+    }
+  }
+
+  async getShippingOrderInfoUrl(trackingNumbers: string[]): Promise<string> {
+    const normalizedTrackingNumbers = trackingNumbers
+      .map((tracking) => tracking.trim())
+      .filter(Boolean);
+
+    if (!normalizedTrackingNumbers.length) {
+      throw new Error("Không có mã vận đơn để in phiếu");
+    }
+
+    try {
+      const response = await apiInstance.POST("/api/shippings/order-info-url", {
+        body: {
+          trackingNumbers: normalizedTrackingNumbers,
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Không lấy được link in phiếu",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error getting shipping order info URL:", error);
+      throw new Error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Không lấy được link in phiếu",
       );
     }
   }
@@ -1007,7 +1332,7 @@ class OrderService {
           path: { orderId },
         },
         body: {
-          reason: reason ?? null,
+          reason: (reason || undefined) as any,
         },
       });
 

@@ -8,25 +8,39 @@ interface LazyImageProps {
   fallbackSx?: SxProps<Theme>;
 }
 
+const composeSx = (...styles: Array<SxProps<Theme> | undefined>) =>
+  styles.filter(Boolean) as SxProps<Theme>;
+
 /**
  * Image with native lazy-loading and a blur-up placeholder while loading.
  */
-export const LazyImage = ({ src, alt = "", sx, fallbackSx }: LazyImageProps) => {
+export const LazyImage = ({
+  src,
+  alt = "",
+  sx,
+  fallbackSx,
+}: LazyImageProps) => {
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState(false);
+  const mergedFallbackSx = composeSx(
+    {
+      bgcolor: "grey.100",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    fallbackSx,
+    sx,
+  );
+
+  const mergedContainerSx = composeSx(
+    { position: "relative", overflow: "hidden" },
+    sx,
+  );
 
   if (!src || error) {
     return (
-      <Box
-        sx={{
-          bgcolor: "grey.100",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          ...fallbackSx,
-          ...sx,
-        }}
-      >
+      <Box sx={mergedFallbackSx}>
         <Box
           component="img"
           src="/placeholder-product.png"
@@ -41,7 +55,7 @@ export const LazyImage = ({ src, alt = "", sx, fallbackSx }: LazyImageProps) => 
   }
 
   return (
-    <Box sx={{ position: "relative", overflow: "hidden", ...sx }}>
+    <Box sx={mergedContainerSx}>
       {/* Blurred low-quality placeholder shown while loading */}
       {!loaded && (
         <Box

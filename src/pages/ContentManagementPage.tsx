@@ -116,19 +116,16 @@ export const ContentManagementPage = () => {
         throw new Error("Sản phẩm thiếu thông tin brand hoặc category");
       }
 
-      const attributePayload =
-        product.attributes
-          ?.filter((attr) => attr.attributeId && attr.valueId)
-          .map((attr) => ({
-            attributeId: attr.attributeId!,
-            valueId: attr.valueId!,
-          })) || [];
+      const attributePayload = overrides?.attributes ?? [];
 
       return {
         name: product.name || "",
         brandId: product.brandId,
         categoryId: product.categoryId,
         description: product.description ?? null,
+        origin: "",
+        olfactoryFamilyIds: [],
+        scentNotes: [],
         attributes: attributePayload,
         ...overrides,
       };
@@ -522,13 +519,15 @@ export const ContentManagementPage = () => {
       ];
 
       if (targetProduct.id === selectedProduct?.id && productInformation) {
-        metadataNotes.push(
-          productInformation.scentGroup,
-          productInformation.productCode,
-          productInformation.releaseYear
-            ? `Ra mắt ${productInformation.releaseYear}`
-            : undefined,
-        );
+        if (productInformation.scentGroup) {
+          metadataNotes.push(productInformation.scentGroup);
+        }
+        if (productInformation.productCode) {
+          metadataNotes.push(productInformation.productCode);
+        }
+        if (productInformation.releaseYear) {
+          metadataNotes.push(`Ra mắt ${productInformation.releaseYear}`);
+        }
       }
 
       const existing = banners.find(

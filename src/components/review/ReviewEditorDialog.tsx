@@ -48,7 +48,9 @@ export const ReviewEditorDialog = ({
   const { showToast } = useToast();
   const [rating, setRating] = useState<number | null>(5);
   const [comment, setComment] = useState("");
-  const [existingImages, setExistingImages] = useState(initialReview?.images || []);
+  const [existingImages, setExistingImages] = useState(
+    initialReview?.images || [],
+  );
   const [mediaIdsToDelete, setMediaIdsToDelete] = useState<string[]>([]);
   const [newImages, setNewImages] = useState<TemporaryReviewMedia[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -88,8 +90,15 @@ export const ReviewEditorDialog = ({
     try {
       setUploading(true);
       setFormError(null);
-      const uploaded = await productReviewService.uploadTemporaryImages(fileList);
-      setNewImages((prev) => [...prev, ...uploaded.filter((item): item is TemporaryReviewMedia & { id: string } => Boolean(item.id))]);
+      const uploaded =
+        await productReviewService.uploadTemporaryImages(fileList);
+      setNewImages((prev) => [
+        ...prev,
+        ...uploaded.filter(
+          (item): item is TemporaryReviewMedia & { id: string } =>
+            Boolean(item.id),
+        ),
+      ]);
       showToast("Đã tải ảnh thành công", "success");
     } catch (err: any) {
       setFormError(err.message || "Không thể tải ảnh lên");
@@ -145,8 +154,7 @@ export const ReviewEditorDialog = ({
         await productReviewService.updateReview(initialReview.id, {
           rating: rating || 0,
           comment: comment.trim(),
-          temporaryMediaIdsToAdd: newImages.map((img) => img.id!).filter(Boolean),
-          mediaIdsToDelete: mediaIdsToDelete.length ? mediaIdsToDelete : null,
+          temporaryMediaIds: newImages.map((img) => img.id!).filter(Boolean),
         });
         showToast("Đã cập nhật đánh giá", "success");
       }
@@ -160,9 +168,12 @@ export const ReviewEditorDialog = ({
     }
   };
 
-  const headerText = mode === "create" ? "Chia sẻ cảm nhận của bạn" : "Cập nhật đánh giá";
-  const subTitle = target?.productName || initialReview?.variantName || "Sản phẩm";
-  const thumbnail = target?.thumbnailUrl || existingImages[0]?.url || newImages[0]?.url;
+  const headerText =
+    mode === "create" ? "Chia sẻ cảm nhận của bạn" : "Cập nhật đánh giá";
+  const subTitle =
+    target?.productName || initialReview?.variantName || "Sản phẩm";
+  const thumbnail =
+    target?.thumbnailUrl || existingImages[0]?.url || newImages[0]?.url;
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -181,7 +192,11 @@ export const ReviewEditorDialog = ({
             }}
           >
             {thumbnail ? (
-              <img src={thumbnail} alt={subTitle} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              <img
+                src={thumbnail}
+                alt={subTitle}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
             ) : (
               <CameraAltIcon color="disabled" />
             )}
@@ -232,35 +247,65 @@ export const ReviewEditorDialog = ({
           </Box>
 
           <Box>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={1}
+            >
               <Typography variant="subtitle2" color="text.secondary">
-                Hình ảnh thực tế ({existingImages.length + newImages.length}/{MAX_IMAGES})
+                Hình ảnh thực tế ({existingImages.length + newImages.length}/
+                {MAX_IMAGES})
               </Typography>
               <Button
                 variant="outlined"
                 size="small"
                 component="label"
-                startIcon={uploading ? <CircularProgress size={18} /> : <CloudUploadIcon />}
+                startIcon={
+                  uploading ? (
+                    <CircularProgress size={18} />
+                  ) : (
+                    <CloudUploadIcon />
+                  )
+                }
                 disabled={uploading || remainingSlots <= 0}
               >
                 Tải ảnh
-                <input type="file" accept="image/*" hidden multiple onChange={handleUpload} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  multiple
+                  onChange={handleUpload}
+                />
               </Button>
             </Stack>
 
-            {(existingImages.length > 0 || newImages.length > 0) ? (
+            {existingImages.length > 0 || newImages.length > 0 ? (
               <Stack direction="row" flexWrap="wrap" gap={1.5}>
                 {existingImages.map((image) => (
                   <Box key={image.id} sx={{ position: "relative" }}>
                     <img
                       src={image.url || ""}
                       alt={image.altText || "Review"}
-                      style={{ width: 90, height: 90, borderRadius: 12, objectFit: "cover", border: "1px solid #eee" }}
+                      style={{
+                        width: 90,
+                        height: 90,
+                        borderRadius: 12,
+                        objectFit: "cover",
+                        border: "1px solid #eee",
+                      }}
                     />
                     <IconButton
                       size="small"
                       onClick={() => handleRemoveExisting(image.id)}
-                      sx={{ position: "absolute", top: -10, right: -10, bgcolor: "white", boxShadow: 1 }}
+                      sx={{
+                        position: "absolute",
+                        top: -10,
+                        right: -10,
+                        bgcolor: "background.paper",
+                        boxShadow: 1,
+                      }}
                     >
                       <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
@@ -271,12 +316,24 @@ export const ReviewEditorDialog = ({
                     <img
                       src={image.url || ""}
                       alt="New upload"
-                      style={{ width: 90, height: 90, borderRadius: 12, objectFit: "cover", border: "1px solid #eee" }}
+                      style={{
+                        width: 90,
+                        height: 90,
+                        borderRadius: 12,
+                        objectFit: "cover",
+                        border: "1px solid #eee",
+                      }}
                     />
                     <IconButton
                       size="small"
                       onClick={() => handleRemoveNew(image.id)}
-                      sx={{ position: "absolute", top: -10, right: -10, bgcolor: "white", boxShadow: 1 }}
+                      sx={{
+                        position: "absolute",
+                        top: -10,
+                        right: -10,
+                        bgcolor: "background.paper",
+                        boxShadow: 1,
+                      }}
                     >
                       <DeleteOutlineIcon fontSize="small" />
                     </IconButton>
@@ -288,12 +345,24 @@ export const ReviewEditorDialog = ({
                 variant="outlined"
                 component="label"
                 fullWidth
-                startIcon={uploading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+                startIcon={
+                  uploading ? (
+                    <CircularProgress size={20} />
+                  ) : (
+                    <CloudUploadIcon />
+                  )
+                }
                 disabled={uploading || remainingSlots <= 0}
                 sx={{ py: 2, borderStyle: "dashed", color: "text.secondary" }}
               >
                 Thêm ảnh thực tế (tối đa {MAX_IMAGES})
-                <input type="file" accept="image/*" hidden multiple onChange={handleUpload} />
+                <input
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  multiple
+                  onChange={handleUpload}
+                />
               </Button>
             )}
           </Box>
@@ -310,7 +379,11 @@ export const ReviewEditorDialog = ({
           onClick={handleSubmit}
           disabled={isSubmitting || uploading}
         >
-          {isSubmitting ? "Đang gửi..." : mode === "create" ? "Gửi đánh giá" : "Lưu thay đổi"}
+          {isSubmitting
+            ? "Đang gửi..."
+            : mode === "create"
+              ? "Gửi đánh giá"
+              : "Lưu thay đổi"}
         </Button>
       </DialogActions>
     </Dialog>

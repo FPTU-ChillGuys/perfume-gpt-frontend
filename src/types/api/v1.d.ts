@@ -5590,8 +5590,76 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateReturnRequestDto"];
+                    "text/json": components["schemas"]["UpdateReturnRequestDto"];
+                    "application/*+json": components["schemas"]["UpdateReturnRequestDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -5796,7 +5864,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProcessRefundRequest"];
+                    "text/json": components["schemas"]["ProcessRefundRequest"];
+                    "application/*+json": components["schemas"]["ProcessRefundRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -5837,6 +5911,7 @@ export interface paths {
                 content: {
                     "application/x-www-form-urlencoded": {
                         Videos?: components["schemas"]["IFormFile"][];
+                        Images?: components["schemas"]["IFormFile"][];
                     };
                 };
             };
@@ -7081,6 +7156,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payments/momo-return": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Found */
+                302: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/payments/vnpay-return": {
         parameters: {
             query?: never;
@@ -7341,6 +7460,64 @@ export interface paths {
                 };
             };
         };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/payments/management-transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    FromDate?: string;
+                    ToDate?: string;
+                    PaymentMethod?: components["schemas"]["PaymentMethod"];
+                    TransactionType?: components["schemas"]["TransactionType"];
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -12227,6 +12404,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfPaymentTransactionOverviewResponse: {
+            payload?: null | components["schemas"]["PaymentTransactionOverviewResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfPickListResponse: {
             payload?: null | components["schemas"]["PickListResponse"];
             success?: boolean;
@@ -12689,6 +12873,7 @@ export interface components {
             /** Format: uuid */
             orderId: string;
             reason: components["schemas"]["ReturnOrderReason"];
+            isRefundOnly?: boolean;
             returnItems: components["schemas"]["ReturnItemDto"][];
             customerNote?: null | string;
             /** Format: uuid */
@@ -13065,6 +13250,22 @@ export interface components {
             /** Format: date-time */
             updatedAt?: null | string;
         };
+        OrderDetailListItem: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            variantId?: string;
+            variantName: string;
+            imageUrl?: null | string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: decimal */
+            unitPrice?: number;
+            /** Format: decimal */
+            refunablePrice?: number;
+            /** Format: decimal */
+            total?: number;
+        };
         OrderDetailListItems: {
             /** Format: uuid */
             variantId?: string;
@@ -13086,6 +13287,8 @@ export interface components {
             quantity?: number;
             /** Format: decimal */
             unitPrice?: number;
+            /** Format: decimal */
+            refunablePrice?: number;
             /** Format: decimal */
             total?: number;
             reservedBatches: components["schemas"]["ReservedBatchResponse"][];
@@ -13113,6 +13316,7 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: null | string;
+            orderDetails: components["schemas"]["OrderDetailListItem"][];
         };
         OrderResponse: {
             /** Format: uuid */
@@ -13157,12 +13361,15 @@ export interface components {
             requestedQuantity?: number;
             /** Format: decimal */
             unitPrice?: number;
+            /** Format: decimal */
+            refundableAmount?: number;
         };
         OrderReturnRequestResponse: {
             /** Format: uuid */
             id?: string;
             /** Format: uuid */
             orderId?: string;
+            orderCode: string;
             /** Format: uuid */
             customerId?: string;
             customerEmail?: null | string;
@@ -13182,8 +13389,10 @@ export interface components {
             /** Format: decimal */
             approvedRefundAmount?: null | number;
             isRefunded?: boolean;
+            isRefundOnly?: boolean;
             vnpTransactionNo?: null | string;
             isRestocked?: boolean;
+            returnShippingInfo?: null | components["schemas"]["ReturnShippingInfoResponse"];
             returnDetails?: null | components["schemas"]["OrderReturnRequestDetailResponse"][];
             proofImages?: null | components["schemas"]["MediaResponse"][];
             /** Format: date-time */
@@ -13288,6 +13497,19 @@ export interface components {
         };
         PagedResultOfOrderReturnRequestResponse: {
             items: components["schemas"]["OrderReturnRequestResponse"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
+        PagedResultOfPaymentTransactionAdminItemResponse: {
+            items: components["schemas"]["PaymentTransactionAdminItemResponse"][];
             /** Format: int32 */
             pageNumber: number;
             /** Format: int32 */
@@ -13432,7 +13654,56 @@ export interface components {
         /** @enum {string} */
         PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore";
         /** @enum {string} */
-        PaymentStatus: "Unpaid" | "Paid" | "Refunded";
+        PaymentStatus: "Unpaid" | "Paid" | "Partial_Refunded" | "Refunded";
+        PaymentTransactionAdminItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            orderId?: string;
+            method?: components["schemas"]["PaymentMethod"];
+            transactionType?: components["schemas"]["TransactionType"];
+            transactionStatus?: components["schemas"]["TransactionStatus"];
+            /** Format: decimal */
+            amount?: number;
+            gatewayTransactionNo?: null | string;
+            failureReason?: null | string;
+            /** Format: uuid */
+            originalPaymentId?: null | string;
+            /** Format: int32 */
+            retryAttempt?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: null | string;
+        };
+        PaymentTransactionOverviewResponse: {
+            summary: components["schemas"]["PaymentTransactionSummaryResponse"];
+            transactions: components["schemas"]["PagedResultOfPaymentTransactionAdminItemResponse"];
+        };
+        PaymentTransactionSummaryResponse: {
+            /** Format: date-time */
+            fromDate?: string;
+            /** Format: date-time */
+            toDate?: string;
+            /** Format: int32 */
+            totalTransactions?: number;
+            /** Format: int32 */
+            totalPaymentTransactions?: number;
+            /** Format: int32 */
+            totalRefundTransactions?: number;
+            /** Format: int32 */
+            pendingTransactionsCount?: number;
+            /** Format: int32 */
+            successTransactionsCount?: number;
+            /** Format: int32 */
+            failedTransactionsCount?: number;
+            /** Format: int32 */
+            cancelledTransactionsCount?: number;
+            /** Format: decimal */
+            totalPaymentAmount?: number;
+            /** Format: decimal */
+            totalRefundAmount?: number;
+        };
         PickListBatchInfo: {
             /** Format: uuid */
             reservationId?: string;
@@ -13483,10 +13754,15 @@ export interface components {
         ProcessCancelRequest: {
             isApproved?: boolean;
             staffNote?: null | string;
+            refundMethod?: components["schemas"]["PaymentMethod"];
         };
         ProcessInitialReturnDto: {
             isApproved?: boolean;
+            isRequestMoreInfo?: boolean;
             staffNote?: null | string;
+        };
+        ProcessRefundRequest: {
+            refundMethod?: components["schemas"]["PaymentMethod"];
         };
         ProductAttributeDto: {
             /** Format: int32 */
@@ -13797,7 +14073,21 @@ export interface components {
         /** @enum {string} */
         ReturnOrderReason: "DamagedProduct" | "WrongItemReceived" | "ItemNotAsDescribed" | "ChangedMind" | "AllergicReaction";
         /** @enum {string} */
-        ReturnRequestStatus: "Pending" | "ApprovedForReturn" | "Inspecting" | "ReadyForRefund" | "Completed" | "Rejected";
+        ReturnRequestStatus: "Pending" | "ApprovedForReturn" | "Inspecting" | "ReadyForRefund" | "Completed" | "Rejected" | "RequestMoreInfo";
+        ReturnShippingInfoResponse: {
+            /** Format: uuid */
+            id?: string;
+            carrierName?: components["schemas"]["CarrierName"];
+            trackingNumber?: null | string;
+            type?: components["schemas"]["ShippingType"];
+            /** Format: decimal */
+            shippingFee?: number;
+            status?: components["schemas"]["ShippingStatus"];
+            /** Format: date-time */
+            estimatedDeliveryDate?: null | string;
+            /** Format: date-time */
+            shippedDate?: null | string;
+        };
         RevenueSummaryResponse: {
             /** Format: date-time */
             fromDate?: string;
@@ -13954,7 +14244,8 @@ export interface components {
             /** Format: date-time */
             shippedDate?: null | string;
         };
-        ShippingStatus: number;
+        /** @enum {string} */
+        ShippingStatus: "Pending" | "Delivering" | "Delivered" | "Cancelled" | "Returning" | "Returned";
         /** @enum {string} */
         ShippingType: "Forward" | "Return";
         StaffLookupItem: {
@@ -14248,6 +14539,11 @@ export interface components {
             familyPreferenceIds?: null | number[];
             attributePreferenceIds?: null | number[];
         };
+        UpdateReturnRequestDto: {
+            customerNote?: null | string;
+            temporaryMediaIds?: null | string[];
+            removeMediaIds?: null | string[];
+        };
         UpdateScentNoteRequest: {
             name: string;
         };
@@ -14318,6 +14614,7 @@ export interface components {
         UserOrderResponse: {
             /** Format: uuid */
             id?: string;
+            code: string;
             type?: components["schemas"]["OrderType"];
             status?: components["schemas"]["OrderStatus"];
             isReturnable?: boolean;

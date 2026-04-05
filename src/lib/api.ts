@@ -1,12 +1,13 @@
 import type { paths } from "../types/api/v1";
 import createFetchClient, { type Middleware } from "openapi-fetch";
 import { markApiRequestEnd, markApiRequestStart } from "@/utils/perfMetrics";
+import { clearStoredAuth, getStoredAccessToken } from "@/utils/authStorage";
 
 const middleware: Middleware = {
   async onRequest({ request }) {
     markApiRequestStart(request);
 
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken = getStoredAccessToken();
     // (optional) add logic here to refresh token when it expires
 
     if (accessToken) {
@@ -21,7 +22,7 @@ const middleware: Middleware = {
 
     if (response?.status === 401) {
       // Handle unauthorized - but skip redirect if already on login page
-      localStorage.removeItem("accessToken");
+      clearStoredAuth();
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
       }

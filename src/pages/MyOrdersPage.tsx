@@ -9,7 +9,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   Divider,
   FormControl,
@@ -29,6 +28,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ImageNotSupportedOutlinedIcon from "@mui/icons-material/ImageNotSupportedOutlined";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
@@ -56,7 +56,6 @@ import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 
 type OrderListItemWithReturnable = OrderListItem & {
   isReturnable?: boolean;
-  isReturnalbe?: boolean;
 };
 
 const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
@@ -67,12 +66,28 @@ const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: orderStatusLabels["Delivered"], value: "Delivered" },
   { label: orderStatusLabels["Cancelled"], value: "Cancelled" },
   { label: orderStatusLabels["Partial_Returned"], value: "Partial_Returned" },
-  { label: "Trả hàng/Hoàn tiền", value: "Returning" },
+  { label: "Trả hàng/Hoàn tiền", value: "Returned" },
+];
+
+const CANCEL_REASON_SUGGESTIONS = [
+  "Tôi muốn thay đổi sản phẩm trong đơn",
+  "Tôi muốn đổi địa chỉ nhận hàng",
+  "Tôi không còn nhu cầu mua nữa",
+  "Tôi đã đặt nhầm sản phẩm",
+  "Tôi muốn thay đổi phương thức thanh toán",
 ];
 
 const formatCurrency = (value?: number | null) => {
   if (!value) return "0 ₫";
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
+};
+
+const formatUnitPrice = (unitPrice?: number | null, total?: number | null) => {
+  if (!unitPrice || !total || unitPrice === total) {
+    return null;
+  }
+
+  return formatCurrency(unitPrice);
 };
 
 const toIsoString = (value: string) => {
@@ -191,11 +206,14 @@ export const MyOrdersPage = () => {
     });
   };
 
-  const handleCopyOrderId = async (orderId?: string | null) => {
-    if (!orderId) return;
+  const getDisplayOrderCode = (order?: OrderListItemWithReturnable | null) =>
+    order?.code || order?.id || "-";
+
+  const handleCopyOrderCode = async (orderCode?: string | null) => {
+    if (!orderCode) return;
 
     try {
-      await navigator.clipboard.writeText(orderId);
+      await navigator.clipboard.writeText(orderCode);
       showToast("Đã sao chép mã đơn hàng", "success");
     } catch {
       showToast("Không thể sao chép mã đơn hàng", "error");
@@ -299,7 +317,7 @@ export const MyOrdersPage = () => {
 
   return (
     <MainLayout>
-      <Box sx={{ bgcolor: "white", py: 4, flex: 1 }}>
+      <Box sx={{ bgcolor: "background.default", py: 4, flex: 1 }}>
         <Container maxWidth="lg">
           <Paper
             elevation={0}
@@ -318,7 +336,7 @@ export const MyOrdersPage = () => {
             <Box
               sx={{
                 flex: 1,
-                bgcolor: "#fff",
+                bgcolor: "background.paper",
                 minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
@@ -417,20 +435,22 @@ export const MyOrdersPage = () => {
                             spacing={1}
                             alignItems="center"
                           >
-                            <Tooltip title={order.id || ""}>
+                            <Tooltip title={getDisplayOrderCode(order)}>
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
                                 sx={{ fontFamily: "monospace" }}
                               >
-                                #{order.id || "-"}
+                                #{getDisplayOrderCode(order)}
                               </Typography>
                             </Tooltip>
-                            {!!order.id && (
+                            {!!(order.code || order.id) && (
                               <Tooltip title="Sao chép mã đơn">
                                 <IconButton
                                   size="small"
-                                  onClick={() => handleCopyOrderId(order.id)}
+                                  onClick={() =>
+                                    handleCopyOrderCode(order.code || order.id)
+                                  }
                                 >
                                   <ContentCopyIcon sx={{ fontSize: 14 }} />
                                 </IconButton>
@@ -481,6 +501,116 @@ export const MyOrdersPage = () => {
                         </Stack>
 
                         <Divider sx={{ mb: 1.5 }} />
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          paddingBottom={1.5}
+                        >
+                          {order.itemCount || 0} sản phẩm
+                        </Typography>
+
+                        {(order.orderDetails || []).length > 0 && (
+                          <Stack spacing={1.25} sx={{ mb: 1.5 }}>
+                            {order.orderDetails.map((detail, idx) => {
+                              const quantity = Number(detail.quantity ?? 0);
+                              const itemTotal = Number(detail.total ?? 0);
+                              const unitPriceLabel = formatUnitPrice(
+                                detail.unitPrice,
+                                detail.total,
+                              );
+
+                              return (
+                                <Box
+                                  key={
+                                    detail.id || `${order.id || "order"}-${idx}`
+                                  }
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1.5,
+                                  }}
+                                >
+                                  {detail.imageUrl ? (
+                                    <Box
+                                      component="img"
+                                      src={detail.imageUrl}
+                                      alt={detail.variantName}
+                                      sx={{
+                                        width: 56,
+                                        height: 56,
+                                        borderRadius: 1,
+                                        objectFit: "cover",
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  ) : (
+                                    <Box
+                                      sx={{
+                                        width: 56,
+                                        height: 56,
+                                        borderRadius: 1,
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        bgcolor: "grey.100",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      <ImageNotSupportedOutlinedIcon
+                                        sx={{
+                                          color: "text.disabled",
+                                          fontSize: 22,
+                                        }}
+                                      />
+                                    </Box>
+                                  )}
+
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={500}
+                                      noWrap
+                                      title={detail.variantName}
+                                    >
+                                      {detail.variantName}
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      x{quantity}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box
+                                    sx={{ textAlign: "right", minWidth: 110 }}
+                                  >
+                                    {unitPriceLabel && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.disabled"
+                                        sx={{ textDecoration: "line-through" }}
+                                      >
+                                        {unitPriceLabel}
+                                      </Typography>
+                                    )}
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={600}
+                                      sx={{ color: "#ee4d2d" }}
+                                    >
+                                      {formatCurrency(itemTotal)}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              );
+                            })}
+                          </Stack>
+                        )}
 
                         {/* Order summary row */}
                         <Stack
@@ -489,9 +619,6 @@ export const MyOrdersPage = () => {
                           alignItems={{ xs: "flex-start", sm: "center" }}
                           spacing={1}
                         >
-                          <Typography variant="body2" color="text.secondary">
-                            {order.itemCount || 0} sản phẩm
-                          </Typography>
                           <Stack
                             direction="row"
                             spacing={1}
@@ -644,10 +771,11 @@ export const MyOrdersPage = () => {
       <Dialog
         open={Boolean(cancelOrderId)}
         onClose={() => {
+          if (actionOrderId === cancelOrderId) return;
           setCancelOrderId(null);
           setCancelReason("");
         }}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
       >
         <DialogTitle>
@@ -656,11 +784,11 @@ export const MyOrdersPage = () => {
             : "Gửi yêu cầu hủy đơn"}
         </DialogTitle>
         <DialogContent>
-          <Stack spacing={1.5}>
-            <DialogContentText>
+          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
               {cancelBehavior?.note ||
-                "Bạn có chắc chắn muốn gửi yêu cầu hủy đơn này không?"}
-            </DialogContentText>
+                "Vui lòng chọn hoặc nhập lý do để tiếp tục."}
+            </Typography>
             <TextField
               label="Lý do hủy *"
               value={cancelReason}
@@ -671,6 +799,22 @@ export const MyOrdersPage = () => {
               size="small"
               placeholder="Nhập lý do hủy đơn hàng"
             />
+
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {CANCEL_REASON_SUGGESTIONS.map((reason) => {
+                const isSelected = cancelReason.trim() === reason;
+                return (
+                  <Chip
+                    key={reason}
+                    clickable
+                    label={reason}
+                    color={isSelected ? "warning" : "default"}
+                    onClick={() => setCancelReason(reason)}
+                    sx={{ maxWidth: "100%" }}
+                  />
+                );
+              })}
+            </Stack>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -679,6 +823,7 @@ export const MyOrdersPage = () => {
               setCancelOrderId(null);
               setCancelReason("");
             }}
+            disabled={actionOrderId === cancelOrderId}
           >
             Đóng
           </Button>

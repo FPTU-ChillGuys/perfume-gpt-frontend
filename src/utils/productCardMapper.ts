@@ -77,6 +77,10 @@ export const mapProductToCard = (
       : undefined;
   const rawPrice = variant?.basePrice ?? minVariantPrice ?? 0;
   const price = Number(rawPrice);
+  const productPrimaryImageUrl =
+    typeof product.primaryImage?.url === "string"
+      ? product.primaryImage.url
+      : undefined;
 
   return {
     id: product.id,
@@ -84,8 +88,7 @@ export const mapProductToCard = (
     name: product.name ?? "Đang cập nhật",
     salePrice: Number.isFinite(price) ? price : 0,
     maxPrice: maxVariantPrice,
-    imageUrl:
-      product.primaryImage?.url ?? getVariantImageUrl(variant) ?? undefined,
+    imageUrl: productPrimaryImageUrl ?? getVariantImageUrl(variant),
     variantId: variant?.id,
     numberOfVariants: product.numberOfVariants ?? 0,
   };

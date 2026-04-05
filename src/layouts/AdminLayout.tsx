@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Box,
+  Collapse,
   Drawer,
   AppBar,
   Toolbar,
@@ -37,11 +38,12 @@ import {
   AssignmentReturn as AssignmentReturnIcon,
   Slideshow as SlideshowIcon,
   SmartToy as BotIcon,
-  Quiz as SurveyIcon,
+  Quiz as QuizIcon,
   Feed as FeedIcon,
   Chat as ChatIcon,
   ThumbsUpDown as ThumbsUpDownIcon,
   LocalOffer as LocalOfferIcon,
+  AccountBalanceWallet as AccountBalanceWalletIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -50,158 +52,219 @@ import { importStockService } from "../services/importStockService";
 const drawerWidth = 280;
 const drawerCollapsedWidth = 70;
 
-interface MenuItem {
+interface SidebarMenuItem {
   text: string;
   icon: React.ReactElement;
   path: string;
   roles: string[];
 }
 
-const menuItems: MenuItem[] = [
-  {
-    text: "Trang chủ",
-    icon: <DashboardIcon />,
-    path: "/admin/dashboard",
-    roles: ["admin"],
-  },
-  {
-    text: "Trang chủ",
-    icon: <DashboardIcon />,
-    path: "/staff/dashboard",
-    roles: ["staff"],
-  },
-  {
-    text: "Banner & nội dung",
-    icon: <SlideshowIcon />,
-    path: "/admin/content",
-    roles: ["admin"],
-  },
-  {
-    text: "Chiến lược khuyến mãi",
-    icon: <CampaignIcon />,
-    path: "/admin/campaigns",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý Voucher",
-    icon: <LocalOfferIcon />,
-    path: "/admin/vouchers",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý người dùng",
-    icon: <PeopleIcon />,
-    path: "#",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý sản phẩm",
-    icon: <CategoryIcon />,
-    path: "/admin/products",
-    roles: ["admin"],
-  },
-  {
-    text: "Yêu cầu hủy đơn",
-    icon: <CancelIcon />,
-    path: "/admin/cancel-requests",
-    roles: ["admin"],
-  },
-  {
-    text: "Yêu cầu trả hàng",
-    icon: <AssignmentReturnIcon />,
-    path: "/admin/return-requests",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý đơn hàng",
-    icon: <ShoppingCartIcon />,
-    path: "/admin/orders",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý sản phẩm",
-    icon: <CategoryIcon />,
-    path: "/staff/products",
-    roles: ["staff"],
-  },
-  {
-    text: "Đợt nhập hàng",
-    icon: <ShipmentIcon />,
-    path: "/staff/receive-import-stock",
-    roles: ["staff"],
-  },
-  {
-    text: "Quản lý đơn hàng",
-    icon: <ShoppingCartIcon />,
-    path: "/staff/orders",
-    roles: ["staff"],
-  },
-  {
-    text: "Yêu cầu trả hàng",
-    icon: <AssignmentReturnIcon />,
-    path: "/staff/return-requests",
-    roles: ["staff"],
-  },
-  {
-    text: "Nhà cung cấp",
-    icon: <PeopleIcon />,
-    path: "/admin/suppliers",
-    roles: ["admin"],
-  },
-  {
-    text: "Nhập hàng",
-    icon: <AddBoxIcon />,
-    path: "/admin/import-stock",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý kho",
-    icon: <InventoryIcon />,
-    path: "/admin/inventory",
-    roles: ["admin"],
-  },
+interface SidebarMenuGroup {
+  key: string;
+  text: string;
+  icon: React.ReactElement;
+  roles: string[];
+  pinnedBottom?: boolean;
+  items: SidebarMenuItem[];
+}
 
+const menuGroups: SidebarMenuGroup[] = [
   {
-    text: "Quản lý kho",
+    key: "overview",
+    text: "Tổng quan",
+    icon: <DashboardIcon />,
+    roles: ["admin", "staff"],
+    items: [
+      {
+        text: "Trang chủ",
+        icon: <DashboardIcon />,
+        path: "/admin/dashboard",
+        roles: ["admin"],
+      },
+      {
+        text: "Trang chủ",
+        icon: <DashboardIcon />,
+        path: "/staff/dashboard",
+        roles: ["staff"],
+      },
+    ],
+  },
+  {
+    key: "orders",
+    text: "Đơn hàng",
+    icon: <ShoppingCartIcon />,
+    roles: ["admin", "staff"],
+    items: [
+      {
+        text: "Quản lý đơn hàng",
+        icon: <ShoppingCartIcon />,
+        path: "/admin/orders",
+        roles: ["admin"],
+      },
+      {
+        text: "Yêu cầu hủy đơn",
+        icon: <CancelIcon />,
+        path: "/admin/cancel-requests",
+        roles: ["admin"],
+      },
+      {
+        text: "Yêu cầu trả hàng",
+        icon: <AssignmentReturnIcon />,
+        path: "/admin/return-requests",
+        roles: ["admin"],
+      },
+      {
+        text: "Quản lý đơn hàng",
+        icon: <ShoppingCartIcon />,
+        path: "/staff/orders",
+        roles: ["staff"],
+      },
+      {
+        text: "Yêu cầu trả hàng",
+        icon: <AssignmentReturnIcon />,
+        path: "/staff/return-requests",
+        roles: ["staff"],
+      },
+    ],
+  },
+  {
+    key: "inventory",
+    text: "Kho hàng",
     icon: <InventoryIcon />,
-    path: "/staff/inventory",
-    roles: ["staff"],
+    roles: ["admin", "staff"],
+    items: [
+      {
+        text: "Quản lý kho",
+        icon: <InventoryIcon />,
+        path: "/admin/inventory",
+        roles: ["admin"],
+      },
+      {
+        text: "Nhập hàng",
+        icon: <AddBoxIcon />,
+        path: "/admin/import-stock",
+        roles: ["admin"],
+      },
+      {
+        text: "Nhà cung cấp",
+        icon: <PeopleIcon />,
+        path: "/admin/suppliers",
+        roles: ["admin"],
+      },
+      {
+        text: "Quản lý sản phẩm",
+        icon: <CategoryIcon />,
+        path: "/admin/products",
+        roles: ["admin"],
+      },
+      {
+        text: "Báo cáo",
+        icon: <ReportsIcon />,
+        path: "/admin/inventory-report-logs",
+        roles: ["admin"],
+      },
+      {
+        text: "Quản lý kho",
+        icon: <InventoryIcon />,
+        path: "/staff/inventory",
+        roles: ["staff"],
+      },
+      {
+        text: "Đợt nhập hàng",
+        icon: <ShipmentIcon />,
+        path: "/staff/receive-import-stock",
+        roles: ["staff"],
+      },
+      {
+        text: "Quản lý sản phẩm",
+        icon: <CategoryIcon />,
+        path: "/staff/products",
+        roles: ["staff"],
+      },
+    ],
   },
   {
-    text: "Báo cáo",
-    icon: <ReportsIcon />,
-    path: "/admin/inventory-report-logs",
+    key: "content-and-ops",
+    text: "Nội dung & Vận hành",
+    icon: <CampaignIcon />,
     roles: ["admin"],
+    items: [
+      {
+        text: "Banner & nội dung",
+        icon: <SlideshowIcon />,
+        path: "/admin/content",
+        roles: ["admin"],
+      },
+      {
+        text: "Chiến lược khuyến mãi",
+        icon: <CampaignIcon />,
+        path: "/admin/campaigns",
+        roles: ["admin"],
+      },
+      {
+        text: "Quản lý Voucher",
+        icon: <LocalOfferIcon />,
+        path: "/admin/vouchers",
+        roles: ["admin"],
+      },
+      {
+        text: "Rà soát giao dịch thu chi",
+        icon: <AccountBalanceWalletIcon />,
+        path: "/admin/payment-transactions",
+        roles: ["admin"],
+      },
+      {
+        text: "Quản lý người dùng",
+        icon: <PeopleIcon />,
+        path: "/admin/users",
+        roles: ["admin"],
+      },
+      {
+        text: "Thuộc tính sản phẩm",
+        icon: <CategoryIcon />,
+        path: "/admin/attributes",
+        roles: ["admin"],
+      },
+    ],
   },
   {
-    text: "Cấu hình AI",
+    key: "ai",
+    text: "AI",
     icon: <BotIcon />,
-    path: "/admin/instructions",
     roles: ["admin"],
-  },
-  {
-    text: "Survey",
-    icon: <SurveyIcon />,
-    path: "/admin/survey",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý Log",
-    icon: <FeedIcon />,
-    path: "/admin/logs",
-    roles: ["admin"],
-  },
-  {
-    text: "Quản lý Hội thoại",
-    icon: <ChatIcon />,
-    path: "/admin/conversations",
-    roles: ["admin"],
-  },
-  {
-    text: "AI Acceptance",
-    icon: <ThumbsUpDownIcon />,
-    path: "/admin/ai-acceptance",
-    roles: ["admin"],
+    pinnedBottom: true,
+    items: [
+      {
+        text: "Cấu hình AI",
+        icon: <BotIcon />,
+        path: "/admin/instructions",
+        roles: ["admin"],
+      },
+      {
+        text: "AI Acceptance",
+        icon: <ThumbsUpDownIcon />,
+        path: "/admin/ai-acceptance",
+        roles: ["admin"],
+      },
+      {
+        text: "Survey",
+        icon: <QuizIcon />,
+        path: "/admin/quiz",
+        roles: ["admin"],
+      },
+      {
+        text: "Quản lý Log",
+        icon: <FeedIcon />,
+        path: "/admin/logs",
+        roles: ["admin"],
+      },
+      {
+        text: "Quản lý Hội thoại",
+        icon: <ChatIcon />,
+        path: "/admin/conversations",
+        roles: ["admin"],
+      },
+    ],
   },
 ];
 
@@ -213,6 +276,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+  const [collapsedGroupKeys, setCollapsedGroupKeys] = useState<string[]>([]);
 
   // Fetch pending import tickets count for staff
   useEffect(() => {
@@ -259,14 +323,200 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   const handleNavigate = (path: string) => {
+    if (path === "#") {
+      return;
+    }
     navigate(path);
     setMobileOpen(false);
   };
 
-  // Filter menu items based on user role
-  const filteredMenuItems = menuItems.filter((item) =>
-    item.roles.includes(user?.role || ""),
-  );
+  const visibleMenuGroups = menuGroups
+    .filter((group) => group.roles.includes(user?.role || ""))
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        item.roles.includes(user?.role || ""),
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const normalGroups = visibleMenuGroups.filter((group) => !group.pinnedBottom);
+  const bottomGroups = visibleMenuGroups.filter((group) => group.pinnedBottom);
+
+  const isGroupActive = (group: SidebarMenuGroup) =>
+    group.items.some((item) => location.pathname === item.path);
+
+  const toggleGroup = (groupKey: string) => {
+    setCollapsedGroupKeys((prev) =>
+      prev.includes(groupKey)
+        ? prev.filter((key) => key !== groupKey)
+        : [...prev, groupKey],
+    );
+  };
+
+  const renderMenuItem = (
+    item: SidebarMenuItem,
+    isChild = false,
+    keyPrefix = "",
+  ) => {
+    const isActive = location.pathname === item.path;
+    return (
+      <ListItem
+        key={`${keyPrefix}${item.text}-${item.path}`}
+        disablePadding
+        sx={{ mb: 0.5 }}
+      >
+        <ListItemButton
+          onClick={() => handleNavigate(item.path)}
+          sx={{
+            borderRadius: 1,
+            bgcolor: isActive ? "primary.main" : "transparent",
+            color: isActive ? "white" : "text.primary",
+            justifyContent: collapsed ? "center" : "flex-start",
+            px: collapsed ? 1 : isChild ? 4 : 2,
+            "&:hover": {
+              bgcolor: isActive ? "primary.dark" : "action.hover",
+            },
+            "& .MuiListItemIcon-root": {
+              color: isActive ? "white" : "text.secondary",
+            },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
+            {item.text === "Đợt nhập hàng" &&
+            user?.role === "staff" &&
+            pendingCount > 0 &&
+            collapsed ? (
+              <Badge badgeContent={pendingCount} color="error" max={99}>
+                {item.icon}
+              </Badge>
+            ) : (
+              item.icon
+            )}
+          </ListItemIcon>
+          {!collapsed && (
+            <ListItemText
+              primary={item.text}
+              primaryTypographyProps={{
+                fontSize: "0.875rem",
+                fontWeight: isActive ? 600 : 500,
+              }}
+            />
+          )}
+          {!collapsed &&
+            item.text === "Đợt nhập hàng" &&
+            user?.role === "staff" &&
+            pendingCount > 0 && (
+              <Box
+                sx={{
+                  ml: 1,
+                  px: 1,
+                  py: 0.25,
+                  bgcolor: "error.main",
+                  color: "white",
+                  borderRadius: 1,
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                }}
+              >
+                +{pendingCount}
+              </Box>
+            )}
+        </ListItemButton>
+      </ListItem>
+    );
+  };
+
+  const renderMenuGroup = (group: SidebarMenuGroup) => {
+    const isOpen = !collapsedGroupKeys.includes(group.key);
+    const active = isGroupActive(group);
+    return (
+      <Box key={group.key} sx={{ mb: 1 }}>
+        <ListItem disablePadding sx={{ mb: 0.5 }}>
+          <ListItemButton
+            onClick={() => toggleGroup(group.key)}
+            sx={{
+              borderRadius: 1,
+              bgcolor: active ? "action.selected" : "transparent",
+              px: 2,
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40, color: "text.secondary" }}>
+              {group.icon}
+            </ListItemIcon>
+            <ListItemText
+              primary={group.text}
+              primaryTypographyProps={{
+                fontSize: "0.875rem",
+                fontWeight: 700,
+              }}
+            />
+            {isOpen ? <ArrowDropUpIcon /> : <ArrowDropDownIcon />}
+          </ListItemButton>
+        </ListItem>
+        <Collapse in={isOpen} timeout="auto" unmountOnExit>
+          <List disablePadding>
+            {group.items.map((item) =>
+              renderMenuItem(item, true, `${group.key}-`),
+            )}
+          </List>
+        </Collapse>
+      </Box>
+    );
+  };
+
+  const getGroupNavigatePath = (group: SidebarMenuGroup) => {
+    const activeItem = group.items.find(
+      (item) => location.pathname === item.path,
+    );
+    if (activeItem) {
+      return activeItem.path;
+    }
+
+    const fallbackItem = group.items.find((item) => item.path !== "#");
+    return fallbackItem?.path ?? "#";
+  };
+
+  const renderCollapsedGroupItem = (group: SidebarMenuGroup) => {
+    const active = isGroupActive(group);
+    const navigatePath = getGroupNavigatePath(group);
+    const showPendingBadge =
+      user?.role === "staff" &&
+      pendingCount > 0 &&
+      group.items.some((item) => item.path === "/staff/receive-import-stock");
+
+    return (
+      <ListItem key={`collapsed-${group.key}`} disablePadding sx={{ mb: 0.5 }}>
+        <ListItemButton
+          onClick={() => handleNavigate(navigatePath)}
+          title={group.text}
+          sx={{
+            borderRadius: 1,
+            bgcolor: active ? "primary.main" : "transparent",
+            color: active ? "white" : "text.primary",
+            justifyContent: "center",
+            px: 1,
+            "&:hover": {
+              bgcolor: active ? "primary.dark" : "action.hover",
+            },
+            "& .MuiListItemIcon-root": {
+              color: active ? "white" : "text.secondary",
+            },
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: "auto" }}>
+            {showPendingBadge ? (
+              <Badge badgeContent={pendingCount} color="error" max={99}>
+                {group.icon}
+              </Badge>
+            ) : (
+              group.icon
+            )}
+          </ListItemIcon>
+        </ListItemButton>
+      </ListItem>
+    );
+  };
 
   const drawer = (
     <Box>
@@ -300,75 +550,28 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       <Divider />
 
       {/* Navigation Menu */}
-      <List sx={{ px: 1, py: 2 }}>
-        {filteredMenuItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <ListItem
-              key={`${item.text}-${item.path}`}
-              disablePadding
-              sx={{ mb: 0.5 }}
-            >
-              <ListItemButton
-                onClick={() => handleNavigate(item.path)}
-                sx={{
-                  borderRadius: 1,
-                  bgcolor: isActive ? "primary.main" : "transparent",
-                  color: isActive ? "white" : "text.primary",
-                  justifyContent: collapsed ? "center" : "flex-start",
-                  px: collapsed ? 1 : 2,
-                  "&:hover": {
-                    bgcolor: isActive ? "primary.dark" : "action.hover",
-                  },
-                  "& .MuiListItemIcon-root": {
-                    color: isActive ? "white" : "text.secondary",
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
-                  {item.text === "Đợt nhập hàng" &&
-                    user?.role === "staff" &&
-                    pendingCount > 0 &&
-                    collapsed ? (
-                    <Badge badgeContent={pendingCount} color="error" max={99}>
-                      {item.icon}
-                    </Badge>
-                  ) : (
-                    item.icon
-                  )}
-                </ListItemIcon>
-                {!collapsed && (
-                  <ListItemText
-                    primary={item.text}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: isActive ? 600 : 500,
-                    }}
-                  />
-                )}
-                {!collapsed &&
-                  item.text === "Đợt nhập hàng" &&
-                  user?.role === "staff" &&
-                  pendingCount > 0 && (
-                    <Box
-                      sx={{
-                        ml: 1,
-                        px: 1,
-                        py: 0.25,
-                        bgcolor: "error.main",
-                        color: "white",
-                        borderRadius: 1,
-                        fontSize: "0.75rem",
-                        fontWeight: 600,
-                      }}
-                    >
-                      +{pendingCount}
-                    </Box>
-                  )}
-              </ListItemButton>
-            </ListItem>
-          );
-        })}
+      <List
+        sx={{
+          px: 1,
+          py: 2,
+          height: "calc(100vh - 81px)",
+          display: "flex",
+          flexDirection: "column",
+          overflowY: "auto",
+        }}
+      >
+        {collapsed
+          ? normalGroups.map((group) => renderCollapsedGroupItem(group))
+          : normalGroups.map((group) => renderMenuGroup(group))}
+
+        {bottomGroups.length > 0 && (
+          <>
+            <Divider sx={{ my: 1 }} />
+            {collapsed
+              ? bottomGroups.map((group) => renderCollapsedGroupItem(group))
+              : bottomGroups.map((group) => renderMenuGroup(group))}
+          </>
+        )}
       </List>
     </Box>
   );

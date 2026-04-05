@@ -14,6 +14,7 @@ import {
   DialogTitle,
   Divider,
   FormControlLabel,
+  IconButton,
   MenuItem,
   Paper,
   Select,
@@ -39,11 +40,11 @@ import {
   Person,
   Phone,
   Receipt,
+  Sync,
   StarBorder,
   LocationOn,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
-import { AppBreadcrumbs } from "@/components/common/AppBreadcrumbs";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
 import type { PaymentMethod } from "@/types/checkout";
@@ -77,6 +78,7 @@ const STATUS_TO_STEP: Record<OrderStatus, number> = {
   Delivered: 4,
   Returning: -2,
   Cancelled: -1,
+  Partial_Returned: -2,
   Returned: -2,
 };
 
@@ -91,10 +93,11 @@ const STEPS = [
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
   Pending: ["Processing", "Cancelled"],
   Processing: ["Cancelled"],
-  Delivering: ["Delivered", "Returned"],
+  Delivering: [],
   Delivered: [],
   Returning: ["Returned"],
   Cancelled: [],
+  Partial_Returned: [],
   Returned: [],
 };
 
@@ -325,6 +328,7 @@ export const OrderManagementDetailPage = () => {
   >({});
   const [isPackagingConfirmed, setIsPackagingConfirmed] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isSyncingShipping, setIsSyncingShipping] = useState(false);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -355,6 +359,8 @@ export const OrderManagementDetailPage = () => {
     if (!order?.status) return [];
     return allowedTransitions[order.status] ?? [];
   }, [order?.status]);
+
+  const isShippingManagedStatus = order?.status === "Delivering";
 
   const subtotal = useMemo(
     () =>
@@ -536,6 +542,28 @@ export const OrderManagementDetailPage = () => {
     }
   };
 
+  const handleSyncShippingStatus = async () => {
+    if (!orderId) {
+      return;
+    }
+
+    try {
+      setIsSyncingShipping(true);
+      await orderService.syncMyShippingStatus();
+      await loadOrder();
+      showToast("Đã đồng bộ trạng thái vận chuyển", "success");
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Không thể đồng bộ trạng thái vận chuyển",
+        "error",
+      );
+    } finally {
+      setIsSyncingShipping(false);
+    }
+  };
+
   const toggleBatchDetails = (detailId?: string) => {
     if (!detailId) return;
     setExpandedBatches((prev) => ({
@@ -547,14 +575,6 @@ export const OrderManagementDetailPage = () => {
   return (
     <AdminLayout>
       <Box>
-        <AppBreadcrumbs
-          items={[
-            { label: "Quản trị", href: "/admin" },
-            { label: "Quản lý đơn hàng", href: "/admin/orders" },
-            { label: "Chi tiết đơn hàng" },
-          ]}
-          sx={{ mb: 2 }}
-        />
         <Paper sx={{ overflow: "hidden", borderRadius: 2 }}>
           {isLoading ? (
             <Box
@@ -603,8 +623,29 @@ export const OrderManagementDetailPage = () => {
                   alignItems="center"
                   flexWrap="wrap"
                 >
+                  <IconButton
+                    size="small"
+                    onClick={handleSyncShippingStatus}
+                    disabled={isSyncingShipping}
+                    aria-label="Đồng bộ trạng thái vận chuyển"
+                  >
+                    <Sync
+                      sx={{
+                        animation: isSyncingShipping
+                          ? "sync-spin 0.9s linear infinite"
+                          : "none",
+                        "@keyframes sync-spin": {
+                          from: { transform: "rotate(0deg)" },
+                          to: { transform: "rotate(360deg)" },
+                        },
+                      }}
+                    />
+                  </IconButton>
                   <Typography variant="body2" color="text.secondary">
-                    Mã đơn: <b>{(order.id ?? "").toUpperCase()}</b>
+                    Mã đơn:{" "}
+                    <b>
+                      {(order.code || order.id || orderId || "-").toUpperCase()}
+                    </b>
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     |
@@ -729,6 +770,19 @@ export const OrderManagementDetailPage = () => {
                                 <b>{order.shippingInfo.trackingNumber}</b>
                               </Typography>
                             )}
+                            {order.status === "Delivering" &&
+                              order.shippingInfo.estimatedDeliveryDate && (
+                                <Typography
+                                  variant="body2"
+                                  color="info.main"
+                                  fontWeight={600}
+                                >
+                                  Dự kiến nhận hàng:{" "}
+                                  {fmtDateShort(
+                                    order.shippingInfo.estimatedDeliveryDate,
+                                  )}
+                                </Typography>
+                              )}
                           </Stack>
                         )}
                       </Box>
@@ -751,7 +805,7 @@ export const OrderManagementDetailPage = () => {
                     <TableContainer>
                       <Table>
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "#fafafa" }}>
+                          <TableRow sx={{ bgcolor: "action.hover" }}>
                             <TableCell>Sản phẩm</TableCell>
                             <TableCell align="center">Số lượng</TableCell>
                             <TableCell align="right">Đơn giá</TableCell>
@@ -983,7 +1037,9 @@ export const OrderManagementDetailPage = () => {
 
                     {availableStatuses.length === 0 ? (
                       <Alert severity="info">
-                        Đơn hàng đã ở trạng thái cuối, không thể cập nhật thêm.
+                        {isShippingManagedStatus
+                          ? "Đơn hàng đang được đơn vị vận chuyển xử lý. Trạng thái sẽ được cập nhật qua đồng bộ vận chuyển."
+                          : "Đơn hàng đã ở trạng thái cuối, không thể cập nhật thêm."}
                       </Alert>
                     ) : (
                       <Stack spacing={2}>

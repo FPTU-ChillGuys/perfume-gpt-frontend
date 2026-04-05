@@ -1,12 +1,12 @@
 import { apiInstance } from "@/lib/api";
 import type { StaffLookupResponse } from "../types/staff-user";
 import type { components } from "@/types/api/v1";
+import { getStoredAccessToken } from "@/utils/authStorage";
 
 export type UserCredentials = components["schemas"]["UserCredentialsResponse"];
 export type UserAvatar = components["schemas"]["MediaResponse"];
 
 class UserService {
-
   private readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   async getUserMe(): Promise<UserCredentials> {
@@ -64,7 +64,7 @@ class UserService {
   }
 
   async uploadAvatar(file: File, altText?: string): Promise<string> {
-    const accessToken = localStorage.getItem("accessToken");
+    const accessToken = getStoredAccessToken();
     if (!accessToken) {
       throw new Error("Bạn chưa đăng nhập");
     }

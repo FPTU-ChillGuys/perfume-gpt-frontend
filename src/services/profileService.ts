@@ -1,5 +1,6 @@
 import { apiInstance } from "@/lib/api";
 import type { UserProfile, UpdateProfileRequest } from "../types/profile";
+import { getStoredAccessToken } from "@/utils/authStorage";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -8,7 +9,7 @@ class ProfileService {
 
   async getMyProfile(): Promise<UserProfile> {
     try {
-      const accessToken = localStorage.getItem("accessToken");
+      const accessToken = getStoredAccessToken();
       const response = await fetch(
         `${API_BASE_URL}${this.PROFILE_ENDPOINT}/me`,
         {

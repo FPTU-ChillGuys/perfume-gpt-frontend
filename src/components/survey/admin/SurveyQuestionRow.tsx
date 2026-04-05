@@ -109,7 +109,7 @@ function SurveyQuestionRow({ item, isExpanded, onToggle, onEdit, onDelete }: Pro
             <TableRow>
                 <TableCell colSpan={6} sx={{ p: 0, border: isExpanded ? undefined : "none" }}>
                     <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-                        <Box sx={{ bgcolor: "#fafafa", px: 4, py: 2 }}>
+                        <Box sx={{ bgcolor: "action.hover", px: 4, py: 2 }}>
                             <Typography
                                 variant="subtitle2"
                                 fontWeight="bold"
