@@ -32,8 +32,7 @@ const statusLabel = (status?: string) => {
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
   if (status === "Rejected") return "Từ chối";
-  if (status === "Completed") return "Đã hoàn tất";
-  if (status === "Refunded") return "Đã hoàn tiền";
+  if (status === "Completed") return "Đã hoàn tiền";
   return status || "-";
 };
 
@@ -44,6 +43,7 @@ const shippingStatusLabel = (status?: string | null) => {
   if (status === "Confirmed") return "Đã xác nhận";
   if (status === "PickedUp") return "Đã lấy hàng";
   if (status === "InTransit") return "Đang vận chuyển";
+  if (status === "Delivering") return "Đang vận chuyển";
   if (status === "OutForDelivery") return "Đang giao hàng";
   if (status === "Delivered") return "Giao hàng thành công";
   if (status === "DeliveryFailed") return "Giao hàng thất bại";

@@ -55,7 +55,6 @@ import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 
 type OrderListItemWithReturnable = OrderListItem & {
   isReturnable?: boolean;
-  isReturnalbe?: boolean;
 };
 
 const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
@@ -66,7 +65,7 @@ const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: orderStatusLabels["Delivered"], value: "Delivered" },
   { label: orderStatusLabels["Cancelled"], value: "Cancelled" },
   { label: orderStatusLabels["Partial_Returned"], value: "Partial_Returned" },
-  { label: "Trả hàng/Hoàn tiền", value: "Returning" },
+  { label: "Trả hàng/Hoàn tiền", value: "Returned" },
 ];
 
 const CANCEL_REASON_SUGGESTIONS = [

@@ -35,8 +35,8 @@ const STATUS_TABS: { label: string; value: ReturnRequestStatus | "All" }[] = [
   { label: "Đã duyệt", value: "ApprovedForReturn" },
   { label: "Đang kiểm định", value: "Inspecting" },
   { label: "Chờ hoàn tiền", value: "ReadyForRefund" },
+  { label: "Đã hoàn tiền", value: "Completed" },
   { label: "Từ chối", value: "Rejected" },
-  { label: "Đã hoàn tất", value: "Completed" },
 ];
 
 const statusLabel = (status?: string) => {
@@ -44,9 +44,8 @@ const statusLabel = (status?: string) => {
   if (status === "ApprovedForReturn") return "Đã duyệt";
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
+  if (status === "Completed") return "Đã hoàn tiền";
   if (status === "Rejected") return "Từ chối";
-  if (status === "Completed") return "Đã hoàn tất";
-  if (status === "Refunded") return "Đã hoàn tiền";
   return status || "-";
 };
 
@@ -71,7 +70,6 @@ const statusColor = (
   if (status === "ReadyForRefund") return "success";
   if (status === "Rejected") return "error";
   if (status === "Completed") return "success";
-  if (status === "Refunded") return "success";
   return "default";
 };
 
