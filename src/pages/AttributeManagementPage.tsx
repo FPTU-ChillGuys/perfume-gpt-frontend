@@ -151,7 +151,8 @@ export const AttributeManagementPage = () => {
           await brandService.updateBrand(s.editing.id, trimmed);
         else if (activeTab === 1)
           await categoryService.updateCategory(s.editing.id, trimmed);
-        else await concentrationService.updateConcentration(s.editing.id, trimmed);
+        else
+          await concentrationService.updateConcentration(s.editing.id, trimmed);
         showToast("Cập nhật thành công", "success");
       } else {
         if (activeTab === 0) await brandService.createBrand(trimmed);
@@ -193,10 +194,6 @@ export const AttributeManagementPage = () => {
   return (
     <AdminLayout>
       <Box sx={{ p: { xs: 2, md: 3 } }}>
-        <Typography variant="h5" fontWeight={700} mb={3}>
-          Quản Lý Thuộc Tính
-        </Typography>
-
         <Paper variant="outlined" sx={{ mb: 3 }}>
           <Tabs
             value={activeTab}
@@ -213,7 +210,6 @@ export const AttributeManagementPage = () => {
             ))}
           </Tabs>
         </Paper>
-
         <Box
           sx={{
             display: "flex",
@@ -234,13 +230,11 @@ export const AttributeManagementPage = () => {
             Thêm mới
           </Button>
         </Box>
-
         {s.error && (
           <Alert severity="error" sx={{ mb: 2 }}>
             {s.error}
           </Alert>
         )}
-
         {s.loading ? (
           <Box display="flex" justifyContent="center" py={6}>
             <CircularProgress />

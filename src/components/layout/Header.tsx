@@ -45,6 +45,7 @@ import {
   type CategoryLookupItem,
 } from "../../services/categoryService";
 import { notificationService } from "../../services/notificationService";
+import { loyaltyService } from "../../services/loyaltyService";
 
 const MAX_VISIBLE_CATEGORIES = 5;
 
@@ -73,6 +74,7 @@ export const Header = () => {
   const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
   const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
   const [markingAllRead, setMarkingAllRead] = useState(false);
+  const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null);
 
   useEffect(() => {
     categoryService
@@ -82,6 +84,32 @@ export const Header = () => {
         console.error("Failed to load categories");
       });
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== "user") {
+      setLoyaltyBalance(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    loyaltyService
+      .getMyBalance()
+      .then((data) => {
+        if (isMounted) {
+          setLoyaltyBalance(data.pointBalance ?? 0);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setLoyaltyBalance(0);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, user?.role]);
 
   const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
   const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
@@ -401,9 +429,7 @@ export const Header = () => {
                       cursor: user.role === "user" ? "pointer" : "default",
                       "&:hover": {
                         bgcolor:
-                          user.role === "user"
-                            ? "action.hover"
-                            : "transparent",
+                          user.role === "user" ? "action.hover" : "transparent",
                       },
                     }}
                   >
@@ -417,22 +443,25 @@ export const Header = () => {
                     >
                       {user.email}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "inline-block",
-                        mt: 0.5,
-                        px: 1,
-                        py: 0.25,
-                        bgcolor: "primary.main",
-                        color: "white",
-                        borderRadius: 1,
-                        fontSize: "0.7rem",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {user.role}
-                    </Typography>
+                    {user.role === "user" && loyaltyBalance !== null && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "inline-block",
+                          mt: 0.75,
+                          px: 1.25,
+                          py: 0.35,
+                          color: "error.main",
+                          border: (theme) =>
+                            `1px solid ${theme.palette.error.main}`,
+                          borderRadius: 99,
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {`Số dư: ${loyaltyBalance.toLocaleString("vi-VN")} điểm`}
+                      </Typography>
+                    )}
                   </MenuItem>
                   <Divider />
                   {user.role === "user" && (

@@ -12,6 +12,7 @@ import {
   Input,
   Paper,
   Stack,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -301,6 +302,8 @@ export const MyReturnRequestDetailPage = () => {
   };
 
   const isRequestMoreInfo = request?.status === "RequestMoreInfo";
+  const shouldShowStaffNote =
+    request?.status === "Rejected" || request?.status === "RequestMoreInfo";
 
   const existingProofImages = request?.proofImages || [];
   const visibleProofImages = existingProofImages.filter(
@@ -382,8 +385,19 @@ export const MyReturnRequestDetailPage = () => {
       return;
     }
 
-    if (removeMediaIds.length === 0 && newMediaFiles.length === 0) {
-      showToast("Bạn chưa thay đổi hình ảnh/video để cập nhật", "warning");
+    const draftCustomerNote = customerNoteDraft.trim();
+    const currentCustomerNote = (request.customerNote || "").trim();
+    const isCustomerNoteChanged = draftCustomerNote !== currentCustomerNote;
+
+    if (
+      removeMediaIds.length === 0 &&
+      newMediaFiles.length === 0 &&
+      !isCustomerNoteChanged
+    ) {
+      showToast(
+        "Bạn chưa thay đổi hình ảnh/video hoặc ghi chú để cập nhật",
+        "warning",
+      );
       return;
     }
 
@@ -398,10 +412,6 @@ export const MyReturnRequestDetailPage = () => {
           .map((item) => item.id)
           .filter((id): id is string => Boolean(id));
       }
-
-      const draftCustomerNote = customerNoteDraft.trim();
-      const currentCustomerNote = (request.customerNote || "").trim();
-      const isCustomerNoteChanged = draftCustomerNote !== currentCustomerNote;
 
       const updatePayload: UpdateReturnRequestDto = {
         temporaryMediaIds: temporaryMediaIds.length ? temporaryMediaIds : null,
@@ -683,7 +693,7 @@ export const MyReturnRequestDetailPage = () => {
                         </Box>
                         <Box>
                           <Typography variant="caption" color="text.secondary">
-                            Tiền yêu cầu hoàn
+                            Tiền ước tính hoàn
                           </Typography>
                           <Typography fontWeight={700} color="#ee4d2d">
                             {formatCurrency(request.requestedRefundAmount)}
@@ -824,26 +834,19 @@ export const MyReturnRequestDetailPage = () => {
                               <Typography>{request.customerNote}</Typography>
                             </Box>
                           )}
-                          {request.staffNote && (
+                          {shouldShowStaffNote && request.staffNote && (
                             <Box>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                               >
-                                Ghi chú nhân viên
+                                Ghi chú nhân viên / kiểm định
                               </Typography>
-                              <Typography>{request.staffNote}</Typography>
-                            </Box>
-                          )}
-                          {request.inspectionNote && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                Ghi chú kiểm định
+                              <Typography>
+                                {request.staffNote?.trim() ||
+                                  request.inspectionNote?.trim() ||
+                                  "-"}
                               </Typography>
-                              <Typography>{request.inspectionNote}</Typography>
                             </Box>
                           )}
                         </Box>
@@ -1274,6 +1277,19 @@ export const MyReturnRequestDetailPage = () => {
                             </Stack>
                           </Stack>
                         )}
+
+                        <TextField
+                          fullWidth
+                          multiline
+                          minRows={3}
+                          label="Ghi chú của bạn (có thể chỉnh sửa)"
+                          value={customerNoteDraft}
+                          onChange={(event) =>
+                            setCustomerNoteDraft(event.target.value)
+                          }
+                          disabled={isUpdatingEvidence}
+                          sx={{ mt: 2 }}
+                        />
 
                         <Stack
                           direction="row"

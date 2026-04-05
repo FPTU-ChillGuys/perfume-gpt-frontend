@@ -25,6 +25,8 @@ import ImageIcon from "@mui/icons-material/Image";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import LocalPrintshopOutlinedIcon from "@mui/icons-material/LocalPrintshopOutlined";
 import Sync from "@mui/icons-material/Sync";
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import momoLogo from "@/assets/momo.png";
 import vnpayLogo from "@/assets/vnpay.jpg";
 import storeLogo from "@/assets/store.png";
@@ -86,6 +88,7 @@ const shippingStatusLabel = (status?: string | null) => {
   if (status === "Confirmed") return "Đã xác nhận";
   if (status === "PickedUp") return "Đã lấy hàng";
   if (status === "InTransit") return "Đang vận chuyển";
+  if (status === "Delivering") return "Đang giao hàng";
   if (status === "OutForDelivery") return "Đang giao hàng";
   if (status === "Delivered") return "Giao hàng thành công";
   if (status === "DeliveryFailed") return "Giao hàng thất bại";
@@ -130,6 +133,23 @@ const formatCurrency = (value?: number | null) =>
 const toNumber = (value: unknown) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const normalizeMoneyInput = (value: string) => {
+  const digitsOnly = value.replace(/\D/g, "");
+  if (!digitsOnly) {
+    return "";
+  }
+
+  return digitsOnly.replace(/^0+(?=\d)/, "");
+};
+
+const formatMoneyInput = (value: string) => {
+  if (!value) {
+    return "";
+  }
+
+  return value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
 const isVideoMedia = (url: string, mimeType?: string | null) => {
@@ -212,7 +232,7 @@ export const OrderReturnRequestDetailPage = () => {
   const [moreInfoDialogOpen, setMoreInfoDialogOpen] = useState(false);
   const [moreInfoReason, setMoreInfoReason] = useState("");
 
-  const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState(0);
+  const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState("0");
   const [inspectionRestocked, setInspectionRestocked] = useState(false);
   const [inspectionResultNote, setInspectionResultNote] = useState("");
   const [inspectionRejectDialogOpen, setInspectionRejectDialogOpen] =
@@ -228,6 +248,8 @@ export const OrderReturnRequestDetailPage = () => {
   const [lightboxMediaMimeType, setLightboxMediaMimeType] = useState<
     string | null
   >(null);
+  const shouldShowStaffNote =
+    request?.status === "Rejected" || request?.status === "RequestMoreInfo";
 
   const loadDetail = useCallback(async () => {
     if (!returnRequestId) {
@@ -250,8 +272,11 @@ export const OrderReturnRequestDetailPage = () => {
       }
 
       setInspectionApprovedRefund(
-        toNumber(
-          fullRequest.approvedRefundAmount ?? fullRequest.requestedRefundAmount,
+        String(
+          toNumber(
+            fullRequest.approvedRefundAmount ??
+              fullRequest.requestedRefundAmount,
+          ),
         ),
       );
       setInspectionRestocked(Boolean(fullRequest.isRestocked));
@@ -353,7 +378,9 @@ export const OrderReturnRequestDetailPage = () => {
       return;
     }
 
-    if (inspectionApprovedRefund < 0) {
+    const approvedRefundAmount = toNumber(inspectionApprovedRefund);
+
+    if (approvedRefundAmount < 0) {
       showToast("Số tiền hoàn được duyệt không hợp lệ", "warning");
       return;
     }
@@ -361,7 +388,7 @@ export const OrderReturnRequestDetailPage = () => {
     setIsSaving(true);
     try {
       await orderService.completeReturnInspection(request.id, {
-        approvedRefundAmount: inspectionApprovedRefund,
+        approvedRefundAmount,
         isRestocked: inspectionRestocked,
         inspectionNote: inspectionResultNote.trim() || null,
       });
@@ -705,7 +732,7 @@ export const OrderReturnRequestDetailPage = () => {
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
-                      Tiền yêu cầu hoàn
+                      Tiền ước tính hoàn
                     </Typography>
                     <Typography fontWeight={700} color="#ee4d2d">
                       {formatCurrency(request.requestedRefundAmount)}
@@ -810,14 +837,18 @@ export const OrderReturnRequestDetailPage = () => {
                           {request.customerNote?.trim() || "-"}
                         </Typography>
                       </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          Ghi chú nhân viên
-                        </Typography>
-                        <Typography sx={{ whiteSpace: "pre-wrap" }}>
-                          {request.staffNote?.trim() || "-"}
-                        </Typography>
-                      </Box>
+                      {shouldShowStaffNote && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Ghi chú nhân viên / kiểm định
+                          </Typography>
+                          <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                            {request.staffNote?.trim() ||
+                              request.inspectionNote?.trim() ||
+                              "-"}
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
                   </Box>
                 </Box>
@@ -1060,13 +1091,20 @@ export const OrderReturnRequestDetailPage = () => {
 
                   <TextField
                     fullWidth
-                    type="number"
+                    type="text"
                     label="Số tiền hoàn được duyệt"
-                    value={inspectionApprovedRefund}
-                    onChange={(event) =>
-                      setInspectionApprovedRefund(toNumber(event.target.value))
-                    }
-                    inputProps={{ min: 0 }}
+                    value={formatMoneyInput(inspectionApprovedRefund)}
+                    onChange={(event) => {
+                      setInspectionApprovedRefund(
+                        normalizeMoneyInput(event.target.value),
+                      );
+                    }}
+                    onBlur={() => {
+                      if (!inspectionApprovedRefund) {
+                        setInspectionApprovedRefund("0");
+                      }
+                    }}
+                    inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
                   />
 
                   <FormControlLabel
@@ -1077,6 +1115,8 @@ export const OrderReturnRequestDetailPage = () => {
                         onChange={(event) =>
                           setInspectionRestocked(event.target.checked)
                         }
+                        icon={<RadioButtonUncheckedIcon />}
+                        checkedIcon={<CheckCircleOutlineIcon />}
                       />
                     }
                     label="Nhập lại kho"

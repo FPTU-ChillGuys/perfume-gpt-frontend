@@ -662,22 +662,6 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               >
                 {user?.email}
               </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  display: "inline-block",
-                  mt: 0.5,
-                  px: 1,
-                  py: 0.25,
-                  bgcolor: "primary.main",
-                  color: "white",
-                  borderRadius: 1,
-                  fontSize: "0.7rem",
-                  textTransform: "uppercase",
-                }}
-              >
-                {user?.role}
-              </Typography>
             </MenuItem>
             <Divider />
             <MenuItem
