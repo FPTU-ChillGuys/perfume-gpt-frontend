@@ -4,6 +4,12 @@ import type { components } from "@/types/api/v1";
 export type LoyaltyPointResponse =
   components["schemas"]["LoyaltyTransactionTotalsResponse"];
 
+export type LoyaltyHistoryItem =
+  components["schemas"]["LoyaltyTransactionHistoryItemResponse"];
+
+export type LoyaltyTransactionType =
+  components["schemas"]["LoyaltyTransactionType"];
+
 class LoyaltyService {
   async getMyBalance(): Promise<LoyaltyPointResponse> {
     const response = await apiInstance.GET("/api/loyaltytransactions/me/total");
@@ -57,6 +63,35 @@ class LoyaltyService {
     if (!response.data?.success) {
       throw new Error(response.data?.message || "Failed to redeem points");
     }
+  }
+
+  async getMyHistory(
+    page = 1,
+    pageSize = 10,
+    transactionType?: LoyaltyTransactionType,
+  ): Promise<{ items: LoyaltyHistoryItem[]; totalCount: number }> {
+    const response = await apiInstance.GET(
+      "/api/loyaltytransactions/me/history",
+      {
+        params: {
+          query: {
+            PageNumber: page,
+            PageSize: pageSize,
+            ...(transactionType ? { TransactionType: transactionType } : {}),
+          },
+        },
+      },
+    );
+    if (!response.data?.success) {
+      throw new Error(
+        response.data?.message || "Failed to load loyalty history",
+      );
+    }
+    const payload = response.data.payload;
+    return {
+      items: payload?.items ?? [],
+      totalCount: payload?.totalCount ?? 0,
+    };
   }
 }
 

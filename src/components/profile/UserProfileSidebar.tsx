@@ -21,6 +21,7 @@ import {
   ExpandLess,
   ExpandMore,
   AssignmentReturn as ReturnIcon,
+  Stars as LoyaltyIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -68,6 +69,11 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
       icon: <VoucherIcon fontSize="small" />,
       path: "/profile/vouchers",
     },
+    {
+      label: "Điểm Thưởng",
+      icon: <LoyaltyIcon fontSize="small" />,
+      path: "/profile/loyalty",
+    },
   ];
 
   const displayName = userInfo?.fullName || userInfo?.email || "Người dùng";
@@ -79,7 +85,7 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
         flexShrink: 0,
         borderRight: "1px solid",
         borderColor: "divider",
-        bgcolor: "#fafafa",
+        bgcolor: "background.paper",
         pt: 3,
         pb: 4,
       }}

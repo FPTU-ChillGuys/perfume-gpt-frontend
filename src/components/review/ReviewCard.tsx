@@ -3,18 +3,21 @@ import ReactMarkdown from "react-markdown";
 import {
   Avatar,
   Box,
+  Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogContent,
   IconButton,
   Paper,
   Stack,
+  TextField,
   Typography,
   useTheme,
-  Button,
 } from "@mui/material";
 import Rating from "@mui/material/Rating";
 import CloseIcon from "@mui/icons-material/Close";
+import StorefrontIcon from "@mui/icons-material/Storefront";
 import {
   getReviewStatus,
   type ReviewMedia,
@@ -53,6 +56,7 @@ interface ReviewCardProps {
   actions?: React.ReactNode;
   clampLines?: number;
   dense?: boolean;
+  onReply?: (reviewId: string, comment: string) => Promise<void>;
 }
 
 export const ReviewCard = ({
@@ -61,10 +65,14 @@ export const ReviewCard = ({
   actions,
   clampLines = 0,
   dense = false,
+  onReply,
 }: ReviewCardProps) => {
   const theme = useTheme();
   const [selectedImage, setSelectedImage] = useState<ReviewMedia | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState(review.staffFeedbackComment ?? "");
+  const [replyLoading, setReplyLoading] = useState(false);
 
   const avatarGradient = useMemo(() => {
     const seed = (review.userFullName || "perfume").length * 37;
@@ -248,6 +256,103 @@ export const ReviewCard = ({
                 />
               </Box>
             ))}
+          </Box>
+        )}
+
+        {(review.staffFeedbackComment || onReply) && (
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "action.hover",
+              borderLeft: "3px solid",
+              borderColor: "primary.main",
+            }}
+          >
+            <Stack direction="row" spacing={1} alignItems="center" mb={1}>
+              <StorefrontIcon fontSize="small" color="primary" />
+              <Typography variant="subtitle2" fontWeight={700} color="primary">
+                Phản hồi từ Cửa hàng
+              </Typography>
+              {review.staffFeedbackAt && (
+                <Typography variant="caption" color="text.secondary">
+                  · {dateFormatter.format(new Date(review.staffFeedbackAt))}
+                </Typography>
+              )}
+            </Stack>
+
+            {!replyOpen && review.staffFeedbackComment && (
+              <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                {review.staffFeedbackComment}
+              </Typography>
+            )}
+
+            {replyOpen && onReply && (
+              <Stack spacing={1.5} mt={1}>
+                <TextField
+                  multiline
+                  minRows={2}
+                  maxRows={6}
+                  fullWidth
+                  size="small"
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Nhập phản hồi đến khách hàng..."
+                  disabled={replyLoading}
+                />
+                <Stack direction="row" spacing={1}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={replyLoading || replyText.trim().length < 2}
+                    onClick={async () => {
+                      setReplyLoading(true);
+                      try {
+                        await onReply(review.id!, replyText.trim());
+                        setReplyOpen(false);
+                      } finally {
+                        setReplyLoading(false);
+                      }
+                    }}
+                    startIcon={
+                      replyLoading ? (
+                        <CircularProgress size={14} color="inherit" />
+                      ) : undefined
+                    }
+                  >
+                    Gửi
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="text"
+                    disabled={replyLoading}
+                    onClick={() => {
+                      setReplyText(review.staffFeedbackComment ?? "");
+                      setReplyOpen(false);
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                </Stack>
+              </Stack>
+            )}
+
+            {onReply && !replyOpen && (
+              <Button
+                size="small"
+                variant="outlined"
+                sx={{
+                  mt: review.staffFeedbackComment ? 1 : 0,
+                  textTransform: "none",
+                }}
+                onClick={() => {
+                  setReplyText(review.staffFeedbackComment ?? "");
+                  setReplyOpen(true);
+                }}
+              >
+                {review.staffFeedbackComment ? "Sửa phản hồi" : "Phản hồi"}
+              </Button>
+            )}
           </Box>
         )}
       </Stack>

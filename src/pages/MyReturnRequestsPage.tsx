@@ -160,7 +160,7 @@ export const MyReturnRequestsPage = () => {
 
   return (
     <MainLayout>
-      <Box sx={{ bgcolor: "white", py: 4, flex: 1 }}>
+      <Box sx={{ bgcolor: "background.default", py: 4, flex: 1 }}>
         <Container maxWidth="lg">
           <Paper
             elevation={0}
@@ -178,7 +178,7 @@ export const MyReturnRequestsPage = () => {
             <Box
               sx={{
                 flex: 1,
-                bgcolor: "#fff",
+                bgcolor: "background.paper",
                 minWidth: 0,
                 display: "flex",
                 flexDirection: "column",

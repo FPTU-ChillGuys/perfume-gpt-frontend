@@ -1038,7 +1038,7 @@ const ProductDetailPage = () => {
                 borderRadius: 3,
                 border: "1px solid",
                 borderColor: "divider",
-                bgcolor: "white",
+                bgcolor: "background.paper",
                 height: 420,
                 display: "flex",
                 alignItems: "center",

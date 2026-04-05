@@ -641,7 +641,7 @@ export default function ChatbotWidget() {
               display: "flex",
               flexDirection: "column",
               gap: 1.5,
-              bgcolor: "#fff",
+              bgcolor: "background.paper",
               "&::-webkit-scrollbar": { width: 5 },
               "&::-webkit-scrollbar-thumb": {
                 bgcolor: "#dee2e6",
@@ -732,7 +732,7 @@ export default function ChatbotWidget() {
               display: "flex",
               gap: 1,
               alignItems: "flex-end",
-              bgcolor: "#fff",
+              bgcolor: "background.paper",
               flexShrink: 0,
             }}
           >
@@ -749,7 +749,7 @@ export default function ChatbotWidget() {
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 3,
-                  bgcolor: "#f8f9fa",
+                  bgcolor: "action.hover",
                   "& fieldset": { borderColor: "#e9ecef" },
                   "&:hover fieldset": { borderColor: "#dc2626" },
                   "&.Mui-focused fieldset": { borderColor: "#dc2626" },

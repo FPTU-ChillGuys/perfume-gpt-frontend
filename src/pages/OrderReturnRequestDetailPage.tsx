@@ -607,7 +607,7 @@ export const OrderReturnRequestDetailPage = () => {
                   sx={{ letterSpacing: 0.5 }}
                 >
                   MÃ ĐƠN HÀNG:{" "}
-                  <b style={{ color: "#333" }}>
+                  <b style={{ color: "inherit" }}>
                     {(request.orderCode || "-").toUpperCase()}
                   </b>
                 </Typography>
@@ -632,7 +632,7 @@ export const OrderReturnRequestDetailPage = () => {
                   border: "1px solid",
                   borderColor: "#e5e7eb",
                   borderRadius: 2,
-                  bgcolor: "#fff",
+                  bgcolor: "background.paper",
                   position: "relative",
                   overflow: "hidden",
                   boxShadow: "0 1px 2px rgba(15, 23, 42, 0.06)",
@@ -657,7 +657,7 @@ export const OrderReturnRequestDetailPage = () => {
                   <Typography
                     variant="subtitle2"
                     fontWeight={700}
-                    sx={{ color: "#333" }}
+                    sx={{ color: "text.primary" }}
                   >
                     Thông tin yêu cầu
                   </Typography>

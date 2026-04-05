@@ -115,6 +115,11 @@ const UserLogsManagementPage = lazy(() =>
     default: m.UserLogsManagementPage,
   })),
 );
+const UserManagementPage = lazy(() =>
+  import("./pages/UserManagementPage").then((m) => ({
+    default: m.UserManagementPage,
+  })),
+);
 const AdminConversationsPage = lazy(() =>
   import("./pages/AdminConversationsPage").then((m) => ({
     default: m.AdminConversationsPage,
@@ -148,6 +153,11 @@ const VerifyEmailPage = lazy(() =>
 const AdminVouchersPage = lazy(() =>
   import("./pages/AdminVouchersPage").then((m) => ({
     default: m.AdminVouchersPage,
+  })),
+);
+const AttributeManagementPage = lazy(() =>
+  import("./pages/AttributeManagementPage").then((m) => ({
+    default: m.default,
   })),
 );
 const OrderCancelRequestsPage = lazy(() =>
@@ -307,6 +317,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/profile/loyalty"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <ProfilePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/profile/notifications"
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
@@ -425,6 +443,14 @@ function App() {
                         element={<UnauthorizedPage />}
                       />
                       <Route
+                        path="/admin/users"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <UserManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/logs"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -477,6 +503,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <AdminVouchersPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/attributes"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <AttributeManagementPage />
                           </RoleBasedRoute>
                         }
                       />

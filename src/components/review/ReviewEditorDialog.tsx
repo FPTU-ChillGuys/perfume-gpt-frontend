@@ -303,7 +303,7 @@ export const ReviewEditorDialog = ({
                         position: "absolute",
                         top: -10,
                         right: -10,
-                        bgcolor: "white",
+                        bgcolor: "background.paper",
                         boxShadow: 1,
                       }}
                     >
@@ -331,7 +331,7 @@ export const ReviewEditorDialog = ({
                         position: "absolute",
                         top: -10,
                         right: -10,
-                        bgcolor: "white",
+                        bgcolor: "background.paper",
                         boxShadow: 1,
                       }}
                     >

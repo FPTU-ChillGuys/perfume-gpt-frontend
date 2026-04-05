@@ -167,7 +167,7 @@ export const LoginPage = () => {
           sx={{
             width: "100%",
             maxWidth: 480,
-            bgcolor: "white",
+            bgcolor: "background.paper",
             p: 3,
             borderRadius: 2,
             boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
