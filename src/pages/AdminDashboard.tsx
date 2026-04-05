@@ -10,6 +10,10 @@ import {
   Alert,
   Avatar,
   Divider,
+  Slider,
+  FormControl,
+  MenuItem,
+  Select,
 } from "@mui/material";
 import {
   PersonAdd,
@@ -80,10 +84,50 @@ const getTodayRange = () => {
   };
 };
 
-const getCurrentMonthRange = () => {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+const formatMonthKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+const getCurrentMonthKey = () => formatMonthKey(new Date());
+
+const getYearMonthOptions = (year = new Date().getFullYear()) => {
+  const options: { value: string; label: string }[] = [];
+
+  for (let month = 1; month <= 12; month += 1) {
+    const date = new Date(year, month - 1, 1);
+    options.push({
+      value: formatMonthKey(date),
+      label: date.toLocaleDateString("vi-VN", {
+        month: "long",
+        year: "numeric",
+      }),
+    });
+  }
+
+  return options;
+};
+
+const parseMonthKey = (monthKey: string) => {
+  const [yearText, monthText] = monthKey.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    month < 1 ||
+    month > 12
+  ) {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  }
+
+  return { year, month };
+};
+
+const getMonthRange = (monthKey: string) => {
+  const { year, month } = parseMonthKey(monthKey);
+  const start = new Date(year, month - 1, 1, 0, 0, 0);
+  const end = new Date(year, month, 0, 23, 59, 59);
 
   return {
     from: formatDateTimeForApi(start),
@@ -93,7 +137,9 @@ const getCurrentMonthRange = () => {
 
 interface WeekRevenuePoint {
   label: string;
-  revenue: number;
+  grossRevenue: number;
+  refundedAmount: number;
+  netRevenue: number;
   orders: number;
 }
 
@@ -103,11 +149,10 @@ interface WeekRange {
   to: string;
 }
 
-const getCurrentMonthWeekRanges = (): WeekRange[] => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const lastDay = new Date(year, month + 1, 0).getDate();
+const getMonthWeekRanges = (monthKey: string): WeekRange[] => {
+  const { year, month } = parseMonthKey(monthKey);
+  const monthIndex = month - 1;
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
 
   const weekBreakpoints = [1, 8, 15, 22, 29];
   return weekBreakpoints
@@ -121,8 +166,15 @@ const getCurrentMonthWeekRanges = (): WeekRange[] => {
         return null;
       }
 
-      const start = new Date(year, month, startDay, 0, 0, 0);
-      const end = new Date(year, month, Math.min(endDay, lastDay), 23, 59, 59);
+      const start = new Date(year, monthIndex, startDay, 0, 0, 0);
+      const end = new Date(
+        year,
+        monthIndex,
+        Math.min(endDay, lastDay),
+        23,
+        59,
+        59,
+      );
 
       return {
         label: `Tuần ${index + 1}`,
@@ -139,12 +191,18 @@ const buildWeeklyRevenueSeries = (
 ): WeekRevenuePoint[] => {
   return ranges.map((range, index) => {
     const summary = summaries[index] || {};
-    const revenue = Number(summary.netRevenue ?? summary.grossRevenue ?? 0);
+    const grossRevenue = Number(summary.grossRevenue ?? 0);
+    const refundedAmount = Number(summary.refundedAmount ?? 0);
+    const netRevenue = Number(
+      summary.netRevenue ?? grossRevenue - refundedAmount,
+    );
     const orders = Number(summary.paidOrdersCount ?? 0);
 
     return {
       label: range.label,
-      revenue,
+      grossRevenue,
+      refundedAmount,
+      netRevenue,
       orders,
     };
   });
@@ -180,37 +238,178 @@ const StatCard = ({ label, value, icon, color, bg, helper }: StatCardProps) => (
   </Paper>
 );
 
-const RevenueLineChart = ({ data }: { data: WeekRevenuePoint[] }) => {
-  const width = 640;
-  const height = 320;
-  const margin = { top: 18, right: 24, bottom: 56, left: 62 };
+const RevenueLineChart = ({
+  data,
+  range,
+  onRangeChange,
+}: {
+  data: WeekRevenuePoint[];
+  range: number[];
+  onRangeChange: (next: number[]) => void;
+}) => {
+  const width = 1000;
+  const height = 340;
+  const margin = { top: 28, right: 24, bottom: 62, left: 70 };
+  const xAxisStart = margin.left + 18;
 
-  const maxRevenue = Math.max(1, ...data.map((point) => point.revenue));
-  const plotWidth = width - margin.left - margin.right;
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  const safeStart = Math.max(0, Math.min(range[0] ?? 0, data.length - 1));
+  const safeEnd = Math.max(
+    safeStart,
+    Math.min(range[1] ?? safeStart, data.length - 1),
+  );
+  const visibleData = data.slice(safeStart, safeEnd + 1);
+
+  const allValues = visibleData.flatMap((point) => [
+    point.grossRevenue,
+    point.netRevenue,
+    point.refundedAmount,
+  ]);
+
+  const maxRevenue = Math.max(1, ...allValues);
+  const minRevenue = Math.min(0, ...allValues);
+  const valueSpan = Math.max(1, maxRevenue - minRevenue);
+  const plotWidth = width - xAxisStart - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
 
-  const points = data.map((point, index) => {
-    const x = margin.left + (index * plotWidth) / Math.max(data.length - 1, 1);
+  const yTickValues =
+    minRevenue < 0 && maxRevenue > 0
+      ? [maxRevenue, maxRevenue / 2, 0, minRevenue / 2, minRevenue]
+      : [
+          maxRevenue,
+          maxRevenue * 0.75,
+          maxRevenue * 0.5,
+          maxRevenue * 0.25,
+          minRevenue,
+        ];
+
+  const points = visibleData.map((point, index) => {
+    const x =
+      xAxisStart + (index * plotWidth) / Math.max(visibleData.length - 1, 1);
     const y =
-      margin.top + plotHeight - (point.revenue / maxRevenue) * plotHeight;
+      margin.top +
+      plotHeight -
+      ((point.netRevenue - minRevenue) / valueSpan) * plotHeight;
     return { ...point, x, y };
   });
 
-  const path = points
-    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
-    .join(" ");
+  const smoothPath = (seriesPoints: { x: number; y: number }[]) => {
+    if (!seriesPoints.length) {
+      return "";
+    }
+
+    if (seriesPoints.length === 1) {
+      return `M${seriesPoints[0]!.x},${seriesPoints[0]!.y}`;
+    }
+
+    let path = `M${seriesPoints[0]!.x},${seriesPoints[0]!.y}`;
+
+    for (let i = 0; i < seriesPoints.length - 1; i += 1) {
+      const p1 = seriesPoints[i]!;
+      const p2 = seriesPoints[i + 1]!;
+      const dx = p2.x - p1.x;
+      const curvature = 0.35;
+
+      // Keep control points close to each endpoint's Y value to avoid wavy overshoot.
+      const cp1x = p1.x + dx * curvature;
+      const cp1y = p1.y;
+      const cp2x = p2.x - dx * curvature;
+      const cp2y = p2.y;
+
+      path += ` C${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    }
+
+    return path;
+  };
+
+  const buildSeriesPath = (
+    selector: (point: WeekRevenuePoint) => number,
+    source: (WeekRevenuePoint & { x: number; y: number })[],
+  ) => {
+    const seriesPoints = source.map((point) => {
+      const value = selector(point);
+      const y =
+        margin.top +
+        plotHeight -
+        ((value - minRevenue) / valueSpan) * plotHeight;
+      return { x: point.x, y };
+    });
+
+    if (!seriesPoints.length) {
+      return "";
+    }
+
+    const connectedPoints = [
+      { x: margin.left, y: seriesPoints[0]!.y },
+      ...seriesPoints,
+    ];
+    return smoothPath(connectedPoints);
+  };
+
+  const grossPath = buildSeriesPath((point) => point.grossRevenue, points);
+  const netPath = buildSeriesPath((point) => point.netRevenue, points);
+  const refundPath = buildSeriesPath((point) => point.refundedAmount, points);
+
+  const hoveredPoint = hoveredIndex != null ? visibleData[hoveredIndex] : null;
+
+  const hoveredX = hoveredIndex != null ? points[hoveredIndex]?.x : undefined;
+
+  const zeroLineY =
+    margin.top + plotHeight - ((0 - minRevenue) / valueSpan) * plotHeight;
+
+  const sliderMarks = data.map((point, index) => ({
+    value: index,
+    label: point.label,
+  }));
 
   return (
-    <Box>
-      <Box sx={{ width: "100%", overflowX: "auto" }}>
+    <Box
+      sx={{
+        borderRadius: 2,
+        bgcolor: "#f8fbff",
+        border: "1px solid",
+        borderColor: "#dbe7f5",
+        p: 2.2,
+      }}
+    >
+      <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap mb={1.5}>
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Box
+            sx={{ width: 14, height: 3, bgcolor: "#4ade80", borderRadius: 1 }}
+          />
+          <Typography variant="caption" color="#334155">
+            Doanh thu gộp
+          </Typography>
+        </Stack>
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Box
+            sx={{ width: 14, height: 3, bgcolor: "#60a5fa", borderRadius: 1 }}
+          />
+          <Typography variant="caption" color="#334155">
+            Doanh thu thuần
+          </Typography>
+        </Stack>
+        <Stack direction="row" spacing={0.75} alignItems="center">
+          <Box
+            sx={{ width: 14, height: 3, bgcolor: "#f87171", borderRadius: 1 }}
+          />
+          <Typography variant="caption" color="#334155">
+            Hoàn tiền
+          </Typography>
+        </Stack>
+      </Stack>
+
+      <Box sx={{ width: "100%", overflowX: "auto", position: "relative" }}>
         <svg
-          width={width}
+          width="100%"
           height={height}
+          viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Biểu đồ doanh thu theo tuần"
+          aria-label="Biểu đồ doanh thu theo tuần trong tháng"
         >
           <line
-            x1={margin.left}
+            x1={xAxisStart}
             y1={margin.top + plotHeight}
             x2={width - margin.right}
             y2={margin.top + plotHeight}
@@ -225,56 +424,199 @@ const RevenueLineChart = ({ data }: { data: WeekRevenuePoint[] }) => {
             stroke="#cbd5e1"
           />
 
-          {[0, 0.25, 0.5, 0.75, 1].map((tick, index) => {
-            const y = margin.top + plotHeight - tick * plotHeight;
+          {zeroLineY >= margin.top && zeroLineY <= margin.top + plotHeight && (
+            <line
+              x1={xAxisStart}
+              y1={zeroLineY}
+              x2={width - margin.right}
+              y2={zeroLineY}
+              stroke="#94a3b8"
+              strokeDasharray="5 4"
+            />
+          )}
+
+          {yTickValues.map((value, index) => {
+            const y =
+              margin.top +
+              plotHeight -
+              ((value - minRevenue) / valueSpan) * plotHeight;
             return (
               <g key={index}>
                 <line
-                  x1={margin.left}
+                  x1={xAxisStart}
                   y1={y}
                   x2={width - margin.right}
                   y2={y}
-                  stroke="#e5e7eb"
+                  stroke="#e2e8f0"
                   strokeDasharray="3 3"
                 />
                 <text
                   x={margin.left - 8}
                   y={y + 4}
-                  fill="#6b7280"
+                  fill="#64748b"
                   fontSize="11"
                   textAnchor="end"
                 >
-                  {formatCompactCurrency(maxRevenue * tick)}
+                  {formatCompactCurrency(value)}
                 </text>
               </g>
             );
           })}
 
           <path
-            d={path}
+            d={grossPath}
             fill="none"
-            stroke="#2563eb"
+            stroke="#4ade80"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          <path
+            d={netPath}
+            fill="none"
+            stroke="#60a5fa"
             strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          <path
+            d={refundPath}
+            fill="none"
+            stroke="#f87171"
+            strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
           />
 
           {points.map((point, index) => (
             <g key={index}>
-              <circle cx={point.x} cy={point.y} r={4} fill="#1d4ed8" />
+              <rect
+                x={
+                  index === 0
+                    ? xAxisStart
+                    : (points[index - 1]!.x + point.x) / 2
+                }
+                y={margin.top}
+                width={
+                  index === points.length - 1
+                    ? width - margin.right - point.x
+                    : (points[index + 1]!.x - point.x) / 2
+                }
+                height={plotHeight}
+                fill="transparent"
+                onMouseEnter={() => setHoveredIndex(index)}
+                onMouseMove={() => setHoveredIndex(index)}
+              />
+
+              <circle
+                cx={point.x}
+                cy={
+                  margin.top +
+                  plotHeight -
+                  ((point.netRevenue - minRevenue) / valueSpan) * plotHeight
+                }
+                r={hoveredIndex === index ? 5 : 3.8}
+                fill="#60a5fa"
+              />
+
               <text
                 x={point.x}
                 y={height - 14}
                 textAnchor="middle"
-                fill="#374151"
+                fill="#475569"
                 fontSize="11"
               >
                 {point.label}
               </text>
             </g>
           ))}
+
+          {hoveredX != null && (
+            <line
+              x1={hoveredX}
+              y1={margin.top}
+              x2={hoveredX}
+              y2={margin.top + plotHeight}
+              stroke="#94a3b8"
+              strokeDasharray="4 4"
+            />
+          )}
         </svg>
+
+        {hoveredPoint && hoveredX != null && (
+          <Paper
+            elevation={3}
+            sx={{
+              position: "absolute",
+              top: 10,
+              left: Math.min(width - 220, Math.max(8, hoveredX + 12)),
+              px: 1.25,
+              py: 1,
+              bgcolor: "#ffffff",
+              color: "#0f172a",
+              border: "1px solid #cbd5e1",
+              borderRadius: 1.5,
+              minWidth: 190,
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{ color: "#64748b", display: "block", mb: 0.5 }}
+            >
+              {hoveredPoint.label}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{ color: "#86efac", display: "block" }}
+            >
+              Doanh thu gộp: {formatCurrency(hoveredPoint.grossRevenue)}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{ color: "#93c5fd", display: "block" }}
+            >
+              Doanh thu thuần: {formatCurrency(hoveredPoint.netRevenue)}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{ color: "#fca5a5", display: "block" }}
+            >
+              Hoàn tiền: {formatCurrency(hoveredPoint.refundedAmount)}
+            </Typography>
+          </Paper>
+        )}
       </Box>
+
+      {data.length > 1 && (
+        <Box sx={{ px: 0.75, pt: 1.5 }}>
+          <Slider
+            value={range}
+            onChange={(_, value) => {
+              if (Array.isArray(value) && value.length === 2) {
+                onRangeChange([value[0] ?? 0, value[1] ?? 0]);
+              }
+            }}
+            min={0}
+            max={data.length - 1}
+            step={1}
+            marks={sliderMarks}
+            valueLabelDisplay="off"
+            sx={{
+              color: "#60a5fa",
+              "& .MuiSlider-markLabel": {
+                color: "#475569",
+                fontSize: 11,
+                mt: 0.5,
+              },
+              "& .MuiSlider-rail": {
+                bgcolor: "#cbd5e1",
+              },
+            }}
+          />
+        </Box>
+      )}
     </Box>
   );
 };
@@ -283,9 +625,12 @@ const AdminDashboard = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const monthOptions = getYearMonthOptions(new Date().getFullYear());
 
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [weeklyRevenue, setWeeklyRevenue] = useState<WeekRevenuePoint[]>([]);
+  const [revenueRange, setRevenueRange] = useState<number[]>([0, 0]);
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey());
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [inventorySummary, setInventorySummary] =
     useState<InventoryLevelsSummary>({});
@@ -293,8 +638,8 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const todayRange = getTodayRange();
-    const monthRange = getCurrentMonthRange();
-    const weekRanges = getCurrentMonthWeekRanges();
+    const monthRange = getMonthRange(selectedMonth);
+    const weekRanges = getMonthWeekRanges(selectedMonth);
     let active = true;
 
     Promise.all([
@@ -323,9 +668,12 @@ const AdminDashboard = () => {
         }
 
         setOverview(ov);
-        setWeeklyRevenue(
-          buildWeeklyRevenueSeries(weekRanges, revenueSummaries),
+        const weeklySeries = buildWeeklyRevenueSeries(
+          weekRanges,
+          revenueSummaries,
         );
+        setWeeklyRevenue(weeklySeries);
+        setRevenueRange([0, Math.max(0, weeklySeries.length - 1)]);
         setTopProducts(top);
         setInventorySummary(inv);
       })
@@ -344,7 +692,7 @@ const AdminDashboard = () => {
     return () => {
       active = false;
     };
-  }, [showToast]);
+  }, [selectedMonth, showToast]);
 
   const todayOrders = Number(overview?.revenue?.paidOrdersCount ?? 0);
   const todayRevenue = Number(
@@ -448,19 +796,45 @@ const AdminDashboard = () => {
             >
               <Paper sx={{ p: 2.5, borderRadius: 2.5 }}>
                 <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 1,
+                    mb: 2,
+                    flexWrap: "wrap",
+                  }}
                 >
-                  <Timeline color="primary" />
-                  <Typography variant="h6" fontWeight="bold">
-                    Doanh thu tháng hiện tại theo tuần
-                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center">
+                    <Timeline color="primary" />
+                    <Typography variant="h6" fontWeight="bold">
+                      Doanh thu theo tuần trong tháng
+                    </Typography>
+                  </Stack>
+
+                  <FormControl size="small" sx={{ minWidth: 190 }}>
+                    <Select
+                      value={selectedMonth}
+                      onChange={(event) => setSelectedMonth(event.target.value)}
+                    >
+                      {monthOptions.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                 </Box>
                 {weeklyRevenue.length === 0 ? (
                   <Typography color="text.secondary" textAlign="center" py={4}>
-                    Chưa có dữ liệu doanh thu theo tháng
+                    Chưa có dữ liệu doanh thu của tháng đã chọn
                   </Typography>
                 ) : (
-                  <RevenueLineChart data={weeklyRevenue} />
+                  <RevenueLineChart
+                    data={weeklyRevenue}
+                    range={revenueRange}
+                    onRangeChange={setRevenueRange}
+                  />
                 )}
               </Paper>
 
