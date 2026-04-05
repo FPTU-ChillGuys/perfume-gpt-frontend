@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -8,6 +9,7 @@ import {
   Container,
   Divider,
   IconButton,
+  Input,
   Paper,
   Stack,
   Tooltip,
@@ -18,8 +20,15 @@ import ImageIcon from "@mui/icons-material/Image";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import LocalPrintshopOutlinedIcon from "@mui/icons-material/LocalPrintshopOutlined";
 import Sync from "@mui/icons-material/Sync";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
+import VideocamOutlined from "@mui/icons-material/VideocamOutlined";
 import { MainLayout } from "@/layouts/MainLayout";
-import { orderService, type OrderReturnRequest } from "@/services/orderService";
+import {
+  orderService,
+  type OrderReturnRequest,
+  type UpdateReturnRequestDto,
+} from "@/services/orderService";
 import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
 import { useToast } from "@/hooks/useToast";
@@ -28,11 +37,12 @@ import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
+  if (status === "RequestMoreInfo") return "Bổ sung bằng chứng";
   if (status === "ApprovedForReturn") return "Đã duyệt trả";
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
   if (status === "Rejected") return "Từ chối";
-  if (status === "Completed") return "Đã hoàn tiền";
+  if (status === "Completed") return "Đã hoàn tiền";
   return status || "-";
 };
 
@@ -69,6 +79,7 @@ const statusColor = (
   status?: string,
 ): "default" | "warning" | "info" | "success" | "error" => {
   if (status === "Pending") return "warning";
+  if (status === "RequestMoreInfo") return "warning";
   if (status === "ApprovedForReturn") return "info";
   if (status === "Inspecting") return "info";
   if (status === "ReadyForRefund") return "success";
@@ -107,44 +118,69 @@ const MediaPreviewDialog = ({
   mediaUrl: string;
   mimeType?: string | null;
   onClose: () => void;
-}) => (
-  <Box
-    sx={{
-      position: open ? "fixed" : "absolute",
-      inset: 0,
-      bgcolor: "rgba(0,0,0,0.65)",
-      zIndex: open ? 1300 : -1,
-      display: open ? "flex" : "none",
-      alignItems: "center",
-      justifyContent: "center",
-      p: 2,
-    }}
-    onClick={onClose}
-  >
-    <Box onClick={(e) => e.stopPropagation()}>
-      {isVideoMedia(mediaUrl, mimeType) ? (
-        <Box
-          component="video"
-          src={mediaUrl}
-          controls
-          sx={{ maxWidth: "90vw", maxHeight: "85vh", display: "block" }}
-        />
-      ) : (
-        <Box
-          component="img"
-          src={mediaUrl}
-          alt="Ảnh minh chứng"
-          sx={{ maxWidth: "90vw", maxHeight: "85vh", display: "block" }}
-        />
-      )}
+}) => {
+  if (!open || !mediaUrl) {
+    return null;
+  }
+
+  return (
+    <Box
+      sx={{
+        position: "fixed",
+        inset: 0,
+        bgcolor: "rgba(0,0,0,0.65)",
+        zIndex: 1300,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        p: 2,
+      }}
+      onClick={onClose}
+    >
+      <Box onClick={(e) => e.stopPropagation()}>
+        {isVideoMedia(mediaUrl, mimeType) ? (
+          <Box
+            component="video"
+            src={mediaUrl}
+            controls
+            sx={{ maxWidth: "90vw", maxHeight: "85vh", display: "block" }}
+          />
+        ) : (
+          <Box
+            component="img"
+            src={mediaUrl}
+            alt="Ảnh minh chứng"
+            sx={{ maxWidth: "90vw", maxHeight: "85vh", display: "block" }}
+          />
+        )}
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};
 
 export const MyReturnRequestDetailPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { returnRequestId } = useParams<{ returnRequestId: string }>();
+
+  const backState = location.state as
+    | {
+        status?: string;
+        page?: number;
+        pageSize?: number;
+      }
+    | undefined;
+
+  const handleBack = () => {
+    navigate("/my-return-requests", {
+      state: {
+        status: backState?.status ?? "All",
+        page: backState?.page ?? 1,
+        pageSize: backState?.pageSize ?? 10,
+      },
+    });
+  };
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
 
   const [request, setRequest] = useState<OrderReturnRequest | null>(null);
@@ -152,6 +188,10 @@ export const MyReturnRequestDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncingShipping, setIsSyncingShipping] = useState(false);
   const [isGeneratingLabelUrl, setIsGeneratingLabelUrl] = useState(false);
+  const [isUpdatingEvidence, setIsUpdatingEvidence] = useState(false);
+  const [customerNoteDraft, setCustomerNoteDraft] = useState("");
+  const [newMediaFiles, setNewMediaFiles] = useState<File[]>([]);
+  const [removeMediaIds, setRemoveMediaIds] = useState<string[]>([]);
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedMediaUrl, setSelectedMediaUrl] = useState("");
@@ -178,6 +218,10 @@ export const MyReturnRequestDetailPage = () => {
       } else {
         setOrder(null);
       }
+
+      setCustomerNoteDraft(fullRequest.customerNote || "");
+      setNewMediaFiles([]);
+      setRemoveMediaIds([]);
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Không thể tải chi tiết",
@@ -256,6 +300,183 @@ export const MyReturnRequestDetailPage = () => {
     }
   };
 
+  const isRequestMoreInfo = request?.status === "RequestMoreInfo";
+
+  const existingProofImages = request?.proofImages || [];
+  const visibleProofImages = existingProofImages.filter(
+    (media) => !removeMediaIds.includes(media.id || ""),
+  );
+
+  const newImageFilesCount = newMediaFiles.filter(
+    (file) => !file.type.startsWith("video/"),
+  ).length;
+
+  const newVideoFilesCount = newMediaFiles.filter((file) =>
+    file.type.startsWith("video/"),
+  ).length;
+
+  const newMediaPreviews = useMemo(
+    () =>
+      newMediaFiles.map((file, index) => ({
+        index,
+        name: file.name,
+        mimeType: file.type,
+        isVideo: file.type.startsWith("video/"),
+        url: URL.createObjectURL(file),
+      })),
+    [newMediaFiles],
+  );
+
+  useEffect(() => {
+    return () => {
+      newMediaPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    };
+  }, [newMediaPreviews]);
+
+  const handlePickNewImages = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const pickedFiles = Array.from(event.target.files || []).filter((file) =>
+      file.type.startsWith("image/"),
+    );
+    if (!pickedFiles.length) {
+      return;
+    }
+
+    setNewMediaFiles((prev) => [...prev, ...pickedFiles]);
+    event.target.value = "";
+  };
+
+  const handlePickNewVideos = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const pickedFiles = Array.from(event.target.files || []).filter((file) =>
+      file.type.startsWith("video/"),
+    );
+    if (!pickedFiles.length) {
+      return;
+    }
+
+    setNewMediaFiles((prev) => [...prev, ...pickedFiles]);
+    event.target.value = "";
+  };
+
+  const handleRemoveExistingMedia = (mediaId?: string) => {
+    if (!mediaId) {
+      showToast("Không thể xóa media này vì thiếu mã định danh", "warning");
+      return;
+    }
+
+    setRemoveMediaIds((prev) =>
+      prev.includes(mediaId) ? prev : [...prev, mediaId],
+    );
+  };
+
+  const handleUndoRemoveExistingMedia = (mediaId?: string) => {
+    if (!mediaId) return;
+    setRemoveMediaIds((prev) => prev.filter((id) => id !== mediaId));
+  };
+
+  const handleRemoveNewFile = (indexToRemove: number) => {
+    setNewMediaFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  const handleSubmitMoreEvidence = async () => {
+    if (!request?.id || !isRequestMoreInfo) {
+      return;
+    }
+
+    if (removeMediaIds.length === 0 && newMediaFiles.length === 0) {
+      showToast("Bạn chưa thay đổi hình ảnh/video để cập nhật", "warning");
+      return;
+    }
+
+    try {
+      setIsUpdatingEvidence(true);
+
+      let temporaryMediaIds: string[] = [];
+      if (newMediaFiles.length > 0) {
+        const uploadResult =
+          await orderService.uploadTemporaryReturnMedia(newMediaFiles);
+        temporaryMediaIds = uploadResult
+          .map((item) => item.id)
+          .filter((id): id is string => Boolean(id));
+      }
+
+      const draftCustomerNote = customerNoteDraft.trim();
+      const currentCustomerNote = (request.customerNote || "").trim();
+      const isCustomerNoteChanged = draftCustomerNote !== currentCustomerNote;
+
+      const updatePayload: UpdateReturnRequestDto = {
+        temporaryMediaIds: temporaryMediaIds.length ? temporaryMediaIds : null,
+        removeMediaIds: removeMediaIds.length ? removeMediaIds : null,
+      };
+
+      // Keep backend value unchanged when customer note is not edited.
+      if (isCustomerNoteChanged) {
+        updatePayload.customerNote = draftCustomerNote || null;
+      }
+
+      await orderService.updateReturnRequest(request.id, updatePayload);
+
+      showToast("Đã gửi bổ sung bằng chứng thành công", "success");
+      await loadDetail();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật yêu cầu bổ sung bằng chứng",
+        "error",
+      );
+    } finally {
+      setIsUpdatingEvidence(false);
+    }
+  };
+
+  const requestItems = useMemo(() => {
+    const orderDetails = order?.orderDetails || [];
+    const returnDetails = request?.returnDetails || [];
+
+    if (!returnDetails.length) {
+      return orderDetails.map((item, index) => {
+        const quantity = toNumber(item.quantity);
+        const unitPrice = toNumber(item.unitPrice);
+        return {
+          key: item.id || index,
+          name: item.variantName || `Sản phẩm ${index + 1}`,
+          imageUrl: item.imageUrl || null,
+          quantity,
+          unitPrice,
+          totalItem: unitPrice * quantity,
+        };
+      });
+    }
+
+    return returnDetails.map((detail, index) => {
+      const matchedOrderDetail = orderDetails.find(
+        (item) =>
+          item.id === detail.orderDetailId ||
+          (detail.variantId && item.variantId === detail.variantId),
+      );
+
+      const quantity = toNumber(detail.requestedQuantity);
+      const unitPrice = toNumber(
+        detail.unitPrice ?? matchedOrderDetail?.unitPrice,
+      );
+
+      return {
+        key:
+          detail.id ||
+          detail.orderDetailId ||
+          detail.variantId ||
+          matchedOrderDetail?.id ||
+          index,
+        name:
+          matchedOrderDetail?.variantName || `Sản phẩm hoàn trả ${index + 1}`,
+        imageUrl: matchedOrderDetail?.imageUrl || null,
+        quantity,
+        unitPrice,
+        totalItem: unitPrice * quantity,
+      };
+    });
+  }, [order?.orderDetails, request?.returnDetails]);
+
   return (
     <MainLayout>
       <Box sx={{ bgcolor: "white", py: 4, flex: 1 }}>
@@ -303,7 +524,7 @@ export const MyReturnRequestDetailPage = () => {
                   >
                     <Button
                       startIcon={<ArrowBackIcon />}
-                      onClick={() => navigate(-1)}
+                      onClick={handleBack}
                       sx={{ color: "text.secondary", textTransform: "none" }}
                     >
                       TRỞ LẠI
@@ -634,16 +855,18 @@ export const MyReturnRequestDetailPage = () => {
                         Sản phẩm trong đơn
                       </Typography>
                       <Stack spacing={0} divider={<Divider />}>
-                        {(order?.orderDetails || []).map((item, index) => {
-                          const quantity = toNumber(item.quantity);
-                          const unitPrice = toNumber(item.unitPrice);
-                          const name =
-                            item.variantName || `Sản phẩm ${index + 1}`;
-                          const imageUrl = item.imageUrl || null;
-                          const totalItem = unitPrice * quantity;
+                        {requestItems.map((item) => {
+                          const {
+                            key,
+                            quantity,
+                            unitPrice,
+                            name,
+                            imageUrl,
+                            totalItem,
+                          } = item;
 
                           return (
-                            <Box key={item.id || index} sx={{ py: 1.5 }}>
+                            <Box key={key} sx={{ py: 1.5 }}>
                               <Box
                                 sx={{
                                   display: "flex",
@@ -732,7 +955,7 @@ export const MyReturnRequestDetailPage = () => {
                           fontWeight={700}
                           mb={1.5}
                         >
-                          Ảnh/Video minh chứng ({request.proofImages.length})
+                          Ảnh/Video minh chứng ({visibleProofImages.length})
                         </Typography>
                         <Stack
                           direction="row"
@@ -740,7 +963,7 @@ export const MyReturnRequestDetailPage = () => {
                           flexWrap="wrap"
                           useFlexGap
                         >
-                          {request.proofImages.map((img, idx) =>
+                          {visibleProofImages.map((img, idx) =>
                             img.url ? (
                               <Box
                                 key={img.id || idx}
@@ -762,6 +985,44 @@ export const MyReturnRequestDetailPage = () => {
                                   bgcolor: "grey.100",
                                 }}
                               >
+                                {isRequestMoreInfo && img.id && (
+                                  <IconButton
+                                    size="small"
+                                    onPointerDown={(event) => {
+                                      event.stopPropagation();
+                                    }}
+                                    onMouseDown={(event) => {
+                                      event.stopPropagation();
+                                    }}
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      if (removeMediaIds.includes(img.id!)) {
+                                        handleUndoRemoveExistingMedia(img.id);
+                                      } else {
+                                        handleRemoveExistingMedia(img.id);
+                                      }
+                                    }}
+                                    sx={{
+                                      position: "absolute",
+                                      top: 4,
+                                      right: 4,
+                                      zIndex: 2,
+                                      bgcolor: removeMediaIds.includes(img.id)
+                                        ? "warning.main"
+                                        : "rgba(0,0,0,0.6)",
+                                      color: "white",
+                                      "&:hover": {
+                                        bgcolor: removeMediaIds.includes(img.id)
+                                          ? "warning.dark"
+                                          : "rgba(0,0,0,0.8)",
+                                      },
+                                    }}
+                                  >
+                                    <DeleteOutlineIcon fontSize="small" />
+                                  </IconButton>
+                                )}
+
                                 {isVideoMedia(img.url, img.mimeType) ? (
                                   <>
                                     <Box
@@ -804,6 +1065,231 @@ export const MyReturnRequestDetailPage = () => {
                               </Box>
                             ) : null,
                           )}
+                        </Stack>
+
+                        {isRequestMoreInfo && (
+                          <Typography
+                            variant="caption"
+                            color="warning.main"
+                            sx={{ display: "block", mt: 1 }}
+                          >
+                            Nhấn biểu tượng thùng rác trên ảnh/video cũ để đánh
+                            dấu xóa trước khi gửi cập nhật.
+                          </Typography>
+                        )}
+                      </Paper>
+                    )}
+
+                    {isRequestMoreInfo && (
+                      <Paper variant="outlined" sx={{ p: 2 }}>
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight={700}
+                          mb={1.5}
+                        >
+                          Bổ sung bằng chứng
+                        </Typography>
+
+                        <Alert severity="info" sx={{ mb: 2 }}>
+                          Vui lòng bổ sung hình ảnh/video theo yêu cầu của quản
+                          trị viên. Bạn có thể thêm mới hoặc xóa media cũ trước
+                          khi gửi lại.
+                        </Alert>
+
+                        <Stack
+                          direction="row"
+                          spacing={1.5}
+                          useFlexGap
+                          flexWrap="wrap"
+                        >
+                          <Box
+                            component="label"
+                            sx={{
+                              border: "1px dashed",
+                              borderColor: "divider",
+                              borderRadius: 2,
+                              p: 1.5,
+                              width: 164,
+                              textAlign: "center",
+                              cursor: isUpdatingEvidence
+                                ? "not-allowed"
+                                : "pointer",
+                              bgcolor: "#fafafa",
+                              opacity: isUpdatingEvidence ? 0.6 : 1,
+                            }}
+                          >
+                            <PhotoCameraOutlined
+                              sx={{ color: "text.secondary" }}
+                            />
+                            <Typography variant="body2" mt={0.5}>
+                              Thêm Hình ảnh
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {newImageFilesCount}
+                            </Typography>
+                            <Input
+                              type="file"
+                              inputProps={{ accept: "image/*", multiple: true }}
+                              onChange={handlePickNewImages}
+                              disabled={isUpdatingEvidence}
+                              sx={{ display: "none" }}
+                            />
+                          </Box>
+
+                          <Box
+                            component="label"
+                            sx={{
+                              border: "1px dashed",
+                              borderColor: "divider",
+                              borderRadius: 2,
+                              p: 1.5,
+                              width: 164,
+                              textAlign: "center",
+                              cursor: isUpdatingEvidence
+                                ? "not-allowed"
+                                : "pointer",
+                              bgcolor: "#fafafa",
+                              opacity: isUpdatingEvidence ? 0.6 : 1,
+                            }}
+                          >
+                            <VideocamOutlined
+                              sx={{ color: "text.secondary" }}
+                            />
+                            <Typography variant="body2" mt={0.5}>
+                              Thêm Video
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {newVideoFilesCount}
+                            </Typography>
+                            <Input
+                              type="file"
+                              inputProps={{ accept: "video/*" }}
+                              onChange={handlePickNewVideos}
+                              disabled={isUpdatingEvidence}
+                              sx={{ display: "none" }}
+                            />
+                          </Box>
+                        </Stack>
+
+                        {newMediaPreviews.length > 0 && (
+                          <Stack spacing={1} mt={2}>
+                            <Typography variant="body2" fontWeight={600}>
+                              Tệp mới đã chọn
+                            </Typography>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              flexWrap="wrap"
+                              useFlexGap
+                            >
+                              {newMediaPreviews.map((preview) => (
+                                <Box
+                                  key={`${preview.name}-${preview.index}`}
+                                  onClick={() => {
+                                    setSelectedMediaUrl(preview.url);
+                                    setSelectedMediaMimeType(preview.mimeType);
+                                    setLightboxOpen(true);
+                                  }}
+                                  sx={{
+                                    cursor: "pointer",
+                                    borderRadius: 1.5,
+                                    overflow: "hidden",
+                                    border: "2px solid",
+                                    borderColor: "divider",
+                                    transition: "all 0.2s",
+                                    position: "relative",
+                                    bgcolor: "grey.100",
+                                  }}
+                                >
+                                  <IconButton
+                                    size="small"
+                                    onPointerDown={(event) => {
+                                      event.stopPropagation();
+                                    }}
+                                    onMouseDown={(event) => {
+                                      event.stopPropagation();
+                                    }}
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      handleRemoveNewFile(preview.index);
+                                    }}
+                                    disabled={isUpdatingEvidence}
+                                    sx={{
+                                      position: "absolute",
+                                      top: 4,
+                                      right: 4,
+                                      zIndex: 2,
+                                      bgcolor: "rgba(0,0,0,0.6)",
+                                      color: "white",
+                                      "&:hover": {
+                                        bgcolor: "rgba(0,0,0,0.8)",
+                                      },
+                                    }}
+                                  >
+                                    <DeleteOutlineIcon fontSize="small" />
+                                  </IconButton>
+
+                                  {preview.isVideo ? (
+                                    <>
+                                      <Box
+                                        component="video"
+                                        src={preview.url}
+                                        muted
+                                        playsInline
+                                        preload="metadata"
+                                        sx={{
+                                          width: 100,
+                                          height: 100,
+                                          objectFit: "cover",
+                                          display: "block",
+                                        }}
+                                      />
+                                      <PlayCircleOutlineIcon
+                                        sx={{
+                                          fontSize: 36,
+                                          color: "common.white",
+                                          position: "absolute",
+                                          top: "50%",
+                                          left: "50%",
+                                          transform: "translate(-50%, -50%)",
+                                        }}
+                                      />
+                                    </>
+                                  ) : (
+                                    <Box
+                                      component="img"
+                                      src={preview.url}
+                                      alt={preview.name}
+                                      sx={{
+                                        width: 100,
+                                        height: 100,
+                                        objectFit: "cover",
+                                        display: "block",
+                                      }}
+                                    />
+                                  )}
+                                </Box>
+                              ))}
+                            </Stack>
+                          </Stack>
+                        )}
+
+                        <Stack
+                          direction="row"
+                          justifyContent="flex-end"
+                          spacing={1}
+                          mt={2}
+                        >
+                          <Button
+                            variant="contained"
+                            onClick={handleSubmitMoreEvidence}
+                            disabled={isUpdatingEvidence}
+                          >
+                            {isUpdatingEvidence
+                              ? "Đang gửi cập nhật..."
+                              : "Gửi bổ sung bằng chứng"}
+                          </Button>
                         </Stack>
                       </Paper>
                     )}

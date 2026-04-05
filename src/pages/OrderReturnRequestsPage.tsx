@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
   Badge,
@@ -31,6 +31,7 @@ type ReturnTabStatus = "All" | ReturnRequestStatus;
 const STATUS_OPTIONS: ReturnTabStatus[] = [
   "All",
   "Pending",
+  "RequestMoreInfo",
   "ApprovedForReturn",
   "Inspecting",
   "ReadyForRefund",
@@ -40,6 +41,7 @@ const STATUS_OPTIONS: ReturnTabStatus[] = [
 
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
+  if (status === "RequestMoreInfo") return "Bổ sung bằng chứng";
   if (status === "ApprovedForReturn") return "Đã duyệt";
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
@@ -65,6 +67,7 @@ const statusColor = (
   status?: string,
 ): "default" | "warning" | "info" | "success" | "error" => {
   if (status === "Pending") return "warning";
+  if (status === "RequestMoreInfo") return "warning";
   if (status === "ApprovedForReturn") return "info";
   if (status === "Inspecting") return "info";
   if (status === "ReadyForRefund") return "success";
@@ -82,11 +85,39 @@ const formatCurrency = (value?: number | null) =>
 
 export const OrderReturnRequestsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const backState = location.state as
+    | {
+        status?: ReturnTabStatus;
+        page?: number;
+        rowsPerPage?: number;
+      }
+    | undefined;
+
+  const initialTabIndex = (() => {
+    const restoredStatus = backState?.status;
+    if (!restoredStatus) return 0;
+    const foundIndex = STATUS_OPTIONS.findIndex((s) => s === restoredStatus);
+    return foundIndex >= 0 ? foundIndex : 0;
+  })();
+
+  const initialPage =
+    typeof backState?.page === "number" && backState.page >= 0
+      ? backState.page
+      : 0;
+
+  const initialRowsPerPage =
+    typeof backState?.rowsPerPage === "number" &&
+    [10, 20, 30].includes(backState.rowsPerPage)
+      ? backState.rowsPerPage
+      : 10;
+
   const [requests, setRequests] = useState<OrderReturnRequest[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [tabIndex, setTabIndex] = useState(0);
+  const [page, setPage] = useState(initialPage);
+  const [rowsPerPage, setRowsPerPage] = useState(initialRowsPerPage);
+  const [tabIndex, setTabIndex] = useState(initialTabIndex);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -139,7 +170,13 @@ export const OrderReturnRequestsPage = () => {
     const prefix = window.location.pathname.startsWith("/staff")
       ? "/staff"
       : "/admin";
-    navigate(`${prefix}/return-requests/${request.id}`);
+    navigate(`${prefix}/return-requests/${request.id}`, {
+      state: {
+        status: STATUS_OPTIONS[tabIndex],
+        page,
+        rowsPerPage,
+      },
+    });
   };
 
   return (

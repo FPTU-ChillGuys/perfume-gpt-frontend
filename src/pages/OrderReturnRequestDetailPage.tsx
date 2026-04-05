@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
+  Alert,
   Box,
   Button,
   Checkbox,
@@ -68,6 +69,7 @@ const REFUND_METHOD_OPTIONS: {
 
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
+  if (status === "RequestMoreInfo") return "Bổ sung bằng chứng";
   if (status === "ApprovedForReturn") return "Đã duyệt trả";
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
@@ -97,6 +99,7 @@ const statusColor = (
   status?: string,
 ): "default" | "warning" | "info" | "success" | "error" => {
   if (status === "Pending") return "warning";
+  if (status === "RequestMoreInfo") return "warning";
   if (status === "ApprovedForReturn") return "info";
   if (status === "Inspecting") return "info";
   if (status === "ReadyForRefund") return "success";
@@ -172,7 +175,30 @@ const MediaPreviewDialog = ({
 export const OrderReturnRequestDetailPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { returnRequestId } = useParams<{ returnRequestId: string }>();
+
+  const backState = location.state as
+    | {
+        status?: string;
+        page?: number;
+        rowsPerPage?: number;
+      }
+    | undefined;
+
+  const handleBack = () => {
+    const prefix = window.location.pathname.startsWith("/staff")
+      ? "/staff"
+      : "/admin";
+
+    navigate(`${prefix}/return-requests`, {
+      state: {
+        status: backState?.status ?? "All",
+        page: backState?.page ?? 0,
+        rowsPerPage: backState?.rowsPerPage ?? 10,
+      },
+    });
+  };
 
   const [request, setRequest] = useState<OrderReturnRequest | null>(null);
   const [order, setOrder] = useState<OrderResponse | null>(null);
@@ -181,9 +207,10 @@ export const OrderReturnRequestDetailPage = () => {
   const [isSyncingShipping, setIsSyncingShipping] = useState(false);
   const [isGeneratingLabelUrl, setIsGeneratingLabelUrl] = useState(false);
 
-  const [reviewNote, setReviewNote] = useState("");
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [moreInfoDialogOpen, setMoreInfoDialogOpen] = useState(false);
+  const [moreInfoReason, setMoreInfoReason] = useState("");
 
   const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState(0);
   const [inspectionRestocked, setInspectionRestocked] = useState(false);
@@ -248,27 +275,47 @@ export const OrderReturnRequestDetailPage = () => {
     await loadDetail();
   };
 
-  const handleReview = async (isApproved: boolean, note?: string | null) => {
+  const handleReview = async (
+    isApproved: boolean,
+    note?: string | null,
+    isRequestMoreInfo = false,
+  ) => {
     if (!request?.id) {
       return;
     }
 
-    const finalNote = (note ?? reviewNote).trim();
-    if (!isApproved && !finalNote) {
-      showToast("Vui lòng nhập ghi chú khi từ chối", "warning");
+    const finalNote = (note ?? "").trim();
+    const isRejectAction = !isApproved && !isRequestMoreInfo;
+
+    if (isRejectAction && !finalNote) {
+      showToast("Vui lòng nhập lý do", "warning");
       return;
     }
+
+    const staffNoteToSend = isApproved ? null : finalNote || null;
 
     setIsSaving(true);
     try {
       await orderService.reviewReturnRequest(request.id, {
         isApproved,
-        staffNote: finalNote || null,
+        isRequestMoreInfo,
+        staffNote: staffNoteToSend,
       });
+
+      if (isRequestMoreInfo) {
+        setMoreInfoDialogOpen(false);
+        setMoreInfoReason("");
+      } else if (!isApproved) {
+        setRejectDialogOpen(false);
+        setRejectReason("");
+      }
+
       await refreshAfterAction(
-        isApproved
-          ? "Đã duyệt yêu cầu trả hàng"
-          : "Đã từ chối yêu cầu trả hàng",
+        isRequestMoreInfo
+          ? "Đã yêu cầu bổ sung bằng chứng"
+          : isApproved
+            ? "Đã duyệt yêu cầu trả hàng"
+            : "Đã từ chối yêu cầu trả hàng",
       );
     } catch (error) {
       showToast(
@@ -438,6 +485,54 @@ export const OrderReturnRequestDetailPage = () => {
     }
   };
 
+  const requestItems = useMemo(() => {
+    const orderDetails = order?.orderDetails || [];
+    const returnDetails = request?.returnDetails || [];
+
+    if (!returnDetails.length) {
+      return orderDetails.map((item, index) => {
+        const quantity = toNumber(item.quantity);
+        const unitPrice = toNumber(item.unitPrice);
+        return {
+          key: item.id || index,
+          name: item.variantName || `Sản phẩm ${index + 1}`,
+          imageUrl: item.imageUrl || null,
+          quantity,
+          unitPrice,
+          total: unitPrice * quantity,
+        };
+      });
+    }
+
+    return returnDetails.map((detail, index) => {
+      const matchedOrderDetail = orderDetails.find(
+        (item) =>
+          item.id === detail.orderDetailId ||
+          (detail.variantId && item.variantId === detail.variantId),
+      );
+
+      const quantity = toNumber(detail.requestedQuantity);
+      const unitPrice = toNumber(
+        detail.unitPrice ?? matchedOrderDetail?.unitPrice,
+      );
+
+      return {
+        key:
+          detail.id ||
+          detail.orderDetailId ||
+          detail.variantId ||
+          matchedOrderDetail?.id ||
+          index,
+        name:
+          matchedOrderDetail?.variantName || `Sản phẩm hoàn trả ${index + 1}`,
+        imageUrl: matchedOrderDetail?.imageUrl || null,
+        quantity,
+        unitPrice,
+        total: unitPrice * quantity,
+      };
+    });
+  }, [order?.orderDetails, request?.returnDetails]);
+
   return (
     <AdminLayout>
       <Paper sx={{ overflow: "hidden", borderRadius: 2 }}>
@@ -462,7 +557,7 @@ export const OrderReturnRequestDetailPage = () => {
             >
               <Button
                 startIcon={<ArrowBack />}
-                onClick={() => navigate(-1)}
+                onClick={handleBack}
                 sx={{ color: "text.secondary", textTransform: "none" }}
               >
                 TRỞ LẠI
@@ -668,8 +763,63 @@ export const OrderReturnRequestDetailPage = () => {
                           )}
                         </Typography>
                       </Box>
+                      {request.status === "ApprovedForReturn" &&
+                        request.returnShippingInfo.estimatedDeliveryDate && (
+                          <Box sx={{ gridColumn: { xs: "1", md: "1 / -1" } }}>
+                            <Alert severity="info" sx={{ py: 0.5 }}>
+                              Dự kiến hàng trả về kho:{" "}
+                              <b>
+                                {formatDate(
+                                  request.returnShippingInfo
+                                    .estimatedDeliveryDate,
+                                )}
+                              </b>
+                            </Alert>
+                          </Box>
+                        )}
                     </>
                   )}
+
+                  <Box
+                    sx={{
+                      gridColumn: { xs: "1", md: "1 / -1" },
+                      mt: 0.5,
+                      pt: 2,
+                      borderTop: "1px dashed",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Box
+                      display="grid"
+                      gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr 1fr" }}
+                      gap={2}
+                    >
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Lý do trả hàng
+                        </Typography>
+                        <Typography>
+                          {returnReasonLabel(request.reason)}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Ghi chú khách hàng
+                        </Typography>
+                        <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                          {request.customerNote?.trim() || "-"}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Ghi chú nhân viên
+                        </Typography>
+                        <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                          {request.staffNote?.trim() || "-"}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
                 </Box>
               </Box>
               <Paper variant="outlined" sx={{ p: 2 }}>
@@ -677,15 +827,12 @@ export const OrderReturnRequestDetailPage = () => {
                   Sản phẩm trong đơn
                 </Typography>
                 <Stack spacing={0} divider={<Divider />}>
-                  {(order?.orderDetails || []).map((item, index) => {
-                    const quantity = toNumber(item.quantity);
-                    const unitPrice = toNumber(item.unitPrice);
-                    const name = item.variantName || `Sản phẩm ${index + 1}`;
-                    const imageUrl = item.imageUrl || null;
-                    const total = unitPrice * quantity;
+                  {requestItems.map((item) => {
+                    const { key, quantity, unitPrice, name, imageUrl, total } =
+                      item;
 
                     return (
-                      <Box key={item.id || index} sx={{ py: 1.5 }}>
+                      <Box key={key} sx={{ py: 1.5 }}>
                         <Box
                           sx={{
                             display: "flex",
@@ -843,20 +990,23 @@ export const OrderReturnRequestDetailPage = () => {
                   <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
                     Duyệt yêu cầu
                   </Typography>
-                  <TextField
-                    fullWidth
-                    multiline
-                    minRows={2}
-                    label="Ghi chú khi duyệt (tùy chọn)"
-                    value={reviewNote}
-                    onChange={(event) => setReviewNote(event.target.value)}
-                  />
                   <Stack
                     direction="row"
                     spacing={1}
                     justifyContent="flex-end"
                     mt={2}
                   >
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      onClick={() => {
+                        setMoreInfoReason("");
+                        setMoreInfoDialogOpen(true);
+                      }}
+                      disabled={isSaving}
+                    >
+                      Yêu cầu bổ sung bằng chứng
+                    </Button>
                     <Button
                       variant="outlined"
                       color="error"
@@ -872,7 +1022,7 @@ export const OrderReturnRequestDetailPage = () => {
                       variant="contained"
                       color="success"
                       onClick={() => {
-                        void handleReview(true, reviewNote);
+                        void handleReview(true);
                       }}
                       disabled={isSaving}
                     >
@@ -1056,11 +1206,72 @@ export const OrderReturnRequestDetailPage = () => {
             variant="contained"
             color="error"
             onClick={() => {
-              void handleReview(false, rejectReason);
+              void handleReview(false, rejectReason, false);
             }}
             disabled={isSaving || !rejectReason.trim()}
           >
             Xác nhận từ chối
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={moreInfoDialogOpen}
+        onClose={() => !isSaving && setMoreInfoDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Yêu cầu bổ sung bằng chứng</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Bạn có thể nhập lý do hoặc chọn nhanh một gợi ý bên dưới.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Lý do yêu cầu bổ sung"
+            value={moreInfoReason}
+            onChange={(event) => setMoreInfoReason(event.target.value)}
+          />
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            useFlexGap
+            mt={1.5}
+          >
+            {REJECT_REASON_SUGGESTIONS.map((reason) => {
+              const isSelected = moreInfoReason.trim() === reason;
+              return (
+                <Chip
+                  key={reason}
+                  clickable
+                  color={isSelected ? "primary" : "default"}
+                  label={reason}
+                  onClick={() => setMoreInfoReason(reason)}
+                  sx={{ maxWidth: "100%" }}
+                />
+              );
+            })}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setMoreInfoDialogOpen(false)}
+            disabled={isSaving}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={() => {
+              void handleReview(false, moreInfoReason, true);
+            }}
+            disabled={isSaving}
+          >
+            Xác nhận yêu cầu bổ sung
           </Button>
         </DialogActions>
       </Dialog>

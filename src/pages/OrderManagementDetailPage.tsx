@@ -93,7 +93,7 @@ const STEPS = [
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
   Pending: ["Processing", "Cancelled"],
   Processing: ["Cancelled"],
-  Delivering: ["Delivered", "Returned"],
+  Delivering: [],
   Delivered: [],
   Returning: ["Returned"],
   Cancelled: [],
@@ -359,6 +359,8 @@ export const OrderManagementDetailPage = () => {
     if (!order?.status) return [];
     return allowedTransitions[order.status] ?? [];
   }, [order?.status]);
+
+  const isShippingManagedStatus = order?.status === "Delivering";
 
   const subtotal = useMemo(
     () =>
@@ -768,6 +770,19 @@ export const OrderManagementDetailPage = () => {
                                 <b>{order.shippingInfo.trackingNumber}</b>
                               </Typography>
                             )}
+                            {order.status === "Delivering" &&
+                              order.shippingInfo.estimatedDeliveryDate && (
+                                <Typography
+                                  variant="body2"
+                                  color="info.main"
+                                  fontWeight={600}
+                                >
+                                  Dự kiến nhận hàng:{" "}
+                                  {fmtDateShort(
+                                    order.shippingInfo.estimatedDeliveryDate,
+                                  )}
+                                </Typography>
+                              )}
                           </Stack>
                         )}
                       </Box>
@@ -1022,7 +1037,9 @@ export const OrderManagementDetailPage = () => {
 
                     {availableStatuses.length === 0 ? (
                       <Alert severity="info">
-                        Đơn hàng đã ở trạng thái cuối, không thể cập nhật thêm.
+                        {isShippingManagedStatus
+                          ? "Đơn hàng đang được đơn vị vận chuyển xử lý. Trạng thái sẽ được cập nhật qua đồng bộ vận chuyển."
+                          : "Đơn hàng đã ở trạng thái cuối, không thể cập nhật thêm."}
                       </Alert>
                     ) : (
                       <Stack spacing={2}>

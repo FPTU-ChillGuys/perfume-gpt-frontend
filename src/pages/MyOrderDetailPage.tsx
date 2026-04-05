@@ -5,6 +5,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Container,
@@ -35,6 +36,8 @@ import {
   ArrowBack,
   PhotoCameraOutlined,
   VideocamOutlined,
+  DeleteOutline,
+  PlayCircleOutline,
   Sync,
   Receipt,
   Payments,
@@ -46,6 +49,10 @@ import {
   Phone,
   CancelOutlined,
   AssignmentReturn,
+  Add,
+  Remove,
+  RadioButtonUnchecked,
+  CheckCircle,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
@@ -114,7 +121,7 @@ const STEPS = [
   { label: "Đơn Hàng Đã Đặt", Icon: Receipt },
   { label: "Đơn Hàng Đã Thanh Toán", Icon: Payments },
   { label: "Đã Giao Cho ĐVVC", Icon: LocalShipping },
-  { label: "Chờ Giao Hàng", Icon: MoveToInbox },
+  { label: "Đang Giao Hàng", Icon: MoveToInbox },
   { label: "Đánh Giá", Icon: StarBorder },
 ];
 
@@ -134,9 +141,6 @@ const CANCEL_REASON_SUGGESTIONS = [
   "Tôi muốn thay đổi phương thức thanh toán",
 ];
 
-const MAX_RETURN_IMAGES = 6;
-const MAX_RETURN_VIDEOS = 1;
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const fmt = (v?: number | null) =>
@@ -146,6 +150,12 @@ const fmtDate = (s?: string | null) => {
   if (!s) return null;
   const d = new Date(s);
   return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")} ${d.getDate().toString().padStart(2, "0")}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getFullYear()}`;
+};
+
+const fmtDateShort = (s?: string | null) => {
+  if (!s) return "-";
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("vi-VN");
 };
 
 // ─── Order Stepper ──────────────────────────────────────────────────────────
@@ -535,25 +545,14 @@ export const MyOrderDetailPage = () => {
     return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
   }, [order?.paymentTransactions]);
 
-  const returnImagePreviews = useMemo(
+  const returnMediaPreviews = useMemo(
     () =>
-      returnMediaFiles
-        .filter((file) => file.type.startsWith("image/"))
-        .map((file) => ({
-          name: file.name,
-          url: URL.createObjectURL(file),
-        })),
-    [returnMediaFiles],
-  );
-
-  const returnVideoPreviews = useMemo(
-    () =>
-      returnMediaFiles
-        .filter((file) => file.type.startsWith("video/"))
-        .map((file) => ({
-          name: file.name,
-          url: URL.createObjectURL(file),
-        })),
+      returnMediaFiles.map((file, index) => ({
+        index,
+        name: file.name,
+        isVideo: file.type.startsWith("video/"),
+        url: URL.createObjectURL(file),
+      })),
     [returnMediaFiles],
   );
 
@@ -646,14 +645,11 @@ export const MyOrderDetailPage = () => {
 
   useEffect(() => {
     return () => {
-      returnImagePreviews.forEach((preview) =>
-        URL.revokeObjectURL(preview.url),
-      );
-      returnVideoPreviews.forEach((preview) =>
+      returnMediaPreviews.forEach((preview) =>
         URL.revokeObjectURL(preview.url),
       );
     };
-  }, [returnImagePreviews, returnVideoPreviews]);
+  }, [returnMediaPreviews]);
 
   useEffect(() => {
     if (!isReturnDialogOpen) {
@@ -767,14 +763,7 @@ export const MyOrderDetailPage = () => {
       const existingVideos = prev.filter((file) =>
         file.type.startsWith("video/"),
       );
-      const nextImages = [...existingImages, ...fileList].slice(
-        0,
-        MAX_RETURN_IMAGES,
-      );
-
-      if (existingImages.length + fileList.length > MAX_RETURN_IMAGES) {
-        showToast(`Chỉ tối đa ${MAX_RETURN_IMAGES} hình ảnh`, "warning");
-      }
+      const nextImages = [...existingImages, ...fileList];
 
       return [...nextImages, ...existingVideos];
     });
@@ -798,14 +787,7 @@ export const MyOrderDetailPage = () => {
       const existingVideos = prev.filter((file) =>
         file.type.startsWith("video/"),
       );
-      const nextVideos = [...existingVideos, ...fileList].slice(
-        0,
-        MAX_RETURN_VIDEOS,
-      );
-
-      if (existingVideos.length + fileList.length > MAX_RETURN_VIDEOS) {
-        showToast(`Chỉ tối đa ${MAX_RETURN_VIDEOS} video`, "warning");
-      }
+      const nextVideos = [...existingVideos, ...fileList];
 
       return [...existingImages, ...nextVideos];
     });
@@ -831,6 +813,43 @@ export const MyOrderDetailPage = () => {
       ...prev,
       [orderDetailId]: nextValue,
     }));
+  };
+
+  const handleToggleReturnItem = (orderDetailId: string, max: number) => {
+    setReturnItemQuantities((prev) => {
+      const current = Math.min(
+        Math.max(0, Number(prev[orderDetailId] ?? 0)),
+        max,
+      );
+
+      return {
+        ...prev,
+        [orderDetailId]: current > 0 ? 0 : Math.min(1, max),
+      };
+    });
+  };
+
+  const handleIncreaseReturnQuantity = (orderDetailId: string, max: number) => {
+    setReturnItemQuantities((prev) => {
+      const current = Math.min(
+        Math.max(0, Number(prev[orderDetailId] ?? 0)),
+        max,
+      );
+      return {
+        ...prev,
+        [orderDetailId]: Math.min(max, current + 1),
+      };
+    });
+  };
+
+  const handleDecreaseReturnQuantity = (orderDetailId: string) => {
+    setReturnItemQuantities((prev) => {
+      const current = Math.max(0, Number(prev[orderDetailId] ?? 0));
+      return {
+        ...prev,
+        [orderDetailId]: Math.max(0, current - 1),
+      };
+    });
   };
 
   const handleProvinceChange = async (
@@ -1246,6 +1265,19 @@ export const MyOrderDetailPage = () => {
                                   <b>{order.shippingInfo.trackingNumber}</b>
                                 </Typography>
                               )}
+                              {order.status === "Delivering" &&
+                                order.shippingInfo.estimatedDeliveryDate && (
+                                  <Typography
+                                    variant="body2"
+                                    color="info.main"
+                                    fontWeight={600}
+                                  >
+                                    Dự kiến nhận hàng:{" "}
+                                    {fmtDateShort(
+                                      order.shippingInfo.estimatedDeliveryDate,
+                                    )}
+                                  </Typography>
+                                )}
                             </Stack>
                           )}
                         </Box>
@@ -1627,9 +1659,11 @@ export const MyOrderDetailPage = () => {
                 {(order?.orderDetails ?? []).map((item, index) => {
                   const detailId = item.id ?? "";
                   const maxQty = Number(item.quantity ?? 0);
-                  const selectedQty = Number(
-                    returnItemQuantities[detailId] ?? 0,
+                  const selectedQty = Math.min(
+                    maxQty,
+                    Math.max(0, Number(returnItemQuantities[detailId] ?? 0)),
                   );
+                  const isSelected = selectedQty > 0;
 
                   return (
                     <Box
@@ -1652,6 +1686,16 @@ export const MyOrderDetailPage = () => {
                           spacing={1.25}
                           alignItems="center"
                         >
+                          <Checkbox
+                            checked={isSelected}
+                            disabled={!detailId || maxQty <= 0}
+                            onChange={() =>
+                              handleToggleReturnItem(detailId, maxQty)
+                            }
+                            icon={<RadioButtonUnchecked />}
+                            checkedIcon={<CheckCircle />}
+                          />
+
                           {item.imageUrl ? (
                             <Box
                               component="img"
@@ -1687,22 +1731,62 @@ export const MyOrderDetailPage = () => {
                           </Box>
                         </Stack>
 
-                        <TextField
-                          label="Số lượng trả"
-                          size="small"
-                          type="number"
-                          value={selectedQty}
-                          onChange={(e) =>
-                            handleReturnQuantityChange(
-                              detailId,
-                              maxQty,
-                              e.target.value,
-                            )
-                          }
-                          disabled={!detailId}
-                          inputProps={{ min: 0, max: maxQty }}
-                          sx={{ width: { xs: "100%", sm: 150 } }}
-                        />
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          spacing={0.75}
+                          sx={{ width: { xs: "100%", sm: "auto" } }}
+                        >
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ minWidth: 72 }}
+                          >
+                            Số lượng trả
+                          </Typography>
+
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handleDecreaseReturnQuantity(detailId)
+                            }
+                            disabled={!detailId || selectedQty <= 0}
+                            sx={{ border: "1px solid", borderColor: "divider" }}
+                          >
+                            <Remove fontSize="small" />
+                          </IconButton>
+
+                          <TextField
+                            size="small"
+                            type="number"
+                            value={selectedQty}
+                            onChange={(e) =>
+                              handleReturnQuantityChange(
+                                detailId,
+                                maxQty,
+                                e.target.value,
+                              )
+                            }
+                            disabled={!detailId}
+                            inputProps={{
+                              min: 0,
+                              max: maxQty,
+                              style: { textAlign: "center" },
+                            }}
+                            sx={{ width: 90 }}
+                          />
+
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              handleIncreaseReturnQuantity(detailId, maxQty)
+                            }
+                            disabled={!detailId || selectedQty >= maxQty}
+                            sx={{ border: "1px solid", borderColor: "divider" }}
+                          >
+                            <Add fontSize="small" />
+                          </IconButton>
+                        </Stack>
                       </Stack>
                     </Box>
                   );
@@ -1754,9 +1838,8 @@ export const MyOrderDetailPage = () => {
                       p: 1.5,
                       width: 164,
                       textAlign: "center",
-                      cursor: "not-allowed",
+                      cursor: "pointer",
                       bgcolor: "#fafafa",
-                      opacity: 0.6,
                     }}
                   >
                     <PhotoCameraOutlined sx={{ color: "text.secondary" }} />
@@ -1764,22 +1847,15 @@ export const MyOrderDetailPage = () => {
                       Thêm Hình ảnh
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {returnImageFiles.length}/{MAX_RETURN_IMAGES}
+                      {returnImageFiles.length}
                     </Typography>
                     <input
                       hidden
                       type="file"
                       accept="image/*"
                       multiple
-                      disabled
+                      onChange={handleReturnImageChange}
                     />
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ display: "block", mt: 0.5 }}
-                    >
-                      Sắp hỗ trợ
-                    </Typography>
                   </Box>
 
                   <Box
@@ -1791,13 +1867,8 @@ export const MyOrderDetailPage = () => {
                       p: 1.5,
                       width: 164,
                       textAlign: "center",
-                      cursor:
-                        returnVideoFiles.length >= MAX_RETURN_VIDEOS
-                          ? "not-allowed"
-                          : "pointer",
+                      cursor: "pointer",
                       bgcolor: "#fafafa",
-                      opacity:
-                        returnVideoFiles.length >= MAX_RETURN_VIDEOS ? 0.6 : 1,
                     }}
                   >
                     <VideocamOutlined sx={{ color: "text.secondary" }} />
@@ -1805,102 +1876,90 @@ export const MyOrderDetailPage = () => {
                       Thêm Video
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {returnVideoFiles.length}/{MAX_RETURN_VIDEOS}
+                      {returnVideoFiles.length}
                     </Typography>
                     <input
                       hidden
                       type="file"
                       accept="video/*"
                       onChange={handleReturnVideoChange}
-                      disabled={returnVideoFiles.length >= MAX_RETURN_VIDEOS}
                     />
                   </Box>
                 </Stack>
 
-                {!!returnMediaFiles.length && (
-                  <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                    {returnMediaFiles.map((file, index) => (
-                      <Chip
-                        key={`${file.name}-${index}`}
-                        label={file.name}
-                        size="small"
-                        onDelete={() => handleRemoveReturnMedia(index)}
-                        sx={{ maxWidth: 260 }}
-                      />
-                    ))}
-                  </Stack>
-                )}
-
-                {!!returnImagePreviews.length && (
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ overflowX: "auto", pb: 0.5 }}
-                  >
-                    {returnImagePreviews.map((preview, index) => (
+                {!!returnMediaPreviews.length && (
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {returnMediaPreviews.map((preview) => (
                       <Box
-                        key={`${preview.name}-${index}`}
-                        component="img"
-                        src={preview.url}
-                        alt={preview.name}
-                        sx={{
-                          width: 64,
-                          height: 64,
-                          borderRadius: 1,
-                          objectFit: "cover",
-                          border: "1px solid",
-                          borderColor: "divider",
-                          flexShrink: 0,
-                        }}
-                      />
-                    ))}
-                  </Stack>
-                )}
-
-                {!!returnVideoPreviews.length && (
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    sx={{ overflowX: "auto", pb: 0.5 }}
-                  >
-                    {returnVideoPreviews.map((preview, index) => (
-                      <Box
-                        key={`${preview.name}-${index}`}
+                        key={`${preview.name}-${preview.index}`}
                         sx={{
                           position: "relative",
-                          width: 96,
-                          height: 64,
-                          borderRadius: 1,
+                          width: 100,
+                          height: 100,
+                          borderRadius: 1.5,
                           overflow: "hidden",
-                          border: "1px solid",
+                          border: "2px solid",
                           borderColor: "divider",
-                          flexShrink: 0,
                           bgcolor: "grey.100",
                         }}
                       >
-                        <Box
-                          component="video"
-                          src={preview.url}
-                          muted
-                          preload="metadata"
-                          sx={{
-                            width: "100%",
-                            height: "100%",
-                            objectFit: "cover",
-                            display: "block",
-                          }}
-                        />
-                        <VideocamOutlined
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveReturnMedia(preview.index)}
                           sx={{
                             position: "absolute",
-                            top: "50%",
-                            left: "50%",
-                            transform: "translate(-50%, -50%)",
-                            color: "common.white",
-                            fontSize: 26,
-                            textShadow: "0 2px 6px rgba(0,0,0,0.45)",
+                            top: 4,
+                            right: 4,
+                            zIndex: 2,
+                            bgcolor: "rgba(0,0,0,0.6)",
+                            color: "white",
+                            "&:hover": {
+                              bgcolor: "rgba(0,0,0,0.8)",
+                            },
                           }}
-                        />
+                        >
+                          <DeleteOutline fontSize="small" />
+                        </IconButton>
+
+                        {preview.isVideo ? (
+                          <>
+                            <Box
+                              component="video"
+                              src={preview.url}
+                              muted
+                              playsInline
+                              preload="metadata"
+                              sx={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                                display: "block",
+                              }}
+                            />
+                            <PlayCircleOutline
+                              sx={{
+                                fontSize: 36,
+                                color: "common.white",
+                                position: "absolute",
+                                top: "50%",
+                                left: "50%",
+                                transform: "translate(-50%, -50%)",
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <Box
+                            component="img"
+                            src={preview.url}
+                            alt={preview.name}
+                            sx={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              display: "block",
+                            }}
+                          />
+                        )}
                       </Box>
                     ))}
                   </Stack>

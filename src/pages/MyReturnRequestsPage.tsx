@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -32,6 +32,7 @@ import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 const STATUS_TABS: { label: string; value: ReturnRequestStatus | "All" }[] = [
   { label: "Tất cả", value: "All" },
   { label: "Chờ duyệt", value: "Pending" },
+  { label: "Bổ sung bằng chứng", value: "RequestMoreInfo" },
   { label: "Đã duyệt", value: "ApprovedForReturn" },
   { label: "Đang kiểm định", value: "Inspecting" },
   { label: "Chờ hoàn tiền", value: "ReadyForRefund" },
@@ -41,10 +42,11 @@ const STATUS_TABS: { label: string; value: ReturnRequestStatus | "All" }[] = [
 
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
+  if (status === "RequestMoreInfo") return "Bổ sung bằng chứng";
   if (status === "ApprovedForReturn") return "Đã duyệt";
   if (status === "Inspecting") return "Đang kiểm định";
   if (status === "ReadyForRefund") return "Chờ hoàn tiền";
-  if (status === "Completed") return "Đã hoàn tiền";
+  if (status === "Completed") return "Đã hoàn tiền";
   if (status === "Rejected") return "Từ chối";
   return status || "-";
 };
@@ -65,6 +67,7 @@ const statusColor = (
   status?: string,
 ): "default" | "warning" | "info" | "success" | "error" => {
   if (status === "Pending") return "warning";
+  if (status === "RequestMoreInfo") return "warning";
   if (status === "ApprovedForReturn") return "info";
   if (status === "Inspecting") return "info";
   if (status === "ReadyForRefund") return "success";
@@ -82,13 +85,42 @@ const formatCurrency = (value?: number | null) =>
 export const MyReturnRequestsPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const backState = location.state as
+    | {
+        status?: ReturnRequestStatus | "All";
+        page?: number;
+        pageSize?: number;
+      }
+    | undefined;
+
+  const initialStatus =
+    backState?.status &&
+    STATUS_TABS.some((tab) => tab.value === backState.status)
+      ? backState.status
+      : "All";
+
+  const initialPage =
+    typeof backState?.page === "number" && backState.page >= 1
+      ? backState.page
+      : 1;
+
+  const initialPageSize =
+    typeof backState?.pageSize === "number" &&
+    [5, 10, 20].includes(backState.pageSize)
+      ? backState.pageSize
+      : 10;
+
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
 
   const [requests, setRequests] = useState<OrderReturnRequest[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [status, setStatus] = useState<ReturnRequestStatus | "All">("All");
+  const [page, setPage] = useState(initialPage);
+  const [pageSize, setPageSize] = useState(initialPageSize);
+  const [status, setStatus] = useState<ReturnRequestStatus | "All">(
+    initialStatus,
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   const loadRequests = useCallback(async () => {
@@ -289,7 +321,13 @@ export const MyReturnRequestsPage = () => {
                             variant="outlined"
                             onClick={() => {
                               if (!request.id) return;
-                              navigate(`/my-return-requests/${request.id}`);
+                              navigate(`/my-return-requests/${request.id}`, {
+                                state: {
+                                  status,
+                                  page,
+                                  pageSize,
+                                },
+                              });
                             }}
                             sx={{
                               borderColor: "#ee4d2d",

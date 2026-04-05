@@ -67,6 +67,8 @@ export interface CreateReturnRequestPayload {
 }
 export type TemporaryMediaResponse =
   components["schemas"]["TemporaryMediaResponse"];
+export type UpdateReturnRequestDto =
+  components["schemas"]["UpdateReturnRequestDto"];
 export type ProcessInitialReturnDto =
   components["schemas"]["ProcessInitialReturnDto"];
 export type StartInspectionDto = components["schemas"]["StartInspectionDto"];
@@ -79,6 +81,7 @@ export type ReturnRefundMethod = Extract<
 
 export type ReturnRequestStatus =
   | "Pending"
+  | "RequestMoreInfo"
   | "ApprovedForReturn"
   | "Inspecting"
   | "ReadyForRefund"
@@ -107,6 +110,15 @@ export interface ReturnShippingInfo {
   shippedDate?: string | null;
 }
 
+export interface ReturnRequestDetail {
+  id?: string;
+  orderDetailId?: string;
+  variantId?: string;
+  requestedQuantity?: number;
+  unitPrice?: number;
+  refundableAmount?: number;
+}
+
 export interface OrderReturnRequest {
   id?: string;
   orderId?: string;
@@ -126,6 +138,7 @@ export interface OrderReturnRequest {
   isRestocked?: boolean;
   createdAt?: string;
   updatedAt?: string | null;
+  returnDetails?: ReturnRequestDetail[];
   proofImages?: ProofImage[];
   returnShippingInfo?: ReturnShippingInfo;
   [key: string]: unknown;
@@ -235,6 +248,8 @@ class OrderService {
   private normalizeReturnRequest(item: unknown): OrderReturnRequest {
     const rawProofImages =
       this.getValue<unknown[]>(item, ["proofImages", "ProofImages"]) || [];
+    const rawReturnDetails =
+      this.getValue<unknown[]>(item, ["returnDetails", "ReturnDetails"]) || [];
     const rawReturnShippingInfo = this.getValue<unknown>(item, [
       "returnShippingInfo",
       "ReturnShippingInfo",
@@ -299,6 +314,29 @@ class OrderService {
         new Date().toISOString(),
       updatedAt:
         this.getValue<string | null>(item, ["updatedAt", "UpdatedAt"]) ?? null,
+      returnDetails: rawReturnDetails.map((detail) => ({
+        id: this.getValue<string>(detail, ["id", "Id"]),
+        orderDetailId: this.getValue<string>(detail, [
+          "orderDetailId",
+          "OrderDetailId",
+        ]),
+        variantId: this.getValue<string>(detail, ["variantId", "VariantId"]),
+        requestedQuantity: Number(
+          this.getValue<number>(detail, [
+            "requestedQuantity",
+            "RequestedQuantity",
+          ]) ?? 0,
+        ),
+        unitPrice: Number(
+          this.getValue<number>(detail, ["unitPrice", "UnitPrice"]) ?? 0,
+        ),
+        refundableAmount: Number(
+          this.getValue<number>(detail, [
+            "refundableAmount",
+            "RefundableAmount",
+          ]) ?? 0,
+        ),
+      })),
       proofImages: rawProofImages.map((img) => this.normalizeProofImage(img)),
       returnShippingInfo: rawReturnShippingInfo
         ? this.normalizeReturnShippingInfo(rawReturnShippingInfo)
@@ -843,6 +881,36 @@ class OrderService {
       throw new Error(
         error?.message || "Không thể tải chi tiết yêu cầu trả hàng",
       );
+    }
+  }
+
+  async updateReturnRequest(
+    id: string,
+    body: UpdateReturnRequestDto,
+  ): Promise<string> {
+    try {
+      const { data, error } = await apiInstance.PUT(
+        "/api/orderreturnrequests/{id}",
+        {
+          params: { path: { id } },
+          body,
+        },
+      );
+
+      if (error) {
+        throw new Error(
+          (error as any)?.message || "Không thể cập nhật yêu cầu trả hàng",
+        );
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.message || "Không thể cập nhật yêu cầu trả hàng");
+      }
+
+      return data.message || "Cập nhật yêu cầu trả hàng thành công";
+    } catch (error: any) {
+      console.error("Error updating return request:", error);
+      throw new Error(error?.message || "Không thể cập nhật yêu cầu trả hàng");
     }
   }
 

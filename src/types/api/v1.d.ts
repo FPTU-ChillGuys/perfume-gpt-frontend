@@ -5590,8 +5590,76 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateReturnRequestDto"];
+                    "text/json": components["schemas"]["UpdateReturnRequestDto"];
+                    "application/*+json": components["schemas"]["UpdateReturnRequestDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -12805,6 +12873,7 @@ export interface components {
             /** Format: uuid */
             orderId: string;
             reason: components["schemas"]["ReturnOrderReason"];
+            isRefundOnly?: boolean;
             returnItems: components["schemas"]["ReturnItemDto"][];
             customerNote?: null | string;
             /** Format: uuid */
@@ -13320,6 +13389,7 @@ export interface components {
             /** Format: decimal */
             approvedRefundAmount?: null | number;
             isRefunded?: boolean;
+            isRefundOnly?: boolean;
             vnpTransactionNo?: null | string;
             isRestocked?: boolean;
             returnShippingInfo?: null | components["schemas"]["ReturnShippingInfoResponse"];
@@ -13688,6 +13758,7 @@ export interface components {
         };
         ProcessInitialReturnDto: {
             isApproved?: boolean;
+            isRequestMoreInfo?: boolean;
             staffNote?: null | string;
         };
         ProcessRefundRequest: {
@@ -14002,7 +14073,7 @@ export interface components {
         /** @enum {string} */
         ReturnOrderReason: "DamagedProduct" | "WrongItemReceived" | "ItemNotAsDescribed" | "ChangedMind" | "AllergicReaction";
         /** @enum {string} */
-        ReturnRequestStatus: "Pending" | "ApprovedForReturn" | "Inspecting" | "ReadyForRefund" | "Completed" | "Rejected";
+        ReturnRequestStatus: "Pending" | "ApprovedForReturn" | "Inspecting" | "ReadyForRefund" | "Completed" | "Rejected" | "RequestMoreInfo";
         ReturnShippingInfoResponse: {
             /** Format: uuid */
             id?: string;
@@ -14467,6 +14538,11 @@ export interface components {
             notePreferenceIds?: null | components["schemas"]["UpdateNotePreferenceRequest"][];
             familyPreferenceIds?: null | number[];
             attributePreferenceIds?: null | number[];
+        };
+        UpdateReturnRequestDto: {
+            customerNote?: null | string;
+            temporaryMediaIds?: null | string[];
+            removeMediaIds?: null | string[];
         };
         UpdateScentNoteRequest: {
             name: string;
