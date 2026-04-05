@@ -115,6 +115,11 @@ const UserLogsManagementPage = lazy(() =>
     default: m.UserLogsManagementPage,
   })),
 );
+const UserManagementPage = lazy(() =>
+  import("./pages/UserManagementPage").then((m) => ({
+    default: m.UserManagementPage,
+  })),
+);
 const AdminConversationsPage = lazy(() =>
   import("./pages/AdminConversationsPage").then((m) => ({
     default: m.AdminConversationsPage,
@@ -423,6 +428,14 @@ function App() {
                       <Route
                         path="/admin/profile"
                         element={<UnauthorizedPage />}
+                      />
+                      <Route
+                        path="/admin/users"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <UserManagementPage />
+                          </RoleBasedRoute>
+                        }
                       />
                       <Route
                         path="/admin/logs"

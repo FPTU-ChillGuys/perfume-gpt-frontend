@@ -216,7 +216,7 @@ const menuGroups: SidebarMenuGroup[] = [
       {
         text: "Quản lý người dùng",
         icon: <PeopleIcon />,
-        path: "#",
+        path: "/admin/users",
         roles: ["admin"],
       },
     ],

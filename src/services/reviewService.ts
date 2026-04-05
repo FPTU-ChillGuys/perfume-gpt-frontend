@@ -264,6 +264,32 @@ class ProductReviewService {
     }
   }
 
+  async answerReview(
+    reviewId: string,
+    staffFeedbackComment: string,
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/reviews/{reviewId}/answer",
+        {
+          params: { path: { reviewId } },
+          body: { staffFeedbackComment },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Không thể gửi phản hồi");
+      }
+
+      return response.data.message || "Đã gửi phản hồi";
+    } catch (error: any) {
+      console.error("Error answering review:", error);
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể gửi phản hồi"),
+      );
+    }
+  }
+
   async uploadTemporaryImages(files: File[]): Promise<TemporaryReviewMedia[]> {
     if (!files.length) {
       return [];
