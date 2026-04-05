@@ -13116,6 +13116,22 @@ export interface components {
             /** Format: date-time */
             updatedAt?: null | string;
         };
+        OrderDetailListItem: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            variantId?: string;
+            variantName: string;
+            imageUrl?: null | string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: decimal */
+            unitPrice?: number;
+            /** Format: decimal */
+            refunablePrice?: number;
+            /** Format: decimal */
+            total?: number;
+        };
         OrderDetailListItems: {
             /** Format: uuid */
             variantId?: string;
@@ -13166,6 +13182,7 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: null | string;
+            orderDetails: components["schemas"]["OrderDetailListItem"][];
         };
         OrderResponse: {
             /** Format: uuid */

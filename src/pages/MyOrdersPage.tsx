@@ -28,6 +28,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import ImageNotSupportedOutlinedIcon from "@mui/icons-material/ImageNotSupportedOutlined";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
@@ -79,6 +80,14 @@ const CANCEL_REASON_SUGGESTIONS = [
 const formatCurrency = (value?: number | null) => {
   if (!value) return "0 ₫";
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
+};
+
+const formatUnitPrice = (unitPrice?: number | null, total?: number | null) => {
+  if (!unitPrice || !total || unitPrice === total) {
+    return null;
+  }
+
+  return formatCurrency(unitPrice);
 };
 
 const toIsoString = (value: string) => {
@@ -492,6 +501,116 @@ export const MyOrdersPage = () => {
                         </Stack>
 
                         <Divider sx={{ mb: 1.5 }} />
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          paddingBottom={1.5}
+                        >
+                          {order.itemCount || 0} sản phẩm
+                        </Typography>
+
+                        {(order.orderDetails || []).length > 0 && (
+                          <Stack spacing={1.25} sx={{ mb: 1.5 }}>
+                            {order.orderDetails.map((detail, idx) => {
+                              const quantity = Number(detail.quantity ?? 0);
+                              const itemTotal = Number(detail.total ?? 0);
+                              const unitPriceLabel = formatUnitPrice(
+                                detail.unitPrice,
+                                detail.total,
+                              );
+
+                              return (
+                                <Box
+                                  key={
+                                    detail.id || `${order.id || "order"}-${idx}`
+                                  }
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1.5,
+                                  }}
+                                >
+                                  {detail.imageUrl ? (
+                                    <Box
+                                      component="img"
+                                      src={detail.imageUrl}
+                                      alt={detail.variantName}
+                                      sx={{
+                                        width: 56,
+                                        height: 56,
+                                        borderRadius: 1,
+                                        objectFit: "cover",
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                  ) : (
+                                    <Box
+                                      sx={{
+                                        width: 56,
+                                        height: 56,
+                                        borderRadius: 1,
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        bgcolor: "grey.100",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      <ImageNotSupportedOutlinedIcon
+                                        sx={{
+                                          color: "text.disabled",
+                                          fontSize: 22,
+                                        }}
+                                      />
+                                    </Box>
+                                  )}
+
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={500}
+                                      noWrap
+                                      title={detail.variantName}
+                                    >
+                                      {detail.variantName}
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      x{quantity}
+                                    </Typography>
+                                  </Box>
+
+                                  <Box
+                                    sx={{ textAlign: "right", minWidth: 110 }}
+                                  >
+                                    {unitPriceLabel && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.disabled"
+                                        sx={{ textDecoration: "line-through" }}
+                                      >
+                                        {unitPriceLabel}
+                                      </Typography>
+                                    )}
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={600}
+                                      sx={{ color: "#ee4d2d" }}
+                                    >
+                                      {formatCurrency(itemTotal)}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                              );
+                            })}
+                          </Stack>
+                        )}
 
                         {/* Order summary row */}
                         <Stack
@@ -500,9 +619,6 @@ export const MyOrdersPage = () => {
                           alignItems={{ xs: "flex-start", sm: "center" }}
                           spacing={1}
                         >
-                          <Typography variant="body2" color="text.secondary">
-                            {order.itemCount || 0} sản phẩm
-                          </Typography>
                           <Stack
                             direction="row"
                             spacing={1}

@@ -321,10 +321,31 @@ class OrderService {
       "OrderCode",
     ]);
 
+    const rawOrderDetails =
+      this.getValue<unknown[]>(item, ["orderDetails", "OrderDetails"]) || [];
+
+    const orderDetails = rawOrderDetails.map((detail) => ({
+      ...(detail as components["schemas"]["OrderDetailListItem"]),
+      id: this.getValue<string>(detail, ["id", "Id"]),
+      variantId: this.getValue<string>(detail, ["variantId", "VariantId"]),
+      variantName:
+        this.getValue<string>(detail, ["variantName", "VariantName"]) || "",
+      imageUrl:
+        this.getValue<string | null>(detail, ["imageUrl", "ImageUrl"]) ?? null,
+      quantity: Number(
+        this.getValue<number>(detail, ["quantity", "Quantity"]) ?? 0,
+      ),
+      unitPrice: Number(
+        this.getValue<number>(detail, ["unitPrice", "UnitPrice"]) ?? 0,
+      ),
+      total: Number(this.getValue<number>(detail, ["total", "Total"]) ?? 0),
+    }));
+
     return {
       ...(item as OrderListItem),
       id: fallbackId,
       code: fallbackCode || fallbackId || "",
+      orderDetails,
     };
   }
 
