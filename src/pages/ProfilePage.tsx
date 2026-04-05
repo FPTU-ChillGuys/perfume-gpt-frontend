@@ -366,7 +366,7 @@ const ProfilePage = () => {
 
   return (
     <Layout>
-      <Box sx={{ bgcolor: "#ffff", py: 4, flex: 1 }}>
+      <Box sx={{ bgcolor: "background.default", py: 4, flex: 1 }}>
         <Container maxWidth="lg">
           <Paper
             elevation={0}
@@ -380,7 +380,7 @@ const ProfilePage = () => {
             }}
           >
             <UserProfileSidebar userInfo={userInfo} />
-            <Box sx={{ flex: 1, p: 4, bgcolor: "#fff", minWidth: 0 }}>
+            <Box sx={{ flex: 1, p: 4, bgcolor: "background.paper", minWidth: 0 }}>
               {renderContent()}
             </Box>
           </Paper>

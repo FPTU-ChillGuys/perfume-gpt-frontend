@@ -941,7 +941,7 @@ export const CheckoutPage = () => {
                             borderRadius: 1,
                             border: "1px solid",
                             borderColor: "divider",
-                            bgcolor: "#fff",
+                            bgcolor: "background.paper",
                             p: 0.5,
                             flexShrink: 0,
                           }}

@@ -79,7 +79,7 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
         flexShrink: 0,
         borderRight: "1px solid",
         borderColor: "divider",
-        bgcolor: "#fafafa",
+        bgcolor: "background.paper",
         pt: 3,
         pb: 4,
       }}

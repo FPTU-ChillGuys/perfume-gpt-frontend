@@ -227,7 +227,7 @@ export default function QuizManagementPage() {
                                 size="small"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                sx={{ minWidth: { xs: "100%", sm: 400 }, bgcolor: "#fff" }}
+                                sx={{ minWidth: { xs: "100%", sm: 400 }, bgcolor: "background.paper" }}
                                 InputProps={{
                                     startAdornment: (
                                         <InputAdornment position="start">

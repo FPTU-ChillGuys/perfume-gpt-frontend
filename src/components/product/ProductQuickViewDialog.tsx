@@ -356,7 +356,7 @@ const ProductQuickViewDialog = ({
                 justifyContent: "center",
                 alignItems: "center",
                 minHeight: 320,
-                bgcolor: "white",
+                bgcolor: "background.paper",
               }}
             >
               {heroImage ? (

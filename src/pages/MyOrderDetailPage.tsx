@@ -1024,7 +1024,7 @@ export const MyOrderDetailPage = () => {
   // ── Render ──────────────────────────────────────────────────────────────
   return (
     <MainLayout>
-      <Box sx={{ bgcolor: "white", py: 4, flex: 1 }}>
+      <Box sx={{ bgcolor: "background.default", py: 4, flex: 1 }}>
         <Container maxWidth="lg">
           <Paper
             elevation={0}
@@ -1040,7 +1040,7 @@ export const MyOrderDetailPage = () => {
             <UserProfileSidebar userInfo={userInfo} />
 
             {/* Main content */}
-            <Box sx={{ flex: 1, bgcolor: "#fff", minWidth: 0 }}>
+            <Box sx={{ flex: 1, bgcolor: "background.paper", minWidth: 0 }}>
               {isLoading ? (
                 <Box
                   display="flex"
@@ -1122,7 +1122,7 @@ export const MyOrderDetailPage = () => {
                         sx={{ letterSpacing: 0.5 }}
                       >
                         MÃ ĐƠN HÀNG:{" "}
-                        <b style={{ color: "#333" }}>
+                        <b style={{ color: "inherit" }}>
                           {(
                             order.code ||
                             order.id ||
@@ -1269,7 +1269,7 @@ export const MyOrderDetailPage = () => {
                       <TableContainer>
                         <Table>
                           <TableHead>
-                            <TableRow sx={{ bgcolor: "#fafafa" }}>
+                            <TableRow sx={{ bgcolor: "action.hover" }}>
                               <TableCell>Sản phẩm</TableCell>
                               <TableCell align="center">Số lượng</TableCell>
                               <TableCell align="right">Đơn giá</TableCell>
@@ -1755,7 +1755,7 @@ export const MyOrderDetailPage = () => {
                       width: 164,
                       textAlign: "center",
                       cursor: "not-allowed",
-                      bgcolor: "#fafafa",
+                      bgcolor: "action.hover",
                       opacity: 0.6,
                     }}
                   >
@@ -1795,7 +1795,7 @@ export const MyOrderDetailPage = () => {
                         returnVideoFiles.length >= MAX_RETURN_VIDEOS
                           ? "not-allowed"
                           : "pointer",
-                      bgcolor: "#fafafa",
+                      bgcolor: "action.hover",
                       opacity:
                         returnVideoFiles.length >= MAX_RETURN_VIDEOS ? 0.6 : 1,
                     }}

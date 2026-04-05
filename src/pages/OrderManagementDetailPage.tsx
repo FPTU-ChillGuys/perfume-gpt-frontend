@@ -790,7 +790,7 @@ export const OrderManagementDetailPage = () => {
                     <TableContainer>
                       <Table>
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "#fafafa" }}>
+                          <TableRow sx={{ bgcolor: "action.hover" }}>
                             <TableCell>Sản phẩm</TableCell>
                             <TableCell align="center">Số lượng</TableCell>
                             <TableCell align="right">Đơn giá</TableCell>
