@@ -12,6 +12,7 @@ import {
 import { EmojiEvents, AccountBalanceWallet, Info } from "@mui/icons-material";
 import { MainLayout } from "../layouts/MainLayout";
 import { loyaltyService } from "../services/loyaltyService";
+import { LoyaltyHistorySection } from "../components/profile/LoyaltyHistorySection";
 
 export const LoyaltyTransactionsPage = () => {
   const [balance, setBalance] = useState<number>(0);
@@ -84,6 +85,10 @@ export const LoyaltyTransactionsPage = () => {
             </Typography>
           </Box>
         </Paper>
+
+        <Divider sx={{ my: 3 }} />
+
+        <LoyaltyHistorySection />
       </Container>
     </MainLayout>
   );

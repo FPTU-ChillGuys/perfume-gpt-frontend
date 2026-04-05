@@ -29,6 +29,8 @@ import {
   LocalOffer as BrandIcon,
   Category as CategoryIcon,
   Science as ConcentrationIcon,
+  Spa as OlfactoryIcon,
+  Notes as ScentNoteIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { brandService, type BrandResponse } from "../services/brandService";
@@ -40,6 +42,8 @@ import {
   concentrationService,
   type ConcentrationResponse,
 } from "../services/concentrationService";
+import { olfactoryService } from "../services/olfactoryService";
+import { scentNoteService } from "../services/scentNoteService";
 import { useToast } from "../hooks/useToast";
 
 type ItemType = { id?: number; name: string };
@@ -72,12 +76,16 @@ const TABS = [
   { label: "Thương Hiệu", icon: <BrandIcon /> },
   { label: "Danh Mục", icon: <CategoryIcon /> },
   { label: "Nồng Độ", icon: <ConcentrationIcon /> },
+  { label: "Nhóm Hương", icon: <OlfactoryIcon /> },
+  { label: "Nốt Hương", icon: <ScentNoteIcon /> },
 ];
 
 export const AttributeManagementPage = () => {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState(0);
   const [states, setStates] = useState<TabState[]>([
+    defaultTabState(),
+    defaultTabState(),
     defaultTabState(),
     defaultTabState(),
     defaultTabState(),
@@ -100,8 +108,14 @@ export const AttributeManagementPage = () => {
         } else if (tabIdx === 1) {
           const data = await categoryService.getAllCategories();
           items = data.map((d) => ({ id: d.id, name: d.name }));
-        } else {
+        } else if (tabIdx === 2) {
           const data = await concentrationService.getAllConcentrations();
+          items = data.map((d) => ({ id: d.id, name: d.name }));
+        } else if (tabIdx === 3) {
+          const data = await olfactoryService.getAllOlfactory();
+          items = data.map((d) => ({ id: d.id, name: d.name }));
+        } else {
+          const data = await scentNoteService.getAllScentNotes();
           items = data.map((d) => ({ id: d.id, name: d.name }));
         }
         setTabState(tabIdx, { items, loading: false });
@@ -151,13 +165,19 @@ export const AttributeManagementPage = () => {
           await brandService.updateBrand(s.editing.id, trimmed);
         else if (activeTab === 1)
           await categoryService.updateCategory(s.editing.id, trimmed);
-        else
+        else if (activeTab === 2)
           await concentrationService.updateConcentration(s.editing.id, trimmed);
+        else if (activeTab === 3)
+          await olfactoryService.updateOlfactory(s.editing.id, trimmed);
+        else
+          await scentNoteService.updateScentNote(s.editing.id, trimmed);
         showToast("Cập nhật thành công", "success");
       } else {
         if (activeTab === 0) await brandService.createBrand(trimmed);
         else if (activeTab === 1) await categoryService.createCategory(trimmed);
-        else await concentrationService.createConcentration(trimmed);
+        else if (activeTab === 2) await concentrationService.createConcentration(trimmed);
+        else if (activeTab === 3) await olfactoryService.createOlfactoryFamily(trimmed);
+        else await scentNoteService.createScentNote(trimmed);
         showToast("Thêm mới thành công", "success");
       }
       closeDialog();
@@ -177,7 +197,12 @@ export const AttributeManagementPage = () => {
       if (activeTab === 0) await brandService.deleteBrand(s.deleteTarget.id);
       else if (activeTab === 1)
         await categoryService.deleteCategory(s.deleteTarget.id);
-      else await concentrationService.deleteConcentration(s.deleteTarget.id);
+      else if (activeTab === 2)
+        await concentrationService.deleteConcentration(s.deleteTarget.id);
+      else if (activeTab === 3)
+        await olfactoryService.deleteOlfactory(s.deleteTarget.id);
+      else
+        await scentNoteService.deleteScentNote(s.deleteTarget.id);
       showToast("Xóa thành công", "success");
       setTabState(activeTab, { deleteTarget: null });
       await loadItems(activeTab);
@@ -243,7 +268,7 @@ export const AttributeManagementPage = () => {
           <TableContainer component={Paper} variant="outlined">
             <Table>
               <TableHead>
-                <TableRow>
+                <TableRow sx={{ bgcolor: "grey.50" }}>
                   <TableCell width={80}>ID</TableCell>
                   <TableCell>Tên</TableCell>
                   <TableCell width={120} align="right">

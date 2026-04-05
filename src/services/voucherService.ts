@@ -6,6 +6,10 @@ export type VoucherResponse = components["schemas"]["VoucherResponse"];
 type VoucherListResponse =
   components["schemas"]["PagedResultOfVoucherResponse"];
 
+
+export type UserVoucherResponse = components["schemas"]["UserVoucherResponse"];
+export type RedeemableVoucherResponse = components["schemas"]["RedeemableVoucherResponse"];
+
 export interface CreateVoucherRequest {
   code?: string;
   description?: string;
@@ -175,15 +179,30 @@ class VoucherService {
     }
   }
 
-  async getMyVouchers(): Promise<VoucherResponse[]> {
-    const response = await apiInstance.GET(
-      `${this.BASE_ENDPOINT}/my-vouchers` as any,
-      {} as any,
-    );
+  async getMyVouchers(params?: {
+    Status?: string;
+    IsUsed?: boolean;
+    IsExpired?: boolean;
+    Code?: string;
+    PageNumber?: number;
+    PageSize?: number;
+  }): Promise<UserVoucherResponse[]> {
+    const response = await apiInstance.GET("/api/vouchers/me", {
+      params: { query: params },
+    } as any);
     if (!response.data?.success) {
       throw new Error(response.data?.message || "Failed to load my vouchers");
     }
-    return (response.data.payload as VoucherResponse[]) ?? [];
+    const payload = response.data.payload as any;
+    return (payload?.items ?? payload ?? []) as UserVoucherResponse[];
+  }
+
+  async getRedeemableList(): Promise<RedeemableVoucherResponse[]> {
+    const response = await apiInstance.GET("/api/vouchers/redeemable-list");
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load redeemable vouchers");
+    }
+    return (response.data.payload as RedeemableVoucherResponse[]) ?? [];
   }
 
   async getAvailable(): Promise<VoucherResponse[]> {

@@ -22,7 +22,7 @@ import {
   Alert,
   Tooltip,
 } from "@mui/material";
-import { Search, Add, Edit, Delete, Business } from "@mui/icons-material";
+import { Search, Add, Edit, Delete } from "@mui/icons-material";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
   supplierService,
@@ -133,27 +133,22 @@ export const SuppliersPage = () => {
 
   return (
     <AdminLayout>
-      <Box sx={{ p: 3 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Business color="primary" />
-            <Typography variant="h5" fontWeight="bold">Quản lý Nhà cung cấp</Typography>
+      <Box>
+        <Paper sx={{ p: 3, mb: 3 }}>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr auto" }, alignItems: "center" }}>
+            <TextField
+              placeholder="Tìm theo tên..."
+              size="small"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              inputProps={{ "aria-label": "Tìm kiếm nhà cung cấp" }}
+              InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
+              fullWidth
+            />
+            <Button variant="contained" startIcon={<Add />} onClick={openCreate} sx={{ height: 40 }}>
+              Thêm nhà cung cấp
+            </Button>
           </Box>
-          <Button variant="contained" startIcon={<Add />} onClick={openCreate}>
-            Thêm nhà cung cấp
-          </Button>
-        </Box>
-
-        <Paper sx={{ p: 2, mb: 2 }}>
-          <TextField
-            placeholder="Tìm theo tên..."
-            size="small"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            inputProps={{ "aria-label": "Tìm kiếm nhà cung cấp" }}
-            InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
-            sx={{ width: 300 }}
-          />
         </Paper>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

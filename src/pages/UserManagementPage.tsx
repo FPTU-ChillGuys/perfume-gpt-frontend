@@ -387,7 +387,7 @@ export const UserManagementPage = () => {
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "action.hover" }}>
+                    <TableRow sx={{ bgcolor: "grey.50" }}>
                       <TableCell sx={{ fontWeight: 700 }}>Người dùng</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Liên hệ</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Vai trò</TableCell>

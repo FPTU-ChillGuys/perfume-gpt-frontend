@@ -13,6 +13,9 @@ export type PagedCampaignResponse =
   components["schemas"]["PagedResultOfCampaignResponse"];
 export type CreateCampaignRequest =
   components["schemas"]["CreateCampaignRequest"];
+
+export type UpdateCampaignRequest = components["schemas"]["UpdateCampaignRequest"];
+export type UpdateCampaignStatusRequest = components["schemas"]["UpdateCampaignStatusRequest"];
 type BaseResponseString = components["schemas"]["BaseResponseOfstring"];
 type BaseResponseCampaign =
   components["schemas"]["BaseResponseOfCampaignResponse"];
@@ -201,6 +204,83 @@ class CampaignService {
       throw new Error(
         this.extractErrorMessage(error, "Failed to fetch campaign items"),
       );
+    }
+  }
+
+  async updateCampaign(campaignId: string, payload: UpdateCampaignRequest): Promise<string> {
+    try {
+      const response = await apiInstance.PUT("/api/campaigns/{campaignId}", {
+        params: { path: { campaignId } },
+        body: payload,
+      });
+      if (response.error) {
+        const apiError = response.error as BaseResponseString | undefined;
+        throw new Error(
+          this.formatApiErrorMessage(
+            { message: apiError?.message, errors: apiError?.errors, errorType: apiError?.errorType },
+            response.response?.status,
+            "Failed to update campaign",
+          ),
+        );
+      }
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update campaign");
+      }
+      return response.data.message || "Cập nhật chiến lược thành công";
+    } catch (error) {
+      console.error("Error updating campaign:", error);
+      throw new Error(this.extractErrorMessage(error, "Failed to update campaign"));
+    }
+  }
+
+  async deleteCampaign(campaignId: string): Promise<string> {
+    try {
+      const response = await apiInstance.DELETE("/api/campaigns/{campaignId}", {
+        params: { path: { campaignId } },
+      });
+      if (response.error) {
+        const apiError = response.error as BaseResponseString | undefined;
+        throw new Error(
+          this.formatApiErrorMessage(
+            { message: apiError?.message, errors: apiError?.errors, errorType: apiError?.errorType },
+            response.response?.status,
+            "Failed to delete campaign",
+          ),
+        );
+      }
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to delete campaign");
+      }
+      return response.data.message || "Xóa chiến lược thành công";
+    } catch (error) {
+      console.error("Error deleting campaign:", error);
+      throw new Error(this.extractErrorMessage(error, "Failed to delete campaign"));
+    }
+  }
+
+  async updateCampaignStatus(campaignId: string, status: CampaignStatus): Promise<string> {
+    try {
+      const response = await apiInstance.PUT("/api/campaigns/{campaignId}/status", {
+        params: { path: { campaignId } },
+        body: { status },
+      });
+      if (response.error) {
+        const apiError = response.error as BaseResponseString | undefined;
+        throw new Error(
+          this.formatApiErrorMessage(
+            { message: apiError?.message, errors: apiError?.errors, errorType: apiError?.errorType },
+            response.response?.status,
+            "Failed to update campaign status",
+          ),
+        );
+      }
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update campaign status");
+      }
+      return response.data.message || "Cập nhật trạng thái thành công";
+    } catch (error) {
+      console.error("Error updating campaign status:", error);
+      throw new Error(this.extractErrorMessage(error, "Failed to update campaign status"));
     }
   }
 

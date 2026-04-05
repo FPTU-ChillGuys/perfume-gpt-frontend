@@ -70,9 +70,6 @@ const StaffDashboard = () => {
   return (
     <AdminLayout>
       <Container maxWidth="xl">
-        <Typography variant="h4" gutterBottom>
-          Trang nhân viên
-        </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
           Xin chào, {user?.name}!
         </Typography>

@@ -21,6 +21,7 @@ import ProfileInfo from "../components/profile/ProfileInfo";
 import AddressList from "../components/profile/AddressList";
 import { UserProfileSidebar } from "../components/profile/UserProfileSidebar";
 import { LoyaltyHistorySection } from "../components/profile/LoyaltyHistorySection";
+import { VoucherSection } from "../components/profile/VoucherSection";
 
 const ProfilePage = () => {
   const { user } = useAuth();
@@ -250,16 +251,7 @@ const ProfilePage = () => {
           />
         );
       case "vouchers":
-        return (
-          <Box py={4} textAlign="center">
-            <Typography variant="h6" color="text.secondary">
-              Kho Voucher
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mt={1}>
-              Tính năng đang được phát triển.
-            </Typography>
-          </Box>
-        );
+        return <VoucherSection />;
       case "loyalty":
         return <LoyaltyHistorySection />;
       case "change-password":

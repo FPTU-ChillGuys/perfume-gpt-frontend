@@ -55,7 +55,9 @@ const AddAddressDialog = ({
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingWards, setIsLoadingWards] = useState(false);
+  const [isLoadingStreets, setIsLoadingStreets] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [streets, setStreets] = useState<string[]>([]);
 
   const [error, setError] = useState("");
 
@@ -102,12 +104,30 @@ const AddAddressDialog = ({
     }
   };
 
+  const loadStreets = async (province: string, district: string, ward: string) => {
+    if (!ward) return;
+    setIsLoadingStreets(true);
+    try {
+      const data = await addressService.getStreets({
+        Province: province,
+        District: district,
+        Ward_street: ward,
+      });
+      setStreets(data);
+    } catch {
+      setStreets([]);
+    } finally {
+      setIsLoadingStreets(false);
+    }
+  };
+
   const handleProvinceChange = (_: any, newValue: ProvinceResponse | null) => {
     setSelectedProvince(newValue);
     setSelectedDistrict(null);
     setSelectedWard(null);
     setDistricts([]);
     setWards([]);
+    setStreets([]);
 
     if (newValue) {
       setFormData((prev) => ({
@@ -118,6 +138,7 @@ const AddAddressDialog = ({
         districtId: undefined,
         ward: "",
         wardCode: "",
+        street: "",
       }));
       if (newValue.ProvinceID) {
         loadDistricts(newValue.ProvinceID);
@@ -131,6 +152,7 @@ const AddAddressDialog = ({
         districtId: undefined,
         ward: "",
         wardCode: "",
+        street: "",
       }));
     }
   };
@@ -139,6 +161,7 @@ const AddAddressDialog = ({
     setSelectedDistrict(newValue);
     setSelectedWard(null);
     setWards([]);
+    setStreets([]);
 
     if (newValue) {
       setFormData((prev) => ({
@@ -147,6 +170,7 @@ const AddAddressDialog = ({
         districtId: newValue.DistrictID,
         ward: "",
         wardCode: "",
+        street: "",
       }));
       if (newValue.DistrictID) {
         loadWards(newValue.DistrictID);
@@ -158,24 +182,33 @@ const AddAddressDialog = ({
         districtId: undefined,
         ward: "",
         wardCode: "",
+        street: "",
       }));
     }
   };
 
   const handleWardChange = (_: any, newValue: WardResponse | null) => {
     setSelectedWard(newValue);
+    setStreets([]);
 
     if (newValue) {
       setFormData((prev) => ({
         ...prev,
         ward: newValue.WardName || "",
         wardCode: newValue.WardCode || "",
+        street: "",
       }));
+      loadStreets(
+        formData.city || "",
+        formData.district || "",
+        newValue.WardName || "",
+      );
     } else {
       setFormData((prev) => ({
         ...prev,
         ward: "",
         wardCode: "",
+        street: "",
       }));
     }
   };
@@ -226,6 +259,7 @@ const AddAddressDialog = ({
     setSelectedWard(null);
     setDistricts([]);
     setWards([]);
+    setStreets([]);
     setError("");
     onClose();
   };
@@ -347,17 +381,34 @@ const AddAddressDialog = ({
             )}
           />
 
-          <TextField
-            label="Địa chỉ cụ thể (Số nhà, tên đường) *"
+          <Autocomplete
+            freeSolo
+            options={streets}
             value={formData.street}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, street: e.target.value }))
+            onInputChange={(_, newValue) =>
+              setFormData((prev) => ({ ...prev, street: newValue }))
             }
-            fullWidth
-            required
-            multiline
-            rows={2}
-            placeholder="VD: 123 Nguyễn Trãi"
+            loading={isLoadingStreets}
+            disabled={!selectedWard}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Địa chỉ cụ thể (Số nhà, tên đường) *"
+                required
+                placeholder="VD: 123 Nguyễn Trãi"
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {isLoadingStreets ? (
+                        <CircularProgress color="inherit" size={20} />
+                      ) : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
           />
         </Stack>
       </DialogContent>
