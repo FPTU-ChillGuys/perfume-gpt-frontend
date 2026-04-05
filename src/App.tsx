@@ -155,6 +155,11 @@ const AdminVouchersPage = lazy(() =>
     default: m.AdminVouchersPage,
   })),
 );
+const AttributeManagementPage = lazy(() =>
+  import("./pages/AttributeManagementPage").then((m) => ({
+    default: m.default,
+  })),
+);
 const OrderCancelRequestsPage = lazy(() =>
   import("./pages/OrderCancelRequestsPage").then((m) => ({
     default: m.OrderCancelRequestsPage,
@@ -305,6 +310,14 @@ function App() {
                       />
                       <Route
                         path="/profile/vouchers"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <ProfilePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/profile/loyalty"
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
                             <ProfilePage />
@@ -490,6 +503,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <AdminVouchersPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/attributes"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <AttributeManagementPage />
                           </RoleBasedRoute>
                         }
                       />

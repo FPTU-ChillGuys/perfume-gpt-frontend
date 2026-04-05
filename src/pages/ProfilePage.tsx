@@ -20,6 +20,7 @@ import { MainLayout } from "../layouts/MainLayout";
 import ProfileInfo from "../components/profile/ProfileInfo";
 import AddressList from "../components/profile/AddressList";
 import { UserProfileSidebar } from "../components/profile/UserProfileSidebar";
+import { LoyaltyHistorySection } from "../components/profile/LoyaltyHistorySection";
 
 const ProfilePage = () => {
   const { user } = useAuth();
@@ -55,6 +56,7 @@ const ProfilePage = () => {
     if (pathname === "/profile/address") return "address";
     if (pathname === "/profile/change-password") return "change-password";
     if (pathname === "/profile/vouchers") return "vouchers";
+    if (pathname === "/profile/loyalty") return "loyalty";
     return "profile";
   };
   const activeSection = getActiveSection();
@@ -258,6 +260,8 @@ const ProfilePage = () => {
             </Typography>
           </Box>
         );
+      case "loyalty":
+        return <LoyaltyHistorySection />;
       case "change-password":
         return (
           <Box py={4} textAlign="center">
