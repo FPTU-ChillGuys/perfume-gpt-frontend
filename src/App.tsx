@@ -173,6 +173,11 @@ const LoyaltyTransactionsPage = lazy(() =>
     default: m.LoyaltyTransactionsPage,
   })),
 );
+const PaymentTransactionsManagementPage = lazy(() =>
+  import("./pages/PaymentTransactionsManagementPage").then((m) => ({
+    default: m.PaymentTransactionsManagementPage,
+  })),
+);
 
 const PageLoader = () => (
   <Box
@@ -472,6 +477,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <AdminVouchersPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/payment-transactions"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <PaymentTransactionsManagementPage />
                           </RoleBasedRoute>
                         }
                       />

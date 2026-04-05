@@ -43,6 +43,7 @@ import {
   Chat as ChatIcon,
   ThumbsUpDown as ThumbsUpDownIcon,
   LocalOffer as LocalOfferIcon,
+  AccountBalanceWallet as AccountBalanceWalletIcon,
 } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -204,6 +205,12 @@ const menuGroups: SidebarMenuGroup[] = [
         text: "Quản lý Voucher",
         icon: <LocalOfferIcon />,
         path: "/admin/vouchers",
+        roles: ["admin"],
+      },
+      {
+        text: "Rà soát giao dịch thu chi",
+        icon: <AccountBalanceWalletIcon />,
+        path: "/admin/payment-transactions",
         roles: ["admin"],
       },
       {
