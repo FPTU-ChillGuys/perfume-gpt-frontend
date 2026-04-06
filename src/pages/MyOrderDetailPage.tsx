@@ -83,6 +83,7 @@ import {
   CANCEL_ORDER_REASON_OPTIONS,
   mapCancelReasonInputToEnum,
 } from "@/utils/cancelOrderReason";
+import { formatDateTimeCompactVN, formatDateVN } from "@/utils/dateTime";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import codIcon from "@/assets/cod.png";
@@ -161,15 +162,11 @@ const fmt = (v?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(v ?? 0))}đ`;
 
 const fmtDate = (s?: string | null) => {
-  if (!s) return null;
-  const d = new Date(s);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")} ${d.getDate().toString().padStart(2, "0")}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getFullYear()}`;
+  return formatDateTimeCompactVN(s);
 };
 
 const fmtDateShort = (s?: string | null) => {
-  if (!s) return "-";
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("vi-VN");
+  return formatDateVN(s);
 };
 
 const isSupportedPaymentMethod = (

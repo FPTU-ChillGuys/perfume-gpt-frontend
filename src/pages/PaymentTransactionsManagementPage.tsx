@@ -34,6 +34,7 @@ import {
   type TransactionStatus,
   type PaymentTransactionOverviewResponse,
 } from "@/services/paymentManagementService";
+import { formatDateTimeVN } from "@/utils/dateTime";
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
@@ -83,8 +84,7 @@ const formatCurrency = (value?: number) => {
 };
 
 const formatDateTime = (value?: string | null) => {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("vi-VN");
+  return formatDateTimeVN(value);
 };
 
 export const PaymentTransactionsManagementPage = () => {

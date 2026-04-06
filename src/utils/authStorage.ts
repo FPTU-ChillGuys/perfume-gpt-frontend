@@ -1,5 +1,6 @@
 const ACCESS_TOKEN_KEY = "accessToken";
 const USER_KEY = "user";
+const LOGOUT_MARKER_KEY = "authLogoutAt";
 
 const safeGet = (storage: Storage, key: string) => {
   try {
@@ -38,6 +39,9 @@ export const getStoredUser = () => {
 
 export const setStoredAuth = (accessToken: string, userJson: string) => {
   // Keep auth shared across tabs in the same browser profile.
+  safeRemove(localStorage, LOGOUT_MARKER_KEY);
+  safeRemove(sessionStorage, LOGOUT_MARKER_KEY);
+
   safeSet(localStorage, ACCESS_TOKEN_KEY, accessToken);
   safeSet(localStorage, USER_KEY, userJson);
 
@@ -47,6 +51,9 @@ export const setStoredAuth = (accessToken: string, userJson: string) => {
 };
 
 export const clearStoredAuth = () => {
+  safeSet(localStorage, LOGOUT_MARKER_KEY, String(Date.now()));
+  safeSet(sessionStorage, LOGOUT_MARKER_KEY, String(Date.now()));
+
   safeRemove(sessionStorage, ACCESS_TOKEN_KEY);
   safeRemove(sessionStorage, USER_KEY);
   safeRemove(localStorage, ACCESS_TOKEN_KEY);
@@ -54,18 +61,29 @@ export const clearStoredAuth = () => {
 };
 
 export const migrateLegacyAuthToSession = () => {
+  const logoutMarker = safeGet(localStorage, LOGOUT_MARKER_KEY);
   const sharedToken = safeGet(localStorage, ACCESS_TOKEN_KEY);
   const sharedUser = safeGet(localStorage, USER_KEY);
   const sessionToken = safeGet(sessionStorage, ACCESS_TOKEN_KEY);
   const sessionUser = safeGet(sessionStorage, USER_KEY);
 
-  // Legacy path: if only sessionStorage has auth, promote it to localStorage.
-  if (!sharedToken && sessionToken) {
-    safeSet(localStorage, ACCESS_TOKEN_KEY, sessionToken);
+  // If a logout was broadcast in another tab, clear stale tab-scoped auth.
+  if (logoutMarker && !sharedToken && !sharedUser) {
+    safeRemove(sessionStorage, ACCESS_TOKEN_KEY);
+    safeRemove(sessionStorage, USER_KEY);
+    return;
   }
 
-  if (!sharedUser && sessionUser) {
-    safeSet(localStorage, USER_KEY, sessionUser);
+  // Legacy path: if only sessionStorage has auth, promote it once to localStorage.
+  // Skip this when a logout marker exists so we never resurrect a logged-out session.
+  if (!logoutMarker) {
+    if (!sharedToken && sessionToken) {
+      safeSet(localStorage, ACCESS_TOKEN_KEY, sessionToken);
+    }
+
+    if (!sharedUser && sessionUser) {
+      safeSet(localStorage, USER_KEY, sessionUser);
+    }
   }
 
   // Ensure current tab sessionStorage also reflects shared auth.

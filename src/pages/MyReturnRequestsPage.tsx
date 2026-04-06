@@ -28,6 +28,7 @@ import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
 import { useToast } from "@/hooks/useToast";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
+import { formatDateTimeVN } from "@/utils/dateTime";
 
 const STATUS_TABS: { label: string; value: ReturnRequestStatus | "All" }[] = [
   { label: "Tất cả", value: "All" },
@@ -76,8 +77,7 @@ const statusColor = (
   return "default";
 };
 
-const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("vi-VN") : "-";
+const formatDate = (value?: string | null) => formatDateTimeVN(value);
 
 const formatCurrency = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;

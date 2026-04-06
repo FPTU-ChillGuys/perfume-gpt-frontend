@@ -60,6 +60,7 @@ import {
   CANCEL_ORDER_REASON_OPTIONS,
   mapCancelReasonInputToEnum,
 } from "@/utils/cancelOrderReason";
+import { formatDateTimeCompactVN } from "@/utils/dateTime";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import codIcon from "@/assets/cod.png";
@@ -123,11 +124,7 @@ const toIsoString = (value: string) => {
 };
 
 const formatDateTime = (value?: string | null) => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-
-  return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")} ${date.getDate().toString().padStart(2, "0")}-${(date.getMonth() + 1).toString().padStart(2, "0")}-${date.getFullYear()}`;
+  return formatDateTimeCompactVN(value);
 };
 
 const isSupportedPaymentMethod = (

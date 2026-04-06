@@ -289,6 +289,15 @@ export const PaymentFailurePage = () => {
     await processRetryPayment();
   };
 
+  const handleViewOrderDetail = () => {
+    if (!orderId) {
+      showToast("Không tìm thấy mã đơn hàng", "error");
+      return;
+    }
+
+    navigate(`/my-orders/${orderId}`);
+  };
+
   if (isLoading) {
     return (
       <MainLayout>
@@ -548,6 +557,17 @@ export const PaymentFailurePage = () => {
                     sx={{ minHeight: 44 }}
                   >
                     Về trang thanh toán
+                  </Button>
+                )}
+                {orderId && (
+                  <Button
+                    variant="outlined"
+                    color="info"
+                    size="large"
+                    onClick={handleViewOrderDetail}
+                    sx={{ minHeight: 44 }}
+                  >
+                    Xem chi tiết đơn hàng
                   </Button>
                 )}
                 <Button

@@ -33,6 +33,7 @@ import {
 } from "../services/orderService";
 import { useToast } from "../hooks/useToast";
 import type { OrderResponse } from "../types/order";
+import { formatDateTimeVN, formatDateVN } from "@/utils/dateTime";
 
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"] as const;
 
@@ -52,11 +53,9 @@ const statusLabel = (s?: string) => {
   return s || "—";
 };
 
-const formatDate = (d?: string) =>
-  d ? new Date(d).toLocaleDateString("vi-VN") : "—";
+const formatDate = (d?: string) => (d ? formatDateVN(d) : "—");
 
-const formatDateTime = (d?: string) =>
-  d ? new Date(d).toLocaleString("vi-VN") : "—";
+const formatDateTime = (d?: string) => (d ? formatDateTimeVN(d) : "—");
 
 const formatCurrency = (value?: number | null) => {
   if (!value) return "0 ₫";

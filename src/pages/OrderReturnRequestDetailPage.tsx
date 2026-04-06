@@ -38,6 +38,7 @@ import {
 } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
 import type { OrderResponse } from "@/types/order";
+import { formatDateTimeVN } from "@/utils/dateTime";
 
 const REJECT_REASON_SUGGESTIONS = [
   "Yêu cầu quá thời hạn hỗ trợ đổi trả",
@@ -124,8 +125,7 @@ const returnReasonLabel = (reason?: string | null) => {
   return reason;
 };
 
-const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("vi-VN") : "-";
+const formatDate = (value?: string | null) => formatDateTimeVN(value);
 
 const formatCurrency = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;

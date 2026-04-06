@@ -35,6 +35,7 @@ import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
 import { exportToCsv } from "@/utils/exportCsv";
+import { formatDateTimeVN } from "@/utils/dateTime";
 import type { OrderListItem, OrderStatus, OrderType } from "@/types/order";
 import {
   orderStatusLabels,
@@ -64,7 +65,7 @@ const formatCurrency = (value?: number) => {
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleString("vi-VN");
+  return formatDateTimeVN(dateStr);
 };
 
 const getDisplayOrderCode = (order?: OrderListItem | null) =>
