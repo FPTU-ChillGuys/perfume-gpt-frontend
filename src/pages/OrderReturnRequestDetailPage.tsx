@@ -70,6 +70,12 @@ const REFUND_METHOD_OPTIONS: {
   },
 ];
 
+const REFUND_METHOD_LABEL: Record<ReturnRefundMethod, string> = {
+  VnPay: "VNPay",
+  Momo: "MoMo",
+  CashInStore: "Cash In Store",
+};
+
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
   if (status === "RequestMoreInfo") return "Bổ sung bằng chứng";
@@ -242,6 +248,30 @@ export const OrderReturnRequestDetailPage = () => {
   const [refundConfirmOpen, setRefundConfirmOpen] = useState(false);
   const [selectedRefundMethod, setSelectedRefundMethod] =
     useState<ReturnRefundMethod>("VnPay");
+
+  const lockedRefundMethod = useMemo<ReturnRefundMethod | null>(() => {
+    const transactions = order?.paymentTransactions ?? [];
+    const successfulPayment = transactions.find(
+      (transaction) =>
+        transaction.transactionType === "Payment" &&
+        transaction.status === "Success" &&
+        (transaction.paymentMethod === "VnPay" ||
+          transaction.paymentMethod === "Momo"),
+    );
+
+    if (successfulPayment?.paymentMethod === "VnPay") {
+      return "VnPay";
+    }
+
+    if (successfulPayment?.paymentMethod === "Momo") {
+      return "Momo";
+    }
+
+    return null;
+  }, [order?.paymentTransactions]);
+
+  const isRefundMethodLocked = Boolean(lockedRefundMethod);
+  const effectiveRefundMethod = lockedRefundMethod ?? selectedRefundMethod;
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxMediaUrl, setLightboxMediaUrl] = useState("");
@@ -439,7 +469,7 @@ export const OrderReturnRequestDetailPage = () => {
     setIsSaving(true);
     setRefundConfirmOpen(false);
     try {
-      await orderService.refundReturnRequest(request.id, selectedRefundMethod);
+      await orderService.refundReturnRequest(request.id, effectiveRefundMethod);
       await refreshAfterAction("Đã hoàn tiền cho khách hàng");
     } catch (error) {
       showToast(
@@ -1179,7 +1209,11 @@ export const OrderReturnRequestDetailPage = () => {
                       variant="contained"
                       color="success"
                       onClick={() => {
-                        setSelectedRefundMethod("VnPay");
+                        if (lockedRefundMethod) {
+                          setSelectedRefundMethod(lockedRefundMethod);
+                        } else {
+                          setSelectedRefundMethod("VnPay");
+                        }
                         setRefundConfirmOpen(true);
                       }}
                       disabled={isSaving}
@@ -1383,53 +1417,121 @@ export const OrderReturnRequestDetailPage = () => {
       >
         <DialogTitle>Xác nhận hoàn tiền</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Chọn phương thức hoàn tiền:
-          </Typography>
+          {isRefundMethodLocked ? (
+            <>
+              <Alert severity="info" sx={{ mb: 1.5 }}>
+                Đơn hàng này đã thanh toán bằng
+                {` ${REFUND_METHOD_LABEL[effectiveRefundMethod]} `}
+                nên hệ thống chỉ cho phép hoàn tiền bằng đúng phương thức này để
+                đảm bảo truy vết và đối soát giao dịch.
+              </Alert>
 
-          <Stack
-            direction="row"
-            spacing={1.5}
-            flexWrap="wrap"
-            useFlexGap
-            mb={2}
-          >
-            {REFUND_METHOD_OPTIONS.map((option) => {
-              const active = selectedRefundMethod === option.value;
-              return (
-                <Paper
-                  key={option.value}
-                  variant="outlined"
-                  onClick={() => setSelectedRefundMethod(option.value)}
-                  sx={{
-                    px: 1.5,
-                    py: 1,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    borderColor: active ? "#ee4d2d" : "divider",
-                    bgcolor: active ? "rgba(238,77,45,0.06)" : "#fff",
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={option.iconSrc}
-                    alt={option.label}
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1.25 }}
+              >
+                Phương thức hoàn tiền áp dụng:
+              </Typography>
+
+              <Stack direction="row" spacing={1.5} mb={2}>
+                {REFUND_METHOD_OPTIONS.filter(
+                  (option) => option.value === effectiveRefundMethod,
+                ).map((option) => (
+                  <Paper
+                    key={option.value}
+                    variant="outlined"
                     sx={{
-                      width: 22,
-                      height: 22,
-                      objectFit: "contain",
-                      borderRadius: 0.5,
+                      px: 1.5,
+                      py: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      borderColor: "#ee4d2d",
+                      bgcolor: "rgba(238,77,45,0.06)",
                     }}
-                  />
-                  <Typography variant="body2" fontWeight={active ? 700 : 500}>
-                    {option.label}
-                  </Typography>
-                </Paper>
-              );
-            })}
-          </Stack>
+                  >
+                    <Box
+                      component="img"
+                      src={option.iconSrc}
+                      alt={option.label}
+                      sx={{
+                        width: 22,
+                        height: 22,
+                        objectFit: "contain",
+                        borderRadius: 0.5,
+                      }}
+                    />
+                    <Typography variant="body2" fontWeight={700}>
+                      {option.label}
+                    </Typography>
+                  </Paper>
+                ))}
+              </Stack>
+            </>
+          ) : (
+            <>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 1.5 }}
+              >
+                Chọn phương thức hoàn tiền:
+              </Typography>
+
+              <Stack
+                direction="row"
+                spacing={1.5}
+                flexWrap="wrap"
+                useFlexGap
+                mb={2}
+              >
+                {REFUND_METHOD_OPTIONS.map((option) => {
+                  const active = selectedRefundMethod === option.value;
+                  return (
+                    <Paper
+                      key={option.value}
+                      variant="outlined"
+                      onClick={() => setSelectedRefundMethod(option.value)}
+                      sx={{
+                        px: 1.5,
+                        py: 1,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        borderColor: active ? "#ee4d2d" : "divider",
+                        bgcolor: active ? "rgba(238,77,45,0.06)" : "#fff",
+                      }}
+                    >
+                      <Box
+                        component="img"
+                        src={option.iconSrc}
+                        alt={option.label}
+                        sx={{
+                          width: 22,
+                          height: 22,
+                          objectFit: "contain",
+                          borderRadius: 0.5,
+                        }}
+                      />
+                      <Typography
+                        variant="body2"
+                        fontWeight={active ? 700 : 500}
+                      >
+                        {option.label}
+                      </Typography>
+                    </Paper>
+                  );
+                })}
+              </Stack>
+
+              <Alert severity="warning" sx={{ mb: 2 }}>
+                Đơn chưa có giao dịch online thành công (ví dụ COD). Hiện tại có
+                thể chọn phương thức hoàn tiền thủ công.
+              </Alert>
+            </>
+          )}
 
           <Typography>
             Bạn có chắc chắn muốn xác nhận hoàn tiền cho yêu cầu này không? Hành

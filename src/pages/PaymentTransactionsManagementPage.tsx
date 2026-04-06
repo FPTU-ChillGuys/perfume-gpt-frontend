@@ -406,7 +406,7 @@ export const PaymentTransactionsManagementPage = () => {
                 overview.transactions.items.map((item) => (
                   <TableRow key={item.id} hover>
                     <TableCell>{item.id ?? "-"}</TableCell>
-                    <TableCell>{item.orderId ?? "-"}</TableCell>
+                    <TableCell>{item.orderCode ?? "-"}</TableCell>
                     <TableCell>
                       <Chip
                         size="small"
