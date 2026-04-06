@@ -3,7 +3,8 @@ import type { OrderStatus, PaymentStatus, OrderType } from "@/types/order";
 // Vietnamese labels for order status
 export const orderStatusLabels: Record<OrderStatus, string> = {
   Pending: "Chờ xử lý",
-  Processing: "Đang xử lý",
+  Preparing: "Đang chuẩn bị",
+  ReadyToPick: "Chờ lấy hàng",
   Delivering: "Đang giao hàng",
   Delivered: "Đã giao hàng",
   Returning: "Đang hoàn trả",
@@ -32,7 +33,8 @@ export const orderStatusColors: Record<
   "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success"
 > = {
   Pending: "warning", // 🟠 Cam - Chờ xử lý
-  Processing: "secondary", // ⚪ Xám/Tím nhạt - Đang xử lý tại kho
+  Preparing: "secondary", // ⚪ Xám/Tím nhạt - Đang chuẩn bị tại kho
+  ReadyToPick: "info", // 🔵 Xanh dương - Sẵn sàng bàn giao cho ĐVVC
   Delivering: "info", // 🔵 Xanh dương - Đang giao hàng (VẬN CHUYỂN)
   Delivered: "success", // 🟢 Xanh lá - Đã giao hàng
   Returning: "warning", // 🟠 Cam - Đang trong quy trình hoàn trả

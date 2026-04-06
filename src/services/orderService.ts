@@ -76,6 +76,14 @@ export type ProcessInitialReturnDto =
 export type StartInspectionDto = components["schemas"]["StartInspectionDto"];
 export type RecordInspectionDto = components["schemas"]["RecordInspectionDto"];
 export type RejectInspectionDto = components["schemas"]["RejectInspectionDto"];
+export type PickListResponse = components["schemas"]["PickListResponse"];
+export type PickListItemResponse =
+  components["schemas"]["PickListItemResponse"];
+export type PickListBatchInfo = components["schemas"]["PickListBatchInfo"];
+export type SwapDamagedStockRequest =
+  components["schemas"]["SwapDamagedStockRequest"];
+export type SwapDamagedStockResponse =
+  components["schemas"]["SwapDamagedStockResponse"];
 export type ReturnRefundMethod = Extract<
   PaymentMethod,
   "VnPay" | "Momo" | "CashInStore"
@@ -1302,28 +1310,135 @@ class OrderService {
     status: OrderStatus,
     note?: string,
   ): Promise<void> {
+    // Backward-compatible wrapper for old callers.
+    if (status === "Preparing") {
+      await this.staffPrepareOrder(orderId);
+      return;
+    }
+
+    if (status === "Cancelled") {
+      await this.staffCancelOrder(orderId, "ChangedMind", note);
+      return;
+    }
+
+    throw new Error(
+      "Trạng thái này không thể cập nhật thủ công với schema hiện tại",
+    );
+  }
+
+  async staffPrepareOrder(orderId: string): Promise<string> {
     try {
-      const response = await apiInstance.PUT("/api/orders/{orderId}/status", {
-        params: {
-          path: { orderId },
+      const response = await apiInstance.PUT(
+        "/api/orders/{orderId}/staff-prepare",
+        {
+          params: {
+            path: { orderId },
+          },
         },
-        body: {
-          status,
-          note: note || null,
-        },
-      });
+      );
 
       if (!response.data?.success) {
-        throw new Error(
-          response.data?.message || "Failed to update order status",
-        );
+        throw new Error(response.data?.message || "Failed to prepare order");
       }
+
+      return response.data.message || "Order prepared successfully";
     } catch (error: any) {
-      console.error("Error updating order status:", error);
+      console.error("Error preparing order:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to update order status",
+          "Failed to prepare order",
+      );
+    }
+  }
+
+  async staffCancelOrder(
+    orderId: string,
+    reason: CancelOrderReason,
+    note?: string,
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/orders/{orderId}/staff-cancel",
+        {
+          params: {
+            path: { orderId },
+          },
+          body: {
+            reason,
+            note: note || null,
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to cancel order");
+      }
+
+      return response.data.message || "Order canceled successfully";
+    } catch (error: any) {
+      console.error("Error canceling order by staff:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to cancel order",
+      );
+    }
+  }
+
+  async getOrderPickList(orderId: string): Promise<PickListResponse> {
+    try {
+      const response = await apiInstance.GET("/api/orders/{orderId}/picklist", {
+        params: {
+          path: { orderId },
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Failed to get order picklist",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error getting order picklist:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to get order picklist",
+      );
+    }
+  }
+
+  async swapDamagedOrderReservation(
+    orderId: string,
+    payload: SwapDamagedStockRequest,
+  ): Promise<SwapDamagedStockResponse> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/orders/{orderId}/swap-damaged",
+        {
+          params: {
+            path: { orderId },
+          },
+          body: payload,
+        },
+      );
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Failed to swap damaged reservation",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error swapping damaged reservation:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to swap damaged reservation",
       );
     }
   }

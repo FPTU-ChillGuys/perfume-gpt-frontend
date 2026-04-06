@@ -27,8 +27,9 @@ interface UpdateOrderStatusDialogProps {
 
 // Define allowed status transitions
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
-  Pending: ["Processing", "Cancelled"],
-  Processing: ["Delivering", "Cancelled"],
+  Pending: ["Preparing", "Cancelled"],
+  Preparing: ["ReadyToPick", "Cancelled"],
+  ReadyToPick: ["Delivering", "Cancelled"],
   Delivering: [],
   Delivered: [],
   Returning: ["Returned"],

@@ -38,13 +38,14 @@ import {
   VideocamOutlined,
   DeleteOutline,
   PlayCircleOutline,
-  Sync,
   Receipt,
   Payments,
+  CheckCircle,
   LocalShipping,
-  MoveToInbox,
+  Storage,
   StarBorder,
   Person,
+  Sync,
   LocationOn,
   Phone,
   CancelOutlined,
@@ -52,7 +53,7 @@ import {
   Add,
   Remove,
   RadioButtonUnchecked,
-  CheckCircle,
+  Inventory,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
@@ -131,9 +132,10 @@ const REVIEW_STATUS_CHIP: Record<
 /** Maps OrderStatus → active stepper index (0-based, -1 = canceled/returned) */
 const STATUS_TO_STEP: Record<OrderStatus, number> = {
   Pending: 0,
-  Processing: 1,
-  Delivering: 3,
-  Delivered: 4,
+  Preparing: 2,
+  ReadyToPick: 3,
+  Delivering: 4,
+  Delivered: 5,
   Returning: -2,
   Cancelled: -1,
   Partial_Returned: -2,
@@ -143,8 +145,9 @@ const STATUS_TO_STEP: Record<OrderStatus, number> = {
 const STEPS = [
   { label: "Đơn Hàng Đã Đặt", Icon: Receipt },
   { label: "Đơn Hàng Đã Thanh Toán", Icon: Payments },
-  { label: "Đã Giao Cho ĐVVC", Icon: LocalShipping },
-  { label: "Đang Giao Hàng", Icon: MoveToInbox },
+  { label: "Đang Chuẩn Bị", Icon: Inventory },
+  { label: "Chờ Lấy Hàng", Icon: Storage },
+  { label: "Đang Giao Hàng", Icon: LocalShipping },
   { label: "Đánh Giá", Icon: StarBorder },
 ];
 
@@ -343,7 +346,7 @@ const OrderStepper = ({
                 <Box
                   sx={{
                     flex: 1,
-                    height: 2,
+                    height: 3,
                     bgcolor: lineColor,
                     mt: "27px",
                     mx: 0.5,
@@ -496,7 +499,9 @@ export const MyOrderDetailPage = () => {
     }
 
     const isPending = currentOrder.status === "Pending";
-    const isProcessing = currentOrder.status === "Processing";
+    const isPreparingOrReadyToPick =
+      currentOrder.status === "Preparing" ||
+      currentOrder.status === "ReadyToPick";
     const isPaid = currentOrder.paymentStatus === "Paid";
 
     if (isPending && !isPaid) {
@@ -507,7 +512,7 @@ export const MyOrderDetailPage = () => {
       };
     }
 
-    if ((isPending && isPaid) || isProcessing) {
+    if ((isPending && isPaid) || isPreparingOrReadyToPick) {
       return {
         mode: "request" as const,
         buttonLabel: "Yêu cầu hủy đơn hàng",

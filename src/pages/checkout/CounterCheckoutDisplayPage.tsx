@@ -29,10 +29,11 @@ const resolveStatusColor = (status?: string): ChipProps["color"] => {
   switch (status) {
     case "Delivered":
       return "success";
-    case "Processing":
+    case "Preparing":
+    case "ReadyToPick":
     case "Delivering":
       return "info";
-    case "Canceled":
+    case "Cancelled":
     case "Returned":
       return "error";
     default:
@@ -87,7 +88,9 @@ export const CounterCheckoutDisplayPage = () => {
         setError(null);
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : "Không thể tải thông tin đơn hàng";
+          err instanceof Error
+            ? err.message
+            : "Không thể tải thông tin đơn hàng";
         setError(message);
 
         // Keep currently displayed order during silent refresh errors.
@@ -127,7 +130,10 @@ export const CounterCheckoutDisplayPage = () => {
 
   useEffect(() => {
     const handleStorageSync = (event: StorageEvent) => {
-      if (event.key === COUNTER_DISPLAY_COMMAND_KEY && event.newValue?.startsWith("clear:")) {
+      if (
+        event.key === COUNTER_DISPLAY_COMMAND_KEY &&
+        event.newValue?.startsWith("clear:")
+      ) {
         setOrder(null);
         setError(null);
         setOrderIdInput("");
@@ -177,7 +183,11 @@ export const CounterCheckoutDisplayPage = () => {
         <Container maxWidth="md">
           <Paper
             elevation={3}
-            sx={{ p: { xs: 3, md: 4 }, borderRadius: 4, backdropFilter: "blur(6px)" }}
+            sx={{
+              p: { xs: 3, md: 4 },
+              borderRadius: 4,
+              backdropFilter: "blur(6px)",
+            }}
           >
             <Stack spacing={3}>
               <Box>
@@ -185,8 +195,8 @@ export const CounterCheckoutDisplayPage = () => {
                   Màn hình khách
                 </Typography>
                 <Typography color="text.secondary">
-                  Nhập mã đơn hàng để hiển thị chi tiết. Nhân viên có thể quét hoặc sao chép
-                  mã từ hệ thống quản trị.
+                  Nhập mã đơn hàng để hiển thị chi tiết. Nhân viên có thể quét
+                  hoặc sao chép mã từ hệ thống quản trị.
                 </Typography>
               </Box>
 
@@ -235,7 +245,11 @@ export const CounterCheckoutDisplayPage = () => {
 
               {order && (
                 <Stack spacing={3}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
                     <Box>
                       <Typography variant="overline" color="text.secondary">
                         MÃ ĐƠN
@@ -272,7 +286,12 @@ export const CounterCheckoutDisplayPage = () => {
                             component="img"
                             src={item.imageUrl}
                             alt={item.variantName}
-                            sx={{ width: 72, height: 72, borderRadius: 2, objectFit: "cover" }}
+                            sx={{
+                              width: 72,
+                              height: 72,
+                              borderRadius: 2,
+                              objectFit: "cover",
+                            }}
                           />
                         ) : (
                           <Box
@@ -317,7 +336,9 @@ export const CounterCheckoutDisplayPage = () => {
                     </Stack>
                     {order.shippingInfo && (
                       <Stack direction="row" justifyContent="space-between">
-                        <Typography color="text.secondary">Phí vận chuyển</Typography>
+                        <Typography color="text.secondary">
+                          Phí vận chuyển
+                        </Typography>
                         <Typography fontWeight={600}>
                           {formatCurrency(order.shippingInfo.shippingFee)}
                         </Typography>
@@ -325,13 +346,19 @@ export const CounterCheckoutDisplayPage = () => {
                     )}
                     {order.voucherCode && (
                       <Stack direction="row" justifyContent="space-between">
-                        <Typography color="text.secondary">Mã giảm giá</Typography>
+                        <Typography color="text.secondary">
+                          Mã giảm giá
+                        </Typography>
                         <Typography fontWeight={600} color="success.main">
                           {order.voucherCode}
                         </Typography>
                       </Stack>
                     )}
-                    <Stack direction="row" justifyContent="space-between" mt={1}>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      mt={1}
+                    >
                       <Typography variant="h5" fontWeight={700}>
                         Tổng cộng
                       </Typography>
@@ -348,7 +375,9 @@ export const CounterCheckoutDisplayPage = () => {
                       Khách hàng
                     </Typography>
                     <Typography fontWeight={600}>
-                      {order.recipientInfo?.recipientName || order.customerName || "Khách hàng"}
+                      {order.recipientInfo?.recipientName ||
+                        order.customerName ||
+                        "Khách hàng"}
                     </Typography>
                     <Typography color="text.secondary">
                       {order.recipientInfo?.fullAddress || "Nhận tại quầy"}

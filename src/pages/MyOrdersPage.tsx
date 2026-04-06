@@ -96,12 +96,14 @@ const RETRY_PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
 const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: "Tất cả", value: "" },
   { label: orderStatusLabels["Pending"], value: "Pending" },
-  { label: orderStatusLabels["Processing"], value: "Processing" },
+  { label: orderStatusLabels["Preparing"], value: "Preparing" },
+  { label: orderStatusLabels["ReadyToPick"], value: "ReadyToPick" },
   { label: orderStatusLabels["Delivering"], value: "Delivering" },
   { label: orderStatusLabels["Delivered"], value: "Delivered" },
   { label: orderStatusLabels["Cancelled"], value: "Cancelled" },
+  { label: orderStatusLabels["Returning"], value: "Returning" },
   { label: orderStatusLabels["Partial_Returned"], value: "Partial_Returned" },
-  { label: "Trả hàng/Hoàn tiền", value: "Returned" },
+  { label: orderStatusLabels["Returned"], value: "Returned" },
 ];
 
 const formatCurrency = (value?: number | null) => {
@@ -329,7 +331,8 @@ export const MyOrdersPage = () => {
 
   const getCancelBehavior = (order: OrderListItem) => {
     const isPending = order.status === "Pending";
-    const isProcessing = order.status === "Processing";
+    const isPreparingOrReadyToPick =
+      order.status === "Preparing" || order.status === "ReadyToPick";
     const isPaid = order.paymentStatus === "Paid";
 
     if (isPending && !isPaid) {
@@ -340,7 +343,7 @@ export const MyOrdersPage = () => {
       };
     }
 
-    if ((isPending && isPaid) || isProcessing) {
+    if ((isPending && isPaid) || isPreparingOrReadyToPick) {
       return {
         mode: "request" as const,
         buttonLabel: "Yêu cầu hủy đơn hàng",
