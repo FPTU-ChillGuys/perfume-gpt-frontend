@@ -361,6 +361,7 @@ export const OrderManagementDetailPage = () => {
   }, [order?.status]);
 
   const isShippingManagedStatus = order?.status === "Delivering";
+  const hasTrackingNumber = Boolean(order?.shippingInfo?.trackingNumber);
 
   const subtotal = useMemo(
     () =>
@@ -528,7 +529,7 @@ export const OrderManagementDetailPage = () => {
         items: fulfillPayload,
       });
       showToast(
-        "Đóng gói thành công, đơn hàng đã chuyển sang Đang giao hàng",
+        "Đóng gói thành công, đơn hàng đã sẽ được bàn giao cho đơn vị vận chuyển",
         "success",
       );
       await loadOrder();
@@ -1043,67 +1044,71 @@ export const OrderManagementDetailPage = () => {
                       </Alert>
                     ) : (
                       <Stack spacing={2}>
-                        {order.status === "Processing" && (
-                          <Alert severity="info">
-                            Đơn đang ở trạng thái Đang xử lý. Hệ thống sẽ tự
-                            động sử dụng batch giữ hàng và số lượng của đơn,
-                            Staff chỉ cần xác nhận đã đóng gói đúng trước khi
-                            bàn giao vận chuyển.
-                          </Alert>
-                        )}
+                        {order.status === "Processing" &&
+                          !hasTrackingNumber && (
+                            <Alert severity="info">
+                              Đơn đang ở trạng thái Đang xử lý. Hệ thống sẽ tự
+                              động sử dụng batch giữ hàng và số lượng của đơn,
+                              Staff chỉ cần xác nhận đã đóng gói đúng trước khi
+                              bàn giao vận chuyển.
+                            </Alert>
+                          )}
 
-                        {order.status === "Processing" && (
-                          <Stack spacing={1.5}>
-                            <Box
-                              sx={{
-                                p: 1.5,
-                                border: "1px solid",
-                                borderColor: "divider",
-                                borderRadius: 1,
-                              }}
-                            >
-                              <FormControlLabel
-                                control={
-                                  <Checkbox
-                                    checked={isPackagingConfirmed}
-                                    onChange={(e) =>
-                                      setIsPackagingConfirmed(e.target.checked)
-                                    }
-                                    disabled={isUpdating || isFulfilling}
-                                  />
+                        {order.status === "Processing" &&
+                          !hasTrackingNumber && (
+                            <Stack spacing={1.5}>
+                              <Box
+                                sx={{
+                                  p: 1.5,
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                  borderRadius: 1,
+                                }}
+                              >
+                                <FormControlLabel
+                                  control={
+                                    <Checkbox
+                                      checked={isPackagingConfirmed}
+                                      onChange={(e) =>
+                                        setIsPackagingConfirmed(
+                                          e.target.checked,
+                                        )
+                                      }
+                                      disabled={isUpdating || isFulfilling}
+                                    />
+                                  }
+                                  label="Tôi đã đóng gói sản phẩm với đúng số lô và đủ số lượng"
+                                />
+                                {autoFulfillError && (
+                                  <Typography
+                                    variant="caption"
+                                    color="error.main"
+                                  >
+                                    {autoFulfillError}
+                                  </Typography>
+                                )}
+                              </Box>
+
+                              <Button
+                                variant="contained"
+                                onClick={handleFulfillOrder}
+                                disabled={
+                                  isFulfilling ||
+                                  isUpdating ||
+                                  !isPackagingConfirmed ||
+                                  Boolean(autoFulfillError)
                                 }
-                                label="Tôi đã đóng gói sản phẩm với đúng số lô và đủ số lượng"
-                              />
-                              {autoFulfillError && (
-                                <Typography
-                                  variant="caption"
-                                  color="error.main"
-                                >
-                                  {autoFulfillError}
-                                </Typography>
-                              )}
-                            </Box>
-
-                            <Button
-                              variant="contained"
-                              onClick={handleFulfillOrder}
-                              disabled={
-                                isFulfilling ||
-                                isUpdating ||
-                                !isPackagingConfirmed ||
-                                Boolean(autoFulfillError)
-                              }
-                              sx={{
-                                bgcolor: "#1976d2",
-                                "&:hover": { bgcolor: "#115293" },
-                              }}
-                            >
-                              {isFulfilling
-                                ? "Đang đóng gói..."
-                                : "Đóng gói & bàn giao vận chuyển"}
-                            </Button>
-                          </Stack>
-                        )}
+                                sx={{
+                                  bgcolor: "#1976d2",
+                                  "&:hover": { bgcolor: "#115293" },
+                                }}
+                              >
+                                {isFulfilling
+                                  ? "Đang đóng gói..."
+                                  : "Đóng gói & bàn giao vận chuyển"}
+                              </Button>
+                            </Stack>
+                          )}
 
                         <Select
                           value={selectedStatus}

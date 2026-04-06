@@ -46,7 +46,7 @@ export const PaymentSuccessPage = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  const orderId = searchParams.get("orderId") || searchParams.get("orderId");
+  const orderId = searchParams.get("orderId");
   const source = searchParams.get("source");
   const isCheckoutSuccess = source === "checkout";
   const amount = searchParams.get("vnp_Amount");

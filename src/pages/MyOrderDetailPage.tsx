@@ -79,8 +79,16 @@ import {
   type ReviewDialogTarget,
 } from "@/types/review";
 import { orderStatusLabels } from "@/utils/orderStatus";
+import {
+  CANCEL_ORDER_REASON_OPTIONS,
+  mapCancelReasonInputToEnum,
+} from "@/utils/cancelOrderReason";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
+import codIcon from "@/assets/cod.png";
+import storeIcon from "@/assets/store.png";
+import vnpayIcon from "@/assets/vnpay.jpg";
+import momoIcon from "@/assets/momo.png";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -95,6 +103,20 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
 };
+
+const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
+  CashOnDelivery: codIcon,
+  CashInStore: storeIcon,
+  VnPay: vnpayIcon,
+  Momo: momoIcon,
+};
+
+const RETRY_PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
+  "CashOnDelivery",
+  "CashInStore",
+  "VnPay",
+  "Momo",
+];
 
 const REVIEW_STATUS_CHIP: Record<
   ReviewStatus,
@@ -133,14 +155,6 @@ const RETURN_REASON_OPTIONS: { value: ReturnOrderReason; label: string }[] = [
   { value: "ChangedMind", label: "Đổi ý, không còn nhu cầu" },
 ];
 
-const CANCEL_REASON_SUGGESTIONS = [
-  "Tôi muốn thay đổi sản phẩm trong đơn",
-  "Tôi muốn đổi địa chỉ nhận hàng",
-  "Tôi không còn nhu cầu mua nữa",
-  "Tôi đã đặt nhầm sản phẩm",
-  "Tôi muốn thay đổi phương thức thanh toán",
-];
-
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const fmt = (v?: number | null) =>
@@ -157,6 +171,14 @@ const fmtDateShort = (s?: string | null) => {
   const d = new Date(s);
   return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("vi-VN");
 };
+
+const isSupportedPaymentMethod = (
+  value?: string | null,
+): value is PaymentMethod =>
+  value === "CashOnDelivery" ||
+  value === "CashInStore" ||
+  value === "VnPay" ||
+  value === "Momo";
 
 // ─── Order Stepper ──────────────────────────────────────────────────────────
 
@@ -372,11 +394,17 @@ export const MyOrderDetailPage = () => {
   const [cancelReason, setCancelReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSyncingShipping, setIsSyncingShipping] = useState(false);
+  const [isRetryPaymentDialogOpen, setIsRetryPaymentDialogOpen] =
+    useState(false);
+  const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+  const [selectedRetryPaymentMethod, setSelectedRetryPaymentMethod] =
+    useState<PaymentMethod>("CashOnDelivery");
 
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(
     Boolean(locationState.requestReturn),
   );
   const [returnReason, setReturnReason] = useState<ReturnOrderReason | "">("");
+  const [isRefundOnly, setIsRefundOnly] = useState(false);
   const [returnNote, setReturnNote] = useState("");
   const [returnMediaFiles, setReturnMediaFiles] = useState<File[]>([]);
   const [returnItemQuantities, setReturnItemQuantities] = useState<
@@ -545,6 +573,74 @@ export const MyOrderDetailPage = () => {
     return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
   }, [order?.paymentTransactions]);
 
+  const latestPaymentTransaction = useMemo(
+    () =>
+      [...(order?.paymentTransactions ?? [])]
+        .reverse()
+        .find((transaction) => transaction?.id),
+    [order?.paymentTransactions],
+  );
+
+  const currentPaymentMethod = useMemo<PaymentMethod | null>(() => {
+    const value = latestPaymentTransaction?.paymentMethod;
+    return isSupportedPaymentMethod(value) ? value : null;
+  }, [latestPaymentTransaction?.paymentMethod]);
+
+  const paymentId = latestPaymentTransaction?.id ?? null;
+
+  const isPendingUnpaid =
+    order?.status === "Pending" && order?.paymentStatus === "Unpaid";
+
+  const isPickupInStoreOrder = Boolean(
+    order &&
+    (order.type === "Offline" || (!order.recipientInfo && !order.shippingInfo)),
+  );
+
+  const allowedRetryPaymentMethods = useMemo(
+    () =>
+      RETRY_PAYMENT_METHOD_OPTIONS.filter((method) =>
+        isPickupInStoreOrder
+          ? method !== "CashOnDelivery"
+          : method !== "CashInStore",
+      ),
+    [isPickupInStoreOrder],
+  );
+
+  const canRetryPaymentInDetail = isPendingUnpaid && Boolean(paymentId);
+
+  const isCurrentOnlineMethod =
+    currentPaymentMethod === "VnPay" || currentPaymentMethod === "Momo";
+
+  const paymentExpiresAtLabel = useMemo(() => {
+    const rawExpiresAt = order?.paymentExpiresAt;
+    if (!rawExpiresAt) {
+      return null;
+    }
+
+    const formatted = fmtDate(rawExpiresAt);
+    return formatted || null;
+  }, [order?.paymentExpiresAt]);
+
+  useEffect(() => {
+    if (!canRetryPaymentInDetail) {
+      return;
+    }
+
+    if (
+      currentPaymentMethod &&
+      allowedRetryPaymentMethods.includes(currentPaymentMethod)
+    ) {
+      setSelectedRetryPaymentMethod(currentPaymentMethod);
+      return;
+    }
+
+    setSelectedRetryPaymentMethod(allowedRetryPaymentMethods[0] ?? "VnPay");
+  }, [
+    allowedRetryPaymentMethods,
+    canRetryPaymentInDetail,
+    currentPaymentMethod,
+  ]);
+
   const returnMediaPreviews = useMemo(
     () =>
       returnMediaFiles.map((file, index) => ({
@@ -572,6 +668,9 @@ export const MyOrderDetailPage = () => {
         .map((item) => {
           const id = item.id ?? "";
           const max = Number(item.quantity ?? 0);
+          const refundableUnitPrice = Number(
+            item.refunablePrice ?? item.unitPrice ?? 0,
+          );
           const requested = Math.min(
             Math.max(0, Number(returnItemQuantities[id] ?? 0)),
             max,
@@ -580,6 +679,7 @@ export const MyOrderDetailPage = () => {
             orderDetailId: id,
             requested,
             max,
+            refundableUnitPrice,
             item,
           };
         })
@@ -591,13 +691,17 @@ export const MyOrderDetailPage = () => {
     () =>
       selectedReturnItems.reduce(
         (sum, entry) =>
-          sum + Number(entry.item.unitPrice ?? 0) * Number(entry.requested),
+          sum + entry.refundableUnitPrice * Number(entry.requested),
         0,
       ),
     [selectedReturnItems],
   );
 
   const isReturnAddressValid = useMemo(() => {
+    if (isRefundOnly) {
+      return true;
+    }
+
     if (pickupAddressMode === "saved") {
       return Boolean(selectedSavedAddressId);
     }
@@ -625,6 +729,7 @@ export const MyOrderDetailPage = () => {
     selectedSavedAddressId,
     selectedWard?.WardCode,
     selectedWard?.WardName,
+    isRefundOnly,
   ]);
 
   const canSubmitReturnRequest = useMemo(
@@ -692,9 +797,15 @@ export const MyOrderDetailPage = () => {
       return;
     }
 
+    const cancelReasonEnum = mapCancelReasonInputToEnum(reason);
+    if (!cancelReasonEnum) {
+      showToast("Lý do hủy không hợp lệ", "warning");
+      return;
+    }
+
     try {
       setIsCancelling(true);
-      await orderService.cancelOrder(order.id, reason);
+      await orderService.cancelOrder(order.id, cancelReasonEnum);
       showToast(
         cancelBehavior?.mode === "direct"
           ? "Đã hủy đơn hàng thành công"
@@ -717,8 +828,62 @@ export const MyOrderDetailPage = () => {
     }
   };
 
+  const handleOpenRetryPaymentDialog = () => {
+    if (!canRetryPaymentInDetail) {
+      showToast("Đơn hàng hiện không thể thanh toán lại", "warning");
+      return;
+    }
+
+    setIsRetryPaymentDialogOpen(true);
+  };
+
+  const handleRetryPaymentFromDetail = async () => {
+    if (!paymentId) {
+      showToast("Không tìm thấy giao dịch thanh toán", "error");
+      return;
+    }
+
+    try {
+      setIsRetryingPayment(true);
+      const response = await orderService.retryPayment(
+        paymentId,
+        selectedRetryPaymentMethod,
+      );
+
+      if (
+        selectedRetryPaymentMethod === "VnPay" ||
+        selectedRetryPaymentMethod === "Momo"
+      ) {
+        if (!response.url) {
+          throw new Error("Không lấy được đường dẫn thanh toán");
+        }
+
+        window.location.href = response.url;
+        return;
+      }
+
+      showToast("Đơn hàng đã được xác nhận!", "success");
+      setIsRetryPaymentDialogOpen(false);
+
+      if (orderId) {
+        const refreshedOrder = await orderService.getMyOrderById(orderId);
+        setOrder(refreshedOrder);
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể thanh toán lại đơn hàng",
+        "error",
+      );
+    } finally {
+      setIsRetryingPayment(false);
+    }
+  };
+
   const resetReturnDialogState = () => {
     setReturnReason("");
+    setIsRefundOnly(false);
     setReturnNote("");
     setReturnMediaFiles([]);
     setReturnItemQuantities({});
@@ -963,7 +1128,10 @@ export const MyOrderDetailPage = () => {
     let recipient: components["schemas"]["ContactAddressInformation"] | null =
       null;
 
-    if (pickupAddressMode === "saved") {
+    if (isRefundOnly) {
+      savedAddressId = null;
+      recipient = null;
+    } else if (pickupAddressMode === "saved") {
       if (!selectedSavedAddressId) {
         setReturnFormError("Vui lòng chọn địa chỉ lấy hàng");
         return;
@@ -1012,6 +1180,7 @@ export const MyOrderDetailPage = () => {
       await orderService.createReturnRequest({
         orderId: order.id,
         reason: returnReason,
+        isRefundOnly,
         returnItems: selectedReturnItems.map((entry) => ({
           orderDetailId: entry.orderDetailId,
           quantity: entry.requested,
@@ -1173,6 +1342,36 @@ export const MyOrderDetailPage = () => {
                       totalAmount={order.totalAmount}
                     />
                   </Box>
+
+                  {canRetryPaymentInDetail && (
+                    <Alert severity="warning" sx={{ mx: 3, mt: 2 }}>
+                      <Stack spacing={0.5}>
+                        <Typography variant="body2" fontWeight={600}>
+                          Đơn hàng đang chờ xử lý và chưa thanh toán.
+                        </Typography>
+                        <Typography variant="body2">
+                          Bạn có thể thanh toán lại hoặc đổi phương thức thanh
+                          toán.
+                        </Typography>
+                        {isCurrentOnlineMethod && paymentExpiresAtLabel && (
+                          <Typography variant="body2" color="error.main">
+                            Hạn thanh toán: {paymentExpiresAtLabel}
+                          </Typography>
+                        )}
+                        <Box>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="warning"
+                            onClick={handleOpenRetryPaymentDialog}
+                            sx={{ mt: 0.5 }}
+                          >
+                            Thanh toán lại ngay
+                          </Button>
+                        </Box>
+                      </Stack>
+                    </Alert>
+                  )}
 
                   <Box
                     sx={{
@@ -1521,13 +1720,49 @@ export const MyOrderDetailPage = () => {
                             {paymentMethodLabel}
                           </Typography>
                         </Box>
+
+                        {isPendingUnpaid &&
+                          isCurrentOnlineMethod &&
+                          paymentExpiresAtLabel && (
+                            <Box
+                              display="flex"
+                              justifyContent="space-between"
+                              gap={2}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Hạn thanh toán
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                color="error.main"
+                                textAlign="right"
+                              >
+                                {paymentExpiresAtLabel}
+                              </Typography>
+                            </Box>
+                          )}
                       </Stack>
                     </Paper>
 
                     {(cancelBehavior ||
+                      canRetryPaymentInDetail ||
                       (order.status === "Delivered" && isOrderReturnable)) && (
                       <Box display="flex" justifyContent="flex-end">
                         <Stack direction="row" spacing={1} flexWrap="wrap">
+                          {canRetryPaymentInDetail && (
+                            <Button
+                              variant="contained"
+                              color="warning"
+                              onClick={handleOpenRetryPaymentDialog}
+                            >
+                              Thanh toán lại
+                            </Button>
+                          )}
+
                           {cancelBehavior && (
                             <Button
                               variant="outlined"
@@ -1597,15 +1832,15 @@ export const MyOrderDetailPage = () => {
             />
 
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {CANCEL_REASON_SUGGESTIONS.map((reason) => {
-                const isSelected = cancelReason.trim() === reason;
+              {CANCEL_ORDER_REASON_OPTIONS.map((option) => {
+                const isSelected = cancelReason.trim() === option.label;
                 return (
                   <Chip
-                    key={reason}
+                    key={option.value}
                     clickable
-                    label={reason}
+                    label={option.label}
                     color={isSelected ? "warning" : "default"}
-                    onClick={() => setCancelReason(reason)}
+                    onClick={() => setCancelReason(option.label)}
                     sx={{ maxWidth: "100%" }}
                   />
                 );
@@ -1639,6 +1874,103 @@ export const MyOrderDetailPage = () => {
       </Dialog>
 
       <Dialog
+        open={isRetryPaymentDialogOpen}
+        onClose={() => {
+          if (isRetryingPayment) return;
+          setIsRetryPaymentDialogOpen(false);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Thanh toán lại đơn hàng</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Chọn phương thức thanh toán để tiếp tục.
+            </Typography>
+
+            {isCurrentOnlineMethod && paymentExpiresAtLabel && (
+              <Alert severity="warning">
+                Giao dịch hiện tại sẽ hết hạn lúc <b>{paymentExpiresAtLabel}</b>
+                .
+              </Alert>
+            )}
+
+            <RadioGroup
+              value={selectedRetryPaymentMethod}
+              onChange={(e) =>
+                setSelectedRetryPaymentMethod(e.target.value as PaymentMethod)
+              }
+            >
+              {allowedRetryPaymentMethods.map((method) => (
+                <FormControlLabel
+                  key={method}
+                  value={method}
+                  control={<Radio size="small" />}
+                  label={
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={1.25}
+                      py={0.25}
+                    >
+                      <Box
+                        component="img"
+                        src={PAYMENT_METHOD_ICONS[method]}
+                        alt={PAYMENT_METHOD_LABELS[method]}
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          objectFit: "contain",
+                          borderRadius: 1,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          bgcolor: "#fff",
+                          p: 0.4,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography variant="body2" fontWeight={500}>
+                        {PAYMENT_METHOD_LABELS[method]}
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{
+                    m: 0,
+                    mb: 0.75,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    px: 1.25,
+                    py: 0.25,
+                  }}
+                />
+              ))}
+            </RadioGroup>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setIsRetryPaymentDialogOpen(false)}
+            disabled={isRetryingPayment}
+          >
+            Đóng
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleRetryPaymentFromDetail}
+            disabled={
+              isRetryingPayment ||
+              !allowedRetryPaymentMethods.includes(selectedRetryPaymentMethod)
+            }
+          >
+            {isRetryingPayment ? "Đang xử lý..." : "Thanh toán ngay"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
         open={isReturnDialogOpen}
         onClose={closeReturnRequestDialog}
         maxWidth="md"
@@ -1659,6 +1991,9 @@ export const MyOrderDetailPage = () => {
                 {(order?.orderDetails ?? []).map((item, index) => {
                   const detailId = item.id ?? "";
                   const maxQty = Number(item.quantity ?? 0);
+                  const refundableUnitPrice = Number(
+                    item.refunablePrice ?? item.unitPrice ?? 0,
+                  );
                   const selectedQty = Math.min(
                     maxQty,
                     Math.max(0, Number(returnItemQuantities[detailId] ?? 0)),
@@ -1728,6 +2063,13 @@ export const MyOrderDetailPage = () => {
                             >
                               Đã mua: {maxQty}
                             </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
+                              Đơn giá hoàn tiền: {fmt(refundableUnitPrice)}
+                            </Typography>
                           </Box>
                         </Stack>
 
@@ -1792,6 +2134,24 @@ export const MyOrderDetailPage = () => {
                   );
                 })}
               </Stack>
+
+              <Divider sx={{ my: 1.5 }} />
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Tạm tính hoàn tiền
+                </Typography>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  color="#ee4d2d"
+                >
+                  {fmt(estimatedRefundAmount)}
+                </Typography>
+              </Box>
             </Paper>
 
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
@@ -1817,7 +2177,30 @@ export const MyOrderDetailPage = () => {
 
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
               <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                3. Mô tả thêm và bằng chứng (ảnh/video)
+                3. Phương án giải quyết
+              </Typography>
+              <RadioGroup
+                value={isRefundOnly ? "refund-only" : "return-and-refund"}
+                onChange={(e) =>
+                  setIsRefundOnly(e.target.value === "refund-only")
+                }
+              >
+                <FormControlLabel
+                  value="return-and-refund"
+                  control={<Radio />}
+                  label="Trả hàng & Hoàn tiền"
+                />
+                <FormControlLabel
+                  value="refund-only"
+                  control={<Radio />}
+                  label="Hoàn tiền (Không trả hàng)"
+                />
+              </RadioGroup>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                4. Mô tả thêm và bằng chứng (ảnh/video)
               </Typography>
               <Stack spacing={1.25}>
                 <TextField
@@ -1967,151 +2350,140 @@ export const MyOrderDetailPage = () => {
               </Stack>
             </Paper>
 
-            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-              <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                4. Địa chỉ lấy hàng
-              </Typography>
-              <Stack spacing={1.25}>
-                <RadioGroup
-                  row
-                  value={pickupAddressMode}
-                  onChange={(e) =>
-                    setPickupAddressMode(e.target.value as "saved" | "custom")
-                  }
-                >
-                  <FormControlLabel
-                    value="saved"
-                    control={<Radio />}
-                    label="Chọn địa chỉ hiện có"
-                  />
-                  <FormControlLabel
-                    value="custom"
-                    control={<Radio />}
-                    label="Nhập địa chỉ mới"
-                  />
-                </RadioGroup>
+            {!isRefundOnly && (
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                  5. Địa chỉ lấy hàng
+                </Typography>
+                <Stack spacing={1.25}>
+                  <RadioGroup
+                    row
+                    value={pickupAddressMode}
+                    onChange={(e) =>
+                      setPickupAddressMode(e.target.value as "saved" | "custom")
+                    }
+                  >
+                    <FormControlLabel
+                      value="saved"
+                      control={<Radio />}
+                      label="Chọn địa chỉ hiện có"
+                    />
+                    <FormControlLabel
+                      value="custom"
+                      control={<Radio />}
+                      label="Nhập địa chỉ mới"
+                    />
+                  </RadioGroup>
 
-                {pickupAddressMode === "saved" ? (
-                  <>
-                    {isLoadingAddresses ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      <Select
-                        fullWidth
-                        size="small"
-                        value={selectedSavedAddressId}
-                        onChange={(e) =>
-                          setSelectedSavedAddressId(e.target.value)
-                        }
-                        displayEmpty
-                      >
-                        <MenuItem value="" disabled>
-                          Chọn địa chỉ lấy hàng
-                        </MenuItem>
-                        {savedAddresses.map((address) => (
-                          <MenuItem key={address.id} value={address.id || ""}>
-                            {`${address.recipientName} | ${address.recipientPhoneNumber} | ${address.street}, ${address.ward}, ${address.district}, ${address.city}`}
+                  {pickupAddressMode === "saved" ? (
+                    <>
+                      {isLoadingAddresses ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Select
+                          fullWidth
+                          size="small"
+                          value={selectedSavedAddressId}
+                          onChange={(e) =>
+                            setSelectedSavedAddressId(e.target.value)
+                          }
+                          displayEmpty
+                        >
+                          <MenuItem value="" disabled>
+                            Chọn địa chỉ lấy hàng
                           </MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  </>
-                ) : (
-                  <Stack spacing={1.25}>
-                    <TextField
-                      label="Tên liên hệ *"
-                      size="small"
-                      value={customRecipient.contactName}
-                      onChange={(e) =>
-                        setCustomRecipient((prev) => ({
-                          ...prev,
-                          contactName: e.target.value,
-                        }))
-                      }
-                    />
-                    <TextField
-                      label="Số điện thoại *"
-                      size="small"
-                      value={customRecipient.contactPhoneNumber}
-                      onChange={(e) =>
-                        setCustomRecipient((prev) => ({
-                          ...prev,
-                          contactPhoneNumber: e.target.value,
-                        }))
-                      }
-                    />
-                    <Autocomplete
-                      options={provinces}
-                      value={selectedProvince}
-                      loading={isLoadingProvinces}
-                      getOptionLabel={(option) => option.ProvinceName || ""}
-                      onChange={handleProvinceChange}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Tỉnh/Thành phố *"
-                          size="small"
-                        />
+                          {savedAddresses.map((address) => (
+                            <MenuItem key={address.id} value={address.id || ""}>
+                              {`${address.recipientName} | ${address.recipientPhoneNumber} | ${address.street}, ${address.ward}, ${address.district}, ${address.city}`}
+                            </MenuItem>
+                          ))}
+                        </Select>
                       )}
-                    />
-                    <Autocomplete
-                      options={districts}
-                      value={selectedDistrict}
-                      loading={isLoadingDistricts}
-                      disabled={!selectedProvince}
-                      getOptionLabel={(option) => option.DistrictName || ""}
-                      onChange={handleDistrictChange}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Quận/Huyện *"
-                          size="small"
-                        />
-                      )}
-                    />
-                    <Autocomplete
-                      options={wards}
-                      value={selectedWard}
-                      loading={isLoadingWards}
-                      disabled={!selectedDistrict}
-                      getOptionLabel={(option) => option.WardName || ""}
-                      onChange={handleWardChange}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Phường/Xã *"
-                          size="small"
-                        />
-                      )}
-                    />
-                    <TextField
-                      label="Số nhà, tên đường *"
-                      size="small"
-                      value={customRecipient.fullAddress}
-                      onChange={(e) =>
-                        setCustomRecipient((prev) => ({
-                          ...prev,
-                          fullAddress: e.target.value,
-                        }))
-                      }
-                    />
-                  </Stack>
-                )}
-              </Stack>
-            </Paper>
-
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              <Typography variant="body2" color="text.secondary">
-                Tạm tính hoàn tiền
-              </Typography>
-              <Typography variant="subtitle1" fontWeight={700} color="#ee4d2d">
-                {fmt(estimatedRefundAmount)}
-              </Typography>
-            </Box>
+                    </>
+                  ) : (
+                    <Stack spacing={1.25}>
+                      <TextField
+                        label="Tên liên hệ *"
+                        size="small"
+                        value={customRecipient.contactName}
+                        onChange={(e) =>
+                          setCustomRecipient((prev) => ({
+                            ...prev,
+                            contactName: e.target.value,
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Số điện thoại *"
+                        size="small"
+                        value={customRecipient.contactPhoneNumber}
+                        onChange={(e) =>
+                          setCustomRecipient((prev) => ({
+                            ...prev,
+                            contactPhoneNumber: e.target.value,
+                          }))
+                        }
+                      />
+                      <Autocomplete
+                        options={provinces}
+                        value={selectedProvince}
+                        loading={isLoadingProvinces}
+                        getOptionLabel={(option) => option.ProvinceName || ""}
+                        onChange={handleProvinceChange}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Tỉnh/Thành phố *"
+                            size="small"
+                          />
+                        )}
+                      />
+                      <Autocomplete
+                        options={districts}
+                        value={selectedDistrict}
+                        loading={isLoadingDistricts}
+                        disabled={!selectedProvince}
+                        getOptionLabel={(option) => option.DistrictName || ""}
+                        onChange={handleDistrictChange}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Quận/Huyện *"
+                            size="small"
+                          />
+                        )}
+                      />
+                      <Autocomplete
+                        options={wards}
+                        value={selectedWard}
+                        loading={isLoadingWards}
+                        disabled={!selectedDistrict}
+                        getOptionLabel={(option) => option.WardName || ""}
+                        onChange={handleWardChange}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Phường/Xã *"
+                            size="small"
+                          />
+                        )}
+                      />
+                      <TextField
+                        label="Số nhà, tên đường *"
+                        size="small"
+                        value={customRecipient.fullAddress}
+                        onChange={(e) =>
+                          setCustomRecipient((prev) => ({
+                            ...prev,
+                            fullAddress: e.target.value,
+                          }))
+                        }
+                      />
+                    </Stack>
+                  )}
+                </Stack>
+              </Paper>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions

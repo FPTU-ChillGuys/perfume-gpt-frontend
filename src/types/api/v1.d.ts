@@ -5967,6 +5967,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    UserId?: string;
                     Status?: components["schemas"]["OrderStatus"];
                     Type?: components["schemas"]["OrderType"];
                     PaymentStatus?: components["schemas"]["PaymentStatus"];
@@ -6139,68 +6140,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/orders/user/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    Status?: components["schemas"]["OrderStatus"];
-                    Type?: components["schemas"]["OrderType"];
-                    PaymentStatus?: components["schemas"]["PaymentStatus"];
-                    FromDate?: string;
-                    ToDate?: string;
-                    SearchTerm?: string;
-                    PageNumber?: number;
-                    PageSize?: number;
-                    SortBy?: string;
-                    SortOrder?: string;
-                    IsDescending?: boolean;
-                };
-                header?: never;
-                path: {
-                    userId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/orders": {
         parameters: {
             query?: never;
@@ -6211,6 +6150,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    UserId?: string;
                     Status?: components["schemas"]["OrderStatus"];
                     Type?: components["schemas"]["OrderType"];
                     PaymentStatus?: components["schemas"]["PaymentStatus"];
@@ -6371,68 +6311,6 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
                         "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
                         "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/orders/staff/{staffId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    Status?: components["schemas"]["OrderStatus"];
-                    Type?: components["schemas"]["OrderType"];
-                    PaymentStatus?: components["schemas"]["PaymentStatus"];
-                    FromDate?: string;
-                    ToDate?: string;
-                    SearchTerm?: string;
-                    PageNumber?: number;
-                    PageSize?: number;
-                    SortBy?: string;
-                    SortOrder?: string;
-                    IsDescending?: boolean;
-                };
-                header?: never;
-                path: {
-                    staffId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
                     };
                 };
             };
@@ -7316,84 +7194,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/payments/{paymentId}/method": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    paymentId: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PaymentInformation"];
-                    "text/json": components["schemas"]["PaymentInformation"];
-                    "application/*+json": components["schemas"]["PaymentInformation"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-            };
-        };
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -13315,8 +13115,11 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
+            paymentExpiresAt?: null | string;
+            /** Format: date-time */
             updatedAt?: null | string;
             orderDetails: components["schemas"]["OrderDetailListItem"][];
+            paymentTransactions?: null | components["schemas"]["PaymentInfoResponse"][];
         };
         OrderResponse: {
             /** Format: uuid */
@@ -13660,6 +13463,7 @@ export interface components {
             id?: string;
             /** Format: uuid */
             orderId?: string;
+            orderCode: string;
             method?: components["schemas"]["PaymentMethod"];
             transactionType?: components["schemas"]["TransactionType"];
             transactionStatus?: components["schemas"]["TransactionStatus"];

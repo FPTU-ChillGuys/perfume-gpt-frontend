@@ -51,11 +51,13 @@ export interface PagedCancelRequests {
 export type CreateReturnRequestDto =
   components["schemas"]["CreateReturnRequestDto"];
 export type ReturnOrderReason = components["schemas"]["ReturnOrderReason"];
+export type CancelOrderReason = components["schemas"]["CancelOrderReason"];
 export type ContactAddressInformation =
   components["schemas"]["ContactAddressInformation"];
 export interface CreateReturnRequestPayload {
   orderId: string;
   reason: ReturnOrderReason;
+  isRefundOnly?: boolean;
   returnItems: {
     orderDetailId: string;
     quantity: number;
@@ -1061,6 +1063,7 @@ class OrderService {
       const requestBody: CreateReturnRequestDto = {
         orderId: payload.orderId,
         reason: payload.reason,
+        isRefundOnly: payload.isRefundOnly ?? false,
         returnItems: payload.returnItems,
         customerNote: payload.customerNote ?? null,
         savedAddressId: payload.savedAddressId ?? null,
@@ -1325,14 +1328,17 @@ class OrderService {
     }
   }
 
-  async cancelOrder(orderId: string, reason?: string): Promise<string> {
+  async cancelOrder(
+    orderId: string,
+    reason?: CancelOrderReason,
+  ): Promise<string> {
     try {
       const response = await apiInstance.POST("/api/orders/{orderId}/cancel", {
         params: {
           path: { orderId },
         },
         body: {
-          reason: (reason || undefined) as any,
+          reason: reason || undefined,
         },
       });
 
