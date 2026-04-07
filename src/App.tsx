@@ -175,6 +175,11 @@ const OrderCancelRequestsPage = lazy(() =>
     default: m.OrderCancelRequestsPage,
   })),
 );
+const OrderCancelRequestDetailPage = lazy(() =>
+  import("./pages/OrderCancelRequestDetailPage").then((m) => ({
+    default: m.OrderCancelRequestDetailPage,
+  })),
+);
 const OrderReturnRequestsPage = lazy(() =>
   import("./pages/OrderReturnRequestsPage").then((m) => ({
     default: m.OrderReturnRequestsPage,
@@ -558,6 +563,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderCancelRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/return-requests"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -629,6 +642,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
                             <OrderReturnRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderCancelRequestDetailPage />
                           </RoleBasedRoute>
                         }
                       />

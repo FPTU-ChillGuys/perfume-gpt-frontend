@@ -1,54 +1,43 @@
-import { useState, useEffect, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
-  Box,
-  Badge,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  TablePagination,
-  TextField,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  CircularProgress,
   Alert,
-  Tabs,
-  Tab,
-  Tooltip,
-  Stack,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Divider,
   IconButton,
+  Paper,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
 } from "@mui/material";
+import ArrowBack from "@mui/icons-material/ArrowBack";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CheckIcon from "@mui/icons-material/Check";
 import momoLogo from "@/assets/momo.png";
 import vnpayLogo from "@/assets/vnpay.jpg";
 import transferLogo from "@/assets/transfer.png";
-import { AdminLayout } from "../layouts/AdminLayout";
+import { AdminLayout } from "@/layouts/AdminLayout";
 import {
   orderService,
   type OrderCancelRequest,
   type ProcessCancelRequestBody,
-} from "../services/orderService";
-import { useToast } from "../hooks/useToast";
-import type { OrderResponse } from "../types/order";
-import type { PaymentMethod } from "../types/checkout";
+} from "@/services/orderService";
+import { useToast } from "@/hooks/useToast";
+import type { OrderResponse } from "@/types/order";
+import type { PaymentMethod } from "@/types/checkout";
 import {
   CANCEL_ORDER_REASON_OPTIONS,
   type CancelOrderReason,
 } from "@/utils/cancelOrderReason";
 import { formatDateTimeVN, formatDateVN } from "@/utils/dateTime";
-
-const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"] as const;
 
 const REJECT_NOTE_SUGGESTIONS = [
   "Lý do hủy không hợp lệ theo chính sách hiện tại.",
@@ -150,38 +139,41 @@ const stripVietnameseDiacritics = (value: string) =>
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D");
 
-export const OrderCancelRequestsPage = () => {
+export const OrderCancelRequestDetailPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const { cancelRequestId } = useParams<{ cancelRequestId: string }>();
 
-  const routePrefix = location.pathname.startsWith("/staff")
-    ? "/staff"
-    : "/admin";
+  const backState = location.state as
+    | {
+        status?: string;
+        page?: number;
+        rowsPerPage?: number;
+      }
+    | undefined;
 
-  const statusFromState =
-    (location.state as { status?: string } | null)?.status ?? "All";
-  const pageFromState = (location.state as { page?: number } | null)?.page ?? 0;
-  const rowsPerPageFromState =
-    (location.state as { rowsPerPage?: number } | null)?.rowsPerPage ?? 10;
+  const handleBack = () => {
+    const prefix = window.location.pathname.startsWith("/staff")
+      ? "/staff"
+      : "/admin";
 
-  const [requests, setRequests] = useState<OrderCancelRequest[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(pageFromState);
-  const [rowsPerPage, setRowsPerPage] = useState(rowsPerPageFromState);
-  const [tabIndex, setTabIndex] = useState(() => {
-    const index = STATUS_OPTIONS.findIndex((item) => item === statusFromState);
-    return index >= 0 ? index : 0;
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+    navigate(`${prefix}/cancel-requests`, {
+      state: {
+        status: backState?.status ?? "All",
+        page: backState?.page ?? 0,
+        rowsPerPage: backState?.rowsPerPage ?? 10,
+      },
+    });
+  };
 
-  // Detail + process dialog
   const [selected, setSelected] = useState<OrderCancelRequest | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OrderResponse | null>(
     null,
   );
-  const [isOrderLoading, setIsOrderLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
   const [approveRefundDialogOpen, setApproveRefundDialogOpen] = useState(false);
@@ -193,73 +185,6 @@ export const OrderCancelRequestsPage = () => {
   ] = useState("");
   const [copiedRefundInfo, setCopiedRefundInfo] = useState(false);
   const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-  const [detailOpen, setDetailOpen] = useState(false);
-
-  const pendingCount = requests.filter(
-    (item) => item.status === "Pending",
-  ).length;
-  const approvedCount = requests.filter(
-    (item) => item.status === "Approved",
-  ).length;
-  const rejectedCount = requests.filter(
-    (item) => item.status === "Rejected",
-  ).length;
-
-  const statusFilter =
-    STATUS_OPTIONS[tabIndex] === "All" ? undefined : STATUS_OPTIONS[tabIndex];
-
-  const load = useCallback(async () => {
-    setIsLoading(true);
-    setError("");
-    try {
-      const result = await orderService.getAllCancelRequests({
-        Status: statusFilter as any,
-        PageNumber: page + 1,
-        PageSize: rowsPerPage,
-      });
-      setRequests(result.items);
-      setTotalCount(result.totalCount);
-    } catch (err: any) {
-      setError(err?.message || "Không thể tải danh sách yêu cầu hủy");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [statusFilter, page, rowsPerPage]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const openDetail = async (req: OrderCancelRequest) => {
-    setSelected(req);
-    setRejectNote("");
-    setApproveRefundMethod(null);
-    setApproveManualTransactionReference("");
-    setCopiedRefundInfo(false);
-    setRejectDialogOpen(false);
-    setApproveRefundDialogOpen(false);
-    setDetailOpen(true);
-
-    if (!req.orderId) {
-      setSelectedOrder(null);
-      return;
-    }
-
-    setIsOrderLoading(true);
-    try {
-      const orderDetail = await orderService.getOrderById(req.orderId);
-      setSelectedOrder(orderDetail);
-    } catch (e) {
-      setSelectedOrder(null);
-      showToast(
-        e instanceof Error ? e.message : "Không thể tải chi tiết đơn hàng",
-        "error",
-      );
-    } finally {
-      setIsOrderLoading(false);
-    }
-  };
 
   const resolveOrderPaymentMethod = (
     order: OrderResponse | null,
@@ -284,6 +209,41 @@ export const OrderCancelRequestsPage = () => {
     return firstPaymentMethod ?? null;
   };
 
+  const loadDetail = useCallback(async () => {
+    if (!cancelRequestId) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const requestDetail =
+        await orderService.getCancelRequestById(cancelRequestId);
+      setSelected(requestDetail);
+
+      if (requestDetail.orderId) {
+        const orderDetail = await orderService.getOrderById(
+          requestDetail.orderId,
+        );
+        setSelectedOrder(orderDetail);
+      } else {
+        setSelectedOrder(null);
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải chi tiết yêu cầu hủy",
+        "error",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [cancelRequestId, showToast]);
+
+  useEffect(() => {
+    void loadDetail();
+  }, [loadDetail]);
+
   const submitProcessRequest = async (body: ProcessCancelRequestBody) => {
     if (!selected?.id) return;
 
@@ -296,16 +256,13 @@ export const OrderCancelRequestsPage = () => {
           : "Từ chối yêu cầu thành công",
         "success",
       );
-      setDetailOpen(false);
       setRejectDialogOpen(false);
       setApproveRefundDialogOpen(false);
-      setSelected(null);
-      setSelectedOrder(null);
       setRejectNote("");
       setApproveRefundMethod(null);
       setApproveManualTransactionReference("");
       setCopiedRefundInfo(false);
-      load();
+      await loadDetail();
     } catch (err: any) {
       showToast(err?.message || "Xử lý thất bại", "error");
     } finally {
@@ -510,205 +467,68 @@ export const OrderCancelRequestsPage = () => {
 
   return (
     <AdminLayout>
-      <Box>
-        <Paper sx={{ mb: 3, overflow: "hidden" }}>
-          <Box
-            sx={{ borderBottom: "1px solid", borderColor: "divider", px: 2 }}
-          >
-            <Tabs
-              value={tabIndex}
-              onChange={(_, v) => {
-                setTabIndex(v);
-                setPage(0);
-              }}
-              variant="scrollable"
-              scrollButtons="auto"
-              TabIndicatorProps={{ style: { backgroundColor: "#ee4d2d" } }}
+      <Paper sx={{ overflow: "hidden", borderRadius: 2 }}>
+        {isLoading || !selected ? (
+          <Box textAlign="center" py={6}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
               sx={{
-                "& .MuiTab-root": {
-                  textTransform: "none",
-                  fontWeight: 500,
-                  minWidth: 100,
-                },
-                "& .Mui-selected": { color: "#ee4d2d !important" },
+                px: 3,
+                py: 2,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                gap: 2,
+                flexWrap: "wrap",
               }}
             >
-              <Tab label="Tất cả" />
-              <Tab
-                label={
-                  <Badge
-                    color="warning"
-                    badgeContent={pendingCount > 99 ? "99+" : pendingCount}
-                    invisible={pendingCount <= 0}
-                  >
-                    <Box component="span" sx={{ pr: 1 }}>
-                      Chờ xử lý
-                    </Box>
-                  </Badge>
-                }
-              />
-              <Tab
-                label={
-                  <Badge
-                    color="success"
-                    badgeContent={approvedCount > 99 ? "99+" : approvedCount}
-                    invisible={approvedCount <= 0}
-                  >
-                    <Box component="span" sx={{ pr: 1 }}>
-                      Đã duyệt
-                    </Box>
-                  </Badge>
-                }
-              />
-              <Tab
-                label={
-                  <Badge
-                    color="error"
-                    badgeContent={rejectedCount > 99 ? "99+" : rejectedCount}
-                    invisible={rejectedCount <= 0}
-                  >
-                    <Box component="span" sx={{ pr: 1 }}>
-                      Từ chối
-                    </Box>
-                  </Badge>
-                }
-              />
-            </Tabs>
-          </Box>
-        </Paper>
+              <Button
+                startIcon={<ArrowBack />}
+                onClick={handleBack}
+                sx={{ color: "text.secondary", textTransform: "none" }}
+              >
+                TRỞ LẠI
+              </Button>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+              >
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ letterSpacing: 0.5 }}
+                >
+                  MÃ ĐƠN HÀNG:{" "}
+                  <b style={{ color: "inherit" }}>
+                    {(
+                      selectedOrder?.code ||
+                      selected.orderId ||
+                      "-"
+                    ).toUpperCase()}
+                  </b>
+                </Typography>
+                <Divider orientation="vertical" flexItem />
+                <Typography
+                  variant="body2"
+                  fontWeight={700}
+                  sx={{ color: "#ee4d2d", textTransform: "uppercase" }}
+                >
+                  {statusLabel(selected.status)}
+                </Typography>
+              </Stack>
+            </Box>
 
-        <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell>
-                  <strong>Mã đơn</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Khách hàng</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Lý do</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Ngày yêu cầu</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Trạng thái</strong>
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : requests.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    align="center"
-                    sx={{ py: 4, color: "text.secondary" }}
-                  >
-                    Không có yêu cầu hủy nào
-                  </TableCell>
-                </TableRow>
-              ) : (
-                requests.map((r) => (
-                  <TableRow
-                    key={r.id}
-                    hover
-                    sx={{
-                      cursor: "pointer",
-                      "&:hover": {
-                        bgcolor: "rgba(238,77,45,0.04)",
-                      },
-                    }}
-                    onClick={() => {
-                      if (!r.id) {
-                        return;
-                      }
-
-                      navigate(`${routePrefix}/cancel-requests/${r.id}`, {
-                        state: {
-                          status: STATUS_OPTIONS[tabIndex],
-                          page,
-                          rowsPerPage,
-                        },
-                      });
-                    }}
-                  >
-                    <TableCell>
-                      <strong>{r.orderCode}</strong>
-                    </TableCell>
-                    <TableCell>{r.requestedByEmail || "—"}</TableCell>
-                    <TableCell sx={{ maxWidth: 200 }}>
-                      <Tooltip title={cancelReasonLabel(r.reason)}>
-                        <Typography variant="body2" noWrap>
-                          {cancelReasonLabel(r.reason)}
-                        </Typography>
-                      </Tooltip>
-                    </TableCell>
-                    <TableCell>{formatDate(r.createdAt)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={statusLabel(r.status)}
-                        color={statusColor(r.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-          <TablePagination
-            component="div"
-            count={totalCount}
-            page={page}
-            onPageChange={(_, p) => setPage(p)}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value));
-              setPage(0);
-            }}
-            labelRowsPerPage="Số hàng:"
-            labelDisplayedRows={({ from, to, count }) =>
-              `${from}-${to} / ${count}`
-            }
-          />
-        </TableContainer>
-      </Box>
-
-      {/* Detail Dialog */}
-      <Dialog
-        open={detailOpen}
-        onClose={() => {
-          setDetailOpen(false);
-          setSelected(null);
-          setSelectedOrder(null);
-          setRejectNote("");
-          setApproveRefundMethod(null);
-          setApproveManualTransactionReference("");
-          setCopiedRefundInfo(false);
-          setRejectDialogOpen(false);
-          setApproveRefundDialogOpen(false);
-        }}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>Chi tiết yêu cầu hủy và đơn hàng</DialogTitle>
-        <DialogContent dividers>
-          {selected && (
-            <Stack spacing={2}>
+            <Box
+              sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2 }}
+            >
               <Box
                 sx={{
                   p: 2,
@@ -790,11 +610,7 @@ export const OrderCancelRequestsPage = () => {
                 <Typography variant="subtitle2" fontWeight={700} mb={1}>
                   Chi tiết đơn hàng
                 </Typography>
-                {isOrderLoading ? (
-                  <Box py={2}>
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : !selectedOrder ? (
+                {!selectedOrder ? (
                   <Typography variant="body2" color="text.secondary">
                     Không có dữ liệu chi tiết đơn hàng.
                   </Typography>
@@ -1042,55 +858,10 @@ export const OrderCancelRequestsPage = () => {
                   </Box>
                 )}
               </Box>
-            </Stack>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setDetailOpen(false);
-              setSelected(null);
-              setSelectedOrder(null);
-              setRejectNote("");
-              setApproveRefundMethod(null);
-              setApproveManualTransactionReference("");
-              setCopiedRefundInfo(false);
-              setRejectDialogOpen(false);
-              setApproveRefundDialogOpen(false);
-            }}
-          >
-            Đóng
-          </Button>
-          {selected?.status === "Pending" && (
-            <>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={() => setRejectDialogOpen(true)}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <CircularProgress size={20} color="inherit" />
-                ) : (
-                  "Từ chối"
-                )}
-              </Button>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={handleApproveClick}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <CircularProgress size={20} color="inherit" />
-                ) : (
-                  "Chấp thuận"
-                )}
-              </Button>
-            </>
-          )}
-        </DialogActions>
-      </Dialog>
+            </Box>
+          </>
+        )}
+      </Paper>
 
       <Dialog
         open={rejectDialogOpen}
@@ -1407,6 +1178,43 @@ export const OrderCancelRequestsPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {!isLoading && selected?.status === "Pending" && (
+        <Box
+          sx={{
+            position: "sticky",
+            bottom: 0,
+            mt: 2,
+            bgcolor: "background.paper",
+            borderTop: "1px solid",
+            borderColor: "divider",
+            px: 2,
+            py: 1.5,
+            zIndex: 2,
+          }}
+        >
+          <Stack direction="row" justifyContent="flex-end" spacing={1}>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => setRejectDialogOpen(true)}
+              disabled={isSaving}
+            >
+              Từ chối
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={handleApproveClick}
+              disabled={isSaving}
+            >
+              Chấp thuận
+            </Button>
+          </Stack>
+        </Box>
+      )}
     </AdminLayout>
   );
 };
+
+export default OrderCancelRequestDetailPage;
