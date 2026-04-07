@@ -414,14 +414,10 @@ export const MyReturnRequestDetailPage = () => {
       }
 
       const updatePayload: UpdateReturnRequestDto = {
+        customerNote: draftCustomerNote || null,
         temporaryMediaIds: temporaryMediaIds.length ? temporaryMediaIds : null,
         removeMediaIds: removeMediaIds.length ? removeMediaIds : null,
       };
-
-      // Keep backend value unchanged when customer note is not edited.
-      if (isCustomerNoteChanged) {
-        updatePayload.customerNote = draftCustomerNote || null;
-      }
 
       await orderService.updateReturnRequest(request.id, updatePayload);
 

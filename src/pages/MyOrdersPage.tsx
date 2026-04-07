@@ -35,6 +35,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ImageNotSupportedOutlinedIcon from "@mui/icons-material/ImageNotSupportedOutlined";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
+import type { ReturnRequestStatus } from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
 import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
@@ -67,6 +68,7 @@ import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
+import transericon from "@/assets/transfer.png";
 
 type OrderListItemWithReturnable = OrderListItem & {
   isReturnable?: boolean;
@@ -77,6 +79,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CashInStore: "Thanh toán tiền mặt tại quầy",
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
 };
 
 const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
@@ -84,6 +87,7 @@ const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
   CashInStore: storeIcon,
   VnPay: vnpayIcon,
   Momo: momoIcon,
+  ExternalBankTransfer: transericon,
 };
 
 const RETRY_PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
@@ -127,6 +131,20 @@ const toIsoString = (value: string) => {
 
 const formatDateTime = (value?: string | null) => {
   return formatDateTimeCompactVN(value);
+};
+
+const RETURN_REQUEST_BLOCKED_STATUSES = new Set<ReturnRequestStatus>([
+  "Pending",
+  "ApprovedForReturn",
+  "RequestMoreInfo",
+]);
+
+const returnRequestStatusLabel = (status?: string | null) => {
+  if (!status) return "Đã gửi yêu cầu trả hàng";
+  if (status === "Pending") return "Yêu cầu đang chờ duyệt";
+  if (status === "ApprovedForReturn") return "Yêu cầu đã được duyệt trả hàng";
+  if (status === "RequestMoreInfo") return "Cần bổ sung thông tin trả hàng";
+  return `Yêu cầu trả hàng: ${status}`;
 };
 
 const isSupportedPaymentMethod = (
@@ -175,24 +193,50 @@ export const MyOrdersPage = () => {
   const [selectedRetryMethod, setSelectedRetryMethod] =
     useState<PaymentMethod>("CashOnDelivery");
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+  const [returnRequestStatusByOrderId, setReturnRequestStatusByOrderId] =
+    useState<Record<string, ReturnRequestStatus>>({});
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
     try {
-      const { items, totalCount: count } = await orderService.getMyOrders({
-        PageNumber: page,
-        PageSize: pageSize,
-        SearchTerm: searchTerm || undefined,
-        Status: status || undefined,
-        PaymentStatus: paymentStatus || undefined,
-        Type: type || undefined,
-        FromDate: toIsoString(fromDate),
-        ToDate: toIsoString(toDate),
-        SortBy: "CreatedAt",
-        SortOrder: "desc",
+      const [{ items, totalCount: count }, returnRequestResult] =
+        await Promise.all([
+          orderService.getMyOrders({
+            PageNumber: page,
+            PageSize: pageSize,
+            SearchTerm: searchTerm || undefined,
+            Status: status || undefined,
+            PaymentStatus: paymentStatus || undefined,
+            Type: type || undefined,
+            FromDate: toIsoString(fromDate),
+            ToDate: toIsoString(toDate),
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          }),
+          orderService
+            .getMyReturnRequests({
+              PageNumber: 1,
+              PageSize: 200,
+              SortBy: "CreatedAt",
+              SortOrder: "desc",
+            })
+            .catch(() => ({ items: [] })),
+        ]);
+
+      const latestStatusByOrderId: Record<string, ReturnRequestStatus> = {};
+      returnRequestResult.items.forEach((request) => {
+        if (!request.orderId || !request.status) {
+          return;
+        }
+
+        if (!latestStatusByOrderId[request.orderId]) {
+          latestStatusByOrderId[request.orderId] = request.status;
+        }
       });
+
       setOrders(items as OrderListItemWithReturnable[]);
       setTotalCount(count);
+      setReturnRequestStatusByOrderId(latestStatusByOrderId);
     } catch (error) {
       console.error("Failed to load my orders", error);
       showToast(
@@ -247,6 +291,16 @@ export const MyOrdersPage = () => {
 
   const handleOpenReturnRequest = (orderId?: string | null) => {
     if (!orderId) return;
+
+    const existingStatus = returnRequestStatusByOrderId[orderId];
+    if (existingStatus && RETURN_REQUEST_BLOCKED_STATUSES.has(existingStatus)) {
+      showToast(
+        `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel(existingStatus)}`,
+        "info",
+      );
+      return;
+    }
+
     navigate(`/my-orders/${orderId}`, {
       state: { status, requestReturn: true },
     });
@@ -586,6 +640,15 @@ export const MyOrdersPage = () => {
                         const paymentExpiresAtLabel = formatDateTime(
                           order.paymentExpiresAt,
                         );
+                        const returnRequestStatus = order.id
+                          ? returnRequestStatusByOrderId[order.id]
+                          : undefined;
+                        const hasBlockingReturnRequest = Boolean(
+                          returnRequestStatus &&
+                          RETURN_REQUEST_BLOCKED_STATUSES.has(
+                            returnRequestStatus,
+                          ),
+                        );
 
                         return (
                           <Paper
@@ -876,6 +939,48 @@ export const MyOrdersPage = () => {
                                   {getCancelBehavior(order)?.buttonLabel}
                                 </Button>
                               )}
+
+                              {order.status === "Delivered" &&
+                                isOrderReturnable(order) && (
+                                  <Tooltip
+                                    title={
+                                      hasBlockingReturnRequest
+                                        ? returnRequestStatusLabel(
+                                            returnRequestStatus,
+                                          )
+                                        : ""
+                                    }
+                                  >
+                                    <span>
+                                      <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={() =>
+                                          handleOpenReturnRequest(order.id)
+                                        }
+                                        disabled={hasBlockingReturnRequest}
+                                      >
+                                        {hasBlockingReturnRequest
+                                          ? "Đã gửi yêu cầu trả hàng"
+                                          : "Yêu cầu trả hàng"}
+                                      </Button>
+                                    </span>
+                                  </Tooltip>
+                                )}
+                              {order.status === "Delivered" && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  onClick={() => handleOpenDetail(order.id)}
+                                  sx={{
+                                    bgcolor: "#ee4d2d",
+                                    "&:hover": { bgcolor: "#d03e27" },
+                                  }}
+                                >
+                                  Đánh giá
+                                </Button>
+                              )}
                               <Button
                                 size="small"
                                 variant="outlined"
@@ -891,32 +996,6 @@ export const MyOrdersPage = () => {
                               >
                                 Xem chi tiết
                               </Button>
-                              {order.status === "Delivered" &&
-                                isOrderReturnable(order) && (
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    color="warning"
-                                    onClick={() =>
-                                      handleOpenReturnRequest(order.id)
-                                    }
-                                  >
-                                    Yêu cầu trả hàng
-                                  </Button>
-                                )}
-                              {order.status === "Delivered" && (
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  onClick={() => handleOpenDetail(order.id)}
-                                  sx={{
-                                    bgcolor: "#ee4d2d",
-                                    "&:hover": { bgcolor: "#d03e27" },
-                                  }}
-                                >
-                                  Đánh giá
-                                </Button>
-                              )}
                             </Stack>
                           </Paper>
                         );

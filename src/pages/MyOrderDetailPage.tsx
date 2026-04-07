@@ -233,6 +233,18 @@ const returnShippingStatusLabel = (status?: string | null) => {
   return status;
 };
 
+const returnRequestStatusLabel = (status?: string | null) => {
+  if (!status) return "Đã gửi yêu cầu trả hàng";
+  if (status === "Pending") return "Yêu cầu đang chờ duyệt";
+  if (status === "ApprovedForReturn") return "Yêu cầu đã được duyệt trả hàng";
+  if (status === "Inspecting") return "Shop đang kiểm tra hàng hoàn";
+  if (status === "ReadyForRefund") return "Sẵn sàng hoàn tiền";
+  if (status === "Completed") return "Yêu cầu trả hàng đã hoàn tất";
+  if (status === "Rejected") return "Yêu cầu trả hàng đã bị từ chối";
+  if (status === "RequestMoreInfo") return "Cần bổ sung thông tin trả hàng";
+  return `Yêu cầu trả hàng: ${status}`;
+};
+
 const isSupportedPaymentMethod = (
   value?: string | null,
 ): value is PaymentMethod =>
@@ -240,6 +252,12 @@ const isSupportedPaymentMethod = (
   value === "CashInStore" ||
   value === "VnPay" ||
   value === "Momo";
+
+const RETURN_REQUEST_BLOCKED_STATUSES = new Set([
+  "Pending",
+  "ApprovedForReturn",
+  "RequestMoreInfo",
+]);
 
 // ─── Order Stepper ──────────────────────────────────────────────────────────
 
@@ -617,9 +635,7 @@ export const MyOrderDetailPage = () => {
   const [selectedRetryPaymentMethod, setSelectedRetryPaymentMethod] =
     useState<PaymentMethod>("CashOnDelivery");
 
-  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(
-    Boolean(locationState.requestReturn),
-  );
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [returnReason, setReturnReason] = useState<ReturnOrderReason | "">("");
   const [isRefundOnly, setIsRefundOnly] = useState(false);
   const [returnNote, setReturnNote] = useState("");
@@ -662,12 +678,6 @@ export const MyOrderDetailPage = () => {
     useState(false);
 
   useEffect(() => {
-    if (locationState.requestReturn) {
-      setIsReturnDialogOpen(true);
-    }
-  }, [locationState.requestReturn]);
-
-  useEffect(() => {
     void userService.getUserMe().then(setUserInfo).catch(console.error);
   }, []);
 
@@ -688,7 +698,7 @@ export const MyOrderDetailPage = () => {
           const myReturnRequests = await orderService.getMyReturnRequests({
             PageNumber: 1,
             PageSize: 100,
-            SortBy: "createdAt",
+            SortBy: "CreatedAt",
             SortOrder: "desc",
           });
 
@@ -700,9 +710,32 @@ export const MyOrderDetailPage = () => {
                 new Date(a.createdAt || 0).getTime(),
             )[0];
 
-          setOrderReturnRequest(matchedRequest ?? null);
+          const latestRequest = matchedRequest ?? null;
+          setOrderReturnRequest(latestRequest);
+
+          if (locationState.requestReturn) {
+            const latestStatus = latestRequest?.status;
+            const hasBlockingRequest = Boolean(
+              latestStatus && RETURN_REQUEST_BLOCKED_STATUSES.has(latestStatus),
+            );
+
+            if (hasBlockingRequest) {
+              showToast(
+                `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel(latestStatus)}`,
+                "info",
+              );
+            } else {
+              setIsReturnDialogOpen(true);
+              setReturnFormError("");
+            }
+          }
         } catch {
           setOrderReturnRequest(null);
+
+          if (locationState.requestReturn) {
+            setIsReturnDialogOpen(true);
+            setReturnFormError("");
+          }
         }
       } catch (err: unknown) {
         setError(
@@ -715,7 +748,7 @@ export const MyOrderDetailPage = () => {
       }
     };
     void load();
-  }, [orderId]);
+  }, [locationState.requestReturn, orderId, showToast]);
 
   const reviewsIndex = useMemo(() => {
     const map: Record<string, ReviewResponse> = {};
@@ -737,6 +770,10 @@ export const MyOrderDetailPage = () => {
         | (OrderResponse & { isReturnable?: boolean; isReturnalbe?: boolean })
         | null
     )?.isReturnalbe,
+  );
+  const hasBlockingReturnRequest = Boolean(
+    orderReturnRequest?.id &&
+    RETURN_REQUEST_BLOCKED_STATUSES.has(orderReturnRequest.status ?? ""),
   );
 
   const getCancelBehavior = (currentOrder: OrderResponse | null) => {
@@ -1203,7 +1240,51 @@ export const MyOrderDetailPage = () => {
     });
   };
 
-  const openReturnRequestDialog = () => {
+  const openReturnRequestDialog = async () => {
+    if (hasBlockingReturnRequest) {
+      showToast(
+        `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel(orderReturnRequest?.status)}`,
+        "info",
+      );
+      return;
+    }
+
+    const currentOrderId = order?.id ?? orderId;
+    if (!currentOrderId) {
+      return;
+    }
+
+    try {
+      const myReturnRequests = await orderService.getMyReturnRequests({
+        PageNumber: 1,
+        PageSize: 100,
+        SortBy: "CreatedAt",
+        SortOrder: "desc",
+      });
+
+      const latestRequest = myReturnRequests.items
+        .filter((item) => item.orderId === currentOrderId)
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt || 0).getTime() -
+            new Date(a.createdAt || 0).getTime(),
+        )[0];
+
+      if (latestRequest) {
+        setOrderReturnRequest(latestRequest);
+
+        if (RETURN_REQUEST_BLOCKED_STATUSES.has(latestRequest.status ?? "")) {
+          showToast(
+            `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel(latestRequest.status)}`,
+            "info",
+          );
+          return;
+        }
+      }
+    } catch {
+      // keep local state fallback if this pre-check request fails
+    }
+
     setIsReturnDialogOpen(true);
     setReturnFormError("");
   };
@@ -2112,13 +2193,28 @@ export const MyOrderDetailPage = () => {
 
                           {order.status === "Delivered" &&
                             isOrderReturnable && (
-                              <Button
-                                variant="contained"
-                                color="warning"
-                                onClick={openReturnRequestDialog}
+                              <Tooltip
+                                title={
+                                  hasBlockingReturnRequest
+                                    ? returnRequestStatusLabel(
+                                        orderReturnRequest?.status,
+                                      )
+                                    : ""
+                                }
                               >
-                                Yêu cầu trả hàng
-                              </Button>
+                                <span>
+                                  <Button
+                                    variant="contained"
+                                    color="warning"
+                                    onClick={openReturnRequestDialog}
+                                    disabled={hasBlockingReturnRequest}
+                                  >
+                                    {hasBlockingReturnRequest
+                                      ? "Đã gửi yêu cầu trả hàng"
+                                      : "Yêu cầu trả hàng"}
+                                  </Button>
+                                </span>
+                              </Tooltip>
                             )}
                         </Stack>
                       </Box>
