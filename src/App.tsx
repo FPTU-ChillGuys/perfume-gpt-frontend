@@ -81,6 +81,16 @@ const MyOrderDetailPage = lazy(() =>
     default: m.MyOrderDetailPage,
   })),
 );
+const MyCancelRequestsPage = lazy(() =>
+  import("./pages/MyCancelRequestsPage").then((m) => ({
+    default: m.MyCancelRequestsPage,
+  })),
+);
+const MyCancelRequestDetailPage = lazy(() =>
+  import("./pages/MyCancelRequestDetailPage").then((m) => ({
+    default: m.MyCancelRequestDetailPage,
+  })),
+);
 const MyReturnRequestsPage = lazy(() =>
   import("./pages/MyReturnRequestsPage").then((m) => ({
     default: m.MyReturnRequestsPage,
@@ -346,6 +356,22 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
                             <MyOrderDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-cancel-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyCancelRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyCancelRequestDetailPage />
                           </RoleBasedRoute>
                         }
                       />

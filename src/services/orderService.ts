@@ -540,6 +540,68 @@ class OrderService {
     }
   }
 
+  async getMyCancelRequests(
+    params?: GetOrderCancelRequestsParams,
+  ): Promise<PagedCancelRequests> {
+    try {
+      const response = await apiInstance.GET(
+        "/api/ordercancelrequests/my-requests",
+        {
+          params: {
+            query: params,
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to load my cancel requests",
+        );
+      }
+
+      const payload = response.data.payload;
+      return {
+        items: payload?.items || [],
+        totalCount: payload?.totalCount || 0,
+        pageNumber: payload?.pageNumber || 1,
+        pageSize: payload?.pageSize || 10,
+        totalPages: payload?.totalPages || 1,
+      };
+    } catch (error: any) {
+      console.error("Error fetching my cancel requests:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load my cancel requests",
+      );
+    }
+  }
+
+  async getCancelRequestById(id: string): Promise<OrderCancelRequest> {
+    try {
+      const response = await apiInstance.GET("/api/ordercancelrequests/{id}", {
+        params: {
+          path: { id },
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Failed to load cancel request detail",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error fetching cancel request detail:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load cancel request detail",
+      );
+    }
+  }
+
   async processCancelRequest(
     id: string,
     body: ProcessCancelRequestBody,

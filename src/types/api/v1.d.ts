@@ -5384,6 +5384,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ordercancelrequests/my-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Status?: components["schemas"]["CancelRequestStatus"];
+                    IsRefundRequired?: boolean;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ordercancelrequests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ordercancelrequests/{id}/process": {
         parameters: {
             query?: never;
@@ -12318,6 +12424,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfOrderCancelRequestResponse: {
+            payload?: null | components["schemas"]["OrderCancelRequestResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfOrderResponse: {
             payload?: null | components["schemas"]["OrderResponse"];
             success?: boolean;
@@ -13287,6 +13400,7 @@ export interface components {
             id?: string;
             /** Format: uuid */
             orderId?: string;
+            orderCode: string;
             /** Format: uuid */
             requestedById?: string;
             requestedByEmail?: null | string;

@@ -14,6 +14,7 @@ import {
   LocationOn as LocationIcon,
   Lock as LockIcon,
   ListAlt as OrderIcon,
+  Backspace as BackspaceIcon,
   LocalOffer as VoucherIcon,
   Notifications as NotificationsIcon,
   AccountCircle as AccountIcon,
@@ -58,6 +59,11 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
       label: "Đơn Mua",
       icon: <OrderIcon fontSize="small" />,
       path: "/my-orders",
+    },
+    {
+      label: "Yêu Cầu Hủy Đơn",
+      icon: <BackspaceIcon fontSize="small" />,
+      path: "/my-cancel-requests",
     },
     {
       label: "Trả Hàng/Hoàn Tiền",
@@ -259,4 +265,11 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
 };
 
 // Icon components used inside the sidebar (kept local for clarity)
-export { PersonIcon, LocationIcon, LockIcon, OrderIcon, VoucherIcon, ReturnIcon };
+export {
+  PersonIcon,
+  LocationIcon,
+  LockIcon,
+  OrderIcon,
+  VoucherIcon,
+  ReturnIcon,
+};
