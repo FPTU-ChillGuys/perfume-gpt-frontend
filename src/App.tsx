@@ -622,6 +622,14 @@ function App() {
                           </RoleBasedRoute>
                         }
                       />
+                      <Route
+                        path="/staff/payment-transactions"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <PaymentTransactionsManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
 
                       <Route
                         path="/staff/profile"

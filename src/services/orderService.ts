@@ -63,6 +63,9 @@ export interface CreateReturnRequestPayload {
     quantity: number;
   }[];
   customerNote?: string | null;
+  refundBankName?: string | null;
+  refundAccountNumber?: string | null;
+  refundAccountName?: string | null;
   savedAddressId?: string | null;
   recipient?: ContactAddressInformation | null;
   temporaryMediaIds?: string[] | null;
@@ -86,7 +89,7 @@ export type SwapDamagedStockResponse =
   components["schemas"]["SwapDamagedStockResponse"];
 export type ReturnRefundMethod = Extract<
   PaymentMethod,
-  "VnPay" | "Momo" | "CashInStore"
+  "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer"
 >;
 
 export type ReturnRequestStatus =
@@ -139,6 +142,9 @@ export interface OrderReturnRequest {
   inspectedByName?: string | null;
   reason?: string | null;
   customerNote?: string | null;
+  refundBankName?: string | null;
+  refundAccountNumber?: string | null;
+  refundAccountName?: string | null;
   staffNote?: string | null;
   inspectionNote?: string | null;
   status?: ReturnRequestStatus;
@@ -291,6 +297,21 @@ class OrderService {
       customerNote:
         this.getValue<string | null>(item, ["customerNote", "CustomerNote"]) ??
         null,
+      refundBankName:
+        this.getValue<string | null>(item, [
+          "refundBankName",
+          "RefundBankName",
+        ]) ?? null,
+      refundAccountNumber:
+        this.getValue<string | null>(item, [
+          "refundAccountNumber",
+          "RefundAccountNumber",
+        ]) ?? null,
+      refundAccountName:
+        this.getValue<string | null>(item, [
+          "refundAccountName",
+          "RefundAccountName",
+        ]) ?? null,
       staffNote:
         this.getValue<string | null>(item, ["staffNote", "StaffNote"]) ?? null,
       inspectionNote:
@@ -927,6 +948,8 @@ class OrderService {
   async refundReturnRequest(
     id: string,
     refundMethod: ReturnRefundMethod,
+    manualTransactionReference?: string | null,
+    note?: string | null,
   ): Promise<string> {
     try {
       const accessToken = getStoredAccessToken();
@@ -942,7 +965,11 @@ class OrderService {
               }
             : {}),
         },
-        body: JSON.stringify({ refundMethod }),
+        body: JSON.stringify({
+          refundMethod,
+          manualTransactionReference: manualTransactionReference ?? null,
+          note: note ?? null,
+        }),
       });
 
       const data = await response.json().catch(() => null);
@@ -1074,6 +1101,9 @@ class OrderService {
         isRefundOnly: payload.isRefundOnly ?? false,
         returnItems: payload.returnItems,
         customerNote: payload.customerNote ?? null,
+        refundBankName: payload.refundBankName ?? null,
+        refundAccountNumber: payload.refundAccountNumber ?? null,
+        refundAccountName: payload.refundAccountName ?? null,
         savedAddressId: payload.savedAddressId ?? null,
         recipient: payload.recipient ?? null,
         temporaryMediaIds: payload.temporaryMediaIds ?? null,

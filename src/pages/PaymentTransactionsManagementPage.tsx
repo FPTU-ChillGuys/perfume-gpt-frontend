@@ -41,11 +41,12 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CashInStore: "Tiền mặt tại quầy",
   VnPay: "VNPay",
   Momo: "MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
 };
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   Payment: "Thu",
-  Refund: "Hoàn tiền",
+  Refund: "Hoàn tiền",
 };
 
 const TRANSACTION_STATUS_LABELS: Record<TransactionStatus, string> = {
@@ -345,6 +346,9 @@ export const PaymentTransactionsManagementPage = () => {
                 <MenuItem value="CashInStore">Tiền mặt tại quầy</MenuItem>
                 <MenuItem value="VnPay">VNPay</MenuItem>
                 <MenuItem value="Momo">MoMo</MenuItem>
+                <MenuItem value="ExternalBankTransfer">
+                  Chuyển khoản ngân hàng
+                </MenuItem>
               </Select>
             </FormControl>
 

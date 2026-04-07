@@ -7057,6 +7057,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders/{orderId}/deliver-in-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders/{orderId}/swap-damaged": {
         parameters: {
             query?: never;
@@ -8789,6 +8861,80 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/productvariants/for-pos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Barcode?: string;
+                    Sku?: string;
+                    Name?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -12347,6 +12493,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfProductVariantForPosResponse: {
+            payload?: null | components["schemas"]["ProductVariantForPosResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfProductVariantResponse: {
             payload?: null | components["schemas"]["ProductVariantResponse"];
             success?: boolean;
@@ -12775,6 +12928,9 @@ export interface components {
             isRefundOnly?: boolean;
             returnItems: components["schemas"]["ReturnItemDto"][];
             customerNote?: null | string;
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
             /** Format: uuid */
             savedAddressId?: null | string;
             recipient?: null | components["schemas"]["ContactAddressInformation"];
@@ -13143,6 +13299,9 @@ export interface components {
             /** Format: decimal */
             refundAmount?: null | number;
             isRefunded?: boolean;
+            refundBankName?: null | string;
+            refundAccountName?: null | string;
+            refundAccountNumber?: null | string;
             vnpTransactionNo?: null | string;
             /** Format: date-time */
             createdAt?: string;
@@ -13282,6 +13441,9 @@ export interface components {
             approvedRefundAmount?: null | number;
             isRefunded?: boolean;
             isRefundOnly?: boolean;
+            refundBankName?: null | string;
+            refundAccountName?: null | string;
+            refundAccountNumber?: null | string;
             vnpTransactionNo?: null | string;
             isRestocked?: boolean;
             returnShippingInfo?: null | components["schemas"]["ReturnShippingInfoResponse"];
@@ -13544,7 +13706,7 @@ export interface components {
             method?: components["schemas"]["PaymentMethod"];
         };
         /** @enum {string} */
-        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore";
+        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer";
         /** @enum {string} */
         PaymentStatus: "Unpaid" | "Paid" | "Partial_Refunded" | "Refunded";
         PaymentTransactionAdminItemResponse: {
@@ -13677,6 +13839,7 @@ export interface components {
             isApproved?: boolean;
             staffNote?: null | string;
             refundMethod?: components["schemas"]["PaymentMethod"];
+            manualTransactionReference?: null | string;
         };
         ProcessInitialReturnDto: {
             isApproved?: boolean;
@@ -13685,6 +13848,8 @@ export interface components {
         };
         ProcessRefundRequest: {
             refundMethod?: components["schemas"]["PaymentMethod"];
+            manualTransactionReference?: null | string;
+            note?: null | string;
         };
         ProductAttributeDto: {
             /** Format: int32 */
@@ -13818,6 +13983,20 @@ export interface components {
             noteId?: number;
             name: string;
             type?: components["schemas"]["NoteType"];
+        };
+        ProductVariantForPosResponse: {
+            /** Format: uuid */
+            id?: string;
+            barcode: string;
+            sku: string;
+            name: string;
+            /** Format: int32 */
+            volumeMl?: number;
+            concentrationName: string;
+            displayName: string;
+            /** Format: decimal */
+            basePrice?: number;
+            primaryImageUrl?: null | string;
         };
         ProductVariantResponse: {
             /** Format: uuid */
@@ -14285,6 +14464,8 @@ export interface components {
         SwapDamagedStockRequest: {
             /** Format: uuid */
             damagedReservationId: string;
+            /** Format: int32 */
+            damagedQuantity?: number;
             damageNote?: null | string;
         };
         SwapDamagedStockResponse: {
@@ -14463,6 +14644,9 @@ export interface components {
         };
         UpdateReturnRequestDto: {
             customerNote?: null | string;
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
             temporaryMediaIds?: null | string[];
             removeMediaIds?: null | string[];
         };
@@ -14522,6 +14706,9 @@ export interface components {
         UsageStatus: number;
         UserCancelOrderRequest: {
             reason?: components["schemas"]["CancelOrderReason"];
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
         };
         UserCredentialsResponse: {
             /** Format: uuid */
@@ -14713,7 +14900,7 @@ export interface components {
             SupportType?: number;
             /** Format: int32 */
             Status?: number;
-            CreatedDate: string;
+            CreatedDate?: null | string;
             UpdatedDate: string;
         };
     };

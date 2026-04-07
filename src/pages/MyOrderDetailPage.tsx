@@ -91,6 +91,7 @@ import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
+import transericon from "@/assets/transfer.png";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -104,6 +105,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CashInStore: "Thanh toán tiền mặt tại quầy",
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
 };
 
 const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
@@ -111,6 +113,7 @@ const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
   CashInStore: storeIcon,
   VnPay: vnpayIcon,
   Momo: momoIcon,
+  ExternalBankTransfer: transericon,
 };
 
 const RETRY_PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
@@ -159,6 +162,14 @@ const RETURN_REASON_OPTIONS: { value: ReturnOrderReason; label: string }[] = [
   { value: "ChangedMind", label: "Đổi ý, không còn nhu cầu" },
 ];
 
+interface VietQrBank {
+  id: number;
+  name: string;
+  shortName?: string;
+  short_name?: string;
+  logo?: string;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const fmt = (v?: number | null) =>
@@ -170,6 +181,30 @@ const fmtDate = (s?: string | null) => {
 
 const fmtDateShort = (s?: string | null) => {
   return formatDateVN(s);
+};
+
+const stripVietnameseDiacritics = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+
+const normalizeRefundAccountNumber = (value: string) =>
+  stripVietnameseDiacritics(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+const normalizeRefundAccountName = (value: string) =>
+  stripVietnameseDiacritics(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trimStart();
+
+const getBankDisplayName = (bank: VietQrBank) => {
+  const shortName = (bank.shortName || bank.short_name || "").trim();
+  return shortName ? `${shortName} - ${bank.name}` : bank.name;
 };
 
 const isSupportedPaymentMethod = (
@@ -406,6 +441,14 @@ export const MyOrderDetailPage = () => {
   const [returnReason, setReturnReason] = useState<ReturnOrderReason | "">("");
   const [isRefundOnly, setIsRefundOnly] = useState(false);
   const [returnNote, setReturnNote] = useState("");
+  const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
+  const [isLoadingVietQrBanks, setIsLoadingVietQrBanks] = useState(false);
+  const [vietQrBankError, setVietQrBankError] = useState<string | null>(null);
+  const [selectedRefundBank, setSelectedRefundBank] =
+    useState<VietQrBank | null>(null);
+  const [refundBankName, setRefundBankName] = useState("");
+  const [refundAccountNumber, setRefundAccountNumber] = useState("");
+  const [refundAccountName, setRefundAccountName] = useState("");
   const [returnMediaFiles, setReturnMediaFiles] = useState<File[]>([]);
   const [returnItemQuantities, setReturnItemQuantities] = useState<
     Record<string, number>
@@ -589,6 +632,7 @@ export const MyOrderDetailPage = () => {
   }, [latestPaymentTransaction?.paymentMethod]);
 
   const paymentId = latestPaymentTransaction?.id ?? null;
+  const isCodPaymentOrder = currentPaymentMethod === "CashOnDelivery";
 
   const isPendingUnpaid =
     order?.status === "Pending" && order?.paymentStatus === "Unpaid";
@@ -663,6 +707,47 @@ export const MyOrderDetailPage = () => {
     () => returnMediaFiles.filter((file) => file.type.startsWith("video/")),
     [returnMediaFiles],
   );
+
+  useEffect(() => {
+    if (!isReturnDialogOpen || !isCodPaymentOrder || vietQrBanks.length > 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadVietQrBanks = async () => {
+      try {
+        setIsLoadingVietQrBanks(true);
+        setVietQrBankError(null);
+
+        const response = await fetch("https://api.vietqr.io/v2/banks", {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể tải danh sách ngân hàng");
+        }
+
+        const json = (await response.json()) as { data?: VietQrBank[] };
+        setVietQrBanks(Array.isArray(json.data) ? json.data : []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setVietQrBankError("Không tải được danh sách ngân hàng từ VietQR");
+      } finally {
+        setIsLoadingVietQrBanks(false);
+      }
+    };
+
+    void loadVietQrBanks();
+
+    return () => {
+      controller.abort();
+    };
+  }, [isCodPaymentOrder, isReturnDialogOpen, vietQrBanks.length]);
 
   const selectedReturnItems = useMemo(
     () =>
@@ -740,10 +825,18 @@ export const MyOrderDetailPage = () => {
         returnReason &&
         selectedReturnItems.length > 0 &&
         returnVideoFiles.length > 0 &&
+        (!isCodPaymentOrder ||
+          (refundBankName.trim() &&
+            refundAccountNumber.trim() &&
+            refundAccountName.trim())) &&
         isReturnAddressValid,
       ),
     [
+      isCodPaymentOrder,
       isReturnAddressValid,
+      refundAccountName,
+      refundAccountNumber,
+      refundBankName,
       returnVideoFiles.length,
       returnReason,
       selectedReturnItems.length,
@@ -887,6 +980,10 @@ export const MyOrderDetailPage = () => {
     setReturnReason("");
     setIsRefundOnly(false);
     setReturnNote("");
+    setSelectedRefundBank(null);
+    setRefundBankName("");
+    setRefundAccountNumber("");
+    setRefundAccountName("");
     setReturnMediaFiles([]);
     setReturnItemQuantities({});
     setPickupAddressMode(savedAddresses.length ? "saved" : "custom");
@@ -1126,6 +1223,22 @@ export const MyOrderDetailPage = () => {
       return;
     }
 
+    const trimmedRefundBankName = refundBankName.trim();
+    const trimmedRefundAccountNumber = refundAccountNumber.trim();
+    const trimmedRefundAccountName = refundAccountName.trim();
+
+    if (
+      isCodPaymentOrder &&
+      (!trimmedRefundBankName ||
+        !trimmedRefundAccountNumber ||
+        !trimmedRefundAccountName)
+    ) {
+      setReturnFormError(
+        "Vui lòng điền đầy đủ thông tin tài khoản hoàn tiền cho đơn COD",
+      );
+      return;
+    }
+
     let savedAddressId: string | null | undefined = null;
     let recipient: components["schemas"]["ContactAddressInformation"] | null =
       null;
@@ -1188,16 +1301,27 @@ export const MyOrderDetailPage = () => {
           quantity: entry.requested,
         })),
         customerNote: returnNote.trim() || null,
+        refundBankName: isCodPaymentOrder ? trimmedRefundBankName : null,
+        refundAccountNumber: isCodPaymentOrder
+          ? trimmedRefundAccountNumber
+          : null,
+        refundAccountName: isCodPaymentOrder ? trimmedRefundAccountName : null,
         savedAddressId,
         recipient,
         temporaryMediaIds: temporaryMediaIds.length ? temporaryMediaIds : null,
       });
 
       showToast("Đã gửi yêu cầu trả hàng thành công", "success");
-      closeReturnRequestDialog();
+      setIsReturnDialogOpen(false);
+      resetReturnDialogState();
+
       if (orderId) {
-        const refreshed = await orderService.getMyOrderById(orderId);
-        setOrder(refreshed);
+        try {
+          const refreshed = await orderService.getMyOrderById(orderId);
+          setOrder(refreshed);
+        } catch {
+          // Keep the dialog closed even if refresh fails.
+        }
       }
     } catch (error) {
       showToast(
@@ -2351,6 +2475,125 @@ export const MyOrderDetailPage = () => {
                 )}
               </Stack>
             </Paper>
+
+            {isCodPaymentOrder && (
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                  Thông tin hoàn tiền cho đơn COD
+                </Typography>
+                <Stack spacing={1.25}>
+                  <Alert severity="info" sx={{ mb: 0.5 }}>
+                    Vui lòng nhập chính xác thông tin tài khoản để hệ thống hoàn
+                    tiền khi yêu cầu trả hàng được duyệt.
+                  </Alert>
+                  <Autocomplete
+                    options={vietQrBanks}
+                    value={selectedRefundBank}
+                    loading={isLoadingVietQrBanks}
+                    getOptionLabel={getBankDisplayName}
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    onChange={(_, bank) => {
+                      setSelectedRefundBank(bank);
+                      setRefundBankName(bank ? getBankDisplayName(bank) : "");
+                    }}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props}>
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          alignItems="center"
+                        >
+                          {option.logo ? (
+                            <Box
+                              component="img"
+                              src={option.logo}
+                              alt={
+                                option.shortName ||
+                                option.short_name ||
+                                option.name
+                              }
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                objectFit: "contain",
+                                borderRadius: 0.5,
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 0.5,
+                                bgcolor: "grey.100",
+                              }}
+                            />
+                          )}
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>
+                              {option.shortName ||
+                                option.short_name ||
+                                option.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {option.name}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    )}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Ngân hàng nhận tiền *"
+                        size="small"
+                        error={Boolean(vietQrBankError)}
+                        helperText={
+                          vietQrBankError ||
+                          "Chọn ngân hàng từ danh sách VietQR"
+                        }
+                      />
+                    )}
+                  />
+                  <TextField
+                    label="Số tài khoản *"
+                    value={refundAccountNumber}
+                    onChange={(e) =>
+                      setRefundAccountNumber(
+                        normalizeRefundAccountNumber(e.target.value),
+                      )
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{
+                      inputMode: "text",
+                      autoCapitalize: "characters",
+                    }}
+                    helperText="Tự động viết HOA, không dấu, không khoảng trắng, không ký tự đặc biệt"
+                  />
+                  <TextField
+                    label="Tên chủ tài khoản *"
+                    value={refundAccountName}
+                    onChange={(e) =>
+                      setRefundAccountName(
+                        normalizeRefundAccountName(e.target.value),
+                      )
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{
+                      autoCapitalize: "characters",
+                    }}
+                    helperText="Tự động viết HOA, không dấu, không ký tự đặc biệt"
+                  />
+                </Stack>
+              </Paper>
+            )}
 
             {!isRefundOnly && (
               <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>

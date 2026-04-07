@@ -181,6 +181,12 @@ const menuGroups: SidebarMenuGroup[] = [
         path: "/staff/products",
         roles: ["staff"],
       },
+      {
+        text: "Rà soát giao dịch thu chi",
+        icon: <AccountBalanceWalletIcon />,
+        path: "/staff/payment-transactions",
+        roles: ["staff"],
+      },
     ],
   },
   {
