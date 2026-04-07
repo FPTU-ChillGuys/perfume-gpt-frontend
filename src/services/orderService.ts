@@ -955,6 +955,20 @@ class OrderService {
       const accessToken = getStoredAccessToken();
       const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/${id}/refund`;
 
+      const requestBody: Record<string, string> = {
+        refundMethod,
+      };
+
+      const trimmedManualReference = manualTransactionReference?.trim();
+      if (trimmedManualReference) {
+        requestBody.manualTransactionReference = trimmedManualReference;
+      }
+
+      const trimmedNote = note?.trim();
+      if (trimmedNote) {
+        requestBody.note = trimmedNote;
+      }
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -965,17 +979,25 @@ class OrderService {
               }
             : {}),
         },
-        body: JSON.stringify({
-          refundMethod,
-          manualTransactionReference: manualTransactionReference ?? null,
-          note: note ?? null,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json().catch(() => null);
 
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Không thể hoàn tiền");
+        const message = data?.message || "Không thể hoàn tiền";
+
+        // Gateway refunds can return conflict-style errors while another attempt is processing.
+        if (
+          response.status === 409 ||
+          /xung đột|conflict|đang xử lý giao dịch/i.test(String(message))
+        ) {
+          throw new Error(
+            `${message} Vui lòng chờ trong giây lát rồi thử lại để tránh gửi trùng yêu cầu hoàn tiền.`,
+          );
+        }
+
+        throw new Error(message);
       }
 
       return data.message || "Hoàn tiền thành công";
