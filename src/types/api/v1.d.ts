@@ -12838,7 +12838,6 @@ export interface components {
             startDate?: null | string;
             /** Format: date-time */
             endDate?: null | string;
-            autoStopWhenBatchEmpty?: boolean;
             /** Format: int32 */
             maxUsage?: null | number;
             /** Format: int32 */
@@ -13931,6 +13930,7 @@ export interface components {
             voucherCode?: null | string;
             /** Format: uuid */
             customerId?: null | string;
+            sessionId?: null | string;
         };
         PreviewPosOrderResponse: {
             items?: components["schemas"]["PosOrderDetailListItem"][];

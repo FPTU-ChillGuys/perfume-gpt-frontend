@@ -203,7 +203,6 @@ const PaymentTransactionsManagementPage = lazy(() =>
     default: m.PaymentTransactionsManagementPage,
   })),
 );
-const MobileScannerTest = lazy(() => import("./pages/MobileScannerTest.tsx"));
 
 const PageLoader = () => (
   <Box
@@ -681,11 +680,6 @@ function App() {
                       <Route
                         path="/staff/profile"
                         element={<UnauthorizedPage />}
-                      />
-
-                      <Route
-                        path="/mobile-scanner-test"
-                        element={<MobileScannerTest />}
                       />
 
                       {/* Fallback route for unknown URLs */}
