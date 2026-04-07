@@ -58,6 +58,7 @@ import {
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import type {
+  OrderCancelRequest,
   OrderReturnRequest,
   ReturnOrderReason,
 } from "@/services/orderService";
@@ -258,6 +259,16 @@ const RETURN_REQUEST_BLOCKED_STATUSES = new Set([
   "ApprovedForReturn",
   "RequestMoreInfo",
 ]);
+
+const CANCEL_REQUEST_BLOCKED_STATUSES = new Set(["Pending"]);
+
+const cancelRequestStatusLabel = (status?: string | null) => {
+  if (!status) return "Đã gửi yêu cầu hủy đơn";
+  if (status === "Pending") return "Yêu cầu hủy đơn đang chờ xử lý";
+  if (status === "Approved") return "Yêu cầu hủy đơn đã được duyệt";
+  if (status === "Rejected") return "Yêu cầu hủy đơn đã bị từ chối";
+  return `Yêu cầu hủy đơn: ${status}`;
+};
 
 // ─── Order Stepper ──────────────────────────────────────────────────────────
 
@@ -612,6 +623,8 @@ export const MyOrderDetailPage = () => {
   const [order, setOrder] = useState<OrderResponse | null>(null);
   const [orderReturnRequest, setOrderReturnRequest] =
     useState<OrderReturnRequest | null>(null);
+  const [orderCancelRequest, setOrderCancelRequest] =
+    useState<OrderCancelRequest | null>(null);
   const [myReviews, setMyReviews] = useState<ReviewResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -737,6 +750,27 @@ export const MyOrderDetailPage = () => {
             setReturnFormError("");
           }
         }
+
+        try {
+          const myCancelRequests = await orderService.getMyCancelRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          });
+
+          const matchedCancelRequest = myCancelRequests.items
+            .filter((item) => item.orderId === orderData.id)
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt || 0).getTime() -
+                new Date(a.createdAt || 0).getTime(),
+            )[0];
+
+          setOrderCancelRequest(matchedCancelRequest ?? null);
+        } catch {
+          setOrderCancelRequest(null);
+        }
       } catch (err: unknown) {
         setError(
           err instanceof Error
@@ -774,6 +808,10 @@ export const MyOrderDetailPage = () => {
   const hasBlockingReturnRequest = Boolean(
     orderReturnRequest?.id &&
     RETURN_REQUEST_BLOCKED_STATUSES.has(orderReturnRequest.status ?? ""),
+  );
+  const hasBlockingCancelRequest = Boolean(
+    orderCancelRequest?.id &&
+    CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
   );
 
   const getCancelBehavior = (currentOrder: OrderResponse | null) => {
@@ -1126,6 +1164,14 @@ export const MyOrderDetailPage = () => {
   const handleCancelOrder = async () => {
     if (!order?.id) return;
 
+    if (hasBlockingCancelRequest) {
+      showToast(
+        `Đơn hàng này đã có yêu cầu hủy. ${cancelRequestStatusLabel(orderCancelRequest?.status)}`,
+        "info",
+      );
+      return;
+    }
+
     const reason = cancelReason.trim();
     if (!reason) {
       showToast("Vui lòng nhập lý do hủy đơn hàng", "warning");
@@ -1150,8 +1196,25 @@ export const MyOrderDetailPage = () => {
       setIsCancelDialogOpen(false);
       setCancelReason("");
       if (orderId) {
-        const refreshed = await orderService.getMyOrderById(orderId);
+        const [refreshed, myCancelRequests] = await Promise.all([
+          orderService.getMyOrderById(orderId),
+          orderService.getMyCancelRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          }),
+        ]);
         setOrder(refreshed);
+
+        const latestCancelRequest = myCancelRequests.items
+          .filter((item) => item.orderId === refreshed.id)
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime(),
+          )[0];
+        setOrderCancelRequest(latestCancelRequest ?? null);
       }
     } catch (error) {
       showToast(
@@ -1287,6 +1350,18 @@ export const MyOrderDetailPage = () => {
 
     setIsReturnDialogOpen(true);
     setReturnFormError("");
+  };
+
+  const openCancelDialog = () => {
+    if (hasBlockingCancelRequest) {
+      showToast(
+        `Đơn hàng này đã có yêu cầu hủy. ${cancelRequestStatusLabel(orderCancelRequest?.status)}`,
+        "info",
+      );
+      return;
+    }
+
+    setIsCancelDialogOpen(true);
   };
 
   const closeReturnRequestDialog = () => {
@@ -2178,17 +2253,32 @@ export const MyOrderDetailPage = () => {
                           )}
 
                           {cancelBehavior && (
-                            <Button
-                              variant="outlined"
-                              color={
-                                cancelBehavior.mode === "direct"
-                                  ? "error"
-                                  : "warning"
+                            <Tooltip
+                              title={
+                                hasBlockingCancelRequest
+                                  ? cancelRequestStatusLabel(
+                                      orderCancelRequest?.status,
+                                    )
+                                  : ""
                               }
-                              onClick={() => setIsCancelDialogOpen(true)}
                             >
-                              {cancelBehavior.buttonLabel}
-                            </Button>
+                              <span>
+                                <Button
+                                  variant="outlined"
+                                  color={
+                                    cancelBehavior.mode === "direct"
+                                      ? "error"
+                                      : "warning"
+                                  }
+                                  onClick={openCancelDialog}
+                                  disabled={hasBlockingCancelRequest}
+                                >
+                                  {hasBlockingCancelRequest
+                                    ? "Đã gửi yêu cầu hủy đơn"
+                                    : cancelBehavior.buttonLabel}
+                                </Button>
+                              </span>
+                            </Tooltip>
                           )}
 
                           {order.status === "Delivered" &&

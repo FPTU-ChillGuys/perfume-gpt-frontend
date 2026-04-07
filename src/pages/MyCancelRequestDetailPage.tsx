@@ -274,22 +274,17 @@ export const MyCancelRequestDetailPage = () => {
                             <strong>Lý do hủy:</strong>{" "}
                             {cancelReasonLabel(request.reason)}
                           </Typography>
-                          <Box
-                            display="flex"
-                            justifyContent="space-between"
-                            alignItems="center"
-                          >
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Số tiền hoàn:</strong>
-                            </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Số tiền hoàn:</strong>{" "}
                             <Typography
+                              component="span"
                               variant="subtitle2"
                               fontWeight={700}
                               sx={{ color: "#ee4d2d" }}
                             >
                               {formatCurrency(request.refundAmount)}
                             </Typography>
-                          </Box>
+                          </Typography>
                           {request.staffNote && (
                             <Typography variant="body2" color="text.secondary">
                               <strong>Ghi chú xử lý:</strong>{" "}

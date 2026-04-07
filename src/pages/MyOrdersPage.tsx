@@ -139,12 +139,22 @@ const RETURN_REQUEST_BLOCKED_STATUSES = new Set<ReturnRequestStatus>([
   "RequestMoreInfo",
 ]);
 
+const CANCEL_REQUEST_BLOCKED_STATUSES = new Set(["Pending"]);
+
 const returnRequestStatusLabel = (status?: string | null) => {
   if (!status) return "Đã gửi yêu cầu trả hàng";
   if (status === "Pending") return "Yêu cầu đang chờ duyệt";
   if (status === "ApprovedForReturn") return "Yêu cầu đã được duyệt trả hàng";
   if (status === "RequestMoreInfo") return "Cần bổ sung thông tin trả hàng";
   return `Yêu cầu trả hàng: ${status}`;
+};
+
+const cancelRequestStatusLabel = (status?: string | null) => {
+  if (!status) return "Đã gửi yêu cầu hủy đơn";
+  if (status === "Pending") return "Yêu cầu hủy đơn đang chờ xử lý";
+  if (status === "Approved") return "Yêu cầu hủy đơn đã được duyệt";
+  if (status === "Rejected") return "Yêu cầu hủy đơn đã bị từ chối";
+  return `Yêu cầu hủy đơn: ${status}`;
 };
 
 const isSupportedPaymentMethod = (
@@ -195,33 +205,46 @@ export const MyOrdersPage = () => {
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
   const [returnRequestStatusByOrderId, setReturnRequestStatusByOrderId] =
     useState<Record<string, ReturnRequestStatus>>({});
+  const [cancelRequestStatusByOrderId, setCancelRequestStatusByOrderId] =
+    useState<Record<string, string>>({});
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [{ items, totalCount: count }, returnRequestResult] =
-        await Promise.all([
-          orderService.getMyOrders({
-            PageNumber: page,
-            PageSize: pageSize,
-            SearchTerm: searchTerm || undefined,
-            Status: status || undefined,
-            PaymentStatus: paymentStatus || undefined,
-            Type: type || undefined,
-            FromDate: toIsoString(fromDate),
-            ToDate: toIsoString(toDate),
+      const [
+        { items, totalCount: count },
+        returnRequestResult,
+        cancelRequestResult,
+      ] = await Promise.all([
+        orderService.getMyOrders({
+          PageNumber: page,
+          PageSize: pageSize,
+          SearchTerm: searchTerm || undefined,
+          Status: status || undefined,
+          PaymentStatus: paymentStatus || undefined,
+          Type: type || undefined,
+          FromDate: toIsoString(fromDate),
+          ToDate: toIsoString(toDate),
+          SortBy: "CreatedAt",
+          SortOrder: "desc",
+        }),
+        orderService
+          .getMyReturnRequests({
+            PageNumber: 1,
+            PageSize: 200,
             SortBy: "CreatedAt",
             SortOrder: "desc",
-          }),
-          orderService
-            .getMyReturnRequests({
-              PageNumber: 1,
-              PageSize: 200,
-              SortBy: "CreatedAt",
-              SortOrder: "desc",
-            })
-            .catch(() => ({ items: [] })),
-        ]);
+          })
+          .catch(() => ({ items: [] })),
+        orderService
+          .getMyCancelRequests({
+            PageNumber: 1,
+            PageSize: 200,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          })
+          .catch(() => ({ items: [] })),
+      ]);
 
       const latestStatusByOrderId: Record<string, ReturnRequestStatus> = {};
       returnRequestResult.items.forEach((request) => {
@@ -234,9 +257,21 @@ export const MyOrdersPage = () => {
         }
       });
 
+      const latestCancelStatusByOrderId: Record<string, string> = {};
+      cancelRequestResult.items.forEach((request) => {
+        if (!request.orderId || !request.status) {
+          return;
+        }
+
+        if (!latestCancelStatusByOrderId[request.orderId]) {
+          latestCancelStatusByOrderId[request.orderId] = request.status;
+        }
+      });
+
       setOrders(items as OrderListItemWithReturnable[]);
       setTotalCount(count);
       setReturnRequestStatusByOrderId(latestStatusByOrderId);
+      setCancelRequestStatusByOrderId(latestCancelStatusByOrderId);
     } catch (error) {
       console.error("Failed to load my orders", error);
       showToast(
@@ -379,6 +414,19 @@ export const MyOrdersPage = () => {
 
   const openCancelDialog = (orderId?: string | null) => {
     if (!orderId) return;
+
+    const cancelRequestStatus = cancelRequestStatusByOrderId[orderId];
+    if (
+      cancelRequestStatus &&
+      CANCEL_REQUEST_BLOCKED_STATUSES.has(cancelRequestStatus)
+    ) {
+      showToast(
+        `Đơn hàng này đã có yêu cầu hủy. ${cancelRequestStatusLabel(cancelRequestStatus)}`,
+        "info",
+      );
+      return;
+    }
+
     setCancelOrderId(orderId);
     setCancelReason("");
   };
@@ -643,10 +691,19 @@ export const MyOrdersPage = () => {
                         const returnRequestStatus = order.id
                           ? returnRequestStatusByOrderId[order.id]
                           : undefined;
+                        const cancelRequestStatus = order.id
+                          ? cancelRequestStatusByOrderId[order.id]
+                          : undefined;
                         const hasBlockingReturnRequest = Boolean(
                           returnRequestStatus &&
                           RETURN_REQUEST_BLOCKED_STATUSES.has(
                             returnRequestStatus,
+                          ),
+                        );
+                        const hasBlockingCancelRequest = Boolean(
+                          cancelRequestStatus &&
+                          CANCEL_REQUEST_BLOCKED_STATUSES.has(
+                            cancelRequestStatus,
                           ),
                         );
 
@@ -925,19 +982,37 @@ export const MyOrdersPage = () => {
                               )}
 
                               {getCancelBehavior(order) && (
-                                <Button
-                                  size="small"
-                                  color={
-                                    getCancelBehavior(order)?.mode === "direct"
-                                      ? "error"
-                                      : "warning"
+                                <Tooltip
+                                  title={
+                                    hasBlockingCancelRequest
+                                      ? cancelRequestStatusLabel(
+                                          cancelRequestStatus,
+                                        )
+                                      : ""
                                   }
-                                  variant="outlined"
-                                  disabled={actionOrderId === order.id}
-                                  onClick={() => openCancelDialog(order.id)}
                                 >
-                                  {getCancelBehavior(order)?.buttonLabel}
-                                </Button>
+                                  <span>
+                                    <Button
+                                      size="small"
+                                      color={
+                                        getCancelBehavior(order)?.mode ===
+                                        "direct"
+                                          ? "error"
+                                          : "warning"
+                                      }
+                                      variant="outlined"
+                                      disabled={
+                                        actionOrderId === order.id ||
+                                        hasBlockingCancelRequest
+                                      }
+                                      onClick={() => openCancelDialog(order.id)}
+                                    >
+                                      {hasBlockingCancelRequest
+                                        ? "Đã gửi yêu cầu hủy đơn"
+                                        : getCancelBehavior(order)?.buttonLabel}
+                                    </Button>
+                                  </span>
+                                </Tooltip>
                               )}
 
                               {order.status === "Delivered" &&

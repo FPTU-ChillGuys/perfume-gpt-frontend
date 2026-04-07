@@ -241,13 +241,13 @@ export const MyCancelRequestsPage = () => {
                             spacing={1}
                             alignItems="center"
                           >
-                            <Tooltip title={request.orderId || ""}>
+                            <Tooltip title={request.orderCode || ""}>
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
                                 sx={{ fontFamily: "monospace" }}
                               >
-                                Đơn hàng: #{request.orderId || "-"}
+                                Đơn hàng: #{request.orderCode || "-"}
                               </Typography>
                             </Tooltip>
                             <Typography variant="body2" color="text.secondary">
@@ -267,36 +267,22 @@ export const MyCancelRequestsPage = () => {
 
                         <Divider sx={{ mb: 1.5 }} />
 
-                        <Stack
-                          direction={{ xs: "column", sm: "row" }}
-                          justifyContent="space-between"
-                          alignItems={{ xs: "flex-start", sm: "center" }}
-                          spacing={1}
-                        >
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ maxWidth: "60%" }}
-                          >
+                        <Stack spacing={0.75}>
+                          <Typography variant="body2" color="text.secondary">
                             <strong>Lý do:</strong>{" "}
                             {cancelReasonLabel(request.reason)}
                           </Typography>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                          >
-                            <Typography variant="body2" color="text.secondary">
-                              Hoàn tiền:
-                            </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Số tiền hoàn:</strong>{" "}
                             <Typography
-                              variant="subtitle1"
+                              component="span"
+                              variant="subtitle2"
                               fontWeight={700}
                               sx={{ color: "#ee4d2d" }}
                             >
                               {formatCurrency(request.refundAmount)}
                             </Typography>
-                          </Stack>
+                          </Typography>
                         </Stack>
 
                         <Divider sx={{ my: 1.5 }} />
