@@ -323,7 +323,9 @@ export const OrderReturnRequestDetailPage = () => {
     effectiveRefundMethod === "ExternalBankTransfer" &&
     (isCodOrder || hasRefundBankInfo);
   const refundAmount = toNumber(
-    request?.approvedRefundAmount ?? request?.requestedRefundAmount,
+    request?.approvedRefundAmount ??
+      request?.requestedRefundAmount ??
+      request?.refundableAmount,
   );
   const orderCodeForRefund = request?.orderCode || request?.orderId || "-";
 
@@ -1854,6 +1856,30 @@ export const OrderReturnRequestDetailPage = () => {
               </Alert>
             </>
           )}
+
+          <Box
+            sx={{
+              mb: 2,
+              p: 1.25,
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "grey.50",
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Số tiền cần hoàn
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                sx={{ color: "#16a34a" }}
+              >
+                {formatCurrency(refundAmount)}
+              </Typography>
+            </Box>
+          </Box>
 
           <Typography>
             Bạn có chắc chắn muốn xác nhận hoàn tiền cho yêu cầu này không? Hành

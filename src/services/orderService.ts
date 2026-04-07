@@ -37,8 +37,13 @@ interface GetAllOrdersParams extends GetMyOrdersParams {
 
 export type OrderCancelRequest =
   components["schemas"]["OrderCancelRequestResponse"];
-export type ProcessCancelRequestBody =
-  components["schemas"]["ProcessCancelRequest"];
+export type ProcessCancelRequestBody = Omit<
+  components["schemas"]["ProcessCancelRequest"],
+  "refundMethod"
+> & {
+  refundMethod?: PaymentMethod | null;
+  manualTransactionReference?: string | null;
+};
 
 export interface PagedCancelRequests {
   items: OrderCancelRequest[];
@@ -540,11 +545,16 @@ class OrderService {
     body: ProcessCancelRequestBody,
   ): Promise<string> {
     try {
+      const requestBody = {
+        ...body,
+        refundMethod: body.refundMethod ?? undefined,
+      };
+
       const response = await apiInstance.POST(
         "/api/ordercancelrequests/{id}/process",
         {
           params: { path: { id } },
-          body,
+          body: requestBody,
         },
       );
 

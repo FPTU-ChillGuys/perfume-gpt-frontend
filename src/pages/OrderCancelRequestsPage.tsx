@@ -30,12 +30,25 @@ import { AdminLayout } from "../layouts/AdminLayout";
 import {
   orderService,
   type OrderCancelRequest,
+  type ProcessCancelRequestBody,
 } from "../services/orderService";
 import { useToast } from "../hooks/useToast";
 import type { OrderResponse } from "../types/order";
+import type { PaymentMethod } from "../types/checkout";
+import {
+  CANCEL_ORDER_REASON_OPTIONS,
+  type CancelOrderReason,
+} from "@/utils/cancelOrderReason";
 import { formatDateTimeVN, formatDateVN } from "@/utils/dateTime";
 
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"] as const;
+
+const REJECT_NOTE_SUGGESTIONS = [
+  "Lý do hủy không hợp lệ theo chính sách hiện tại.",
+  "Đơn hàng đã được bàn giao cho đơn vị vận chuyển.",
+  "Đơn hàng đã được xử lý và không thể hủy ở giai đoạn này.",
+  "Thông tin yêu cầu chưa đầy đủ, vui lòng liên hệ CSKH.",
+];
 
 const statusColor = (
   s?: string,
@@ -62,6 +75,26 @@ const formatCurrency = (value?: number | null) => {
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
 };
 
+const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CashOnDelivery: "Thanh toán khi nhận hàng",
+  CashInStore: "Thanh toán tại quầy",
+  VnPay: "Thanh toán qua VNPay",
+  Momo: "Thanh toán qua MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
+};
+
+const cancelReasonLabel = (reason?: string | null) => {
+  if (!reason) return "—";
+
+  const matchedReason = CANCEL_ORDER_REASON_OPTIONS.find(
+    (item) => item.value === (reason as CancelOrderReason),
+  );
+
+  return matchedReason?.label || reason;
+};
+
+const ONLINE_REFUND_METHODS: PaymentMethod[] = ["VnPay", "Momo"];
+
 export const OrderCancelRequestsPage = () => {
   const { showToast } = useToast();
 
@@ -79,7 +112,12 @@ export const OrderCancelRequestsPage = () => {
     null,
   );
   const [isOrderLoading, setIsOrderLoading] = useState(false);
-  const [note, setNote] = useState("");
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectNote, setRejectNote] = useState("");
+  const [approveRefundDialogOpen, setApproveRefundDialogOpen] = useState(false);
+  const [approveStaffNote, setApproveStaffNote] = useState("");
+  const [approveRefundMethod, setApproveRefundMethod] =
+    useState<PaymentMethod | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -120,7 +158,11 @@ export const OrderCancelRequestsPage = () => {
 
   const openDetail = async (req: OrderCancelRequest) => {
     setSelected(req);
-    setNote("");
+    setRejectNote("");
+    setApproveStaffNote("");
+    setApproveRefundMethod(null);
+    setRejectDialogOpen(false);
+    setApproveRefundDialogOpen(false);
     setDetailOpen(true);
 
     if (!req.orderId) {
@@ -143,28 +185,100 @@ export const OrderCancelRequestsPage = () => {
     }
   };
 
-  const handleProcess = async (isApproved: boolean) => {
+  const resolveOrderPaymentMethod = (
+    order: OrderResponse | null,
+  ): PaymentMethod | null => {
+    const transactions = order?.paymentTransactions ?? [];
+
+    const successfulPayment = transactions.find(
+      (transaction) =>
+        transaction.transactionType === "Payment" &&
+        transaction.status === "Success" &&
+        Boolean(transaction.paymentMethod),
+    );
+
+    if (successfulPayment?.paymentMethod) {
+      return successfulPayment.paymentMethod;
+    }
+
+    const firstPaymentMethod = transactions.find((transaction) =>
+      Boolean(transaction.paymentMethod),
+    )?.paymentMethod;
+
+    return firstPaymentMethod ?? null;
+  };
+
+  const submitProcessRequest = async (body: ProcessCancelRequestBody) => {
     if (!selected?.id) return;
+
     setIsSaving(true);
     try {
-      await orderService.processCancelRequest(selected.id, {
-        isApproved,
-        staffNote: note || null,
-      });
+      await orderService.processCancelRequest(selected.id, body);
       showToast(
-        isApproved ? "Duyệt yêu cầu thành công" : "Từ chối yêu cầu thành công",
+        body.isApproved
+          ? "Duyệt yêu cầu thành công"
+          : "Từ chối yêu cầu thành công",
         "success",
       );
       setDetailOpen(false);
+      setRejectDialogOpen(false);
+      setApproveRefundDialogOpen(false);
       setSelected(null);
       setSelectedOrder(null);
-      setNote("");
+      setRejectNote("");
+      setApproveStaffNote("");
+      setApproveRefundMethod(null);
       load();
     } catch (err: any) {
       showToast(err?.message || "Xử lý thất bại", "error");
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleConfirmReject = async () => {
+    if (!rejectNote.trim()) {
+      showToast("Vui lòng nhập lý do từ chối", "warning");
+      return;
+    }
+
+    await submitProcessRequest({
+      isApproved: false,
+      staffNote: rejectNote.trim(),
+      refundMethod: null,
+      manualTransactionReference: null,
+    });
+  };
+
+  const handleApproveClick = () => {
+    const paymentMethod = resolveOrderPaymentMethod(selectedOrder);
+
+    if (paymentMethod && ONLINE_REFUND_METHODS.includes(paymentMethod)) {
+      setApproveRefundMethod(paymentMethod);
+      setApproveRefundDialogOpen(true);
+      return;
+    }
+
+    void submitProcessRequest({
+      isApproved: true,
+      staffNote: null,
+      refundMethod: null,
+      manualTransactionReference: null,
+    });
+  };
+
+  const handleConfirmApproveOnline = async () => {
+    if (!approveRefundMethod) {
+      showToast("Không xác định được phương thức hoàn tiền", "warning");
+      return;
+    }
+
+    await submitProcessRequest({
+      isApproved: true,
+      staffNote: approveStaffNote.trim() || null,
+      refundMethod: approveRefundMethod,
+      manualTransactionReference: null,
+    });
   };
 
   const orderSubtotal =
@@ -175,6 +289,10 @@ export const OrderCancelRequestsPage = () => {
   const shippingFee = Number(selectedOrder?.shippingInfo?.shippingFee ?? 0);
   const grandTotal = Number(selectedOrder?.totalAmount ?? 0);
   const voucherDiscount = Math.max(orderSubtotal + shippingFee - grandTotal, 0);
+  const refundAmountForCancelRequest = Number(
+    selected?.refundAmount ?? selectedOrder?.totalAmount ?? 0,
+  );
+  const currentPaymentMethod = resolveOrderPaymentMethod(selectedOrder);
 
   return (
     <AdminLayout>
@@ -309,9 +427,9 @@ export const OrderCancelRequestsPage = () => {
                     </TableCell>
                     <TableCell>{r.requestedByEmail || "—"}</TableCell>
                     <TableCell sx={{ maxWidth: 200 }}>
-                      <Tooltip title={r.reason || ""}>
+                      <Tooltip title={cancelReasonLabel(r.reason)}>
                         <Typography variant="body2" noWrap>
-                          {r.reason || "—"}
+                          {cancelReasonLabel(r.reason)}
                         </Typography>
                       </Tooltip>
                     </TableCell>
@@ -353,7 +471,11 @@ export const OrderCancelRequestsPage = () => {
           setDetailOpen(false);
           setSelected(null);
           setSelectedOrder(null);
-          setNote("");
+          setRejectNote("");
+          setApproveStaffNote("");
+          setApproveRefundMethod(null);
+          setRejectDialogOpen(false);
+          setApproveRefundDialogOpen(false);
         }}
         maxWidth="lg"
         fullWidth
@@ -380,7 +502,9 @@ export const OrderCancelRequestsPage = () => {
                     <Typography variant="caption" color="text.secondary">
                       Mã đơn hàng
                     </Typography>
-                    <Typography fontWeight={700}>{selected.orderId}</Typography>
+                    <Typography fontWeight={700}>
+                      {selectedOrder?.code || selected.orderId || "—"}
+                    </Typography>
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
@@ -414,7 +538,7 @@ export const OrderCancelRequestsPage = () => {
                   <Typography variant="caption" color="text.secondary">
                     Lý do hủy
                   </Typography>
-                  <Typography>{selected.reason || "—"}</Typography>
+                  <Typography>{cancelReasonLabel(selected.reason)}</Typography>
                 </Box>
               </Box>
 
@@ -627,8 +751,12 @@ export const OrderCancelRequestsPage = () => {
                             <Typography variant="body2" color="text.secondary">
                               Phí vận chuyển
                             </Typography>
-                            <Typography variant="body2">
-                              {formatCurrency(shippingFee)}
+                            <Typography
+                              variant="body2"
+                              color="success.main"
+                              fontWeight={500}
+                            >
+                              FREE
                             </Typography>
                           </Box>
                           {voucherDiscount > 0 && (
@@ -657,24 +785,38 @@ export const OrderCancelRequestsPage = () => {
                               {formatCurrency(grandTotal)}
                             </Typography>
                           </Box>
+                          <Divider />
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            gap={1.5}
+                          >
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              noWrap
+                              sx={{ flexShrink: 0 }}
+                            >
+                              Phương thức thanh toán
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              fontWeight={600}
+                              noWrap
+                              sx={{ whiteSpace: "nowrap" }}
+                            >
+                              {currentPaymentMethod
+                                ? PAYMENT_METHOD_LABELS[currentPaymentMethod]
+                                : "—"}
+                            </Typography>
+                          </Box>
                         </Stack>
                       </Paper>
                     </Stack>
                   </Box>
                 )}
               </Box>
-
-              {selected.status === "Pending" && (
-                <TextField
-                  label="Ghi chú xử lý (tuỳ chọn)"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  size="small"
-                />
-              )}
             </Stack>
           )}
         </DialogContent>
@@ -684,7 +826,11 @@ export const OrderCancelRequestsPage = () => {
               setDetailOpen(false);
               setSelected(null);
               setSelectedOrder(null);
-              setNote("");
+              setRejectNote("");
+              setApproveStaffNote("");
+              setApproveRefundMethod(null);
+              setRejectDialogOpen(false);
+              setApproveRefundDialogOpen(false);
             }}
           >
             Đóng
@@ -694,7 +840,7 @@ export const OrderCancelRequestsPage = () => {
               <Button
                 variant="contained"
                 color="error"
-                onClick={() => handleProcess(false)}
+                onClick={() => setRejectDialogOpen(true)}
                 disabled={isSaving}
               >
                 {isSaving ? (
@@ -706,7 +852,7 @@ export const OrderCancelRequestsPage = () => {
               <Button
                 variant="contained"
                 color="success"
-                onClick={() => handleProcess(true)}
+                onClick={handleApproveClick}
                 disabled={isSaving}
               >
                 {isSaving ? (
@@ -717,6 +863,145 @@ export const OrderCancelRequestsPage = () => {
               </Button>
             </>
           )}
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={rejectDialogOpen}
+        onClose={() => {
+          if (!isSaving) {
+            setRejectDialogOpen(false);
+          }
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Từ chối yêu cầu hủy đơn</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Vui lòng nhập lý do từ chối hoặc chọn nhanh từ gợi ý bên dưới.
+          </Typography>
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Lý do từ chối"
+            value={rejectNote}
+            onChange={(event) => setRejectNote(event.target.value)}
+          />
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            useFlexGap
+            mt={1.5}
+          >
+            {REJECT_NOTE_SUGGESTIONS.map((reason) => (
+              <Chip
+                key={reason}
+                clickable
+                color={rejectNote.trim() === reason ? "primary" : "default"}
+                label={reason}
+                onClick={() => setRejectNote(reason)}
+                sx={{ maxWidth: "100%" }}
+              />
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setRejectDialogOpen(false)}
+            disabled={isSaving}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => {
+              void handleConfirmReject();
+            }}
+            disabled={isSaving || !rejectNote.trim()}
+          >
+            {isSaving ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              "Xác nhận từ chối"
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={approveRefundDialogOpen}
+        onClose={() => {
+          if (!isSaving) {
+            setApproveRefundDialogOpen(false);
+          }
+        }}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Xác nhận duyệt và hoàn tiền</DialogTitle>
+        <DialogContent>
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            Đơn hàng thanh toán online sẽ hoàn tiền bằng đúng phương thức thanh
+            toán ban đầu.
+          </Alert>
+
+          <Stack spacing={1.25} sx={{ mb: 2 }}>
+            <Box display="flex" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Phương thức hoàn tiền
+              </Typography>
+              <Typography variant="body2" fontWeight={700}>
+                {approveRefundMethod || "-"}
+              </Typography>
+            </Box>
+            <Box display="flex" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Số tiền cần hoàn
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                sx={{ color: "#16a34a" }}
+              >
+                {formatCurrency(refundAmountForCancelRequest)}
+              </Typography>
+            </Box>
+          </Stack>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="Ghi chú xử lý (tuỳ chọn)"
+            value={approveStaffNote}
+            onChange={(event) => setApproveStaffNote(event.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setApproveRefundDialogOpen(false)}
+            disabled={isSaving}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() => {
+              void handleConfirmApproveOnline();
+            }}
+            disabled={isSaving || !approveRefundMethod}
+          >
+            {isSaving ? (
+              <CircularProgress size={20} color="inherit" />
+            ) : (
+              "Xác nhận duyệt"
+            )}
+          </Button>
         </DialogActions>
       </Dialog>
     </AdminLayout>
