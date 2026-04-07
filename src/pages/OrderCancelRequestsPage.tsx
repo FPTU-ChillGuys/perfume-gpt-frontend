@@ -25,7 +25,13 @@ import {
   Tooltip,
   Stack,
   Divider,
+  IconButton,
 } from "@mui/material";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CheckIcon from "@mui/icons-material/Check";
+import momoLogo from "@/assets/momo.png";
+import vnpayLogo from "@/assets/vnpay.jpg";
+import transferLogo from "@/assets/transfer.png";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
   orderService,
@@ -94,6 +100,54 @@ const cancelReasonLabel = (reason?: string | null) => {
 };
 
 const ONLINE_REFUND_METHODS: PaymentMethod[] = ["VnPay", "Momo"];
+const REFUND_METHOD_OPTIONS: {
+  value: PaymentMethod;
+  label: string;
+  iconSrc: string;
+}[] = [
+  {
+    value: "VnPay",
+    label: "VNPay",
+    iconSrc: vnpayLogo,
+  },
+  {
+    value: "Momo",
+    label: "MoMo",
+    iconSrc: momoLogo,
+  },
+  {
+    value: "ExternalBankTransfer",
+    label: "External Bank Transfer",
+    iconSrc: transferLogo,
+  },
+];
+const MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH = 6;
+const REFUND_DIALOG_TOP_NOTE =
+  "Bạn có thể chọn hoàn qua cổng thanh toán ban đầu hoặc chuyển khoản thủ công khi cổng hoàn tự động bị treo/lỗi.";
+const REFUND_DIALOG_METHOD_TITLE = "Chọn phương thức hoàn tiền";
+const REFUND_DIALOG_MANUAL_MISSING_BANK_INFO_NOTE =
+  "Yêu cầu này chưa có đủ thông tin tài khoản ngân hàng của khách. Vui lòng yêu cầu khách bổ sung trước khi duyệt chuyển khoản.";
+const REFUND_DIALOG_MANUAL_REFERENCE_LABEL =
+  "Mã giao dịch chuyển khoản thủ công *";
+const REFUND_DIALOG_MANUAL_REFERENCE_HELPER =
+  "Tối thiểu 6 ký tự (ví dụ: FT123456).";
+const REFUND_DIALOG_CONFIRM_NOTE =
+  "Bạn có chắc chắn muốn xác nhận hoàn tiền cho yêu cầu này không? Hành động này không thể hoàn tác.";
+
+interface VietQrBank {
+  name: string;
+  code: string;
+  bin: string;
+  shortName?: string;
+  short_name?: string;
+}
+
+const stripVietnameseDiacritics = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
 
 export const OrderCancelRequestsPage = () => {
   const { showToast } = useToast();
@@ -115,9 +169,14 @@ export const OrderCancelRequestsPage = () => {
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectNote, setRejectNote] = useState("");
   const [approveRefundDialogOpen, setApproveRefundDialogOpen] = useState(false);
-  const [approveStaffNote, setApproveStaffNote] = useState("");
   const [approveRefundMethod, setApproveRefundMethod] =
     useState<PaymentMethod | null>(null);
+  const [
+    approveManualTransactionReference,
+    setApproveManualTransactionReference,
+  ] = useState("");
+  const [copiedRefundInfo, setCopiedRefundInfo] = useState(false);
+  const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -159,8 +218,9 @@ export const OrderCancelRequestsPage = () => {
   const openDetail = async (req: OrderCancelRequest) => {
     setSelected(req);
     setRejectNote("");
-    setApproveStaffNote("");
     setApproveRefundMethod(null);
+    setApproveManualTransactionReference("");
+    setCopiedRefundInfo(false);
     setRejectDialogOpen(false);
     setApproveRefundDialogOpen(false);
     setDetailOpen(true);
@@ -226,8 +286,9 @@ export const OrderCancelRequestsPage = () => {
       setSelected(null);
       setSelectedOrder(null);
       setRejectNote("");
-      setApproveStaffNote("");
       setApproveRefundMethod(null);
+      setApproveManualTransactionReference("");
+      setCopiedRefundInfo(false);
       load();
     } catch (err: any) {
       showToast(err?.message || "Xử lý thất bại", "error");
@@ -252,19 +313,15 @@ export const OrderCancelRequestsPage = () => {
 
   const handleApproveClick = () => {
     const paymentMethod = resolveOrderPaymentMethod(selectedOrder);
+    const fallbackMethod: PaymentMethod | null =
+      paymentMethod && ONLINE_REFUND_METHODS.includes(paymentMethod)
+        ? paymentMethod
+        : "ExternalBankTransfer";
 
-    if (paymentMethod && ONLINE_REFUND_METHODS.includes(paymentMethod)) {
-      setApproveRefundMethod(paymentMethod);
-      setApproveRefundDialogOpen(true);
-      return;
-    }
-
-    void submitProcessRequest({
-      isApproved: true,
-      staffNote: null,
-      refundMethod: null,
-      manualTransactionReference: null,
-    });
+    setApproveRefundMethod(fallbackMethod);
+    setApproveManualTransactionReference("");
+    setCopiedRefundInfo(false);
+    setApproveRefundDialogOpen(true);
   };
 
   const handleConfirmApproveOnline = async () => {
@@ -273,11 +330,27 @@ export const OrderCancelRequestsPage = () => {
       return;
     }
 
+    const isExternalTransfer = approveRefundMethod === "ExternalBankTransfer";
+    const trimmedManualReference = approveManualTransactionReference.trim();
+
+    if (
+      isExternalTransfer &&
+      trimmedManualReference.length < MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH
+    ) {
+      showToast(
+        `Mã giao dịch cần tối thiểu ${MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH} ký tự`,
+        "warning",
+      );
+      return;
+    }
+
     await submitProcessRequest({
       isApproved: true,
-      staffNote: approveStaffNote.trim() || null,
+      staffNote: null,
       refundMethod: approveRefundMethod,
-      manualTransactionReference: null,
+      manualTransactionReference: isExternalTransfer
+        ? trimmedManualReference
+        : null,
     });
   };
 
@@ -293,6 +366,131 @@ export const OrderCancelRequestsPage = () => {
     selected?.refundAmount ?? selectedOrder?.totalAmount ?? 0,
   );
   const currentPaymentMethod = resolveOrderPaymentMethod(selectedOrder);
+  const refundMethodOptions: PaymentMethod[] = [
+    ...(currentPaymentMethod &&
+    ONLINE_REFUND_METHODS.includes(currentPaymentMethod)
+      ? [currentPaymentMethod]
+      : []),
+    "ExternalBankTransfer",
+  ].filter(
+    (method, index, arr) => arr.indexOf(method) === index,
+  ) as PaymentMethod[];
+  const isExternalTransferSelected =
+    approveRefundMethod === "ExternalBankTransfer";
+  const trimmedApproveManualTransactionReference =
+    approveManualTransactionReference.trim();
+  const isApproveManualReferenceTooShort =
+    isExternalTransferSelected &&
+    trimmedApproveManualTransactionReference.length <
+      MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH;
+  const hasRefundBankInfo = Boolean(
+    selected?.refundBankName &&
+    selected?.refundAccountNumber &&
+    selected?.refundAccountName,
+  );
+  const orderCodeForRefund = selectedOrder?.code || selected?.orderId || "-";
+
+  useEffect(() => {
+    if (!approveRefundDialogOpen || !isExternalTransferSelected) {
+      return;
+    }
+
+    if (vietQrBanks.length > 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadVietQrBanks = async () => {
+      try {
+        const response = await fetch("https://api.vietqr.io/v2/banks", {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const json = (await response.json()) as { data?: VietQrBank[] };
+        if (Array.isArray(json.data)) {
+          setVietQrBanks(json.data);
+        }
+      } catch {
+        // Keep UI usable without VietQR lookup data.
+      }
+    };
+
+    void loadVietQrBanks();
+
+    return () => {
+      controller.abort();
+    };
+  }, [approveRefundDialogOpen, isExternalTransferSelected, vietQrBanks.length]);
+
+  const normalizedRefundBankName = stripVietnameseDiacritics(
+    selected?.refundBankName || "",
+  )
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const matchedRefundBankBin =
+    normalizedRefundBankName && vietQrBanks.length
+      ? (vietQrBanks.find((bank) => {
+          const candidates = [
+            bank.shortName,
+            bank.short_name,
+            bank.code,
+            bank.name,
+          ]
+            .filter(Boolean)
+            .map((item) =>
+              stripVietnameseDiacritics(String(item))
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, " ")
+                .replace(/\s+/g, " ")
+                .trim(),
+            );
+
+          return candidates.some(
+            (candidate) =>
+              candidate &&
+              (normalizedRefundBankName.includes(candidate) ||
+                candidate.includes(normalizedRefundBankName)),
+          );
+        })?.bin ?? "")
+      : "";
+
+  const cancelRefundQrImageUrl =
+    isExternalTransferSelected &&
+    matchedRefundBankBin &&
+    selected?.refundAccountNumber &&
+    refundAmountForCancelRequest > 0
+      ? `https://img.vietqr.io/image/${matchedRefundBankBin}-${selected.refundAccountNumber}-compact2.jpg?amount=${refundAmountForCancelRequest}&addInfo=${encodeURIComponent(
+          `Hoan tien don ${orderCodeForRefund}`,
+        )}&accountName=${encodeURIComponent(selected?.refundAccountName || "")}`
+      : "";
+
+  const handleCopyRefundInfo = async () => {
+    const textToCopy = [
+      "YEU CAU HOAN TIEN HUY DON",
+      `- Ma don: ${orderCodeForRefund}`,
+      `- Ngan hang: ${selected?.refundBankName || "-"}`,
+      `- STK: ${selected?.refundAccountNumber || "-"}`,
+      `- Chu TK: ${selected?.refundAccountName || "-"}`,
+      `- So tien: ${formatCurrency(refundAmountForCancelRequest)}`,
+      `- Noi dung CK: Hoan tien don ${orderCodeForRefund}`,
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedRefundInfo(true);
+      setTimeout(() => setCopiedRefundInfo(false), 1800);
+    } catch {
+      showToast("Không thể copy thông tin hoàn tiền", "error");
+    }
+  };
 
   return (
     <AdminLayout>
@@ -472,8 +670,9 @@ export const OrderCancelRequestsPage = () => {
           setSelected(null);
           setSelectedOrder(null);
           setRejectNote("");
-          setApproveStaffNote("");
           setApproveRefundMethod(null);
+          setApproveManualTransactionReference("");
+          setCopiedRefundInfo(false);
           setRejectDialogOpen(false);
           setApproveRefundDialogOpen(false);
         }}
@@ -827,8 +1026,9 @@ export const OrderCancelRequestsPage = () => {
               setSelected(null);
               setSelectedOrder(null);
               setRejectNote("");
-              setApproveStaffNote("");
               setApproveRefundMethod(null);
+              setApproveManualTransactionReference("");
+              setCopiedRefundInfo(false);
               setRejectDialogOpen(false);
               setApproveRefundDialogOpen(false);
             }}
@@ -937,27 +1137,201 @@ export const OrderCancelRequestsPage = () => {
         onClose={() => {
           if (!isSaving) {
             setApproveRefundDialogOpen(false);
+            setCopiedRefundInfo(false);
           }
         }}
         fullWidth
-        maxWidth="sm"
+        maxWidth="md"
       >
         <DialogTitle>Xác nhận duyệt và hoàn tiền</DialogTitle>
         <DialogContent>
           <Alert severity="info" sx={{ mb: 1.5 }}>
-            Đơn hàng thanh toán online sẽ hoàn tiền bằng đúng phương thức thanh
-            toán ban đầu.
+            {REFUND_DIALOG_TOP_NOTE}
           </Alert>
 
-          <Stack spacing={1.25} sx={{ mb: 2 }}>
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography variant="body2" color="text.secondary">
-                Phương thức hoàn tiền
-              </Typography>
-              <Typography variant="body2" fontWeight={700}>
-                {approveRefundMethod || "-"}
-              </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            {REFUND_DIALOG_METHOD_TITLE}
+          </Typography>
+          <Stack
+            direction="row"
+            spacing={1.5}
+            flexWrap="wrap"
+            useFlexGap
+            mb={2}
+          >
+            {REFUND_METHOD_OPTIONS.filter((option) =>
+              refundMethodOptions.includes(option.value),
+            ).map((option) => {
+              const isActive = approveRefundMethod === option.value;
+              return (
+                <Paper
+                  key={option.value}
+                  variant="outlined"
+                  onClick={() => setApproveRefundMethod(option.value)}
+                  sx={{
+                    px: 1.5,
+                    py: 1,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    borderColor: isActive ? "#ee4d2d" : "divider",
+                    bgcolor: isActive ? "rgba(238,77,45,0.06)" : "#fff",
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={option.iconSrc}
+                    alt={option.label}
+                    sx={{
+                      width: 22,
+                      height: 22,
+                      objectFit: "contain",
+                      borderRadius: 0.5,
+                    }}
+                  />
+                  <Typography variant="body2" fontWeight={isActive ? 700 : 500}>
+                    {option.label}
+                  </Typography>
+                </Paper>
+              );
+            })}
+          </Stack>
+
+          {isExternalTransferSelected && (
+            <Box sx={{ mb: 2 }}>
+              {hasRefundBankInfo ? (
+                <Stack
+                  direction={{ xs: "column", md: "row" }}
+                  spacing={2}
+                  alignItems="stretch"
+                >
+                  <Box
+                    sx={{
+                      flex: 1.2,
+                      p: 1.5,
+                      borderRadius: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      bgcolor: "grey.50",
+                    }}
+                  >
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={1}
+                    >
+                      <Typography variant="body2" fontWeight={700}>
+                        Thông tin tài khoản hoàn tiền của khách
+                      </Typography>
+                      <Tooltip
+                        title={
+                          copiedRefundInfo
+                            ? "Đã copy thông tin"
+                            : "Copy thông tin hoàn tiền"
+                        }
+                      >
+                        <span>
+                          <IconButton
+                            size="small"
+                            color={copiedRefundInfo ? "success" : "default"}
+                            onClick={() => {
+                              void handleCopyRefundInfo();
+                            }}
+                          >
+                            {copiedRefundInfo ? (
+                              <CheckIcon />
+                            ) : (
+                              <ContentCopyIcon />
+                            )}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Stack>
+
+                    <Stack spacing={0.6}>
+                      <Typography variant="body2" color="text.secondary">
+                        Ngân hàng: <b>{selected?.refundBankName || "-"}</b>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Số tài khoản:{" "}
+                        <b>{selected?.refundAccountNumber || "-"}</b>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Chủ tài khoản:{" "}
+                        <b>{selected?.refundAccountName || "-"}</b>
+                      </Typography>
+                      <Typography
+                        variant="body1"
+                        fontWeight={800}
+                        sx={{ color: "#16a34a", pt: 0.5 }}
+                      >
+                        Số tiền hoàn:{" "}
+                        {formatCurrency(refundAmountForCancelRequest)}
+                      </Typography>
+                    </Stack>
+                  </Box>
+
+                  <Box
+                    sx={{
+                      flex: 1,
+                      minWidth: { xs: "100%", md: 260 },
+                      p: 1.5,
+                      borderRadius: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      bgcolor: "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {cancelRefundQrImageUrl ? (
+                      <Box
+                        component="img"
+                        src={cancelRefundQrImageUrl}
+                        alt="Mã QR chuyển khoản hoàn tiền"
+                        sx={{ width: "100%", maxWidth: 280, borderRadius: 1 }}
+                      />
+                    ) : (
+                      <Alert severity="warning" sx={{ width: "100%" }}>
+                        Không thể tạo mã QR do thiếu thông tin ngân hàng.
+                      </Alert>
+                    )}
+                  </Box>
+                </Stack>
+              ) : (
+                <Alert severity="warning">
+                  {REFUND_DIALOG_MANUAL_MISSING_BANK_INFO_NOTE}
+                </Alert>
+              )}
+
+              <TextField
+                fullWidth
+                required
+                error={isApproveManualReferenceTooShort}
+                label={REFUND_DIALOG_MANUAL_REFERENCE_LABEL}
+                value={approveManualTransactionReference}
+                onChange={(event) =>
+                  setApproveManualTransactionReference(event.target.value)
+                }
+                sx={{ mt: 1.5 }}
+                helperText={REFUND_DIALOG_MANUAL_REFERENCE_HELPER}
+              />
             </Box>
+          )}
+
+          <Box
+            sx={{
+              mb: 2,
+              p: 1.25,
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "grey.50",
+            }}
+          >
             <Box display="flex" justifyContent="space-between" gap={2}>
               <Typography variant="body2" color="text.secondary">
                 Số tiền cần hoàn
@@ -970,20 +1344,18 @@ export const OrderCancelRequestsPage = () => {
                 {formatCurrency(refundAmountForCancelRequest)}
               </Typography>
             </Box>
-          </Stack>
+          </Box>
 
-          <TextField
-            fullWidth
-            multiline
-            minRows={2}
-            label="Ghi chú xử lý (tuỳ chọn)"
-            value={approveStaffNote}
-            onChange={(event) => setApproveStaffNote(event.target.value)}
-          />
+          <Typography variant="body2" sx={{ mt: 1.5 }}>
+            {REFUND_DIALOG_CONFIRM_NOTE}
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button
-            onClick={() => setApproveRefundDialogOpen(false)}
+            onClick={() => {
+              setApproveRefundDialogOpen(false);
+              setCopiedRefundInfo(false);
+            }}
             disabled={isSaving}
           >
             Hủy
@@ -994,7 +1366,12 @@ export const OrderCancelRequestsPage = () => {
             onClick={() => {
               void handleConfirmApproveOnline();
             }}
-            disabled={isSaving || !approveRefundMethod}
+            disabled={
+              isSaving ||
+              !approveRefundMethod ||
+              (isExternalTransferSelected &&
+                (!hasRefundBankInfo || isApproveManualReferenceTooShort))
+            }
           >
             {isSaving ? (
               <CircularProgress size={20} color="inherit" />

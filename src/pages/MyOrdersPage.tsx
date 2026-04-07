@@ -2,6 +2,7 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -165,6 +166,38 @@ const isSupportedPaymentMethod = (
   value === "VnPay" ||
   value === "Momo";
 
+interface VietQrBank {
+  id: number;
+  name: string;
+  shortName?: string;
+  short_name?: string;
+  logo?: string;
+}
+
+const stripVietnameseDiacritics = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+
+const normalizeRefundAccountNumber = (value: string) =>
+  stripVietnameseDiacritics(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+const normalizeRefundAccountName = (value: string) =>
+  stripVietnameseDiacritics(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trimStart();
+
+const getBankDisplayName = (bank: VietQrBank) => {
+  const shortName = (bank.shortName || bank.short_name || "").trim();
+  return shortName ? `${shortName} - ${bank.name}` : bank.name;
+};
+
 export const MyOrdersPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -198,6 +231,15 @@ export const MyOrdersPage = () => {
   const [actionOrderId, setActionOrderId] = useState<string | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [selectedCancelRefundBank, setSelectedCancelRefundBank] =
+    useState<VietQrBank | null>(null);
+  const [cancelRefundBankName, setCancelRefundBankName] = useState("");
+  const [cancelRefundAccountNumber, setCancelRefundAccountNumber] =
+    useState("");
+  const [cancelRefundAccountName, setCancelRefundAccountName] = useState("");
+  const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
+  const [isLoadingVietQrBanks, setIsLoadingVietQrBanks] = useState(false);
+  const [vietQrBankError, setVietQrBankError] = useState<string | null>(null);
   const [retryOrderId, setRetryOrderId] = useState<string | null>(null);
   const [retryPaymentId, setRetryPaymentId] = useState<string | null>(null);
   const [selectedRetryMethod, setSelectedRetryMethod] =
@@ -390,9 +432,36 @@ export const MyOrdersPage = () => {
       return;
     }
 
+    const trimmedCancelRefundBankName = cancelRefundBankName.trim();
+    const trimmedCancelRefundAccountNumber = cancelRefundAccountNumber.trim();
+    const trimmedCancelRefundAccountName = cancelRefundAccountName.trim();
+
+    if (
+      shouldRequireCancelRefundInfo &&
+      (!trimmedCancelRefundBankName ||
+        !trimmedCancelRefundAccountNumber ||
+        !trimmedCancelRefundAccountName)
+    ) {
+      showToast(
+        "Vui lòng điền đầy đủ thông tin tài khoản hoàn tiền",
+        "warning",
+      );
+      return;
+    }
+
     try {
       setActionOrderId(cancelOrderId);
-      await orderService.cancelOrder(cancelOrderId, cancelReasonEnum);
+      await orderService.cancelOrder(cancelOrderId, cancelReasonEnum, {
+        refundBankName: shouldRequireCancelRefundInfo
+          ? trimmedCancelRefundBankName
+          : null,
+        refundAccountNumber: shouldRequireCancelRefundInfo
+          ? trimmedCancelRefundAccountNumber
+          : null,
+        refundAccountName: shouldRequireCancelRefundInfo
+          ? trimmedCancelRefundAccountName
+          : null,
+      });
       showToast(
         cancelBehavior?.mode === "direct"
           ? "Đã hủy đơn hàng thành công"
@@ -409,6 +478,10 @@ export const MyOrdersPage = () => {
       setActionOrderId(null);
       setCancelOrderId(null);
       setCancelReason("");
+      setSelectedCancelRefundBank(null);
+      setCancelRefundBankName("");
+      setCancelRefundAccountNumber("");
+      setCancelRefundAccountName("");
     }
   };
 
@@ -429,6 +502,10 @@ export const MyOrdersPage = () => {
 
     setCancelOrderId(orderId);
     setCancelReason("");
+    setSelectedCancelRefundBank(null);
+    setCancelRefundBankName("");
+    setCancelRefundAccountNumber("");
+    setCancelRefundAccountName("");
   };
 
   const getCancelBehavior = (order: OrderListItem) => {
@@ -467,6 +544,22 @@ export const MyOrdersPage = () => {
   const cancelBehavior = selectedOrder
     ? getCancelBehavior(selectedOrder)
     : null;
+  const selectedOrderPaymentMethod = useMemo(() => {
+    return [...(selectedOrder?.paymentTransactions ?? [])]
+      .reverse()
+      .find((transaction) => transaction?.paymentMethod)?.paymentMethod;
+  }, [selectedOrder?.paymentTransactions]);
+  const isSelectedOrderOnlineMethod =
+    selectedOrderPaymentMethod === "VnPay" ||
+    selectedOrderPaymentMethod === "Momo";
+  const shouldRequireCancelRefundInfo =
+    cancelBehavior?.mode === "request" && isSelectedOrderOnlineMethod;
+  const canSubmitCancelRequest =
+    cancelReason.trim().length > 0 &&
+    (!shouldRequireCancelRefundInfo ||
+      (cancelRefundBankName.trim() &&
+        cancelRefundAccountNumber.trim() &&
+        cancelRefundAccountName.trim()));
 
   const retryOrder = useMemo(
     () => orders.find((item) => item.id === retryOrderId) ?? null,
@@ -489,6 +582,51 @@ export const MyOrdersPage = () => {
         : method !== "CashInStore",
     );
   }, [retryOrder]);
+
+  useEffect(() => {
+    if (
+      !cancelOrderId ||
+      !shouldRequireCancelRefundInfo ||
+      vietQrBanks.length
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadVietQrBanks = async () => {
+      try {
+        setIsLoadingVietQrBanks(true);
+        setVietQrBankError(null);
+
+        const response = await fetch("https://api.vietqr.io/v2/banks", {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể tải danh sách ngân hàng");
+        }
+
+        const json = (await response.json()) as { data?: VietQrBank[] };
+        setVietQrBanks(Array.isArray(json.data) ? json.data : []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setVietQrBankError("Không tải được danh sách ngân hàng từ VietQR");
+      } finally {
+        setIsLoadingVietQrBanks(false);
+      }
+    };
+
+    void loadVietQrBanks();
+
+    return () => {
+      controller.abort();
+    };
+  }, [cancelOrderId, shouldRequireCancelRefundInfo, vietQrBanks.length]);
 
   const openRetryPaymentDialog = (order: OrderListItemWithReturnable) => {
     const latestPayment = [...(order.paymentTransactions ?? [])]
@@ -1146,6 +1284,10 @@ export const MyOrdersPage = () => {
           if (actionOrderId === cancelOrderId) return;
           setCancelOrderId(null);
           setCancelReason("");
+          setSelectedCancelRefundBank(null);
+          setCancelRefundBankName("");
+          setCancelRefundAccountNumber("");
+          setCancelRefundAccountName("");
         }}
         maxWidth="sm"
         fullWidth
@@ -1187,6 +1329,150 @@ export const MyOrdersPage = () => {
                 );
               })}
             </Stack>
+
+            {shouldRequireCancelRefundInfo && (
+              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                <Stack spacing={1.25}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Thông tin tài khoản nhận hoàn tiền
+                  </Typography>
+                  <Alert severity="info" sx={{ py: 0.5 }}>
+                    Đơn thanh toán online cần thông tin tài khoản để hỗ trợ hoàn
+                    tiền linh hoạt khi cổng hoàn tự động lỗi hoặc cần chuyển
+                    khoản thủ công.
+                  </Alert>
+                  <Autocomplete
+                    options={vietQrBanks}
+                    freeSolo
+                    value={selectedCancelRefundBank}
+                    inputValue={cancelRefundBankName}
+                    loading={isLoadingVietQrBanks}
+                    getOptionLabel={(option) =>
+                      typeof option === "string"
+                        ? option
+                        : getBankDisplayName(option)
+                    }
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    onInputChange={(_, value) => {
+                      setCancelRefundBankName(value);
+                      if (
+                        selectedCancelRefundBank &&
+                        getBankDisplayName(selectedCancelRefundBank) !== value
+                      ) {
+                        setSelectedCancelRefundBank(null);
+                      }
+                    }}
+                    onChange={(_, bank) => {
+                      if (!bank) {
+                        setSelectedCancelRefundBank(null);
+                        return;
+                      }
+
+                      if (typeof bank === "string") {
+                        setSelectedCancelRefundBank(null);
+                        setCancelRefundBankName(bank);
+                        return;
+                      }
+
+                      setSelectedCancelRefundBank(bank);
+                      setCancelRefundBankName(getBankDisplayName(bank));
+                    }}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props}>
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          alignItems="center"
+                        >
+                          {option.logo ? (
+                            <Box
+                              component="img"
+                              src={option.logo}
+                              alt={
+                                option.shortName ||
+                                option.short_name ||
+                                option.name
+                              }
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                objectFit: "contain",
+                                borderRadius: 0.5,
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 0.5,
+                                bgcolor: "grey.100",
+                              }}
+                            />
+                          )}
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>
+                              {option.shortName ||
+                                option.short_name ||
+                                option.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {option.name}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    )}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Ngân hàng nhận tiền *"
+                        size="small"
+                        error={Boolean(vietQrBankError)}
+                        helperText={
+                          vietQrBankError ||
+                          "Chọn ngân hàng từ danh sách VietQR"
+                        }
+                      />
+                    )}
+                  />
+                  <TextField
+                    label="Số tài khoản *"
+                    value={cancelRefundAccountNumber}
+                    onChange={(e) =>
+                      setCancelRefundAccountNumber(
+                        normalizeRefundAccountNumber(e.target.value),
+                      )
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{
+                      inputMode: "text",
+                      autoCapitalize: "characters",
+                    }}
+                    helperText="Tự động viết HOA, không dấu, không khoảng trắng, không ký tự đặc biệt"
+                  />
+                  <TextField
+                    label="Tên chủ tài khoản *"
+                    value={cancelRefundAccountName}
+                    onChange={(e) =>
+                      setCancelRefundAccountName(
+                        normalizeRefundAccountName(e.target.value),
+                      )
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{ autoCapitalize: "characters" }}
+                    helperText="Tự động viết HOA, không dấu, không ký tự đặc biệt"
+                  />
+                </Stack>
+              </Paper>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -1194,6 +1480,10 @@ export const MyOrdersPage = () => {
             onClick={() => {
               setCancelOrderId(null);
               setCancelReason("");
+              setSelectedCancelRefundBank(null);
+              setCancelRefundBankName("");
+              setCancelRefundAccountNumber("");
+              setCancelRefundAccountName("");
             }}
             disabled={actionOrderId === cancelOrderId}
           >
@@ -1206,7 +1496,7 @@ export const MyOrdersPage = () => {
             disabled={
               !cancelOrderId ||
               actionOrderId === cancelOrderId ||
-              cancelReason.trim().length === 0
+              !canSubmitCancelRequest
             }
           >
             {actionOrderId === cancelOrderId

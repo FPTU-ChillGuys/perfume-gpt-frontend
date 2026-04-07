@@ -85,6 +85,19 @@ const REFUND_METHOD_LABEL: Record<ReturnRefundMethod, string> = {
   ExternalBankTransfer: "External Bank Transfer",
 };
 
+const MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH = 6;
+const REFUND_DIALOG_TOP_NOTE =
+  "Bạn có thể chọn hoàn qua cổng thanh toán ban đầu hoặc chuyển khoản thủ công khi cổng hoàn tự động bị treo/lỗi.";
+const REFUND_DIALOG_METHOD_TITLE = "Chọn phương thức hoàn tiền";
+const REFUND_DIALOG_MANUAL_MISSING_BANK_INFO_NOTE =
+  "Yêu cầu này chưa có đủ thông tin tài khoản ngân hàng của khách. Vui lòng yêu cầu khách bổ sung trước khi duyệt chuyển khoản.";
+const REFUND_DIALOG_MANUAL_REFERENCE_LABEL =
+  "Mã giao dịch chuyển khoản thủ công *";
+const REFUND_DIALOG_MANUAL_REFERENCE_HELPER =
+  "Tối thiểu 6 ký tự (ví dụ: FT123456).";
+const REFUND_DIALOG_CONFIRM_NOTE =
+  "Bạn có chắc chắn muốn xác nhận hoàn tiền cho yêu cầu này không? Hành động này không thể hoàn tác.";
+
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
   if (status === "RequestMoreInfo") return "Bổ sung bằng chứng";
@@ -284,19 +297,8 @@ export const OrderReturnRequestDetailPage = () => {
     request?.refundAccountName,
   );
 
-  const isCodOrder = useMemo(() => {
+  const originalOnlineRefundMethod = useMemo<ReturnRefundMethod | null>(() => {
     const transactions = order?.paymentTransactions ?? [];
-    return transactions.some(
-      (transaction) => transaction.paymentMethod === "CashOnDelivery",
-    );
-  }, [order?.paymentTransactions]);
-
-  const lockedRefundMethod = useMemo<ReturnRefundMethod | null>(() => {
-    const transactions = order?.paymentTransactions ?? [];
-
-    if (isCodOrder || hasRefundBankInfo) {
-      return "ExternalBankTransfer";
-    }
 
     const successfulPayment = transactions.find(
       (transaction) =>
@@ -315,13 +317,29 @@ export const OrderReturnRequestDetailPage = () => {
     }
 
     return null;
-  }, [hasRefundBankInfo, isCodOrder, order?.paymentTransactions]);
+  }, [order?.paymentTransactions]);
 
-  const isRefundMethodLocked = Boolean(lockedRefundMethod);
-  const effectiveRefundMethod = lockedRefundMethod ?? selectedRefundMethod;
-  const isManualCodRefund =
-    effectiveRefundMethod === "ExternalBankTransfer" &&
-    (isCodOrder || hasRefundBankInfo);
+  const refundMethodOptions = useMemo<ReturnRefundMethod[]>(() => {
+    const options: ReturnRefundMethod[] = ["ExternalBankTransfer"];
+
+    if (originalOnlineRefundMethod) {
+      options.unshift(originalOnlineRefundMethod);
+    }
+
+    return options;
+  }, [originalOnlineRefundMethod]);
+
+  const effectiveRefundMethod = selectedRefundMethod;
+  const isManualTransferRefund =
+    effectiveRefundMethod === "ExternalBankTransfer";
+  const trimmedManualTransactionReference = manualTransactionReference.trim();
+  const isManualReferenceTooShort =
+    isManualTransferRefund &&
+    trimmedManualTransactionReference.length <
+      MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH;
+  const selectedRefundModeNote = isManualTransferRefund
+    ? "Đang chọn: Chuyển khoản thủ công"
+    : "Đang chọn: Hoàn qua cổng thanh toán ban đầu";
   const refundAmount = toNumber(
     request?.approvedRefundAmount ??
       request?.requestedRefundAmount ??
@@ -643,10 +661,11 @@ export const OrderReturnRequestDetailPage = () => {
       return;
     }
 
-    const trimmedManualTransactionReference = manualTransactionReference.trim();
-
-    if (isManualCodRefund && !trimmedManualTransactionReference) {
-      showToast("Vui lòng nhập mã giao dịch đã chuyển khoản", "warning");
+    if (isManualReferenceTooShort) {
+      showToast(
+        `Mã giao dịch cần tối thiểu ${MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH} ký tự`,
+        "warning",
+      );
       return;
     }
 
@@ -656,7 +675,7 @@ export const OrderReturnRequestDetailPage = () => {
       await orderService.refundReturnRequest(
         request.id,
         effectiveRefundMethod,
-        isManualCodRefund ? trimmedManualTransactionReference : null,
+        isManualTransferRefund ? trimmedManualTransactionReference : null,
         null,
       );
       await refreshAfterAction("Đã hoàn tiền cho khách hàng");
@@ -1409,11 +1428,9 @@ export const OrderReturnRequestDetailPage = () => {
                       onClick={() => {
                         setManualTransactionReference("");
                         setCopiedRefundInfo(false);
-                        if (lockedRefundMethod) {
-                          setSelectedRefundMethod(lockedRefundMethod);
-                        } else {
-                          setSelectedRefundMethod("ExternalBankTransfer");
-                        }
+                        setSelectedRefundMethod(
+                          originalOnlineRefundMethod ?? "ExternalBankTransfer",
+                        );
                         setRefundConfirmOpen(true);
                       }}
                       disabled={isSaving}
@@ -1622,59 +1639,72 @@ export const OrderReturnRequestDetailPage = () => {
       >
         <DialogTitle>Xác nhận hoàn tiền</DialogTitle>
         <DialogContent>
-          {isRefundMethodLocked ? (
-            <>
-              <Alert severity="info" sx={{ mb: 1.5 }}>
-                {effectiveRefundMethod === "ExternalBankTransfer"
-                  ? "Đơn hàng COD sẽ được hoàn tiền bằng chuyển khoản ngân hàng theo thông tin khách đã cung cấp."
-                  : `Đơn hàng này đã thanh toán bằng ${REFUND_METHOD_LABEL[effectiveRefundMethod]} nên hệ thống chỉ cho phép hoàn tiền bằng đúng phương thức này để đảm bảo truy vết và đối soát giao dịch.`}
-              </Alert>
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            {REFUND_DIALOG_TOP_NOTE}
+          </Alert>
 
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1.25 }}
-              >
-                Phương thức hoàn tiền áp dụng:
-              </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            {REFUND_DIALOG_METHOD_TITLE}
+          </Typography>
 
-              <Stack direction="row" spacing={1.5} mb={2}>
-                {REFUND_METHOD_OPTIONS.filter(
-                  (option) => option.value === effectiveRefundMethod,
-                ).map((option) => (
-                  <Paper
-                    key={option.value}
-                    variant="outlined"
+          <Stack
+            direction="row"
+            spacing={1.5}
+            flexWrap="wrap"
+            useFlexGap
+            mb={2}
+          >
+            {REFUND_METHOD_OPTIONS.filter((option) =>
+              refundMethodOptions.includes(option.value),
+            ).map((option) => {
+              const active = selectedRefundMethod === option.value;
+              return (
+                <Paper
+                  key={option.value}
+                  variant="outlined"
+                  onClick={() => setSelectedRefundMethod(option.value)}
+                  sx={{
+                    px: 1.5,
+                    py: 1,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    borderColor: active ? "#ee4d2d" : "divider",
+                    bgcolor: active ? "rgba(238,77,45,0.06)" : "#fff",
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={option.iconSrc}
+                    alt={option.label}
                     sx={{
-                      px: 1.5,
-                      py: 1,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      borderColor: "#ee4d2d",
-                      bgcolor: "rgba(238,77,45,0.06)",
+                      width: 22,
+                      height: 22,
+                      objectFit: "contain",
+                      borderRadius: 0.5,
                     }}
-                  >
-                    <Box
-                      component="img"
-                      src={option.iconSrc}
-                      alt={option.label}
-                      sx={{
-                        width: 22,
-                        height: 22,
-                        objectFit: "contain",
-                        borderRadius: 0.5,
-                      }}
-                    />
-                    <Typography variant="body2" fontWeight={700}>
-                      {option.label}
-                    </Typography>
-                  </Paper>
-                ))}
-              </Stack>
+                  />
+                  <Typography variant="body2" fontWeight={active ? 700 : 500}>
+                    {option.label}
+                  </Typography>
+                </Paper>
+              );
+            })}
+          </Stack>
 
-              {effectiveRefundMethod === "ExternalBankTransfer" && (
-                <Box sx={{ mb: 2 }}>
+          <Chip
+            label={selectedRefundModeNote}
+            color={isManualTransferRefund ? "warning" : "info"}
+            variant="outlined"
+            size="small"
+            sx={{ mb: 1.5 }}
+          />
+
+          {isManualTransferRefund && (
+            <Box sx={{ mb: 2 }}>
+              {hasRefundBankInfo ? (
+                <Box sx={{ mb: 1.5 }}>
                   <Stack
                     direction={{ xs: "column", md: "row" }}
                     spacing={2}
@@ -1776,85 +1806,24 @@ export const OrderReturnRequestDetailPage = () => {
                     </Box>
                   </Stack>
                 </Box>
+              ) : (
+                <Alert severity="warning" sx={{ mb: 1.5 }}>
+                  {REFUND_DIALOG_MANUAL_MISSING_BANK_INFO_NOTE}
+                </Alert>
               )}
 
-              {isManualCodRefund && (
-                <TextField
-                  fullWidth
-                  required
-                  error={!manualTransactionReference.trim()}
-                  label="Mã giao dịch đã chuyển khoản *"
-                  value={manualTransactionReference}
-                  onChange={(event) =>
-                    setManualTransactionReference(event.target.value)
-                  }
-                  sx={{ mb: 2 }}
-                  helperText="Ví dụ: Mã FT của ngân hàng"
-                />
-              )}
-            </>
-          ) : (
-            <>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 1.5 }}
-              >
-                Chọn phương thức hoàn tiền:
-              </Typography>
-
-              <Stack
-                direction="row"
-                spacing={1.5}
-                flexWrap="wrap"
-                useFlexGap
-                mb={2}
-              >
-                {REFUND_METHOD_OPTIONS.map((option) => {
-                  const active = selectedRefundMethod === option.value;
-                  return (
-                    <Paper
-                      key={option.value}
-                      variant="outlined"
-                      onClick={() => setSelectedRefundMethod(option.value)}
-                      sx={{
-                        px: 1.5,
-                        py: 1,
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        borderColor: active ? "#ee4d2d" : "divider",
-                        bgcolor: active ? "rgba(238,77,45,0.06)" : "#fff",
-                      }}
-                    >
-                      <Box
-                        component="img"
-                        src={option.iconSrc}
-                        alt={option.label}
-                        sx={{
-                          width: 22,
-                          height: 22,
-                          objectFit: "contain",
-                          borderRadius: 0.5,
-                        }}
-                      />
-                      <Typography
-                        variant="body2"
-                        fontWeight={active ? 700 : 500}
-                      >
-                        {option.label}
-                      </Typography>
-                    </Paper>
-                  );
-                })}
-              </Stack>
-
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                Đơn chưa có giao dịch online thành công (ví dụ COD). Hiện tại có
-                thể chọn phương thức hoàn tiền thủ công.
-              </Alert>
-            </>
+              <TextField
+                fullWidth
+                required
+                error={isManualReferenceTooShort}
+                label={REFUND_DIALOG_MANUAL_REFERENCE_LABEL}
+                value={manualTransactionReference}
+                onChange={(event) =>
+                  setManualTransactionReference(event.target.value)
+                }
+                helperText={REFUND_DIALOG_MANUAL_REFERENCE_HELPER}
+              />
+            </Box>
           )}
 
           <Box
@@ -1881,10 +1850,7 @@ export const OrderReturnRequestDetailPage = () => {
             </Box>
           </Box>
 
-          <Typography>
-            Bạn có chắc chắn muốn xác nhận hoàn tiền cho yêu cầu này không? Hành
-            động này không thể hoàn tác.
-          </Typography>
+          <Typography variant="body2">{REFUND_DIALOG_CONFIRM_NOTE}</Typography>
         </DialogContent>
         <DialogActions>
           <Button
@@ -1901,7 +1867,8 @@ export const OrderReturnRequestDetailPage = () => {
             }}
             disabled={
               isSaving ||
-              (isManualCodRefund && !manualTransactionReference.trim())
+              (isManualTransferRefund &&
+                (!hasRefundBankInfo || isManualReferenceTooShort))
             }
           >
             {isSaving ? <CircularProgress size={24} /> : "Xác nhận hoàn tiền"}

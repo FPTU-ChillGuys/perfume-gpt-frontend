@@ -1570,6 +1570,11 @@ class OrderService {
   async cancelOrder(
     orderId: string,
     reason?: CancelOrderReason,
+    refundInfo?: {
+      refundBankName?: string | null;
+      refundAccountNumber?: string | null;
+      refundAccountName?: string | null;
+    },
   ): Promise<string> {
     try {
       const response = await apiInstance.POST("/api/orders/{orderId}/cancel", {
@@ -1578,6 +1583,9 @@ class OrderService {
         },
         body: {
           reason: reason || undefined,
+          refundBankName: refundInfo?.refundBankName ?? null,
+          refundAccountNumber: refundInfo?.refundAccountNumber ?? null,
+          refundAccountName: refundInfo?.refundAccountName ?? null,
         },
       });
 
