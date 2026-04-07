@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -224,6 +224,7 @@ const MediaPreviewDialog = ({
 
 export const OrderReturnRequestDetailPage = () => {
   const { showToast } = useToast();
+  const showToastRef = useRef(showToast);
   const navigate = useNavigate();
   const location = useLocation();
   const { returnRequestId } = useParams<{ returnRequestId: string }>();
@@ -448,6 +449,12 @@ export const OrderReturnRequestDetailPage = () => {
   >(null);
   const shouldShowStaffNote =
     request?.status === "Rejected" || request?.status === "RequestMoreInfo";
+  const canStartInspection =
+    request?.returnShippingInfo?.status === "Delivered";
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
 
   const loadDetail = useCallback(async () => {
     if (!returnRequestId) {
@@ -480,14 +487,14 @@ export const OrderReturnRequestDetailPage = () => {
       setInspectionRestocked(Boolean(fullRequest.isRestocked));
       setInspectionResultNote(fullRequest.inspectionNote || "");
     } catch (error) {
-      showToast(
+      showToastRef.current(
         error instanceof Error ? error.message : "Không thể tải chi tiết",
         "error",
       );
     } finally {
       setIsLoading(false);
     }
-  }, [returnRequestId, showToast]);
+  }, [returnRequestId]);
 
   useEffect(() => {
     void loadDetail();
@@ -1279,6 +1286,14 @@ export const OrderReturnRequestDetailPage = () => {
                   <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
                     Bắt đầu kiểm định khi shop đã nhận hàng
                   </Typography>
+
+                  {!canStartInspection && (
+                    <Alert severity="warning" sx={{ mb: 1.5 }}>
+                      Kiện hàng hoàn chưa giao tới kho. Chỉ có thể bắt đầu kiểm
+                      định khi trạng thái vận chuyển là "Giao hàng thành công".
+                    </Alert>
+                  )}
+
                   <Stack direction="row" justifyContent="flex-end">
                     <Button
                       variant="contained"
@@ -1286,7 +1301,7 @@ export const OrderReturnRequestDetailPage = () => {
                       onClick={() => {
                         void handleStartInspection();
                       }}
-                      disabled={isSaving}
+                      disabled={isSaving || !canStartInspection}
                     >
                       Bắt đầu kiểm định
                     </Button>
