@@ -264,7 +264,7 @@ export const CounterCheckoutStaffPage = () => {
       return;
     }
 
-    const payload: CreateInStoreOrderRequest = {
+    const payload: any = {
       voucherCode: voucherCode.trim() || null,
       isPickupInStore: true,
       orderDetails: validOrderDetails,
