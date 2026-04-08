@@ -33,7 +33,7 @@ import {
   LightMode as LightModeIcon,
   DoneAll as DoneAllIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
 import { useThemeMode } from "../../contexts/ThemeContext";
@@ -64,6 +64,7 @@ const toVietnameseCategoryName = (name?: string | null) => {
 
 export const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { cartCount } = useCart();
   const { mode, toggleMode } = useThemeMode();
@@ -114,6 +115,9 @@ export const Header = () => {
   const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
   const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
   const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
+  const isStaffHomepageOrStaffPage =
+    user?.role === "staff" &&
+    (location.pathname === "/" || location.pathname.startsWith("/staff"));
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -480,7 +484,7 @@ export const Header = () => {
                       <Typography variant="body2">Trang chủ</Typography>
                     </MenuItem>
                   )}
-                  {(user.role === "admin" || user.role === "staff") && (
+                  {isStaffHomepageOrStaffPage && (
                     <MenuItem onClick={handleCounterCheckout} sx={{ py: 1.5 }}>
                       <ListItemIcon>
                         <PointOfSaleIcon fontSize="small" />
@@ -488,7 +492,7 @@ export const Header = () => {
                       <Typography variant="body2">Checkout tại quầy</Typography>
                     </MenuItem>
                   )}
-                  {(user.role === "admin" || user.role === "staff") && (
+                  {isStaffHomepageOrStaffPage && (
                     <MenuItem onClick={handleCounterDisplay} sx={{ py: 1.5 }}>
                       <ListItemIcon>
                         <TvIcon fontSize="small" />
@@ -613,7 +617,7 @@ export const Header = () => {
               "&:hover": { color: "primary.main" },
             }}
           >
-            Quiz AI
+            Survey AI
           </Button>
         </Box>
       </Container>

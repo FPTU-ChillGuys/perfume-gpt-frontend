@@ -34,6 +34,8 @@ import {
   AddBox as AddBoxIcon,
   Category as CategoryIcon,
   ShoppingCart as ShoppingCartIcon,
+  PointOfSale as PointOfSaleIcon,
+  Tv as TvIcon,
   Cancel as CancelIcon,
   AssignmentReturn as AssignmentReturnIcon,
   Slideshow as SlideshowIcon,
@@ -670,6 +672,34 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               </Typography>
             </MenuItem>
             <Divider />
+            {user?.role === "staff" && (
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  navigate("/checkout/counter/staff");
+                }}
+                sx={{ py: 1.5 }}
+              >
+                <ListItemIcon>
+                  <PointOfSaleIcon fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="body2">Checkout tại quầy</Typography>
+              </MenuItem>
+            )}
+            {user?.role === "staff" && (
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  navigate("/checkout/counter/display");
+                }}
+                sx={{ py: 1.5 }}
+              >
+                <ListItemIcon>
+                  <TvIcon fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="body2">Màn hình khách tại quầy</Typography>
+              </MenuItem>
+            )}
             <MenuItem
               onClick={() => {
                 handleMenuClose();

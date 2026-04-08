@@ -58,9 +58,9 @@ const CounterCheckoutStaffPage = lazy(() =>
     default: m.CounterCheckoutStaffPage,
   })),
 );
-const CounterCheckoutDisplayPage = lazy(() =>
-  import("./pages/checkout/CounterCheckoutDisplayPage").then((m) => ({
-    default: m.CounterCheckoutDisplayPage,
+const CustomerDisplayScreen = lazy(() =>
+  import("./pages/checkout/CustomerDisplayScreen").then((m) => ({
+    default: m.CustomerDisplayScreen,
   })),
 );
 const PaymentSuccessPage = lazy(() =>
@@ -261,7 +261,7 @@ function App() {
                       />
                       <Route
                         path="/checkout/counter/display"
-                        element={<CounterCheckoutDisplayPage />}
+                        element={<CustomerDisplayScreen />}
                       />
                       <Route path="/products" element={<ProductListPage />} />
                       <Route path="/quiz" element={<QuizPage />} />

@@ -11233,6 +11233,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/for-pos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    phoneOrEmail?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/staff-lookup": {
         parameters: {
             query?: never;
@@ -12160,6 +12221,13 @@ export interface components {
         };
         BaseResponseOfCreateImportTicketRequest: {
             payload?: null | components["schemas"]["CreateImportTicketRequest"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfCustomerForPosResponse: {
+            payload?: null | components["schemas"]["CustomerForPosResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -13132,6 +13200,15 @@ export interface components {
             familyId?: number;
             familyName: string;
         };
+        CustomerForPosResponse: {
+            /** Format: uuid */
+            id?: string;
+            fullName: string;
+            phoneNumber: string;
+            email: string;
+            /** Format: int32 */
+            loyaltyPoint?: number;
+        };
         CustomerNotePreferenceResponse: {
             /** Format: int32 */
             noteId?: number;
@@ -13363,8 +13440,6 @@ export interface components {
         /** @enum {string} */
         LoyaltyTransactionType: "Spend" | "Earn";
         ManualChangeRequest: {
-            /** Format: uuid */
-            userId?: string;
             transactionType?: components["schemas"]["LoyaltyTransactionType"];
             /** Format: int32 */
             points?: number;
