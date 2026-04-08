@@ -73,6 +73,14 @@ const formatDate = (dateStr?: string) => {
 const getDisplayOrderCode = (order?: OrderListItem | null) =>
   order?.code || order?.id || "-";
 
+const getDisplayCustomerName = (customerName?: string | null) => {
+  const normalized = (customerName || "").trim();
+  if (!normalized || normalized.toUpperCase() === "N/A") {
+    return "Khách lẻ";
+  }
+  return normalized;
+};
+
 export const OrderManagementPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -440,7 +448,7 @@ export const OrderManagementPage = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {order.customerName || "N/A"}
+                        {getDisplayCustomerName(order.customerName)}
                       </Typography>
                     </TableCell>
                     <TableCell>

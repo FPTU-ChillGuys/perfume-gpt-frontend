@@ -8,16 +8,54 @@ type UseSignalROptions = {
 };
 
 const resolvePosHubUrl = () => {
+  const explicitHubUrl = (
+    (import.meta.env.VITE_POS_HUB_URL as string | undefined) ||
+    (import.meta.env.VITE_SIGNALR_POS_HUB_URL as string | undefined)
+  )
+    ?.trim()
+    .replace(/\/+$/, "");
+
   const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
     ?.trim()
     .replace(/\/+$/, "");
 
-  if (baseUrl) {
+  const resolveFromBase = (path: string, base?: string) => {
+    if (!base) return undefined;
+
     try {
-      return new URL("/posHub", `${baseUrl}/`).toString();
+      const baseAsUrl = new URL(base);
+      return new URL(path, `${baseAsUrl.origin}/`).toString();
     } catch {
-      return `${baseUrl}/posHub`;
+      return undefined;
     }
+  };
+
+  if (explicitHubUrl) {
+    if (/^https?:\/\//i.test(explicitHubUrl)) {
+      return explicitHubUrl;
+    }
+
+    const fromApiBase = resolveFromBase(explicitHubUrl, baseUrl);
+    if (fromApiBase) return fromApiBase;
+
+    if (typeof window !== "undefined") {
+      try {
+        return new URL(explicitHubUrl, `${window.location.origin}/`).toString();
+      } catch {
+        return `${window.location.origin}${
+          explicitHubUrl.startsWith("/") ? "" : "/"
+        }${explicitHubUrl}`;
+      }
+    }
+
+    return explicitHubUrl;
+  }
+
+  if (baseUrl) {
+    const fromBase = resolveFromBase("/posHub", baseUrl);
+    if (fromBase) return fromBase;
+
+    return `${baseUrl}/posHub`;
   }
 
   if (typeof window !== "undefined") {
@@ -28,6 +66,62 @@ const resolvePosHubUrl = () => {
 };
 
 export const POS_HUB_URL = resolvePosHubUrl();
+
+const normalizeHubCandidate = (value?: string | null) => {
+  const raw = (value || "").trim();
+  if (!raw) return "";
+
+  try {
+    return new URL(raw).toString().replace(/\/+$/, "");
+  } catch {
+    return raw.replace(/\/+$/, "");
+  }
+};
+
+const addCandidate = (set: Set<string>, value?: string | null) => {
+  const normalized = normalizeHubCandidate(value);
+  if (!normalized) return;
+  set.add(normalized);
+};
+
+const buildHubUrlCandidates = (primaryHubUrl: string) => {
+  const candidates = new Set<string>();
+
+  const expand = (candidate: string) => {
+    addCandidate(candidates, candidate);
+
+    try {
+      const parsed = new URL(candidate);
+      const normalizedPath = parsed.pathname.replace(/\/+$/, "").toLowerCase();
+
+      if (!normalizedPath.endsWith("/poshub")) {
+        addCandidate(
+          candidates,
+          new URL("/posHub", `${parsed.origin}/`).toString(),
+        );
+      }
+    } catch {
+      // Ignore non-URL candidate expansions.
+    }
+  };
+
+  expand(primaryHubUrl);
+
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+    ?.trim()
+    .replace(/\/+$/, "");
+
+  if (baseUrl) {
+    try {
+      const parsedBase = new URL(baseUrl);
+      expand(new URL("/posHub", `${parsedBase.origin}/`).toString());
+    } catch {
+      // ignore malformed base URL
+    }
+  }
+
+  return Array.from(candidates);
+};
 
 const normalizeToken = (rawToken: string | null | undefined): string => {
   if (!rawToken) return "";
@@ -150,114 +244,148 @@ export const useSignalR = <T = unknown>({
           startPromiseRef.current = null;
         }
 
-        const connection = new signalR.HubConnectionBuilder()
-          .withUrl(hubUrl, {
-            accessTokenFactory: () => accessToken,
-            transport: signalR.HttpTransportType.LongPolling,
-          })
-          .withAutomaticReconnect()
-          .build();
+        const hubUrlCandidates = buildHubUrlCandidates(hubUrl);
+        let connected = false;
+        let lastSetupError: unknown = null;
 
-        connection.on("UpdateCustomerDisplay", (data: T) => {
+        for (const candidateUrl of hubUrlCandidates) {
           if (!isMounted) return;
-          setCustomerDisplayData(data);
-          setLastEvent("received-update-customer-display");
-        });
 
-        connection.onclose((closeError) => {
-          if (isMounted) {
-            setIsConnected(false);
-            setSafeConnectionState(
-              signalR.HubConnectionState.Disconnected,
-              closeError ? "closed-with-error" : "closed",
-            );
+          const connection = new signalR.HubConnectionBuilder()
+            .withUrl(candidateUrl, {
+              accessTokenFactory: () => accessToken,
+              transport: signalR.HttpTransportType.LongPolling,
+            })
+            .configureLogging(signalR.LogLevel.None)
+            .withAutomaticReconnect()
+            .build();
 
-            if (closeError) {
-              setError(closeError.message || "SignalR connection closed.");
+          connection.on("UpdateCustomerDisplay", (data: T) => {
+            if (!isMounted) return;
+            setCustomerDisplayData(data);
+            setLastEvent("received-update-customer-display");
+          });
+
+          connection.onclose((closeError) => {
+            if (isMounted) {
+              setIsConnected(false);
+              setSafeConnectionState(
+                signalR.HubConnectionState.Disconnected,
+                closeError ? "closed-with-error" : "closed",
+              );
+
+              if (closeError) {
+                setError(closeError.message || "SignalR connection closed.");
+              }
             }
-          }
-        });
+          });
 
-        connection.onreconnecting(() => {
-          if (isMounted) {
-            setIsConnected(false);
-            setSafeConnectionState(
-              signalR.HubConnectionState.Reconnecting,
-              "reconnecting",
-            );
-          }
-        });
+          connection.onreconnecting(() => {
+            if (isMounted) {
+              setIsConnected(false);
+              setSafeConnectionState(
+                signalR.HubConnectionState.Reconnecting,
+                "reconnecting",
+              );
+            }
+          });
 
-        connection.onreconnected(async () => {
-          if (!isMounted) return;
+          connection.onreconnected(async () => {
+            if (!isMounted) return;
+
+            try {
+              await connection.invoke("JoinPosSession", sessionId);
+              setIsConnected(true);
+              setSafeConnectionState(
+                signalR.HubConnectionState.Connected,
+                "reconnected-and-joined",
+              );
+
+              const pendingPayload = pendingSyncPayloadRef.current;
+              if (pendingPayload !== null) {
+                await invokeSyncToCustomer(pendingPayload);
+              }
+            } catch (rejoinError) {
+              if (isMounted) {
+                setError(
+                  rejoinError instanceof Error
+                    ? rejoinError.message
+                    : "Không thể khôi phục kết nối SignalR",
+                );
+                setIsConnected(false);
+              }
+              setSafeConnectionState(
+                signalR.HubConnectionState.Disconnected,
+                "reconnect-failed",
+              );
+            }
+          });
 
           try {
+            setLastEvent(`trying:${candidateUrl}`);
+
+            const startPromise = connection.start();
+            startPromiseRef.current = startPromise;
+            await startPromise;
+            if (startPromiseRef.current === startPromise) {
+              startPromiseRef.current = null;
+            }
+
+            if (!isMounted) {
+              try {
+                await connection.stop();
+              } catch {
+                // ignore stop for stale strict-mode effect
+              }
+              return;
+            }
+
             await connection.invoke("JoinPosSession", sessionId);
+            if (!isMounted) {
+              try {
+                await connection.stop();
+              } catch {
+                // ignore stop for stale strict-mode effect
+              }
+              return;
+            }
+
+            connectionRef.current = connection;
+            connected = true;
             setIsConnected(true);
+            setError(null);
             setSafeConnectionState(
               signalR.HubConnectionState.Connected,
-              "reconnected-and-joined",
+              "connected-and-joined",
             );
 
             const pendingPayload = pendingSyncPayloadRef.current;
             if (pendingPayload !== null) {
               await invokeSyncToCustomer(pendingPayload);
             }
-          } catch (rejoinError) {
-            if (isMounted) {
-              setError(
-                rejoinError instanceof Error
-                  ? rejoinError.message
-                  : "Không thể khôi phục kết nối SignalR",
-              );
-              setIsConnected(false);
+
+            break;
+          } catch (attemptError) {
+            lastSetupError = attemptError;
+            if (startPromiseRef.current) {
+              startPromiseRef.current = null;
             }
-            setSafeConnectionState(
-              signalR.HubConnectionState.Disconnected,
-              "reconnect-failed",
-            );
+
+            try {
+              await connection.stop();
+            } catch {
+              // ignore per-candidate stop errors
+            }
           }
-        });
-
-        connectionRef.current = connection;
-
-        const startPromise = connection.start();
-        startPromiseRef.current = startPromise;
-
-        await startPromise;
-        if (startPromiseRef.current === startPromise) {
-          startPromiseRef.current = null;
         }
 
-        if (!isMounted) {
-          try {
-            await connection.stop();
-          } catch {
-            // ignore stop for stale strict-mode effect
-          }
-          return;
-        }
-
-        await connection.invoke("JoinPosSession", sessionId);
-        if (!isMounted) {
-          try {
-            await connection.stop();
-          } catch {
-            // ignore stop for stale strict-mode effect
-          }
-          return;
-        }
-
-        setIsConnected(true);
-        setError(null);
-        setSafeConnectionState(
-          signalR.HubConnectionState.Connected,
-          "connected-and-joined",
-        );
-
-        const pendingPayload = pendingSyncPayloadRef.current;
-        if (pendingPayload !== null) {
-          await invokeSyncToCustomer(pendingPayload);
+        if (!connected) {
+          throw (
+            lastSetupError ||
+            new Error(
+              `Không thể kết nối POS Hub. Đã thử: ${hubUrlCandidates.join(", ")}`,
+            )
+          );
         }
       } catch (setupError) {
         if (isMounted) {

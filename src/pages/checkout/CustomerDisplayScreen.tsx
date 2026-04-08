@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { CheckCircleRounded, OpenInNew } from "@mui/icons-material";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 import type { PosPreviewResponse } from "@/services/posService";
+import { QRCodeSVG } from "qrcode.react";
 
 const formatCurrency = (value?: number) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))}đ`;
@@ -21,10 +23,13 @@ type DisplayItem = {
 };
 
 export const CustomerDisplayScreen = () => {
-  const { customerDisplayData } = useSignalR<PosPreviewResponse>({
+  const { customerDisplayData, isConnected } = useSignalR<PosPreviewResponse>({
     hubUrl: POS_HUB_URL,
     sessionId: "COUNTER_01",
   });
+  const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
+  const [activePaymentUrl, setActivePaymentUrl] = useState("");
+  const previousItemCountRef = useRef(0);
 
   const items = useMemo<DisplayItem[]>(() => {
     const rawItems = readProp<unknown[]>(customerDisplayData, "items", "Items");
@@ -101,8 +106,128 @@ export const CustomerDisplayScreen = () => {
     return Number(totalPrice ?? subTotal ?? 0);
   }, [customerDisplayData]);
 
+  const paymentUrl = useMemo(() => {
+    return (
+      readProp<string>(customerDisplayData, "paymentUrl", "PaymentUrl") || ""
+    ).trim();
+  }, [customerDisplayData]);
+
+  useEffect(() => {
+    if (!paymentUrl) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      setActivePaymentUrl(paymentUrl);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [paymentUrl]);
+
+  useEffect(() => {
+    // A new non-empty cart with no payment URL indicates a new checkout flow.
+    if (items.length === 0 || paymentUrl) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      setActivePaymentUrl("");
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [items.length, paymentUrl]);
+
+  const displayPaymentUrl = activePaymentUrl || paymentUrl;
+
+  useEffect(() => {
+    const previousCount = previousItemCountRef.current;
+    const currentCount = items.length;
+    let frameId: number | undefined;
+
+    if (
+      previousCount > 0 &&
+      currentCount === 0 &&
+      !displayPaymentUrl &&
+      isConnected &&
+      Boolean(customerDisplayData)
+    ) {
+      frameId = window.requestAnimationFrame(() => {
+        setShowCheckoutSuccess(true);
+      });
+    }
+
+    previousItemCountRef.current = currentCount;
+
+    return () => {
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, [customerDisplayData, displayPaymentUrl, isConnected, items.length]);
+
+  useEffect(() => {
+    if (!displayPaymentUrl) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      setShowCheckoutSuccess(false);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [displayPaymentUrl]);
+
+  useEffect(() => {
+    if (!showCheckoutSuccess) return;
+
+    const timerId = window.setTimeout(() => {
+      setShowCheckoutSuccess(false);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [showCheckoutSuccess]);
+
   return (
     <div className="h-screen w-full overflow-hidden bg-slate-950 text-white">
+      {displayPaymentUrl && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]">
+          <div className="mx-4 w-full max-w-md rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl">
+            <p className="text-2xl font-black text-sky-700">
+              Vui lòng quét mã để thanh toán
+            </p>
+            <div className="mx-auto mt-4 w-fit rounded-2xl border border-slate-200 bg-white p-2">
+              <QRCodeSVG value={displayPaymentUrl} size={240} />
+            </div>
+            <button
+              type="button"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              onClick={() =>
+                window.open(displayPaymentUrl, "_blank", "noopener,noreferrer")
+              }
+            >
+              <OpenInNew fontSize="small" />
+              Mở link thanh toán (test)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showCheckoutSuccess && (
+        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]">
+          <div className="mx-4 w-full max-w-md rounded-3xl bg-white p-8 text-center text-slate-900 shadow-2xl">
+            <CheckCircleRounded className="mx-auto mb-3 text-7xl text-emerald-600 animate-pulse" />
+            <p className="text-3xl font-black text-emerald-700">
+              Thanh toán thành công
+            </p>
+            <p className="mt-2 text-base text-slate-600">
+              Cảm ơn quý khách. Đơn hàng đã được xử lý.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid h-full grid-cols-1 lg:grid-cols-3">
         <section className="relative lg:col-span-1">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(236,72,153,0.35),transparent_45%),radial-gradient(circle_at_80%_0%,rgba(251,191,36,0.25),transparent_40%),linear-gradient(135deg,#111827,#020617_55%,#3f1d2e)]" />

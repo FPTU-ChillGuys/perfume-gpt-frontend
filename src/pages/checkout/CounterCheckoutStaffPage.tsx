@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Add, Delete, Remove, Search } from "@mui/icons-material";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Add,
+  CheckCircleRounded,
+  Delete,
+  OpenInNew,
+  Remove,
+  Search,
+} from "@mui/icons-material";
 import {
   Alert,
   Autocomplete,
@@ -26,6 +33,7 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import { QRCodeSVG } from "qrcode.react";
 import { BatchSelectionModal } from "@/components/checkout/BatchSelectionModal";
 import { PosBarcodeScanner } from "@/components/checkout/PosBarcodeScanner";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -150,6 +158,7 @@ type CartDisplaySyncPayload = {
   subTotal: number;
   discount: number;
   totalPrice: number;
+  paymentUrl?: string | null;
 };
 
 const toGuidOrEmpty = (value?: string | null) => {
@@ -221,6 +230,12 @@ export const CounterCheckoutStaffPage = () => {
   const [isLoadingWards, setIsLoadingWards] = useState(false);
   const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
+  const [checkoutSuccessRef, setCheckoutSuccessRef] = useState<string | null>(
+    null,
+  );
+  const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null);
+  const paymentQrUrlRef = useRef<string | null>(null);
+  const [isPaymentQrOpen, setIsPaymentQrOpen] = useState(false);
 
   const totalQuantityInCart = useMemo(
     () => cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
@@ -230,6 +245,22 @@ export const CounterCheckoutStaffPage = () => {
   const paymentMethodsByMode = isPickupInStore
     ? PICKUP_PAYMENT_METHODS
     : DELIVERY_PAYMENT_METHODS;
+
+  useEffect(() => {
+    if (!checkoutSuccessRef) return;
+
+    const timerId = window.setTimeout(() => {
+      setCheckoutSuccessRef(null);
+    }, 2600);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [checkoutSuccessRef]);
+
+  useEffect(() => {
+    paymentQrUrlRef.current = paymentQrUrl;
+  }, [paymentQrUrl]);
 
   const validateCheckoutInputs = () => {
     if (cartItems.length === 0) {
@@ -709,6 +740,7 @@ export const CounterCheckoutStaffPage = () => {
         subTotal: toSafeNumber(data.subTotal ?? computedSubTotal),
         discount: toSafeNumber(data.discount ?? computedDiscount),
         totalPrice: toSafeNumber(data.totalPrice ?? computedTotal),
+        paymentUrl: null,
       };
     },
     [cartItems],
@@ -724,6 +756,7 @@ export const CounterCheckoutStaffPage = () => {
         subTotal: 0,
         discount: 0,
         totalPrice: 0,
+        paymentUrl: paymentQrUrlRef.current,
       } satisfies CartDisplaySyncPayload);
       return;
     }
@@ -881,12 +914,29 @@ export const CounterCheckoutStaffPage = () => {
       setIsSubmittingCheckout(true);
       const result = await orderService.checkoutInStore(payload);
 
+      if (result.url) {
+        paymentQrUrlRef.current = result.url;
+        setPaymentQrUrl(result.url);
+        setIsPaymentQrOpen(true);
+        void syncCartToCustomer({
+          items: [],
+          subTotal: 0,
+          discount: 0,
+          totalPrice: 0,
+          paymentUrl: result.url,
+        } satisfies CartDisplaySyncPayload);
+      } else {
+        paymentQrUrlRef.current = null;
+        setPaymentQrUrl(null);
+      }
+
       showToast(
         result.orderId
           ? `Checkout thành công. Mã đơn: ${result.orderId}`
           : "Checkout thành công",
         "success",
       );
+      setCheckoutSuccessRef(result.orderId ?? "");
 
       if (paymentMethodAtCheckout === "CashInStore") {
         void (async () => {
@@ -1707,6 +1757,89 @@ export const CounterCheckoutStaffPage = () => {
               Xác nhận checkout
             </Button>
           </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={isPaymentQrOpen && Boolean(paymentQrUrl)}
+          onClose={() => setIsPaymentQrOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Mã QR thanh toán</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2} alignItems="center">
+              {paymentQrUrl && (
+                <Box
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    p: 1,
+                    bgcolor: "white",
+                  }}
+                >
+                  <QRCodeSVG value={paymentQrUrl} size={240} />
+                </Box>
+              )}
+
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                textAlign="center"
+              >
+                Khách hàng có thể quét QR để thanh toán VNPay/MoMo.
+              </Typography>
+              {paymentQrUrl && (
+                <Button
+                  variant="outlined"
+                  startIcon={<OpenInNew />}
+                  onClick={() =>
+                    window.open(paymentQrUrl, "_blank", "noopener,noreferrer")
+                  }
+                >
+                  Mở link thanh toán (test)
+                </Button>
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setIsPaymentQrOpen(false)}>Đóng</Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(checkoutSuccessRef)}
+          onClose={() => setCheckoutSuccessRef(null)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogContent
+            sx={{
+              py: 4,
+              textAlign: "center",
+              "@keyframes checkoutSuccessPop": {
+                "0%": { transform: "scale(0.75)", opacity: 0 },
+                "60%": { transform: "scale(1.08)", opacity: 1 },
+                "100%": { transform: "scale(1)", opacity: 1 },
+              },
+            }}
+          >
+            <CheckCircleRounded
+              sx={{
+                fontSize: 64,
+                color: "success.main",
+                animation: "checkoutSuccessPop 420ms ease-out",
+              }}
+            />
+            <Typography variant="h6" fontWeight={800} mt={1.5}>
+              Checkout thành công
+            </Typography>
+            {checkoutSuccessRef && (
+              <Typography variant="body2" color="text.secondary" mt={0.5}>
+                Mã tham chiếu: {checkoutSuccessRef}
+              </Typography>
+            )}
+          </DialogContent>
         </Dialog>
 
         <BatchSelectionModal

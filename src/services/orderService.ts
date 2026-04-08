@@ -1279,8 +1279,29 @@ class OrderService {
         throw new Error(response.data?.message || "Checkout failed");
       }
 
+      const payload = response.data.payload as
+        | string
+        | { url?: string; orderId?: string }
+        | null
+        | undefined;
+
+      if (typeof payload === "string") {
+        const isRedirectUrl = /^https?:\/\//i.test(payload);
+        return {
+          url: isRedirectUrl ? payload : undefined,
+          orderId: isRedirectUrl ? undefined : payload,
+        };
+      }
+
+      if (payload && typeof payload === "object") {
+        return {
+          url: payload.url,
+          orderId: payload.orderId,
+        };
+      }
+
       return {
-        orderId: response.data.payload ?? undefined,
+        orderId: undefined,
         url: undefined,
       };
     } catch (error: any) {
