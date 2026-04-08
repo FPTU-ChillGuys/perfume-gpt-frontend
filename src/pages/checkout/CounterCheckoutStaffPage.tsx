@@ -920,6 +920,24 @@ export const CounterCheckoutStaffPage = () => {
       lastPaidOrderIdRef.current = orderId;
       setFailedPaymentAction(null);
 
+      // Đồng bộ state local như luồng thanh toán thành công thông thường.
+      setCartItems([]);
+      setSearchResults([]);
+      setSearchKeyword("");
+      setVoucherInput("");
+      setAppliedVoucherCode("");
+      setCustomerLookupKeyword("");
+      setCustomerLookupResults([]);
+      setRecipientName("");
+      setRecipientPhone("");
+      setStreetAddress("");
+      setSelectedProvince(null);
+      setSelectedDistrict(null);
+      setSelectedWard(null);
+      setDistricts([]);
+      setWards([]);
+      handleClearSelectedCustomer();
+
       void syncCartToCustomerRef.current({
         items: [],
         subTotal: 0,
@@ -928,14 +946,34 @@ export const CounterCheckoutStaffPage = () => {
         paymentUrl: null,
       } satisfies CartDisplaySyncPayload);
 
+      console.log("[POS][NOTIFY_SUCCESS] Start", {
+        orderId,
+        paymentId,
+        posSessionId: POS_SESSION_ID,
+      });
+
       void notifyPaymentSuccess({
         orderId,
         paymentId,
         status: "Success",
         message: "Thanh toán thành công",
-      }).catch(() => {
-        // Backend may already broadcast success event; ignore duplicate notify errors.
-      });
+      })
+        .then(() => {
+          console.log("[POS][NOTIFY_SUCCESS] Success", {
+            orderId,
+            paymentId,
+          });
+        })
+        .catch((error) => {
+          console.warn("[POS][NOTIFY_SUCCESS] Failed", {
+            orderId,
+            paymentId,
+            error:
+              error instanceof Error
+                ? error.message
+                : "Unknown notifyPaymentSuccess error",
+          });
+        });
     },
     [notifyPaymentSuccess],
   );
@@ -1133,11 +1171,15 @@ export const CounterCheckoutStaffPage = () => {
     });
 
     if (rawOrderId && rawOrderId === lastPaidOrderIdRef.current) {
-      console.log("[POS][PAYMENT_FAILED_EVENT] Ignored stale fail after success", {
-        orderId: rawOrderId,
-        paymentId: rawPaymentId || null,
-        lastPaidOrderId: lastPaidOrderIdRef.current,
-      });
+      console.log(
+        "[POS][PAYMENT_FAILED_EVENT] Ignored stale fail after success",
+        {
+          orderId: rawOrderId,
+          paymentId: rawPaymentId || null,
+          lastPaidOrderId: lastPaidOrderIdRef.current,
+        },
+      );
+      handledPaymentFailedEventRef.current = failedEventKey;
       return;
     }
 

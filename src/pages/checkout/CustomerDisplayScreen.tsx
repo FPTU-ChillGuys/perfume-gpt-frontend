@@ -1,5 +1,5 @@
 import { CheckCircleRounded, OpenInNew } from "@mui/icons-material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 import type { PosPreviewResponse } from "@/services/posService";
 import { QRCodeSVG } from "qrcode.react";
@@ -53,6 +53,9 @@ export const CustomerDisplayScreen = () => {
   });
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
+  const hadPaymentFlowRef = useRef(false);
+  const lastFailedOrderIdRef = useRef("");
+  const lastSuccessfulOrderIdRef = useRef("");
 
   const items = useMemo<DisplayItem[]>(() => {
     const rawItems = readProp<unknown[]>(customerDisplayData, "items", "Items");
@@ -165,6 +168,8 @@ export const CustomerDisplayScreen = () => {
   useEffect(() => {
     if (!displayPaymentUrl) return;
 
+    hadPaymentFlowRef.current = true;
+
     const frameId = window.requestAnimationFrame(() => {
       setShowCheckoutSuccess(false);
     });
@@ -193,8 +198,18 @@ export const CustomerDisplayScreen = () => {
     const rawStatus =
       paymentCompletedData.status || (paymentCompletedData as any).Status || "";
 
+    const rawOrderId =
+      paymentCompletedData.orderId ||
+      (paymentCompletedData as { OrderId?: string }).OrderId ||
+      "";
+
     if (rawStatus.toLowerCase() !== "success") {
       return;
+    }
+
+    if (rawOrderId) {
+      lastSuccessfulOrderIdRef.current = rawOrderId;
+      lastFailedOrderIdRef.current = "";
     }
 
     const frameId = window.requestAnimationFrame(() => {
@@ -215,9 +230,21 @@ export const CustomerDisplayScreen = () => {
       (paymentFailedData as { Status?: string }).Status ||
       "";
     const normalizedStatus = rawStatus.toLowerCase();
+    const rawOrderId =
+      paymentFailedData.orderId ||
+      (paymentFailedData as { OrderId?: string }).OrderId ||
+      "";
 
     if (normalizedStatus !== "failed" && normalizedStatus !== "error") {
       return;
+    }
+
+    if (rawOrderId && rawOrderId === lastSuccessfulOrderIdRef.current) {
+      return;
+    }
+
+    if (rawOrderId) {
+      lastFailedOrderIdRef.current = rawOrderId;
     }
 
     const frameId = window.requestAnimationFrame(() => {
@@ -240,6 +267,8 @@ export const CustomerDisplayScreen = () => {
 
     if (!link) return;
 
+    hadPaymentFlowRef.current = true;
+
     const frameId = window.requestAnimationFrame(() => {
       setActivePaymentUrl(link);
       setShowCheckoutSuccess(false);
@@ -249,6 +278,28 @@ export const CustomerDisplayScreen = () => {
       window.cancelAnimationFrame(frameId);
     };
   }, [paymentLinkUpdatedData]);
+
+  useEffect(() => {
+    if (!customerDisplayData) return;
+    if (showCheckoutSuccess) return;
+    if (items.length !== 0) return;
+    if (!hadPaymentFlowRef.current) return;
+    if (displayPaymentUrl) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      setShowCheckoutSuccess(true);
+      hadPaymentFlowRef.current = false;
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [
+    customerDisplayData,
+    displayPaymentUrl,
+    items.length,
+    showCheckoutSuccess,
+  ]);
 
   return (
     <div className="h-screen w-full overflow-hidden bg-slate-950 text-white">
