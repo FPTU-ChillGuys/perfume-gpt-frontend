@@ -1,5 +1,5 @@
 import { CheckCircleRounded, OpenInNew } from "@mui/icons-material";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 import type { PosPreviewResponse } from "@/services/posService";
 import { QRCodeSVG } from "qrcode.react";
@@ -22,19 +22,32 @@ type DisplayItem = {
   finalTotal: number;
 };
 
+const SUCCESS_OVERLAY_KEYFRAMES = `
+@keyframes checkoutSuccessCard {
+  0% { transform: translateY(10px) scale(0.94); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes checkoutSuccessPop {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes checkoutSuccessRipple {
+  0% { transform: scale(0.6); opacity: 0.55; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+`;
+
 export const CustomerDisplayScreen = () => {
-  const {
-    customerDisplayData,
-    isConnected,
-    paymentCompletedData,
-    paymentFailedData,
-  } = useSignalR<PosPreviewResponse>({
-    hubUrl: POS_HUB_URL,
-    sessionId: "COUNTER_01",
-  });
+  const { customerDisplayData, paymentCompletedData, paymentFailedData } =
+    useSignalR<PosPreviewResponse>({
+      hubUrl: POS_HUB_URL,
+      sessionId: "COUNTER_01",
+    });
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
-  const previousItemCountRef = useRef(0);
 
   const items = useMemo<DisplayItem[]>(() => {
     const rawItems = readProp<unknown[]>(customerDisplayData, "items", "Items");
@@ -145,32 +158,6 @@ export const CustomerDisplayScreen = () => {
   const displayPaymentUrl = activePaymentUrl || paymentUrl;
 
   useEffect(() => {
-    const previousCount = previousItemCountRef.current;
-    const currentCount = items.length;
-    let frameId: number | undefined;
-
-    if (
-      previousCount > 0 &&
-      currentCount === 0 &&
-      !displayPaymentUrl &&
-      isConnected &&
-      Boolean(customerDisplayData)
-    ) {
-      frameId = window.requestAnimationFrame(() => {
-        setShowCheckoutSuccess(true);
-      });
-    }
-
-    previousItemCountRef.current = currentCount;
-
-    return () => {
-      if (frameId) {
-        window.cancelAnimationFrame(frameId);
-      }
-    };
-  }, [customerDisplayData, displayPaymentUrl, isConnected, items.length]);
-
-  useEffect(() => {
     if (!displayPaymentUrl) return;
 
     const frameId = window.requestAnimationFrame(() => {
@@ -187,7 +174,7 @@ export const CustomerDisplayScreen = () => {
 
     const timerId = window.setTimeout(() => {
       setShowCheckoutSuccess(false);
-    }, 3000);
+    }, 3200);
 
     return () => {
       window.clearTimeout(timerId);
@@ -197,7 +184,7 @@ export const CustomerDisplayScreen = () => {
   useEffect(() => {
     if (!paymentCompletedData) return;
 
-    // 🔴 Bắt lỗi Casing
+    // Bắt lỗi Casing
     const rawStatus =
       paymentCompletedData.status || (paymentCompletedData as any).Status || "";
 
@@ -227,6 +214,8 @@ export const CustomerDisplayScreen = () => {
 
   return (
     <div className="h-screen w-full overflow-hidden bg-slate-950 text-white">
+      <style>{SUCCESS_OVERLAY_KEYFRAMES}</style>
+
       {displayPaymentUrl && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]">
           <div className="mx-4 w-full max-w-md rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl">
@@ -252,9 +241,39 @@ export const CustomerDisplayScreen = () => {
 
       {showCheckoutSuccess && (
         <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]">
-          <div className="mx-4 w-full max-w-md rounded-3xl bg-white p-8 text-center text-slate-900 shadow-2xl">
-            <CheckCircleRounded className="mx-auto mb-3 text-7xl text-emerald-600 animate-pulse" />
-            <p className="text-3xl font-black text-emerald-700">
+          <div
+            className="mx-4 w-full max-w-md rounded-3xl bg-white px-8 py-9 text-center text-slate-900"
+            style={{
+              width: "min(92vw, 440px)",
+              boxShadow: "0 24px 60px rgba(2, 6, 23, 0.28)",
+              animation: "checkoutSuccessCard 260ms ease-out",
+            }}
+          >
+            <div className="relative mx-auto mb-3 flex h-[104px] w-[104px] items-center justify-center">
+              <span
+                className="absolute inset-2 rounded-full border-2 border-emerald-300/80"
+                style={{
+                  animation: "checkoutSuccessRipple 1.25s ease-out infinite",
+                }}
+              />
+              <span
+                className="absolute inset-2 rounded-full border-2 border-emerald-300/70"
+                style={{
+                  animation: "checkoutSuccessRipple 1.25s ease-out infinite",
+                  animationDelay: "0.45s",
+                }}
+              />
+              <div className="relative z-10 flex h-full w-full items-center justify-center">
+                <CheckCircleRounded
+                  className="text-emerald-600"
+                  style={{
+                    fontSize: 84,
+                    animation: "checkoutSuccessPop 520ms ease-out",
+                  }}
+                />
+              </div>
+            </div>
+            <p className="text-[30px] font-extrabold text-emerald-700">
               Thanh toán thành công
             </p>
             <p className="mt-2 text-base text-slate-600">

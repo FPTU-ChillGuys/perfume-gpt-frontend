@@ -59,14 +59,20 @@ export const PaymentSuccessPage = () => {
   const paymentId =
     searchParams.get("paymentId") || searchParams.get("vnp_TxnRef");
   const orderInfo = searchParams.get("vnp_OrderInfo");
+  const decodedOrderInfo = decodeURIComponent(orderInfo || "");
   const posSessionIdFromOrderInfo = extractPosSessionIdFromOrderInfo(orderInfo);
   const posSessionId =
     searchParams.get("sessionId") ||
     searchParams.get("posSessionId") ||
     posSessionIdFromOrderInfo;
+  const orderType = searchParams.get("orderType");
   const responseCode = searchParams.get("vnp_ResponseCode");
   const source = searchParams.get("source");
   const isCheckoutSuccess = source === "checkout";
+  const isInStoreOrder =
+    Boolean(posSessionId) ||
+    /pickupinstore/i.test(orderType || "") ||
+    /pickupinstore/i.test(decodedOrderInfo);
   const amount = searchParams.get("vnp_Amount");
   const bankCode = searchParams.get("vnp_BankCode");
   const cardType = searchParams.get("vnp_CardType");
@@ -289,7 +295,7 @@ export const PaymentSuccessPage = () => {
                     fontSize: 14,
                   }}
                 >
-                  {decodeURIComponent(orderInfo)}
+                  {decodedOrderInfo}
                 </Typography>
               </Box>
             )}
@@ -324,18 +330,20 @@ export const PaymentSuccessPage = () => {
               >
                 Tiếp tục mua sắm
               </Button>
-              <Button
-                variant="outlined"
-                color="primary"
-                size="large"
-                onClick={() =>
-                  navigate(orderId ? `/my-orders/${orderId}` : "/my-orders")
-                }
-                fullWidth
-                sx={{ minHeight: 44 }}
-              >
-                Xem chi tiết đơn hàng
-              </Button>
+              {!isInStoreOrder && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  size="large"
+                  onClick={() =>
+                    navigate(orderId ? `/my-orders/${orderId}` : "/my-orders")
+                  }
+                  fullWidth
+                  sx={{ minHeight: 44 }}
+                >
+                  Xem chi tiết đơn hàng
+                </Button>
+              )}
             </Stack>
           </Stack>
         </Paper>

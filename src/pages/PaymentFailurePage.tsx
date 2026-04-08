@@ -25,11 +25,13 @@ import { Cancel } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import type { PaymentMethod } from "@/types/checkout";
+import type { OrderType } from "@/types/order";
 import { useToast } from "@/hooks/useToast";
 import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
+import transferIcon from "@/assets/transfer.png";
 
 type DeliveryMethod = "Delivery" | "PickupInStore";
 
@@ -47,6 +49,8 @@ const normalizePaymentMethod = (
       return "VnPay";
     case "momo":
       return "Momo";
+    case "payos":
+      return "PayOs";
     default:
       return null;
   }
@@ -164,6 +168,12 @@ const PAYMENT_METHODS: {
     description: "Thanh toán qua MoMo",
     icon: momoIcon,
   },
+  {
+    value: "PayOs",
+    label: "PayOS",
+    description: "Thanh toán qua PayOS",
+    icon: transferIcon,
+  },
 ];
 
 export const PaymentFailurePage = () => {
@@ -179,6 +189,7 @@ export const PaymentFailurePage = () => {
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("CashOnDelivery");
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [orderType, setOrderType] = useState<OrderType | null>(null);
 
   const allowedPaymentMethods = PAYMENT_METHODS.filter((method) =>
     deliveryMethod === "PickupInStore"
@@ -231,12 +242,51 @@ export const PaymentFailurePage = () => {
   const transactionNo = searchParams.get("vnp_TransactionNo");
   const orderInfo = searchParams.get("vnp_OrderInfo");
 
+  const decodedOrderInfo = decodeURIComponent(orderInfo || "");
+  const hasPosSessionInOrderInfo = /PosSessionId\s*:/i.test(decodedOrderInfo);
+  const isInStoreByUrl =
+    deliveryMethod === "PickupInStore" || hasPosSessionInOrderInfo;
+  const isInStoreOrder = orderType === "Offline" || isInStoreByUrl;
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const resolveOrderType = async () => {
+      if (!orderId) return;
+
+      try {
+        const order = await orderService.getOrderById(orderId);
+        if (!isCancelled) {
+          setOrderType(order.type || null);
+        }
+      } catch {
+        if (!isCancelled) {
+          setOrderType(null);
+        }
+      }
+    };
+
+    void resolveOrderType();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [orderId]);
+
   const errorMessage = getErrorMessage(responseCode);
 
   const getPaymentMethodLabel = (method: PaymentMethod) =>
     PAYMENT_METHODS.find((item) => item.value === method)?.label || method;
 
   const processRetryPayment = async () => {
+    if (isInStoreOrder) {
+      showToast(
+        "Đơn tại quầy sẽ do nhân viên xử lý thanh toán lại trên màn hình POS.",
+        "info",
+      );
+      return;
+    }
+
     if (!paymentId) {
       showToast("Không tìm thấy thông tin thanh toán", "error");
       return;
@@ -250,7 +300,11 @@ export const PaymentFailurePage = () => {
       );
 
       // Handle payment redirect
-      if (paymentMethod === "VnPay" || paymentMethod === "Momo") {
+      if (
+        paymentMethod === "VnPay" ||
+        paymentMethod === "Momo" ||
+        paymentMethod === "PayOs"
+      ) {
         if (response.url) {
           window.location.href = response.url;
         } else {
@@ -453,7 +507,7 @@ export const PaymentFailurePage = () => {
             </Box>
 
             <Box sx={{ flex: 0.95 }}>
-              {paymentId && (
+              {!isInStoreOrder && paymentId && (
                 <Box
                   sx={{
                     p: 2,
@@ -536,8 +590,15 @@ export const PaymentFailurePage = () => {
                 </Box>
               )}
 
+              {isInStoreOrder && (
+                <Alert severity="info" sx={{ mb: 2, textAlign: "left" }}>
+                  Đơn hàng tại quầy sẽ được nhân viên xử lý retry thanh toán
+                  trên màn hình POS. Vui lòng chờ nhân viên hỗ trợ.
+                </Alert>
+              )}
+
               <Stack spacing={1.25}>
-                {paymentId ? (
+                {!isInStoreOrder && paymentId ? (
                   <Button
                     variant="contained"
                     color="error"
@@ -548,7 +609,7 @@ export const PaymentFailurePage = () => {
                   >
                     {isRetrying ? <CircularProgress size={24} /> : "Thử lại"}
                   </Button>
-                ) : (
+                ) : !isInStoreOrder ? (
                   <Button
                     variant="contained"
                     color="error"
@@ -558,8 +619,8 @@ export const PaymentFailurePage = () => {
                   >
                     Về trang thanh toán
                   </Button>
-                )}
-                {orderId && (
+                ) : null}
+                {!isInStoreOrder && orderId && (
                   <Button
                     variant="outlined"
                     color="info"

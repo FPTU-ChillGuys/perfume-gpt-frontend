@@ -54,6 +54,8 @@ import type {
   CreateInStoreOrderRequest,
   PaymentMethod,
 } from "@/types/checkout";
+import { CANCEL_ORDER_REASON_OPTIONS } from "@/utils/cancelOrderReason";
+import type { CancelOrderReason } from "@/services/orderService";
 import type {
   DistrictResponse,
   ProvinceResponse,
@@ -81,11 +83,13 @@ const PICKUP_PAYMENT_METHODS: PaymentMethod[] = [
   "CashInStore",
   "VnPay",
   "Momo",
+  "PayOs",
 ];
 const DELIVERY_PAYMENT_METHODS: PaymentMethod[] = [
   "CashOnDelivery",
   "VnPay",
   "Momo",
+  "PayOs",
   "ExternalBankTransfer",
 ];
 
@@ -164,6 +168,12 @@ type CartDisplaySyncPayload = {
   paymentUrl?: string | null;
 };
 
+type FailedPaymentAction = {
+  orderId: string;
+  paymentId: string;
+  message: string;
+};
+
 const toGuidOrEmpty = (value?: string | null) => {
   const raw = (value || "").trim();
   return GUID_REGEX.test(raw) ? raw : EMPTY_GUID;
@@ -239,8 +249,14 @@ export const CounterCheckoutStaffPage = () => {
   );
   const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null);
   const paymentQrUrlRef = useRef<string | null>(null);
-  const [isPaymentQrOpen, setIsPaymentQrOpen] = useState(false);
   const handledPaymentEventRef = useRef<string>("");
+  const [failedPaymentAction, setFailedPaymentAction] =
+    useState<FailedPaymentAction | null>(null);
+  const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+  const [isStaffCancelDialogOpen, setIsStaffCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
+  const [cancelNote, setCancelNote] = useState("");
+  const [isCancellingOrder, setIsCancellingOrder] = useState(false);
 
   const totalQuantityInCart = useMemo(
     () => cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
@@ -256,7 +272,7 @@ export const CounterCheckoutStaffPage = () => {
 
     const timerId = window.setTimeout(() => {
       setCheckoutSuccessRef(null);
-    }, 2600);
+    }, 3200);
 
     return () => {
       window.clearTimeout(timerId);
@@ -300,7 +316,6 @@ export const CounterCheckoutStaffPage = () => {
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
-    setIsPaymentQrOpen(false);
     setCheckoutSuccessRef(rawOrderId);
 
     void syncCartToCustomer({
@@ -311,7 +326,7 @@ export const CounterCheckoutStaffPage = () => {
       paymentUrl: null,
     } satisfies CartDisplaySyncPayload);
 
-    showToast(rawMessage, "success");
+    setFailedPaymentAction(null);
 
     // Dọn giỏ khi thanh toán thành công để bắt đầu ca mới
     setCartItems([]);
@@ -320,7 +335,113 @@ export const CounterCheckoutStaffPage = () => {
     setVoucherInput("");
     setAppliedVoucherCode("");
     handleClearSelectedCustomer();
-  }, [paymentCompletedData, showToast, syncCartToCustomer]);
+  }, [paymentCompletedData, syncCartToCustomer]);
+
+  const handleRetryFailedPayment = async () => {
+    if (!failedPaymentAction?.paymentId) {
+      showToast("Không tìm thấy paymentId để retry", "warning");
+      return;
+    }
+
+    try {
+      setIsRetryingPayment(true);
+      const result = await orderService.retryPayment(
+        failedPaymentAction.paymentId,
+        paymentMethod,
+      );
+
+      if (result.url) {
+        paymentQrUrlRef.current = result.url;
+        setPaymentQrUrl(result.url);
+
+        const currentPayload = previewData
+          ? toCartDisplaySyncPayload(previewData)
+          : {
+              items: cartItems.map((item) => {
+                const subTotal = toSafeNumber(item.unitPrice * item.quantity);
+                return {
+                  variantId: toGuidOrEmpty(item.variantId),
+                  batchId: toGuidOrEmpty(item.batchId),
+                  variantName: item.variantName,
+                  batchCode: item.batchCode,
+                  imageUrl: item.imageUrl || "",
+                  quantity: Math.max(0, Number(item.quantity || 0)),
+                  unitPrice: toSafeNumber(item.unitPrice),
+                  subTotal,
+                  discount: 0,
+                  finalTotal: subTotal,
+                };
+              }),
+              subTotal: toSafeNumber(localSubtotal),
+              discount: 0,
+              totalPrice: toSafeNumber(localSubtotal),
+              paymentUrl: null,
+            };
+
+        void syncCartToCustomer({
+          ...currentPayload,
+          paymentUrl: result.url,
+        } satisfies CartDisplaySyncPayload);
+
+        showToast("Đã tạo lại giao dịch thanh toán", "success");
+        return;
+      }
+
+      setCheckoutSuccessRef(failedPaymentAction.orderId);
+      setFailedPaymentAction(null);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Retry thanh toán thất bại",
+        "error",
+      );
+    } finally {
+      setIsRetryingPayment(false);
+    }
+  };
+
+  const openStaffCancelDialog = () => {
+    if (!failedPaymentAction?.orderId) {
+      showToast("Không tìm thấy đơn hàng để hủy", "warning");
+      return;
+    }
+
+    setCancelReason("");
+    setCancelNote("");
+    setIsStaffCancelDialogOpen(true);
+  };
+
+  const handleStaffCancelFailedOrder = async () => {
+    if (!failedPaymentAction?.orderId) {
+      showToast("Không tìm thấy đơn hàng để hủy", "warning");
+      return;
+    }
+
+    if (!cancelReason) {
+      showToast("Vui lòng chọn lý do hủy", "warning");
+      return;
+    }
+
+    try {
+      setIsCancellingOrder(true);
+      await orderService.staffCancelOrder(
+        failedPaymentAction.orderId,
+        cancelReason,
+        cancelNote.trim() || undefined,
+      );
+      setIsStaffCancelDialogOpen(false);
+      setFailedPaymentAction(null);
+      paymentQrUrlRef.current = null;
+      setPaymentQrUrl(null);
+      showToast("Đã hủy đơn hàng", "success");
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể hủy đơn hàng",
+        "error",
+      );
+    } finally {
+      setIsCancellingOrder(false);
+    }
+  };
 
   const validateCheckoutInputs = () => {
     if (cartItems.length === 0) {
@@ -800,7 +921,7 @@ export const CounterCheckoutStaffPage = () => {
         subTotal: toSafeNumber(data.subTotal ?? computedSubTotal),
         discount: toSafeNumber(data.discount ?? computedDiscount),
         totalPrice: toSafeNumber(data.totalPrice ?? computedTotal),
-        paymentUrl: null,
+        paymentUrl: paymentQrUrlRef.current,
       };
     },
     [cartItems],
@@ -809,16 +930,38 @@ export const CounterCheckoutStaffPage = () => {
   useEffect(() => {
     if (!paymentFailedData) return;
 
+    const rawStatus =
+      paymentFailedData.status ||
+      (paymentFailedData as { Status?: string }).Status ||
+      "";
     const rawMessage =
       paymentFailedData.message ||
       (paymentFailedData as { Message?: string }).Message ||
       "Giao dịch thất bại hoặc bị hủy.";
+    const rawOrderId =
+      paymentFailedData.orderId ||
+      (paymentFailedData as { OrderId?: string }).OrderId ||
+      "";
+    const rawPaymentId =
+      paymentFailedData.paymentId ||
+      (paymentFailedData as { PaymentId?: string }).PaymentId ||
+      "";
+    const status = rawStatus.toLowerCase();
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
-    setIsPaymentQrOpen(false);
 
     showToast(rawMessage, "error");
+
+    if (status === "failed" || status === "error" || status === "cancelled") {
+      if (rawOrderId && rawPaymentId) {
+        setFailedPaymentAction({
+          orderId: rawOrderId,
+          paymentId: rawPaymentId,
+          message: rawMessage,
+        });
+      }
+    }
 
     if (previewData) {
       void syncCartToCustomer(toCartDisplaySyncPayload(previewData));
@@ -841,7 +984,7 @@ export const CounterCheckoutStaffPage = () => {
         subTotal: 0,
         discount: 0,
         totalPrice: 0,
-        paymentUrl: paymentQrUrlRef.current,
+        paymentUrl: null,
       } satisfies CartDisplaySyncPayload);
       return;
     }
@@ -1004,13 +1147,32 @@ export const CounterCheckoutStaffPage = () => {
       if (result.url) {
         paymentQrUrlRef.current = result.url;
         setPaymentQrUrl(result.url);
-        setIsPaymentQrOpen(true);
-        // Đồng bộ giỏ hàng rỗng + mã QR sang màn hình khách
+        const currentPayload = previewData
+          ? toCartDisplaySyncPayload(previewData)
+          : {
+              items: cartItems.map((item) => {
+                const subTotal = toSafeNumber(item.unitPrice * item.quantity);
+                return {
+                  variantId: toGuidOrEmpty(item.variantId),
+                  batchId: toGuidOrEmpty(item.batchId),
+                  variantName: item.variantName,
+                  batchCode: item.batchCode,
+                  imageUrl: item.imageUrl || "",
+                  quantity: Math.max(0, Number(item.quantity || 0)),
+                  unitPrice: toSafeNumber(item.unitPrice),
+                  subTotal,
+                  discount: 0,
+                  finalTotal: subTotal,
+                };
+              }),
+              subTotal: toSafeNumber(localSubtotal),
+              discount: 0,
+              totalPrice: toSafeNumber(localSubtotal),
+              paymentUrl: null,
+            };
+
         void syncCartToCustomer({
-          items: [],
-          subTotal: 0,
-          discount: 0,
-          totalPrice: 0,
+          ...currentPayload,
           paymentUrl: result.url,
         } satisfies CartDisplaySyncPayload);
         // Không được xóa giỏ hàng, để yên đó chờ SignalR gọi về!
@@ -1020,12 +1182,6 @@ export const CounterCheckoutStaffPage = () => {
       // 2. NẾU LÀ TIỀN MẶT TẠI QUẦY (KHÔNG CÓ QR) -> Chạy logic như cũ
       paymentQrUrlRef.current = null;
       setPaymentQrUrl(null);
-      showToast(
-        result.orderId
-          ? `Checkout thành công. Mã đơn: ${result.orderId}`
-          : "Checkout thành công",
-        "success",
-      );
       setCheckoutSuccessRef(result.orderId ?? "");
       if (paymentMethodAtCheckout === "CashInStore") {
         void (async () => {
@@ -1080,14 +1236,9 @@ export const CounterCheckoutStaffPage = () => {
   return (
     <MainLayout>
       <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 4 } }}>
-        <Typography variant="h4" fontWeight={800} mb={0.75}>
+        <Typography variant="h4" fontWeight={800} mb={4}>
           Tính tiền tại quầy (POS)
         </Typography>
-        <Typography variant="body2" color="text.secondary" mb={3.5}>
-          Luồng: Quét/Tìm sản phẩm - Chọn batch - Thêm vào giỏ - Tính tiền tự
-          động.
-        </Typography>
-
         <Stack
           direction={{ xs: "column", lg: "row" }}
           spacing={2.5}
@@ -1594,16 +1745,119 @@ export const CounterCheckoutStaffPage = () => {
                   ))}
                 </TextField>
 
-                <Button
-                  variant="contained"
-                  size="large"
-                  fullWidth
-                  sx={{ mt: 1.75 }}
-                  onClick={handleOpenCheckoutConfirm}
-                  disabled={isSubmittingCheckout || cartItems.length === 0}
-                >
-                  {isSubmittingCheckout ? "Đang checkout..." : "Checkout"}
-                </Button>
+                {failedPaymentAction ? (
+                  <>
+                    <Alert severity="error" sx={{ mt: 1.5 }}>
+                      {failedPaymentAction.message}
+                    </Alert>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 1 }}
+                    >
+                      Đơn {failedPaymentAction.orderId} thanh toán lỗi. Bạn có
+                      thể đổi phương thức và retry hoặc hủy đơn.
+                    </Typography>
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1.25}
+                      sx={{ mt: 1.5 }}
+                    >
+                      <Button
+                        variant="contained"
+                        size="large"
+                        fullWidth
+                        onClick={handleRetryFailedPayment}
+                        disabled={isRetryingPayment || isCancellingOrder}
+                      >
+                        {isRetryingPayment
+                          ? "Đang retry..."
+                          : "Retry thanh toán"}
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="large"
+                        fullWidth
+                        onClick={openStaffCancelDialog}
+                        disabled={isRetryingPayment || isCancellingOrder}
+                      >
+                        Hủy đơn
+                      </Button>
+                    </Stack>
+                  </>
+                ) : (
+                  <Button
+                    variant="contained"
+                    size="large"
+                    fullWidth
+                    sx={{ mt: 1.75 }}
+                    onClick={handleOpenCheckoutConfirm}
+                    disabled={isSubmittingCheckout || cartItems.length === 0}
+                  >
+                    {isSubmittingCheckout ? "Đang checkout..." : "Checkout"}
+                  </Button>
+                )}
+
+                {paymentQrUrl && (
+                  <Box
+                    sx={{
+                      mt: 1.5,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 2,
+                      p: 1.5,
+                      bgcolor: "grey.50",
+                    }}
+                  >
+                    <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                      Mã QR thanh toán (màn hình staff)
+                    </Typography>
+                    <Stack spacing={1.25} alignItems="center">
+                      <Box
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 2,
+                          p: 1,
+                          bgcolor: "white",
+                        }}
+                      >
+                        <QRCodeSVG value={paymentQrUrl} size={200} />
+                      </Box>
+
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        textAlign="center"
+                      >
+                        QR sẽ tự hiển thị popup ở màn hình khách khi checkout có
+                        link thanh toán.
+                      </Typography>
+
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1}
+                        width="100%"
+                      >
+                        <Button
+                          variant="outlined"
+                          startIcon={<OpenInNew />}
+                          fullWidth
+                          onClick={() =>
+                            window.open(
+                              paymentQrUrl,
+                              "_blank",
+                              "noopener,noreferrer",
+                            )
+                          }
+                        >
+                          Mở link thanh toán
+                        </Button>
+                      </Stack>
+                    </Stack>
+                  </Box>
+                )}
               </Box>
             </Paper>
           </Box>
@@ -1849,87 +2103,143 @@ export const CounterCheckoutStaffPage = () => {
           </DialogActions>
         </Dialog>
 
+        {checkoutSuccessRef && (
+          <Box
+            sx={{
+              position: "fixed",
+              inset: 0,
+              zIndex: (theme) => theme.zIndex.modal + 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              bgcolor: "rgba(2, 6, 23, 0.45)",
+              backdropFilter: "blur(2px)",
+            }}
+          >
+            <Box
+              sx={{
+                width: "min(92vw, 440px)",
+                borderRadius: 3,
+                bgcolor: "background.paper",
+                textAlign: "center",
+                px: 4,
+                py: 4.5,
+                boxShadow: "0 24px 60px rgba(2, 6, 23, 0.28)",
+                "@keyframes checkoutSuccessCard": {
+                  "0%": {
+                    transform: "translateY(10px) scale(0.94)",
+                    opacity: 0,
+                  },
+                  "100%": { transform: "translateY(0) scale(1)", opacity: 1 },
+                },
+                animation: "checkoutSuccessCard 260ms ease-out",
+              }}
+            >
+              <Box
+                sx={{
+                  position: "relative",
+                  width: 104,
+                  height: 104,
+                  mx: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  "@keyframes checkoutSuccessPop": {
+                    "0%": { transform: "scale(0.7)", opacity: 0 },
+                    "60%": { transform: "scale(1.08)", opacity: 1 },
+                    "100%": { transform: "scale(1)", opacity: 1 },
+                  },
+                  "@keyframes checkoutSuccessRipple": {
+                    "0%": { transform: "scale(0.6)", opacity: 0.55 },
+                    "100%": { transform: "scale(1.45)", opacity: 0 },
+                  },
+                  "&::before, &::after": {
+                    content: '""',
+                    position: "absolute",
+                    inset: 8,
+                    borderRadius: "50%",
+                    border: "2px solid",
+                    borderColor: "success.light",
+                    animation: "checkoutSuccessRipple 1.25s ease-out infinite",
+                  },
+                  "&::after": {
+                    animationDelay: "0.45s",
+                  },
+                }}
+              >
+                <CheckCircleRounded
+                  sx={{
+                    fontSize: 84,
+                    color: "success.main",
+                    animation: "checkoutSuccessPop 520ms ease-out",
+                  }}
+                />
+              </Box>
+              <Typography variant="h5" fontWeight={800} mt={1.5}>
+                Thanh toán thành công
+              </Typography>
+              {checkoutSuccessRef && (
+                <Typography variant="body2" color="text.secondary" mt={0.75}>
+                  Mã tham chiếu: {checkoutSuccessRef}
+                </Typography>
+              )}
+            </Box>
+          </Box>
+        )}
+
         <Dialog
-          open={isPaymentQrOpen && Boolean(paymentQrUrl)}
-          onClose={() => setIsPaymentQrOpen(false)}
-          maxWidth="xs"
+          open={isStaffCancelDialogOpen}
+          onClose={() => setIsStaffCancelDialogOpen(false)}
+          maxWidth="sm"
           fullWidth
         >
-          <DialogTitle>Mã QR thanh toán</DialogTitle>
+          <DialogTitle>Hủy đơn hàng thất bại thanh toán</DialogTitle>
           <DialogContent dividers>
-            <Stack spacing={2} alignItems="center">
-              {paymentQrUrl && (
-                <Box
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 2,
-                    p: 1,
-                    bgcolor: "white",
-                  }}
-                >
-                  <QRCodeSVG value={paymentQrUrl} size={240} />
-                </Box>
-              )}
-
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                textAlign="center"
-              >
-                Khách hàng có thể quét QR để thanh toán VNPay/MoMo.
+            <Stack spacing={1.5}>
+              <Typography variant="body2" color="text.secondary">
+                Chọn lý do hủy phù hợp để cập nhật cho đơn hàng.
               </Typography>
-              {paymentQrUrl && (
-                <Button
-                  variant="outlined"
-                  startIcon={<OpenInNew />}
-                  onClick={() =>
-                    window.open(paymentQrUrl, "_blank", "noopener,noreferrer")
-                  }
-                >
-                  Mở link thanh toán (test)
-                </Button>
-              )}
+              <TextField
+                select
+                fullWidth
+                label="Lý do hủy"
+                value={cancelReason}
+                onChange={(e) =>
+                  setCancelReason(e.target.value as CancelOrderReason)
+                }
+              >
+                {CANCEL_ORDER_REASON_OPTIONS.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                label="Ghi chú thêm (tuỳ chọn)"
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+                multiline
+                minRows={3}
+                fullWidth
+              />
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setIsPaymentQrOpen(false)}>Đóng</Button>
+            <Button
+              onClick={() => setIsStaffCancelDialogOpen(false)}
+              disabled={isCancellingOrder}
+            >
+              Đóng
+            </Button>
+            <Button
+              color="error"
+              variant="contained"
+              onClick={handleStaffCancelFailedOrder}
+              disabled={isCancellingOrder}
+            >
+              {isCancellingOrder ? "Đang hủy..." : "Xác nhận hủy đơn"}
+            </Button>
           </DialogActions>
-        </Dialog>
-
-        <Dialog
-          open={Boolean(checkoutSuccessRef)}
-          onClose={() => setCheckoutSuccessRef(null)}
-          maxWidth="xs"
-          fullWidth
-        >
-          <DialogContent
-            sx={{
-              py: 4,
-              textAlign: "center",
-              "@keyframes checkoutSuccessPop": {
-                "0%": { transform: "scale(0.75)", opacity: 0 },
-                "60%": { transform: "scale(1.08)", opacity: 1 },
-                "100%": { transform: "scale(1)", opacity: 1 },
-              },
-            }}
-          >
-            <CheckCircleRounded
-              sx={{
-                fontSize: 64,
-                color: "success.main",
-                animation: "checkoutSuccessPop 420ms ease-out",
-              }}
-            />
-            <Typography variant="h6" fontWeight={800} mt={1.5}>
-              Checkout thành công
-            </Typography>
-            {checkoutSuccessRef && (
-              <Typography variant="body2" color="text.secondary" mt={0.5}>
-                Mã tham chiếu: {checkoutSuccessRef}
-              </Typography>
-            )}
-          </DialogContent>
         </Dialog>
 
         <BatchSelectionModal
