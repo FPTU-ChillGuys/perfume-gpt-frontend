@@ -176,7 +176,7 @@ const toSafeNumber = (value: unknown) => {
 
 export const CounterCheckoutStaffPage = () => {
   const { showToast } = useToast();
-  const { syncCartToCustomer, paymentCompletedData } =
+  const { syncCartToCustomer, paymentCompletedData, paymentFailedData } =
     useSignalR<PosPreviewResponse>({
       hubUrl: POS_HUB_URL,
       sessionId: POS_SESSION_ID,
@@ -270,20 +270,22 @@ export const CounterCheckoutStaffPage = () => {
   useEffect(() => {
     if (!paymentCompletedData) return;
 
-    // 🔴 Lấy data bao phủ cả trường hợp camelCase và PascalCase từ C#
+    // Hỗ trợ cả camelCase lẫn PascalCase từ backend C#
     const rawStatus =
-      paymentCompletedData.status || (paymentCompletedData as any).Status || "";
+      paymentCompletedData.status ||
+      (paymentCompletedData as { Status?: string }).Status ||
+      "";
     const rawMessage =
       paymentCompletedData.message ||
-      (paymentCompletedData as any).Message ||
+      (paymentCompletedData as { Message?: string }).Message ||
       "Đã xác nhận thanh toán thành công";
     const rawOrderId =
       paymentCompletedData.orderId ||
-      (paymentCompletedData as any).OrderId ||
+      (paymentCompletedData as { OrderId?: string }).OrderId ||
       "PAID";
     const rawPaymentId =
       paymentCompletedData.paymentId ||
-      (paymentCompletedData as any).PaymentId ||
+      (paymentCompletedData as { PaymentId?: string }).PaymentId ||
       "";
 
     const status = rawStatus.toLowerCase();
@@ -298,8 +300,8 @@ export const CounterCheckoutStaffPage = () => {
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
-    setIsPaymentQrOpen(false); // Tắt Modal QR
-    setCheckoutSuccessRef(rawOrderId); // Bật cục Tick Xanh bự
+    setIsPaymentQrOpen(false);
+    setCheckoutSuccessRef(rawOrderId);
 
     void syncCartToCustomer({
       items: [],
@@ -311,7 +313,7 @@ export const CounterCheckoutStaffPage = () => {
 
     showToast(rawMessage, "success");
 
-    // 🔴 Dọn dẹp giỏ hàng khi KHÁCH ĐÃ THANH TOÁN XONG
+    // Dọn giỏ khi thanh toán thành công để bắt đầu ca mới
     setCartItems([]);
     setSearchResults([]);
     setSearchKeyword("");
@@ -803,6 +805,31 @@ export const CounterCheckoutStaffPage = () => {
     },
     [cartItems],
   );
+
+  useEffect(() => {
+    if (!paymentFailedData) return;
+
+    const rawMessage =
+      paymentFailedData.message ||
+      (paymentFailedData as { Message?: string }).Message ||
+      "Giao dịch thất bại hoặc bị hủy.";
+
+    paymentQrUrlRef.current = null;
+    setPaymentQrUrl(null);
+    setIsPaymentQrOpen(false);
+
+    showToast(rawMessage, "error");
+
+    if (previewData) {
+      void syncCartToCustomer(toCartDisplaySyncPayload(previewData));
+    }
+  }, [
+    paymentFailedData,
+    previewData,
+    showToast,
+    syncCartToCustomer,
+    toCartDisplaySyncPayload,
+  ]);
 
   useEffect(() => {
     if (debouncedPreviewPayload.scannedItems.length === 0) {

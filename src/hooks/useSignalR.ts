@@ -163,6 +163,8 @@ export const useSignalR = <T = unknown>({
   const [lastEvent, setLastEvent] = useState("idle");
   const [paymentCompletedData, setPaymentCompletedData] =
     useState<PosPaymentCompletedPayload | null>(null);
+  const [paymentFailedData, setPaymentFailedData] =
+    useState<PosPaymentCompletedPayload | null>(null);
 
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const startPromiseRef = useRef<Promise<void> | null>(null);
@@ -331,6 +333,15 @@ export const useSignalR = <T = unknown>({
               if (!isMounted) return;
               setPaymentCompletedData(payload);
               setLastEvent("received-payment-completed");
+            },
+          );
+
+          connection.on(
+            "PaymentFailed",
+            (payload: PosPaymentCompletedPayload) => {
+              if (!isMounted) return;
+              setPaymentFailedData(payload);
+              setLastEvent("received-payment-failed");
             },
           );
 
@@ -522,6 +533,7 @@ export const useSignalR = <T = unknown>({
   return {
     customerDisplayData,
     paymentCompletedData,
+    paymentFailedData,
     isConnected,
     connectionState,
     lastEvent,

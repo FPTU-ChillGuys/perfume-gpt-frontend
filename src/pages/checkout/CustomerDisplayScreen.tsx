@@ -23,11 +23,15 @@ type DisplayItem = {
 };
 
 export const CustomerDisplayScreen = () => {
-  const { customerDisplayData, isConnected, paymentCompletedData } =
-    useSignalR<PosPreviewResponse>({
-      hubUrl: POS_HUB_URL,
-      sessionId: "COUNTER_01",
-    });
+  const {
+    customerDisplayData,
+    isConnected,
+    paymentCompletedData,
+    paymentFailedData,
+  } = useSignalR<PosPreviewResponse>({
+    hubUrl: POS_HUB_URL,
+    sessionId: "COUNTER_01",
+  });
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
   const previousItemCountRef = useRef(0);
@@ -204,6 +208,22 @@ export const CustomerDisplayScreen = () => {
     setActivePaymentUrl("");
     setShowCheckoutSuccess(true); // Nhảy tick xanh cho khách xem
   }, [paymentCompletedData]);
+
+  useEffect(() => {
+    if (!paymentFailedData) return;
+
+    const rawStatus =
+      paymentFailedData.status ||
+      (paymentFailedData as { Status?: string }).Status ||
+      "";
+    const normalizedStatus = rawStatus.toLowerCase();
+
+    if (normalizedStatus !== "failed" && normalizedStatus !== "error") {
+      return;
+    }
+
+    setActivePaymentUrl("");
+  }, [paymentFailedData]);
 
   return (
     <div className="h-screen w-full overflow-hidden bg-slate-950 text-white">
