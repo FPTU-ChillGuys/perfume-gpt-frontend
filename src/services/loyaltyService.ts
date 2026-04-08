@@ -31,7 +31,6 @@ class LoyaltyService {
       {
         params: { path: { userId } },
         body: {
-          userId,
           transactionType: "Earn",
           points,
           reason: description || "Cộng điểm thủ công",
@@ -53,7 +52,6 @@ class LoyaltyService {
       {
         params: { path: { userId } },
         body: {
-          userId,
           transactionType: "Spend",
           points,
           reason: description || "Trừ điểm thủ công",

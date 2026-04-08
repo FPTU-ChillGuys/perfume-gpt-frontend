@@ -265,10 +265,13 @@ export const CampaignManagementPage = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
 
-  const [deleteConfirmCampaign, setDeleteConfirmCampaign] = useState<CampaignResponse | null>(null);
+  const [deleteConfirmCampaign, setDeleteConfirmCampaign] =
+    useState<CampaignResponse | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [statusDialogCampaign, setStatusDialogCampaign] = useState<CampaignResponse | null>(null);
-  const [statusChangeValue, setStatusChangeValue] = useState<CampaignStatus>("Upcoming");
+  const [statusDialogCampaign, setStatusDialogCampaign] =
+    useState<CampaignResponse | null>(null);
+  const [statusChangeValue, setStatusChangeValue] =
+    useState<CampaignStatus>("Upcoming");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [createForm, setCreateForm] = useState({
     name: "",
@@ -895,7 +898,10 @@ export const CampaignManagementPage = () => {
       setDeleteConfirmCampaign(null);
       void loadCampaigns();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Không thể xóa chiến lược", "error");
+      showToast(
+        error instanceof Error ? error.message : "Không thể xóa chiến lược",
+        "error",
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -905,12 +911,20 @@ export const CampaignManagementPage = () => {
     if (!statusDialogCampaign?.id) return;
     setIsUpdatingStatus(true);
     try {
-      await campaignService.updateCampaignStatus(statusDialogCampaign.id, statusChangeValue);
+      await campaignService.updateCampaignStatus(
+        statusDialogCampaign.id,
+        statusChangeValue,
+      );
       showToast("Đã cập nhật trạng thái", "success");
       setStatusDialogCampaign(null);
       void loadCampaigns();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Không thể cập nhật trạng thái", "error");
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật trạng thái",
+        "error",
+      );
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -981,7 +995,9 @@ export const CampaignManagementPage = () => {
                 <TableCell>Thời gian</TableCell>
                 <TableCell>Trạng thái</TableCell>
                 <TableCell>Mô tả</TableCell>
-                <TableCell align="center" width={110}>Thao tác</TableCell>
+                <TableCell align="center" width={110}>
+                  Thao tác
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -1045,14 +1061,19 @@ export const CampaignManagementPage = () => {
                           {campaign.description || "-"}
                         </Typography>
                       </TableCell>
-                      <TableCell align="center" onClick={(e) => e.stopPropagation()}>
+                      <TableCell
+                        align="center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Tooltip title="Đổi trạng thái">
                           <IconButton
                             size="small"
                             color="primary"
                             onClick={() => {
                               setStatusDialogCampaign(campaign);
-                              setStatusChangeValue(campaign.status || "Upcoming");
+                              setStatusChangeValue(
+                                campaign.status || "Upcoming",
+                              );
                             }}
                           >
                             <StatusIcon fontSize="small" />
@@ -1204,12 +1225,22 @@ export const CampaignManagementPage = () => {
                               <Chip
                                 size="small"
                                 color={
-                                  item.autoStopWhenBatchEmpty
+                                  (
+                                    item as CampaignPromotionItemResponse & {
+                                      autoStopWhenBatchEmpty?: boolean;
+                                    }
+                                  ).autoStopWhenBatchEmpty
                                     ? "success"
                                     : "default"
                                 }
                                 label={
-                                  item.autoStopWhenBatchEmpty ? "Có" : "Không"
+                                  (
+                                    item as CampaignPromotionItemResponse & {
+                                      autoStopWhenBatchEmpty?: boolean;
+                                    }
+                                  ).autoStopWhenBatchEmpty
+                                    ? "Có"
+                                    : "Không"
                                 }
                               />
                             </TableCell>
@@ -1242,13 +1273,20 @@ export const CampaignManagementPage = () => {
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setDeleteConfirmCampaign(null)} disabled={isDeleting}>Hủy</Button>
+            <Button
+              onClick={() => setDeleteConfirmCampaign(null)}
+              disabled={isDeleting}
+            >
+              Hủy
+            </Button>
             <Button
               variant="contained"
               color="error"
               onClick={handleDeleteCampaign}
               disabled={isDeleting}
-              startIcon={isDeleting ? <CircularProgress size={16} /> : <DeleteIcon />}
+              startIcon={
+                isDeleting ? <CircularProgress size={16} /> : <DeleteIcon />
+              }
             >
               Xóa
             </Button>
@@ -1272,21 +1310,38 @@ export const CampaignManagementPage = () => {
               <Select
                 value={statusChangeValue}
                 label="Trạng thái mới"
-                onChange={(e) => setStatusChangeValue(e.target.value as CampaignStatus)}
+                onChange={(e) =>
+                  setStatusChangeValue(e.target.value as CampaignStatus)
+                }
               >
-                {(Object.keys(CAMPAIGN_STATUS_LABEL) as CampaignStatus[]).map((s) => (
-                  <MenuItem key={s} value={s}>{CAMPAIGN_STATUS_LABEL[s]}</MenuItem>
-                ))}
+                {(Object.keys(CAMPAIGN_STATUS_LABEL) as CampaignStatus[]).map(
+                  (s) => (
+                    <MenuItem key={s} value={s}>
+                      {CAMPAIGN_STATUS_LABEL[s]}
+                    </MenuItem>
+                  ),
+                )}
               </Select>
             </FormControl>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setStatusDialogCampaign(null)} disabled={isUpdatingStatus}>Hủy</Button>
+            <Button
+              onClick={() => setStatusDialogCampaign(null)}
+              disabled={isUpdatingStatus}
+            >
+              Hủy
+            </Button>
             <Button
               variant="contained"
               onClick={handleUpdateStatus}
               disabled={isUpdatingStatus}
-              startIcon={isUpdatingStatus ? <CircularProgress size={16} /> : <StatusIcon />}
+              startIcon={
+                isUpdatingStatus ? (
+                  <CircularProgress size={16} />
+                ) : (
+                  <StatusIcon />
+                )
+              }
             >
               Cập nhật
             </Button>

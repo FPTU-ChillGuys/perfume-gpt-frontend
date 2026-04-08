@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as signalR from "@microsoft/signalr";
 import { getStoredAccessToken } from "@/utils/authStorage";
+import { isTokenExpired } from "@/utils/jwt";
 
 type UseSignalROptions = {
   hubUrl: string;
@@ -133,6 +134,13 @@ const normalizeToken = (rawToken: string | null | undefined): string => {
   return withoutQuotes;
 };
 
+const getValidSignalRToken = (): string => {
+  const token = normalizeToken(getStoredAccessToken());
+  if (!token) return "";
+  if (isTokenExpired(token)) return "";
+  return token;
+};
+
 export const useSignalR = <T = unknown>({
   hubUrl,
   sessionId,
@@ -207,7 +215,7 @@ export const useSignalR = <T = unknown>({
           signalR.HubConnectionState.Connecting,
           "starting",
         );
-        const accessToken = normalizeToken(getStoredAccessToken());
+        const accessToken = getValidSignalRToken();
 
         if (!accessToken) {
           if (isMounted) {
@@ -251,9 +259,23 @@ export const useSignalR = <T = unknown>({
         for (const candidateUrl of hubUrlCandidates) {
           if (!isMounted) return;
 
+          let shouldBypassNgrokWarning = false;
+          try {
+            const parsedCandidate = new URL(candidateUrl);
+            shouldBypassNgrokWarning =
+              parsedCandidate.hostname.includes("ngrok.io") ||
+              parsedCandidate.hostname.includes("ngrok-free.app") ||
+              parsedCandidate.hostname.includes("ngrok-free.dev");
+          } catch {
+            shouldBypassNgrokWarning = false;
+          }
+
           const connection = new signalR.HubConnectionBuilder()
             .withUrl(candidateUrl, {
-              accessTokenFactory: () => accessToken,
+              accessTokenFactory: () => getValidSignalRToken(),
+              headers: shouldBypassNgrokWarning
+                ? { "ngrok-skip-browser-warning": "true" }
+                : undefined,
               transport: signalR.HttpTransportType.LongPolling,
             })
             .configureLogging(signalR.LogLevel.None)
@@ -396,7 +418,7 @@ export const useSignalR = <T = unknown>({
 
           setError(
             message.includes("401")
-              ? "POS Hub trả về 401 (Unauthorized). Frontend đã fallback sang LongPolling nhưng vẫn bị từ chối. Hãy kiểm tra JWT auth cho endpoint /posHub ở backend."
+              ? "POS Hub trả về 401 (Unauthorized). Token có thể đã hết hạn hoặc backend chưa đọc access_token cho endpoint /posHub."
               : message,
           );
           setIsConnected(false);

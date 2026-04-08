@@ -85,6 +85,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CashInStore: "Thanh toán tiền mặt tại quầy",
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
 };
 
 const STATUS_TO_STEP: Record<OrderStatus, number> = {

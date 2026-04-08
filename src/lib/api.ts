@@ -7,6 +7,20 @@ const middleware: Middleware = {
   async onRequest({ request }) {
     markApiRequestStart(request);
 
+    try {
+      const url = new URL(request.url);
+      const isNgrokHost =
+        url.hostname.includes("ngrok.io") ||
+        url.hostname.includes("ngrok-free.app") ||
+        url.hostname.includes("ngrok-free.dev");
+
+      if (isNgrokHost) {
+        request.headers.set("ngrok-skip-browser-warning", "true");
+      }
+    } catch {
+      // Ignore URL parsing errors and continue request flow.
+    }
+
     const accessToken = getStoredAccessToken();
     // (optional) add logic here to refresh token when it expires
 
