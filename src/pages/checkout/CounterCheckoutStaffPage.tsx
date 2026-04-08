@@ -189,11 +189,16 @@ const isHttpUrl = (value?: string | null) =>
 
 export const CounterCheckoutStaffPage = () => {
   const { showToast } = useToast();
-  const { syncCartToCustomer, paymentCompletedData, paymentFailedData } =
-    useSignalR<PosPreviewResponse>({
-      hubUrl: POS_HUB_URL,
-      sessionId: POS_SESSION_ID,
-    });
+  const {
+    syncCartToCustomer,
+    paymentCompletedData,
+    paymentFailedData,
+    paymentLinkUpdatedData,
+    notifyPaymentSuccess,
+  } = useSignalR<PosPreviewResponse>({
+    hubUrl: POS_HUB_URL,
+    sessionId: POS_SESSION_ID,
+  });
 
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchResults, setSearchResults] = useState<PosProductVariant[]>([]);
@@ -257,9 +262,8 @@ export const CounterCheckoutStaffPage = () => {
   const syncCartToCustomerRef = useRef(syncCartToCustomer);
   const [failedPaymentAction, setFailedPaymentAction] =
     useState<FailedPaymentAction | null>(null);
-  const [isResolvingFailedPayment, setIsResolvingFailedPayment] =
-    useState(false);
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+  const [isCashRetryConfirmOpen, setIsCashRetryConfirmOpen] = useState(false);
   const [isStaffCancelDialogOpen, setIsStaffCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
   const [cancelNote, setCancelNote] = useState("");
@@ -347,125 +351,6 @@ export const CounterCheckoutStaffPage = () => {
     setAppliedVoucherCode("");
     handleClearSelectedCustomer();
   }, [paymentCompletedData]);
-
-  const handleRetryFailedPayment = async () => {
-    if (!failedPaymentAction?.paymentId) {
-      showToast("Không tìm thấy paymentId để thử lại", "warning");
-      return;
-    }
-
-    try {
-      setIsRetryingPayment(true);
-      // Allow re-processing the same fail/success DTO after a new retry attempt.
-      handledPaymentFailedEventRef.current = "";
-      handledPaymentEventRef.current = "";
-
-      const result = await orderService.retryPayment(
-        failedPaymentAction.paymentId,
-        paymentMethod,
-        POS_SESSION_ID,
-      );
-
-      const retryPayload = (result.url || result.orderId || "").trim();
-      const isOnlineRedirect = isHttpUrl(retryPayload);
-
-      if (isOnlineRedirect) {
-        paymentQrUrlRef.current = retryPayload;
-        setPaymentQrUrl(retryPayload);
-
-        const currentPayload = previewData
-          ? toCartDisplaySyncPayload(previewData)
-          : {
-              items: cartItems.map((item) => {
-                const subTotal = toSafeNumber(item.unitPrice * item.quantity);
-                return {
-                  variantId: toGuidOrEmpty(item.variantId),
-                  batchId: toGuidOrEmpty(item.batchId),
-                  variantName: item.variantName,
-                  batchCode: item.batchCode,
-                  imageUrl: item.imageUrl || "",
-                  quantity: Math.max(0, Number(item.quantity || 0)),
-                  unitPrice: toSafeNumber(item.unitPrice),
-                  subTotal,
-                  discount: 0,
-                  finalTotal: subTotal,
-                };
-              }),
-              subTotal: toSafeNumber(localSubtotal),
-              discount: 0,
-              totalPrice: toSafeNumber(localSubtotal),
-              paymentUrl: null,
-            };
-
-        void syncCartToCustomerRef.current({
-          ...currentPayload,
-          paymentUrl: retryPayload,
-        } satisfies CartDisplaySyncPayload);
-
-        showToast("Đã tạo lại giao dịch thanh toán", "success");
-        return;
-      }
-
-      if (paymentMethod === "CashInStore") {
-        try {
-          await orderService.confirmPayment(
-            failedPaymentAction.paymentId,
-            true,
-          );
-        } catch {
-          // Continue with order-status fallback when confirm API is not required or fails.
-        }
-      }
-
-      try {
-        const order = await orderService.getOrderById(
-          failedPaymentAction.orderId,
-        );
-        const rawPaymentStatus =
-          ((order as unknown as Record<string, unknown>).paymentStatus as
-            | string
-            | undefined) ||
-          ((order as unknown as Record<string, unknown>).PaymentStatus as
-            | string
-            | undefined) ||
-          "";
-
-        const paymentStatus = rawPaymentStatus.toLowerCase();
-        if (
-          paymentStatus === "paid" ||
-          paymentStatus === "success" ||
-          paymentStatus === "completed"
-        ) {
-          setCheckoutSuccessRef(failedPaymentAction.orderId);
-          setFailedPaymentAction(null);
-          return;
-        }
-
-        if (
-          paymentStatus === "failed" ||
-          paymentStatus === "cancelled" ||
-          paymentStatus === "canceled"
-        ) {
-          showToast("Thanh toán lại thất bại", "error");
-          return;
-        }
-      } catch {
-        // Fall through to neutral info message.
-      }
-
-      showToast(
-        "Đã gửi yêu cầu thanh toán lại. Vui lòng chờ hệ thống xác nhận.",
-        "info",
-      );
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Thanh toán lại thất bại",
-        "error",
-      );
-    } finally {
-      setIsRetryingPayment(false);
-    }
-  };
 
   const openStaffCancelDialog = () => {
     if (!failedPaymentAction?.orderId) {
@@ -1022,114 +907,128 @@ export const CounterCheckoutStaffPage = () => {
       };
     }, [cartItems, localSubtotal]);
 
-  const extractPaymentIdFromOrder = useCallback((order: unknown): string => {
-    if (!order || typeof order !== "object") return "";
+  const finalizeRetryAsPaid = useCallback(
+    (orderId: string, paymentId: string) => {
+      paymentQrUrlRef.current = null;
+      setPaymentQrUrl(null);
+      setCheckoutSuccessRef(orderId);
+      setFailedPaymentAction(null);
 
-    const raw = order as Record<string, unknown>;
-    const directPaymentId =
-      (raw.paymentId as string | undefined) ||
-      (raw.PaymentId as string | undefined) ||
-      "";
-
-    if (directPaymentId.trim()) {
-      return directPaymentId.trim();
-    }
-
-    const transactions =
-      (raw.paymentTransactions as unknown[] | undefined) ||
-      (raw.PaymentTransactions as unknown[] | undefined) ||
-      (raw.payments as unknown[] | undefined) ||
-      (raw.Payments as unknown[] | undefined) ||
-      [];
-
-    for (let i = transactions.length - 1; i >= 0; i -= 1) {
-      const tx = transactions[i];
-      if (!tx || typeof tx !== "object") continue;
-
-      const txRaw = tx as Record<string, unknown>;
-      const txId =
-        (txRaw.id as string | undefined) ||
-        (txRaw.Id as string | undefined) ||
-        (txRaw.paymentId as string | undefined) ||
-        (txRaw.PaymentId as string | undefined) ||
-        "";
-
-      if (txId.trim()) {
-        return txId.trim();
-      }
-    }
-
-    return "";
-  }, []);
-
-  const toOrderDetailsSyncPayload = useCallback(
-    (order: unknown): CartDisplaySyncPayload | null => {
-      if (!order || typeof order !== "object") return null;
-
-      const raw = order as Record<string, unknown>;
-      const details =
-        (raw.orderDetails as unknown[] | undefined) ||
-        (raw.OrderDetails as unknown[] | undefined) ||
-        [];
-
-      if (!Array.isArray(details) || details.length === 0) {
-        return null;
-      }
-
-      const mappedItems = details
-        .filter((item) => item && typeof item === "object")
-        .map((item) => {
-          const d = item as Record<string, unknown>;
-          const quantity = toSafeNumber(d.quantity ?? d.Quantity);
-          const unitPrice = toSafeNumber(d.unitPrice ?? d.UnitPrice);
-          const subTotal = toSafeNumber(
-            d.total ?? d.Total ?? unitPrice * quantity,
-          );
-
-          return {
-            variantId: toGuidOrEmpty(
-              (d.variantId as string | undefined) ||
-                (d.VariantId as string | undefined),
-            ),
-            batchId: toGuidOrEmpty(
-              (d.batchId as string | undefined) ||
-                (d.BatchId as string | undefined),
-            ),
-            variantName: (
-              (d.variantName as string | undefined) ||
-              (d.VariantName as string | undefined) ||
-              "Sản phẩm"
-            ).trim(),
-            batchCode:
-              (d.batchCode as string | undefined) ||
-              (d.BatchCode as string | undefined) ||
-              "",
-            imageUrl:
-              (d.imageUrl as string | undefined) ||
-              (d.ImageUrl as string | undefined) ||
-              "",
-            quantity,
-            unitPrice,
-            subTotal,
-            discount: 0,
-            finalTotal: subTotal,
-          };
-        });
-
-      const subTotal = mappedItems.reduce(
-        (sum, item) => sum + item.subTotal,
-        0,
-      );
-
-      return {
-        items: mappedItems,
-        subTotal,
+      void syncCartToCustomerRef.current({
+        items: [],
+        subTotal: 0,
         discount: 0,
-        totalPrice: subTotal,
+        totalPrice: 0,
         paymentUrl: null,
-      };
+      } satisfies CartDisplaySyncPayload);
+
+      void notifyPaymentSuccess({
+        orderId,
+        paymentId,
+        status: "Success",
+        message: "Thanh toán thành công",
+      }).catch(() => {
+        // Backend may already broadcast success event; ignore duplicate notify errors.
+      });
     },
-    [],
+    [notifyPaymentSuccess],
+  );
+
+  const executeRetryFailedPayment = useCallback(
+    async (requiresCashConfirm: boolean) => {
+      if (!failedPaymentAction?.paymentId) {
+        showToast("Không tìm thấy paymentId để thử lại", "warning");
+        return;
+      }
+
+      try {
+        setIsRetryingPayment(true);
+        // Allow re-processing the same fail/success DTO after a new retry attempt.
+        handledPaymentFailedEventRef.current = "";
+        handledPaymentEventRef.current = "";
+
+        const result = await orderService.retryPayment(
+          failedPaymentAction.paymentId,
+          paymentMethod,
+          POS_SESSION_ID,
+        );
+
+        if (requiresCashConfirm) {
+          await orderService.confirmPayment(
+            failedPaymentAction.paymentId,
+            true,
+          );
+          finalizeRetryAsPaid(
+            failedPaymentAction.orderId,
+            failedPaymentAction.paymentId,
+          );
+          showToast("Đã xác nhận thanh toán tiền mặt", "success");
+          return;
+        }
+
+        const retryPayload = (result.url || result.orderId || "").trim();
+        const isOnlineRedirect = isHttpUrl(retryPayload);
+
+        if (isOnlineRedirect) {
+          paymentQrUrlRef.current = retryPayload;
+          setPaymentQrUrl(retryPayload);
+
+          const currentPayload = previewData
+            ? toCartDisplaySyncPayload(previewData)
+            : {
+                items: cartItems.map((item) => {
+                  const subTotal = toSafeNumber(item.unitPrice * item.quantity);
+                  return {
+                    variantId: toGuidOrEmpty(item.variantId),
+                    batchId: toGuidOrEmpty(item.batchId),
+                    variantName: item.variantName,
+                    batchCode: item.batchCode,
+                    imageUrl: item.imageUrl || "",
+                    quantity: Math.max(0, Number(item.quantity || 0)),
+                    unitPrice: toSafeNumber(item.unitPrice),
+                    subTotal,
+                    discount: 0,
+                    finalTotal: subTotal,
+                  };
+                }),
+                subTotal: toSafeNumber(localSubtotal),
+                discount: 0,
+                totalPrice: toSafeNumber(localSubtotal),
+                paymentUrl: null,
+              };
+
+          void syncCartToCustomerRef.current({
+            ...currentPayload,
+            paymentUrl: retryPayload,
+          } satisfies CartDisplaySyncPayload);
+
+          showToast("Đã tạo lại giao dịch thanh toán", "success");
+          return;
+        }
+
+        showToast(
+          "Đã gửi yêu cầu thanh toán lại. Vui lòng chờ hệ thống xác nhận.",
+          "info",
+        );
+      } catch (error) {
+        showToast(
+          error instanceof Error ? error.message : "Thanh toán lại thất bại",
+          "error",
+        );
+      } finally {
+        setIsRetryingPayment(false);
+      }
+    },
+    [
+      cartItems,
+      failedPaymentAction,
+      finalizeRetryAsPaid,
+      localSubtotal,
+      paymentMethod,
+      previewData,
+      showToast,
+      toCartDisplaySyncPayload,
+    ],
   );
 
   useEffect(() => {
@@ -1176,32 +1075,6 @@ export const CounterCheckoutStaffPage = () => {
           paymentId: rawPaymentId || undefined,
           message: rawMessage,
         });
-
-        void (async () => {
-          try {
-            setIsResolvingFailedPayment(true);
-            const order = await orderService.getOrderById(rawOrderId);
-            const resolvedPaymentId =
-              rawPaymentId || extractPaymentIdFromOrder(order);
-
-            setFailedPaymentAction((prev) => {
-              if (!prev || prev.orderId !== rawOrderId) return prev;
-              return {
-                ...prev,
-                paymentId: resolvedPaymentId || prev.paymentId,
-              };
-            });
-
-            const orderPayload = toOrderDetailsSyncPayload(order);
-            if (orderPayload) {
-              void syncCartToCustomerRef.current(orderPayload);
-            }
-          } catch {
-            // Keep failed UI, retry button will stay disabled until paymentId is available.
-          } finally {
-            setIsResolvingFailedPayment(false);
-          }
-        })();
       }
     }
 
@@ -1217,9 +1090,57 @@ export const CounterCheckoutStaffPage = () => {
     paymentFailedData,
     previewData,
     showToast,
-    extractPaymentIdFromOrder,
     toCartDisplaySyncPayload,
-    toOrderDetailsSyncPayload,
+    toFallbackCartDisplaySyncPayload,
+  ]);
+
+  useEffect(() => {
+    if (!paymentLinkUpdatedData) return;
+
+    const rawOrderId =
+      paymentLinkUpdatedData.orderId ||
+      (paymentLinkUpdatedData as { OrderId?: string }).OrderId ||
+      "";
+    const rawPaymentId =
+      paymentLinkUpdatedData.paymentId ||
+      (paymentLinkUpdatedData as { PaymentId?: string }).PaymentId ||
+      "";
+    const rawPaymentUrl =
+      paymentLinkUpdatedData.paymentUrl ||
+      (paymentLinkUpdatedData as { PaymentUrl?: string }).PaymentUrl ||
+      "";
+
+    if (!rawOrderId || !rawPaymentId || !rawPaymentUrl) {
+      return;
+    }
+
+    paymentQrUrlRef.current = rawPaymentUrl;
+    setPaymentQrUrl(rawPaymentUrl);
+
+    setFailedPaymentAction((prev) => {
+      if (prev && prev.orderId !== rawOrderId) {
+        return prev;
+      }
+
+      return {
+        orderId: rawOrderId,
+        paymentId: rawPaymentId,
+        message: prev?.message || "Đã tạo lại link thanh toán",
+      };
+    });
+
+    const currentPayload = previewData
+      ? toCartDisplaySyncPayload(previewData)
+      : toFallbackCartDisplaySyncPayload();
+
+    void syncCartToCustomerRef.current({
+      ...currentPayload,
+      paymentUrl: rawPaymentUrl,
+    });
+  }, [
+    paymentLinkUpdatedData,
+    previewData,
+    toCartDisplaySyncPayload,
     toFallbackCartDisplaySyncPayload,
   ]);
 
@@ -1359,6 +1280,20 @@ export const CounterCheckoutStaffPage = () => {
   const handleOpenCheckoutConfirm = () => {
     if (!validateCheckoutInputs()) return;
     setIsCheckoutConfirmOpen(true);
+  };
+
+  const handleRetryFailedPayment = () => {
+    if (!failedPaymentAction?.paymentId) {
+      showToast("Không tìm thấy paymentId để thử lại", "warning");
+      return;
+    }
+
+    if (paymentMethod === "CashInStore") {
+      setIsCashRetryConfirmOpen(true);
+      return;
+    }
+
+    void executeRetryFailedPayment(false);
   };
 
   const handleCheckoutInStore = async () => {
@@ -1790,194 +1725,201 @@ export const CounterCheckoutStaffPage = () => {
                   Checkout tại quầy
                 </Typography>
 
-                <RadioGroup
-                  row
-                  value={isPickupInStore ? "pickup" : "delivery"}
-                  onChange={(e) =>
-                    setIsPickupInStore(e.target.value === "pickup")
-                  }
-                >
-                  <FormControlLabel
-                    value="pickup"
-                    control={<Radio size="small" />}
-                    label="Khách lấy tại quầy"
-                  />
-                  <FormControlLabel
-                    value="delivery"
-                    control={<Radio size="small" />}
-                    label="Giao về địa chỉ khách"
-                  />
-                </RadioGroup>
-
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  spacing={1}
-                  alignItems="stretch"
-                  sx={{ mt: 1.5 }}
-                >
-                  <TextField
-                    label="SĐT khách hàng (nếu có tài khoản)"
-                    value={customerLookupKeyword}
-                    onChange={(e) => setCustomerLookupKeyword(e.target.value)}
-                    fullWidth
-                  />
-                  <Button
-                    variant="outlined"
-                    onClick={handleLookupCustomer}
-                    disabled={isLookingUpCustomer}
-                    aria-label="Tìm khách hàng"
-                    sx={{
-                      minWidth: { xs: "100%", sm: 52 },
-                      width: { xs: "100%", sm: 52 },
-                      px: 0,
-                    }}
-                  >
-                    {isLookingUpCustomer ? (
-                      <CircularProgress size={18} />
-                    ) : (
-                      <Search fontSize="small" />
-                    )}
-                  </Button>
-                </Stack>
-
-                {customerLookupResults.length > 0 && (
-                  <Box
-                    sx={{
-                      mt: 1,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 1.5,
-                      maxHeight: 160,
-                      overflowY: "auto",
-                      bgcolor: "grey.50",
-                    }}
-                  >
-                    {customerLookupResults.map((customer) => {
-                      const isSelected = selectedCustomer?.id === customer.id;
-                      return (
-                        <Button
-                          key={customer.id}
-                          fullWidth
-                          variant="text"
-                          onClick={() => handleSelectCustomer(customer)}
-                          sx={{
-                            justifyContent: "flex-start",
-                            textTransform: "none",
-                            px: 1.5,
-                            py: 1,
-                            borderRadius: 0,
-                            bgcolor: isSelected
-                              ? "action.selected"
-                              : "transparent",
-                            borderBottom: "1px solid",
-                            borderColor: "divider",
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            sx={{ textAlign: "left", width: "100%" }}
-                          >
-                            {customer.fullName} - {customer.phoneNumber}
-                          </Typography>
-                        </Button>
-                      );
-                    })}
-                  </Box>
-                )}
-
-                {selectedCustomer && (
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    spacing={1}
-                    sx={{ mt: 1 }}
-                  >
-                    <Typography variant="body2" color="success.main">
-                      Khách hàng đã chọn: {selectedCustomer.fullName} -{" "}
-                      {selectedCustomer.phoneNumber}
-                    </Typography>
-                    <Button
-                      size="small"
-                      variant="text"
-                      color="inherit"
-                      onClick={handleClearSelectedCustomer}
-                      sx={{ whiteSpace: "nowrap" }}
+                {!failedPaymentAction && (
+                  <>
+                    <RadioGroup
+                      row
+                      value={isPickupInStore ? "pickup" : "delivery"}
+                      onChange={(e) =>
+                        setIsPickupInStore(e.target.value === "pickup")
+                      }
                     >
-                      Bỏ chọn
-                    </Button>
-                  </Stack>
-                )}
+                      <FormControlLabel
+                        value="pickup"
+                        control={<Radio size="small" />}
+                        label="Khách lấy tại quầy"
+                      />
+                      <FormControlLabel
+                        value="delivery"
+                        control={<Radio size="small" />}
+                        label="Giao về địa chỉ khách"
+                      />
+                    </RadioGroup>
 
-                {!isPickupInStore && (
-                  <Stack spacing={1.25} sx={{ mt: 1.5 }}>
-                    <TextField
-                      label="Tên người nhận"
-                      value={recipientName}
-                      onChange={(e) => setRecipientName(e.target.value)}
-                      fullWidth
-                    />
-                    <TextField
-                      label="Số điện thoại người nhận"
-                      value={recipientPhone}
-                      onChange={(e) => setRecipientPhone(e.target.value)}
-                      fullWidth
-                    />
-                    <Autocomplete
-                      options={provinces}
-                      getOptionLabel={(option) => option.ProvinceName || ""}
-                      value={selectedProvince}
-                      onChange={(_, value) => {
-                        setSelectedProvince(value);
-                        setSelectedDistrict(null);
-                        setSelectedWard(null);
-                        setDistricts([]);
-                        setWards([]);
-                        if (value?.ProvinceID) {
-                          loadDistricts(value.ProvinceID);
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1}
+                      alignItems="stretch"
+                      sx={{ mt: 1.5 }}
+                    >
+                      <TextField
+                        label="SĐT khách hàng (nếu có tài khoản)"
+                        value={customerLookupKeyword}
+                        onChange={(e) =>
+                          setCustomerLookupKeyword(e.target.value)
                         }
-                      }}
-                      loading={isLoadingProvinces}
-                      renderInput={(params) => (
-                        <TextField {...params} label="Tỉnh/Thành phố" />
-                      )}
-                    />
-                    <Autocomplete
-                      options={districts}
-                      getOptionLabel={(option) => option.DistrictName || ""}
-                      value={selectedDistrict}
-                      onChange={(_, value) => {
-                        setSelectedDistrict(value);
-                        setSelectedWard(null);
-                        setWards([]);
-                        if (value?.DistrictID) {
-                          loadWards(value.DistrictID);
-                        }
-                      }}
-                      loading={isLoadingDistricts}
-                      disabled={!selectedProvince}
-                      renderInput={(params) => (
-                        <TextField {...params} label="Quận/Huyện" />
-                      )}
-                    />
-                    <Autocomplete
-                      options={wards}
-                      getOptionLabel={(option) => option.WardName || ""}
-                      value={selectedWard}
-                      onChange={(_, value) => setSelectedWard(value)}
-                      loading={isLoadingWards}
-                      disabled={!selectedDistrict}
-                      renderInput={(params) => (
-                        <TextField {...params} label="Phường/Xã" />
-                      )}
-                    />
-                    <TextField
-                      label="Địa chỉ cụ thể"
-                      value={streetAddress}
-                      onChange={(e) => setStreetAddress(e.target.value)}
-                      fullWidth
-                    />
-                  </Stack>
+                        fullWidth
+                      />
+                      <Button
+                        variant="outlined"
+                        onClick={handleLookupCustomer}
+                        disabled={isLookingUpCustomer}
+                        aria-label="Tìm khách hàng"
+                        sx={{
+                          minWidth: { xs: "100%", sm: 52 },
+                          width: { xs: "100%", sm: 52 },
+                          px: 0,
+                        }}
+                      >
+                        {isLookingUpCustomer ? (
+                          <CircularProgress size={18} />
+                        ) : (
+                          <Search fontSize="small" />
+                        )}
+                      </Button>
+                    </Stack>
+
+                    {customerLookupResults.length > 0 && (
+                      <Box
+                        sx={{
+                          mt: 1,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1.5,
+                          maxHeight: 160,
+                          overflowY: "auto",
+                          bgcolor: "grey.50",
+                        }}
+                      >
+                        {customerLookupResults.map((customer) => {
+                          const isSelected =
+                            selectedCustomer?.id === customer.id;
+                          return (
+                            <Button
+                              key={customer.id}
+                              fullWidth
+                              variant="text"
+                              onClick={() => handleSelectCustomer(customer)}
+                              sx={{
+                                justifyContent: "flex-start",
+                                textTransform: "none",
+                                px: 1.5,
+                                py: 1,
+                                borderRadius: 0,
+                                bgcolor: isSelected
+                                  ? "action.selected"
+                                  : "transparent",
+                                borderBottom: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{ textAlign: "left", width: "100%" }}
+                              >
+                                {customer.fullName} - {customer.phoneNumber}
+                              </Typography>
+                            </Button>
+                          );
+                        })}
+                      </Box>
+                    )}
+
+                    {selectedCustomer && (
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        spacing={1}
+                        sx={{ mt: 1 }}
+                      >
+                        <Typography variant="body2" color="success.main">
+                          Khách hàng đã chọn: {selectedCustomer.fullName} -{" "}
+                          {selectedCustomer.phoneNumber}
+                        </Typography>
+                        <Button
+                          size="small"
+                          variant="text"
+                          color="inherit"
+                          onClick={handleClearSelectedCustomer}
+                          sx={{ whiteSpace: "nowrap" }}
+                        >
+                          Bỏ chọn
+                        </Button>
+                      </Stack>
+                    )}
+
+                    {!isPickupInStore && (
+                      <Stack spacing={1.25} sx={{ mt: 1.5 }}>
+                        <TextField
+                          label="Tên người nhận"
+                          value={recipientName}
+                          onChange={(e) => setRecipientName(e.target.value)}
+                          fullWidth
+                        />
+                        <TextField
+                          label="Số điện thoại người nhận"
+                          value={recipientPhone}
+                          onChange={(e) => setRecipientPhone(e.target.value)}
+                          fullWidth
+                        />
+                        <Autocomplete
+                          options={provinces}
+                          getOptionLabel={(option) => option.ProvinceName || ""}
+                          value={selectedProvince}
+                          onChange={(_, value) => {
+                            setSelectedProvince(value);
+                            setSelectedDistrict(null);
+                            setSelectedWard(null);
+                            setDistricts([]);
+                            setWards([]);
+                            if (value?.ProvinceID) {
+                              loadDistricts(value.ProvinceID);
+                            }
+                          }}
+                          loading={isLoadingProvinces}
+                          renderInput={(params) => (
+                            <TextField {...params} label="Tỉnh/Thành phố" />
+                          )}
+                        />
+                        <Autocomplete
+                          options={districts}
+                          getOptionLabel={(option) => option.DistrictName || ""}
+                          value={selectedDistrict}
+                          onChange={(_, value) => {
+                            setSelectedDistrict(value);
+                            setSelectedWard(null);
+                            setWards([]);
+                            if (value?.DistrictID) {
+                              loadWards(value.DistrictID);
+                            }
+                          }}
+                          loading={isLoadingDistricts}
+                          disabled={!selectedProvince}
+                          renderInput={(params) => (
+                            <TextField {...params} label="Quận/Huyện" />
+                          )}
+                        />
+                        <Autocomplete
+                          options={wards}
+                          getOptionLabel={(option) => option.WardName || ""}
+                          value={selectedWard}
+                          onChange={(_, value) => setSelectedWard(value)}
+                          loading={isLoadingWards}
+                          disabled={!selectedDistrict}
+                          renderInput={(params) => (
+                            <TextField {...params} label="Phường/Xã" />
+                          )}
+                        />
+                        <TextField
+                          label="Địa chỉ cụ thể"
+                          value={streetAddress}
+                          onChange={(e) => setStreetAddress(e.target.value)}
+                          fullWidth
+                        />
+                      </Stack>
+                    )}
+                  </>
                 )}
 
                 <TextField
@@ -2017,9 +1959,8 @@ export const CounterCheckoutStaffPage = () => {
                         color="text.secondary"
                         sx={{ mt: 0.75, display: "block" }}
                       >
-                        {isResolvingFailedPayment
-                          ? "Đang tải paymentId từ đơn hàng..."
-                          : "Chưa lấy được paymentId để thử lại, vui lòng đợi hoặc thử lại."}
+                        Chưa nhận được paymentId từ hub, vui lòng chờ sự kiện
+                        cập nhật.
                       </Typography>
                     )}
                     <Stack
@@ -2035,7 +1976,6 @@ export const CounterCheckoutStaffPage = () => {
                         disabled={
                           isRetryingPayment ||
                           isCancellingOrder ||
-                          isResolvingFailedPayment ||
                           !failedPaymentAction.paymentId
                         }
                       >
@@ -2455,6 +2395,40 @@ export const CounterCheckoutStaffPage = () => {
             </Box>
           </Box>
         )}
+
+        <Dialog
+          open={isCashRetryConfirmOpen}
+          onClose={() => setIsCashRetryConfirmOpen(false)}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Xác nhận đã nhận tiền mặt</DialogTitle>
+          <DialogContent dividers>
+            <Typography variant="body2" color="text.secondary">
+              Bạn xác nhận đã nhận đủ tiền từ khách hàng cho đơn này? Sau khi
+              xác nhận, hệ thống sẽ gọi retry thanh toán bằng tiền mặt và
+              confirm payment ngay lập tức.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setIsCashRetryConfirmOpen(false)}
+              disabled={isRetryingPayment}
+            >
+              Chưa
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setIsCashRetryConfirmOpen(false);
+                void executeRetryFailedPayment(true);
+              }}
+              disabled={isRetryingPayment}
+            >
+              {isRetryingPayment ? "Đang xử lý..." : "Đã nhận tiền"}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         <Dialog
           open={isStaffCancelDialogOpen}

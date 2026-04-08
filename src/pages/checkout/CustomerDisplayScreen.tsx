@@ -41,12 +41,16 @@ const SUCCESS_OVERLAY_KEYFRAMES = `
 `;
 
 export const CustomerDisplayScreen = () => {
-  const { customerDisplayData, paymentCompletedData, paymentFailedData } =
-    useSignalR<PosPreviewResponse>({
-      hubUrl: POS_HUB_URL,
-      sessionId: "COUNTER_01",
-      requireAuth: false,
-    });
+  const {
+    customerDisplayData,
+    paymentCompletedData,
+    paymentFailedData,
+    paymentLinkUpdatedData,
+  } = useSignalR<PosPreviewResponse>({
+    hubUrl: POS_HUB_URL,
+    sessionId: "COUNTER_01",
+    requireAuth: false,
+  });
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
 
@@ -193,8 +197,14 @@ export const CustomerDisplayScreen = () => {
       return;
     }
 
-    setActivePaymentUrl("");
-    setShowCheckoutSuccess(true); // Nhảy tick xanh cho khách xem
+    const frameId = window.requestAnimationFrame(() => {
+      setActivePaymentUrl("");
+      setShowCheckoutSuccess(true); // Nhảy tick xanh cho khách xem
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [paymentCompletedData]);
 
   useEffect(() => {
@@ -210,8 +220,35 @@ export const CustomerDisplayScreen = () => {
       return;
     }
 
-    setActivePaymentUrl("");
+    const frameId = window.requestAnimationFrame(() => {
+      setActivePaymentUrl("");
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, [paymentFailedData]);
+
+  useEffect(() => {
+    if (!paymentLinkUpdatedData) return;
+
+    const link = (
+      paymentLinkUpdatedData.paymentUrl ||
+      (paymentLinkUpdatedData as { PaymentUrl?: string }).PaymentUrl ||
+      ""
+    ).trim();
+
+    if (!link) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      setActivePaymentUrl(link);
+      setShowCheckoutSuccess(false);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [paymentLinkUpdatedData]);
 
   return (
     <div className="h-screen w-full overflow-hidden bg-slate-950 text-white">
@@ -250,7 +287,7 @@ export const CustomerDisplayScreen = () => {
               animation: "checkoutSuccessCard 260ms ease-out",
             }}
           >
-            <div className="relative mx-auto mb-3 flex h-[104px] w-[104px] items-center justify-center">
+            <div className="relative mx-auto mb-3 flex h-26 w-26 items-center justify-center">
               <span
                 className="absolute inset-2 rounded-full border-2 border-emerald-300/80"
                 style={{

@@ -16,6 +16,13 @@ export type PosPaymentCompletedPayload = {
   message: string;
 };
 
+export type PosPaymentLinkPayload = {
+  orderId: string;
+  paymentId: string;
+  method: string;
+  paymentUrl: string;
+};
+
 const resolvePosHubUrl = () => {
   const explicitHubUrl = (
     (import.meta.env.VITE_POS_HUB_URL as string | undefined) ||
@@ -175,6 +182,8 @@ export const useSignalR = <T = unknown>({
     useState<PosPaymentCompletedPayload | null>(null);
   const [paymentFailedData, setPaymentFailedData] =
     useState<PosPaymentCompletedPayload | null>(null);
+  const [paymentLinkUpdatedData, setPaymentLinkUpdatedData] =
+    useState<PosPaymentLinkPayload | null>(null);
 
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const startPromiseRef = useRef<Promise<void> | null>(null);
@@ -451,6 +460,15 @@ export const useSignalR = <T = unknown>({
             },
           );
 
+          connection.on(
+            "PaymentLinkUpdated",
+            (payload: PosPaymentLinkPayload) => {
+              if (!isMounted) return;
+              setPaymentLinkUpdatedData(payload);
+              setLastEvent("received-payment-link-updated");
+            },
+          );
+
           connection.onclose((closeError) => {
             if (isMounted) {
               setIsConnected(false);
@@ -648,6 +666,7 @@ export const useSignalR = <T = unknown>({
     customerDisplayData,
     paymentCompletedData,
     paymentFailedData,
+    paymentLinkUpdatedData,
     isConnected,
     connectionState,
     lastEvent,
