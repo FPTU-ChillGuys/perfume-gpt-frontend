@@ -56,6 +56,8 @@ export const CustomerDisplayScreen = () => {
   const hadPaymentFlowRef = useRef(false);
   const lastFailedOrderIdRef = useRef("");
   const lastSuccessfulOrderIdRef = useRef("");
+  const latestPaymentOrderIdRef = useRef("");
+  const latestPaymentIdRef = useRef("");
 
   const items = useMemo<DisplayItem[]>(() => {
     const rawItems = readProp<unknown[]>(customerDisplayData, "items", "Items");
@@ -210,6 +212,8 @@ export const CustomerDisplayScreen = () => {
     if (rawOrderId) {
       lastSuccessfulOrderIdRef.current = rawOrderId;
       lastFailedOrderIdRef.current = "";
+      latestPaymentOrderIdRef.current = "";
+      latestPaymentIdRef.current = "";
     }
 
     const frameId = window.requestAnimationFrame(() => {
@@ -234,12 +238,27 @@ export const CustomerDisplayScreen = () => {
       paymentFailedData.orderId ||
       (paymentFailedData as { OrderId?: string }).OrderId ||
       "";
+    const rawPaymentId =
+      paymentFailedData.paymentId ||
+      (paymentFailedData as { PaymentId?: string }).PaymentId ||
+      "";
 
     if (normalizedStatus !== "failed" && normalizedStatus !== "error") {
       return;
     }
 
     if (rawOrderId && rawOrderId === lastSuccessfulOrderIdRef.current) {
+      return;
+    }
+
+    if (
+      rawOrderId &&
+      latestPaymentOrderIdRef.current &&
+      rawOrderId === latestPaymentOrderIdRef.current &&
+      rawPaymentId &&
+      latestPaymentIdRef.current &&
+      rawPaymentId !== latestPaymentIdRef.current
+    ) {
       return;
     }
 
@@ -266,6 +285,22 @@ export const CustomerDisplayScreen = () => {
     ).trim();
 
     if (!link) return;
+
+    const rawOrderId =
+      paymentLinkUpdatedData.orderId ||
+      (paymentLinkUpdatedData as { OrderId?: string }).OrderId ||
+      "";
+    const rawPaymentId =
+      paymentLinkUpdatedData.paymentId ||
+      (paymentLinkUpdatedData as { PaymentId?: string }).PaymentId ||
+      "";
+
+    if (rawOrderId) {
+      latestPaymentOrderIdRef.current = rawOrderId;
+    }
+    if (rawPaymentId) {
+      latestPaymentIdRef.current = rawPaymentId;
+    }
 
     hadPaymentFlowRef.current = true;
 

@@ -187,6 +187,32 @@ const toSafeNumber = (value: unknown) => {
 const isHttpUrl = (value?: string | null) =>
   /^https?:\/\//i.test((value || "").trim());
 
+const extractPaymentIdFromRetryUrl = (url?: string) => {
+  const raw = (url || "").trim();
+  if (!raw || !isHttpUrl(raw)) return "";
+
+  try {
+    const parsed = new URL(raw);
+    const candidates = [
+      parsed.searchParams.get("paymentId"),
+      parsed.searchParams.get("PaymentId"),
+      parsed.searchParams.get("orderId"),
+      parsed.searchParams.get("OrderId"),
+      parsed.searchParams.get("txnRef"),
+      parsed.searchParams.get("TxnRef"),
+      parsed.searchParams.get("vnp_TxnRef"),
+    ];
+
+    const matched = candidates
+      .map((value) => (value || "").trim())
+      .find((value) => GUID_REGEX.test(value));
+
+    return matched || "";
+  } catch {
+    return "";
+  }
+};
+
 const createDebugCallId = (prefix: string) =>
   `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -263,6 +289,8 @@ export const CounterCheckoutStaffPage = () => {
   const handledPaymentEventRef = useRef<string>("");
   const handledPaymentFailedEventRef = useRef<string>("");
   const lastPaidOrderIdRef = useRef<string>("");
+  const latestRetryOrderIdRef = useRef<string>("");
+  const latestRetryPaymentIdRef = useRef<string>("");
   const syncCartToCustomerRef = useRef(syncCartToCustomer);
   const [failedPaymentAction, setFailedPaymentAction] =
     useState<FailedPaymentAction | null>(null);
@@ -1013,13 +1041,21 @@ export const CounterCheckoutStaffPage = () => {
           result,
         });
 
+        const paymentIdFromRetryResponse = (result.paymentId || "").trim();
+        const paymentIdFromRetryUrl = extractPaymentIdFromRetryUrl(result.url);
         const paymentIdForRetry =
-          (result.paymentId || "").trim() || failedPaymentAction.paymentId;
+          paymentIdFromRetryResponse ||
+          paymentIdFromRetryUrl ||
+          failedPaymentAction.paymentId;
+
+        latestRetryOrderIdRef.current = failedPaymentAction.orderId;
+        latestRetryPaymentIdRef.current = paymentIdForRetry;
 
         console.log("[POS][RETRY] PaymentId resolution", {
           retryCallId,
           previousPaymentId: failedPaymentAction.paymentId,
-          paymentIdFromRetryResult: (result.paymentId || "").trim() || null,
+          paymentIdFromRetryResult: paymentIdFromRetryResponse || null,
+          paymentIdFromRetryUrl: paymentIdFromRetryUrl || null,
           paymentIdUsedForNextStep: paymentIdForRetry,
         });
 
@@ -1170,6 +1206,32 @@ export const CounterCheckoutStaffPage = () => {
       failedEventKey,
     });
 
+    const activeRetryOrderId =
+      latestRetryOrderIdRef.current || failedPaymentAction?.orderId || "";
+    const activeRetryPaymentId =
+      latestRetryPaymentIdRef.current || failedPaymentAction?.paymentId || "";
+
+    if (
+      rawOrderId &&
+      activeRetryOrderId &&
+      rawOrderId === activeRetryOrderId &&
+      rawPaymentId &&
+      activeRetryPaymentId &&
+      rawPaymentId !== activeRetryPaymentId
+    ) {
+      console.log(
+        "[POS][PAYMENT_FAILED_EVENT] Ignored stale fail for previous paymentId",
+        {
+          orderId: rawOrderId,
+          stalePaymentId: rawPaymentId,
+          activePaymentId: activeRetryPaymentId,
+          activeRetryOrderId,
+        },
+      );
+      handledPaymentFailedEventRef.current = failedEventKey;
+      return;
+    }
+
     if (rawOrderId && rawOrderId === lastPaidOrderIdRef.current) {
       console.log(
         "[POS][PAYMENT_FAILED_EVENT] Ignored stale fail after success",
@@ -1197,6 +1259,9 @@ export const CounterCheckoutStaffPage = () => {
           paymentId: rawPaymentId || undefined,
           message: rawMessage,
         });
+
+        latestRetryOrderIdRef.current = rawOrderId;
+        latestRetryPaymentIdRef.current = rawPaymentId || "";
       }
     }
 
@@ -1209,6 +1274,8 @@ export const CounterCheckoutStaffPage = () => {
       });
     }
   }, [
+    failedPaymentAction?.orderId,
+    failedPaymentAction?.paymentId,
     paymentFailedData,
     previewData,
     showToast,
@@ -1241,6 +1308,9 @@ export const CounterCheckoutStaffPage = () => {
       paymentId: rawPaymentId,
       paymentUrl: rawPaymentUrl,
     });
+
+    latestRetryOrderIdRef.current = rawOrderId;
+    latestRetryPaymentIdRef.current = rawPaymentId;
 
     paymentQrUrlRef.current = rawPaymentUrl;
     setPaymentQrUrl(rawPaymentUrl);
