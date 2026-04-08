@@ -262,6 +262,7 @@ export const CounterCheckoutStaffPage = () => {
   const paymentQrUrlRef = useRef<string | null>(null);
   const handledPaymentEventRef = useRef<string>("");
   const handledPaymentFailedEventRef = useRef<string>("");
+  const lastPaidOrderIdRef = useRef<string>("");
   const syncCartToCustomerRef = useRef(syncCartToCustomer);
   const [failedPaymentAction, setFailedPaymentAction] =
     useState<FailedPaymentAction | null>(null);
@@ -335,6 +336,7 @@ export const CounterCheckoutStaffPage = () => {
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
     setCheckoutSuccessRef(rawOrderId);
+    lastPaidOrderIdRef.current = rawOrderId;
 
     void syncCartToCustomerRef.current({
       items: [],
@@ -915,6 +917,7 @@ export const CounterCheckoutStaffPage = () => {
       paymentQrUrlRef.current = null;
       setPaymentQrUrl(null);
       setCheckoutSuccessRef(orderId);
+      lastPaidOrderIdRef.current = orderId;
       setFailedPaymentAction(null);
 
       void syncCartToCustomerRef.current({
@@ -1128,6 +1131,15 @@ export const CounterCheckoutStaffPage = () => {
       message: rawMessage,
       failedEventKey,
     });
+
+    if (rawOrderId && rawOrderId === lastPaidOrderIdRef.current) {
+      console.log("[POS][PAYMENT_FAILED_EVENT] Ignored stale fail after success", {
+        orderId: rawOrderId,
+        paymentId: rawPaymentId || null,
+        lastPaidOrderId: lastPaidOrderIdRef.current,
+      });
+      return;
+    }
 
     handledPaymentFailedEventRef.current = failedEventKey;
 
