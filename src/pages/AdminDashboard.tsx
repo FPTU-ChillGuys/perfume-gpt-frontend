@@ -135,8 +135,9 @@ const getMonthRange = (monthKey: string) => {
   };
 };
 
-interface WeekRevenuePoint {
+interface RevenueDayPoint {
   label: string;
+  date: Date;
   grossRevenue: number;
   refundedAmount: number;
   netRevenue: number;
@@ -145,6 +146,8 @@ interface WeekRevenuePoint {
 
 interface WeekRange {
   label: string;
+  startDay: number;
+  endDay: number;
   from: string;
   to: string;
 }
@@ -178,6 +181,8 @@ const getMonthWeekRanges = (monthKey: string): WeekRange[] => {
 
       return {
         label: `Tuần ${index + 1}`,
+        startDay,
+        endDay: Math.min(endDay, lastDay),
         from: formatDateTimeForApi(start),
         to: formatDateTimeForApi(end),
       };
@@ -185,21 +190,49 @@ const getMonthWeekRanges = (monthKey: string): WeekRange[] => {
     .filter((item): item is WeekRange => Boolean(item));
 };
 
-const buildWeeklyRevenueSeries = (
-  ranges: WeekRange[],
+interface DayRange {
+  label: string;
+  date: Date;
+  from: string;
+  to: string;
+}
+
+const getMonthDayRanges = (monthKey: string): DayRange[] => {
+  const { year, month } = parseMonthKey(monthKey);
+  const monthIndex = month - 1;
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+
+  return Array.from({ length: lastDay }, (_, index) => {
+    const day = index + 1;
+    const start = new Date(year, monthIndex, day, 0, 0, 0);
+    const end = new Date(year, monthIndex, day, 23, 59, 59);
+
+    return {
+      label: `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}`,
+      date: start,
+      from: formatDateTimeForApi(start),
+      to: formatDateTimeForApi(end),
+    };
+  });
+};
+
+const buildDailyRevenueSeries = (
+  ranges: DayRange[],
   summaries: RevenueSummary[],
-): WeekRevenuePoint[] => {
+): RevenueDayPoint[] => {
   return ranges.map((range, index) => {
     const summary = summaries[index] || {};
-    const grossRevenue = Number(summary.grossRevenue ?? 0);
-    const refundedAmount = Number(summary.refundedAmount ?? 0);
-    const netRevenue = Number(
-      summary.netRevenue ?? grossRevenue - refundedAmount,
+    const grossRevenue = Math.max(0, Number(summary.grossRevenue ?? 0));
+    const refundedAmount = Math.abs(Number(summary.refundedAmount ?? 0));
+    const netRevenue = Math.max(
+      0,
+      Number(summary.netRevenue ?? grossRevenue - refundedAmount),
     );
     const orders = Number(summary.paidOrdersCount ?? 0);
 
     return {
       label: range.label,
+      date: range.date,
       grossRevenue,
       refundedAmount,
       netRevenue,
@@ -241,10 +274,12 @@ const StatCard = ({ label, value, icon, color, bg, helper }: StatCardProps) => (
 const RevenueLineChart = ({
   data,
   range,
+  weekRanges,
   onRangeChange,
 }: {
-  data: WeekRevenuePoint[];
+  data: RevenueDayPoint[];
   range: number[];
+  weekRanges: WeekRange[];
   onRangeChange: (next: number[]) => void;
 }) => {
   const width = 1000;
@@ -254,12 +289,26 @@ const RevenueLineChart = ({
 
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const safeStart = Math.max(0, Math.min(range[0] ?? 0, data.length - 1));
+  const safeStart = Math.max(0, Math.min(range[0] ?? 0, weekRanges.length - 1));
   const safeEnd = Math.max(
     safeStart,
-    Math.min(range[1] ?? safeStart, data.length - 1),
+    Math.min(range[1] ?? safeStart, weekRanges.length - 1),
   );
-  const visibleData = data.slice(safeStart, safeEnd + 1);
+
+  const rangeStartDate = weekRanges[safeStart]
+    ? new Date(weekRanges[safeStart]!.from)
+    : null;
+  const rangeEndDate = weekRanges[safeEnd]
+    ? new Date(weekRanges[safeEnd]!.to)
+    : null;
+
+  const visibleData = data.filter((point) => {
+    if (!rangeStartDate || !rangeEndDate) {
+      return true;
+    }
+
+    return point.date >= rangeStartDate && point.date <= rangeEndDate;
+  });
 
   const allValues = visibleData.flatMap((point) => [
     point.grossRevenue,
@@ -268,21 +317,18 @@ const RevenueLineChart = ({
   ]);
 
   const maxRevenue = Math.max(1, ...allValues);
-  const minRevenue = Math.min(0, ...allValues);
+  const minRevenue = 0;
   const valueSpan = Math.max(1, maxRevenue - minRevenue);
   const plotWidth = width - xAxisStart - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
 
-  const yTickValues =
-    minRevenue < 0 && maxRevenue > 0
-      ? [maxRevenue, maxRevenue / 2, 0, minRevenue / 2, minRevenue]
-      : [
-          maxRevenue,
-          maxRevenue * 0.75,
-          maxRevenue * 0.5,
-          maxRevenue * 0.25,
-          minRevenue,
-        ];
+  const yTickValues = [
+    maxRevenue,
+    maxRevenue * 0.75,
+    maxRevenue * 0.5,
+    maxRevenue * 0.25,
+    minRevenue,
+  ];
 
   const points = visibleData.map((point, index) => {
     const x =
@@ -324,8 +370,8 @@ const RevenueLineChart = ({
   };
 
   const buildSeriesPath = (
-    selector: (point: WeekRevenuePoint) => number,
-    source: (WeekRevenuePoint & { x: number; y: number })[],
+    selector: (point: RevenueDayPoint) => number,
+    source: (RevenueDayPoint & { x: number; y: number })[],
   ) => {
     const seriesPoints = source.map((point) => {
       const value = selector(point);
@@ -358,10 +404,17 @@ const RevenueLineChart = ({
   const zeroLineY =
     margin.top + plotHeight - ((0 - minRevenue) / valueSpan) * plotHeight;
 
-  const sliderMarks = data.map((point, index) => ({
+  const sliderMarks = weekRanges.map((week, index) => ({
     value: index,
-    label: point.label,
+    label: week.label,
   }));
+
+  const labelStep = Math.max(1, Math.ceil(visibleData.length / 8));
+  const lastPointIndex = Math.max(0, points.length - 1);
+  const previousStepLabelIndex = lastPointIndex - (lastPointIndex % labelStep);
+  const shouldHidePreviousStepLabel =
+    previousStepLabelIndex !== lastPointIndex &&
+    lastPointIndex - previousStepLabelIndex < 2;
 
   return (
     <Box
@@ -406,7 +459,7 @@ const RevenueLineChart = ({
           height={height}
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Biểu đồ doanh thu theo tuần trong tháng"
+          aria-label="Biểu đồ doanh thu theo ngày"
         >
           <line
             x1={xAxisStart}
@@ -492,23 +545,28 @@ const RevenueLineChart = ({
 
           {points.map((point, index) => (
             <g key={index}>
-              <rect
-                x={
+              {(() => {
+                const leftBoundary =
                   index === 0
                     ? xAxisStart
-                    : (points[index - 1]!.x + point.x) / 2
-                }
-                y={margin.top}
-                width={
+                    : (points[index - 1]!.x + point.x) / 2;
+                const rightBoundary =
                   index === points.length - 1
-                    ? width - margin.right - point.x
-                    : (points[index + 1]!.x - point.x) / 2
-                }
-                height={plotHeight}
-                fill="transparent"
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseMove={() => setHoveredIndex(index)}
-              />
+                    ? width - margin.right
+                    : (point.x + points[index + 1]!.x) / 2;
+
+                return (
+                  <rect
+                    x={leftBoundary}
+                    y={margin.top}
+                    width={Math.max(0, rightBoundary - leftBoundary)}
+                    height={plotHeight}
+                    fill="transparent"
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    onMouseMove={() => setHoveredIndex(index)}
+                  />
+                );
+              })()}
 
               <circle
                 cx={point.x}
@@ -521,15 +579,22 @@ const RevenueLineChart = ({
                 fill="#60a5fa"
               />
 
-              <text
-                x={point.x}
-                y={height - 14}
-                textAnchor="middle"
-                fill="#475569"
-                fontSize="11"
-              >
-                {point.label}
-              </text>
+              {(index === lastPointIndex ||
+                (index % labelStep === 0 &&
+                  !(
+                    shouldHidePreviousStepLabel &&
+                    index === previousStepLabelIndex
+                  ))) && (
+                <text
+                  x={point.x}
+                  y={height - 14}
+                  textAnchor="middle"
+                  fill="#475569"
+                  fontSize="11"
+                >
+                  {point.label}
+                </text>
+              )}
             </g>
           ))}
 
@@ -589,7 +654,7 @@ const RevenueLineChart = ({
         )}
       </Box>
 
-      {data.length > 1 && (
+      {weekRanges.length > 1 && (
         <Box sx={{ px: 0.75, pt: 1.5 }}>
           <Slider
             value={range}
@@ -599,7 +664,7 @@ const RevenueLineChart = ({
               }
             }}
             min={0}
-            max={data.length - 1}
+            max={weekRanges.length - 1}
             step={1}
             marks={sliderMarks}
             valueLabelDisplay="off"
@@ -628,7 +693,8 @@ const AdminDashboard = () => {
   const monthOptions = getYearMonthOptions(new Date().getFullYear());
 
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
-  const [weeklyRevenue, setWeeklyRevenue] = useState<WeekRevenuePoint[]>([]);
+  const [dailyRevenue, setDailyRevenue] = useState<RevenueDayPoint[]>([]);
+  const [monthWeekRanges, setMonthWeekRanges] = useState<WeekRange[]>([]);
   const [revenueRange, setRevenueRange] = useState<number[]>([0, 0]);
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthKey());
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
@@ -640,6 +706,7 @@ const AdminDashboard = () => {
     const todayRange = getTodayRange();
     const monthRange = getMonthRange(selectedMonth);
     const weekRanges = getMonthWeekRanges(selectedMonth);
+    const dayRanges = getMonthDayRanges(selectedMonth);
     let active = true;
 
     Promise.all([
@@ -648,7 +715,7 @@ const AdminDashboard = () => {
         ToDate: todayRange.to,
       }),
       Promise.all(
-        weekRanges.map((range) =>
+        dayRanges.map((range) =>
           adminDashboardService.getRevenue({
             FromDate: range.from,
             ToDate: range.to,
@@ -668,12 +735,13 @@ const AdminDashboard = () => {
         }
 
         setOverview(ov);
-        const weeklySeries = buildWeeklyRevenueSeries(
-          weekRanges,
+        const dailySeries = buildDailyRevenueSeries(
+          dayRanges,
           revenueSummaries,
         );
-        setWeeklyRevenue(weeklySeries);
-        setRevenueRange([0, Math.max(0, weeklySeries.length - 1)]);
+        setDailyRevenue(dailySeries);
+        setMonthWeekRanges(weekRanges);
+        setRevenueRange([0, Math.max(0, weekRanges.length - 1)]);
         setTopProducts(top);
         setInventorySummary(inv);
       })
@@ -808,7 +876,7 @@ const AdminDashboard = () => {
                   <Stack direction="row" spacing={1} alignItems="center">
                     <Timeline color="primary" />
                     <Typography variant="h6" fontWeight="bold">
-                      Doanh thu theo tuần trong tháng
+                      Doanh thu theo ngày trong tháng
                     </Typography>
                   </Stack>
 
@@ -825,13 +893,14 @@ const AdminDashboard = () => {
                     </Select>
                   </FormControl>
                 </Box>
-                {weeklyRevenue.length === 0 ? (
+                {dailyRevenue.length === 0 ? (
                   <Typography color="text.secondary" textAlign="center" py={4}>
                     Chưa có dữ liệu doanh thu của tháng đã chọn
                   </Typography>
                 ) : (
                   <RevenueLineChart
-                    data={weeklyRevenue}
+                    data={dailyRevenue}
+                    weekRanges={monthWeekRanges}
                     range={revenueRange}
                     onRangeChange={setRevenueRange}
                   />

@@ -33,7 +33,7 @@ import {
   LightMode as LightModeIcon,
   DoneAll as DoneAllIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
 import { useThemeMode } from "../../contexts/ThemeContext";
@@ -45,6 +45,7 @@ import {
   type CategoryLookupItem,
 } from "../../services/categoryService";
 import { notificationService } from "../../services/notificationService";
+import { loyaltyService } from "../../services/loyaltyService";
 
 const MAX_VISIBLE_CATEGORIES = 5;
 
@@ -63,6 +64,7 @@ const toVietnameseCategoryName = (name?: string | null) => {
 
 export const Header = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { cartCount } = useCart();
   const { mode, toggleMode } = useThemeMode();
@@ -73,6 +75,7 @@ export const Header = () => {
   const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
   const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
   const [markingAllRead, setMarkingAllRead] = useState(false);
+  const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null);
 
   useEffect(() => {
     categoryService
@@ -83,9 +86,38 @@ export const Header = () => {
       });
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== "user") {
+      setLoyaltyBalance(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    loyaltyService
+      .getMyBalance()
+      .then((data) => {
+        if (isMounted) {
+          setLoyaltyBalance(data.pointBalance ?? 0);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setLoyaltyBalance(0);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, user?.role]);
+
   const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
   const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
   const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
+  const isStaffHomepageOrStaffPage =
+    user?.role === "staff" &&
+    (location.pathname === "/" || location.pathname.startsWith("/staff"));
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -401,9 +433,7 @@ export const Header = () => {
                       cursor: user.role === "user" ? "pointer" : "default",
                       "&:hover": {
                         bgcolor:
-                          user.role === "user"
-                            ? "action.hover"
-                            : "transparent",
+                          user.role === "user" ? "action.hover" : "transparent",
                       },
                     }}
                   >
@@ -417,22 +447,25 @@ export const Header = () => {
                     >
                       {user.email}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "inline-block",
-                        mt: 0.5,
-                        px: 1,
-                        py: 0.25,
-                        bgcolor: "primary.main",
-                        color: "white",
-                        borderRadius: 1,
-                        fontSize: "0.7rem",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {user.role}
-                    </Typography>
+                    {user.role === "user" && loyaltyBalance !== null && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "inline-block",
+                          mt: 0.75,
+                          px: 1.25,
+                          py: 0.35,
+                          color: "error.main",
+                          border: (theme) =>
+                            `1px solid ${theme.palette.error.main}`,
+                          borderRadius: 99,
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {`Số dư: ${loyaltyBalance.toLocaleString("vi-VN")} điểm`}
+                      </Typography>
+                    )}
                   </MenuItem>
                   <Divider />
                   {user.role === "user" && (
@@ -451,7 +484,7 @@ export const Header = () => {
                       <Typography variant="body2">Trang chủ</Typography>
                     </MenuItem>
                   )}
-                  {(user.role === "admin" || user.role === "staff") && (
+                  {isStaffHomepageOrStaffPage && (
                     <MenuItem onClick={handleCounterCheckout} sx={{ py: 1.5 }}>
                       <ListItemIcon>
                         <PointOfSaleIcon fontSize="small" />
@@ -459,7 +492,7 @@ export const Header = () => {
                       <Typography variant="body2">Checkout tại quầy</Typography>
                     </MenuItem>
                   )}
-                  {(user.role === "admin" || user.role === "staff") && (
+                  {isStaffHomepageOrStaffPage && (
                     <MenuItem onClick={handleCounterDisplay} sx={{ py: 1.5 }}>
                       <ListItemIcon>
                         <TvIcon fontSize="small" />

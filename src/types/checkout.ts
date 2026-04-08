@@ -5,8 +5,6 @@ export type RecipientInformation =
   components["schemas"]["ContactAddressInformation"];
 export type PaymentInformation = components["schemas"]["PaymentInformation"];
 export type CreateOrderRequest = components["schemas"]["CreateOrderRequest"];
-export type CreateOrderDetailRequest =
-  components["schemas"]["CreateOrderDetailRequest"];
 export type CreateInStoreOrderRequest =
   components["schemas"]["CreateInStoreOrderRequest"];
 

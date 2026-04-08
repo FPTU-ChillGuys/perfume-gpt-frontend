@@ -58,9 +58,9 @@ const CounterCheckoutStaffPage = lazy(() =>
     default: m.CounterCheckoutStaffPage,
   })),
 );
-const CounterCheckoutDisplayPage = lazy(() =>
-  import("./pages/checkout/CounterCheckoutDisplayPage").then((m) => ({
-    default: m.CounterCheckoutDisplayPage,
+const CustomerDisplayScreen = lazy(() =>
+  import("./pages/checkout/CustomerDisplayScreen").then((m) => ({
+    default: m.CustomerDisplayScreen,
   })),
 );
 const PaymentSuccessPage = lazy(() =>
@@ -79,6 +79,16 @@ const MyOrdersPage = lazy(() =>
 const MyOrderDetailPage = lazy(() =>
   import("./pages/MyOrderDetailPage").then((m) => ({
     default: m.MyOrderDetailPage,
+  })),
+);
+const MyCancelRequestsPage = lazy(() =>
+  import("./pages/MyCancelRequestsPage").then((m) => ({
+    default: m.MyCancelRequestsPage,
+  })),
+);
+const MyCancelRequestDetailPage = lazy(() =>
+  import("./pages/MyCancelRequestDetailPage").then((m) => ({
+    default: m.MyCancelRequestDetailPage,
   })),
 );
 const MyReturnRequestsPage = lazy(() =>
@@ -165,6 +175,11 @@ const OrderCancelRequestsPage = lazy(() =>
     default: m.OrderCancelRequestsPage,
   })),
 );
+const OrderCancelRequestDetailPage = lazy(() =>
+  import("./pages/OrderCancelRequestDetailPage").then((m) => ({
+    default: m.OrderCancelRequestDetailPage,
+  })),
+);
 const OrderReturnRequestsPage = lazy(() =>
   import("./pages/OrderReturnRequestsPage").then((m) => ({
     default: m.OrderReturnRequestsPage,
@@ -246,7 +261,7 @@ function App() {
                       />
                       <Route
                         path="/checkout/counter/display"
-                        element={<CounterCheckoutDisplayPage />}
+                        element={<CustomerDisplayScreen />}
                       />
                       <Route path="/products" element={<ProductListPage />} />
                       <Route path="/survey" element={<SurveyPage />} />
@@ -345,6 +360,22 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
                             <MyOrderDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-cancel-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyCancelRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyCancelRequestDetailPage />
                           </RoleBasedRoute>
                         }
                       />
@@ -531,6 +562,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderCancelRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/return-requests"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -606,6 +645,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/staff/cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderCancelRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/staff/return-requests/:returnRequestId"
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
@@ -618,6 +665,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
                             <InventoryManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/payment-transactions"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <PaymentTransactionsManagementPage />
                           </RoleBasedRoute>
                         }
                       />

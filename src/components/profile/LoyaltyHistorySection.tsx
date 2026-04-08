@@ -39,12 +39,10 @@ export const LoyaltyHistorySection = () => {
     setLoading(true);
     try {
       const [historyResult, balanceResult] = await Promise.all([
-        loyaltyService.getMyHistory(
-          page + 1,
-          PAGE_SIZE,
-          filter || undefined,
-        ),
-        balance === null ? loyaltyService.getMyBalance() : Promise.resolve(null),
+        loyaltyService.getMyHistory(page + 1, PAGE_SIZE, filter || undefined),
+        balance === null
+          ? loyaltyService.getMyBalance()
+          : Promise.resolve(null),
       ]);
       setItems(historyResult.items);
       setTotalCount(historyResult.totalCount);
@@ -125,60 +123,68 @@ export const LoyaltyHistorySection = () => {
           </Typography>
         </Box>
       ) : (
-        <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Thời gian</TableCell>
-                <TableCell>Lý do</TableCell>
-                <TableCell align="center">Loại</TableCell>
-                <TableCell align="right">Điểm</TableCell>
-                <TableCell align="right">Số dư sau</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {items.map((item, idx) => (
-                <TableRow key={item.id ?? idx}>
-                  <TableCell sx={{ whiteSpace: "nowrap" }}>
-                    {item.id
-                      ? new Date().toLocaleDateString("vi-VN")
-                      : "—"}
+        <Paper
+          elevation={0}
+          sx={{
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 2,
+            overflow: "hidden",
+          }}
+        >
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: "action.hover" }}>
+                  <TableCell sx={{ fontWeight: 700 }}>Thời gian</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>Lý do</TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>
+                    Loại
                   </TableCell>
-                  <TableCell>{item.reason || "—"}</TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      label={
-                        item.transactionType === "Earn"
-                          ? "Cộng điểm"
-                          : "Trừ điểm"
-                      }
-                      color={
-                        item.transactionType === "Earn" ? "success" : "error"
-                      }
-                      size="small"
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{
-                      fontWeight: 600,
-                      color:
-                        item.transactionType === "Earn"
-                          ? "success.main"
-                          : "error.main",
-                    }}
-                  >
-                    {item.transactionType === "Earn" ? "+" : "-"}
-                    {Math.abs(item.pointsChanged ?? 0).toLocaleString()}
-                  </TableCell>
-                  <TableCell align="right">
-                    {(item.absolutePoints ?? 0).toLocaleString()}
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>
+                    Điểm
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {items.map((item, idx) => (
+                  <TableRow key={item.id ?? idx} hover>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>
+                      {item.id ? new Date().toLocaleDateString("vi-VN") : "—"}
+                    </TableCell>
+                    <TableCell>{item.reason || "—"}</TableCell>
+                    <TableCell align="center">
+                      <Chip
+                        label={
+                          item.transactionType === "Earn"
+                            ? "Cộng điểm"
+                            : "Trừ điểm"
+                        }
+                        color={
+                          item.transactionType === "Earn" ? "success" : "error"
+                        }
+                        size="small"
+                        variant="outlined"
+                      />
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{
+                        fontWeight: 600,
+                        color:
+                          item.transactionType === "Earn"
+                            ? "success.main"
+                            : "error.main",
+                      }}
+                    >
+                      {item.transactionType === "Earn" ? "+" : "-"}
+                      {Math.abs(item.pointsChanged ?? 0).toLocaleString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
           <TablePagination
             component="div"
             count={totalCount}
@@ -186,11 +192,12 @@ export const LoyaltyHistorySection = () => {
             rowsPerPage={PAGE_SIZE}
             rowsPerPageOptions={[PAGE_SIZE]}
             onPageChange={(_, p) => setPage(p)}
+            labelRowsPerPage="Số hàng mỗi trang:"
             labelDisplayedRows={({ from, to, count }) =>
-              `${from}–${to} / ${count}`
+              `${from}–${to} của ${count}`
             }
           />
-        </TableContainer>
+        </Paper>
       )}
     </Box>
   );

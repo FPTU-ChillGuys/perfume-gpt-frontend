@@ -18,8 +18,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     loadUser();
 
-    // NOTE: Cross-tab sync removed to allow multiple independent sessions
-    // Each tab now operates independently with its own auth state
+    // Keep auth UI in sync when login/logout happens in another tab.
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key && event.key !== "accessToken" && event.key !== "user") {
+        return;
+      }
+
+      setUser(authService.getCurrentUser());
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const login = async (credentials: LoginRequest): Promise<User> => {

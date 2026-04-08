@@ -232,10 +232,6 @@ export const UserLogsManagementPage = () => {
     return (
         <AdminLayout>
             <Box>
-                <Typography variant="h4" fontWeight="bold" mb={3}>
-                    Quản lý Log Người Dùng
-                </Typography>
-
                 <Paper sx={{ mb: 3 }}>
                     <Tabs value={tabValue} onChange={handleTabChange} aria-label="user logs tabs">
                         <Tab label="Log hoạt động" id="user-log-tab-0" aria-controls="user-log-panel-0" />

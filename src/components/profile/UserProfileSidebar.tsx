@@ -35,8 +35,10 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [accountOpen, setAccountOpen] = useState(true);
+  const [ordersOpen, setOrdersOpen] = useState(true);
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string, includeSubPaths = false) =>
+    pathname === path || (includeSubPaths && pathname.startsWith(`${path}/`));
 
   const navItems = [
     {
@@ -57,12 +59,24 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
     {
       label: "Đơn Mua",
       icon: <OrderIcon fontSize="small" />,
-      path: "/my-orders",
-    },
-    {
-      label: "Trả Hàng/Hoàn Tiền",
-      icon: <ReturnIcon fontSize="small" />,
-      path: "/my-return-requests",
+      isGroup: true,
+      children: [
+        {
+          label: "Lịch Sử Mua Hàng",
+          path: "/my-orders",
+          includeSubPaths: true,
+        },
+        {
+          label: "Hủy Đơn/Hoàn Tiền",
+          path: "/my-cancel-requests",
+          includeSubPaths: true,
+        },
+        {
+          label: "Trả Hàng/Hoàn Tiền",
+          path: "/my-return-requests",
+          includeSubPaths: true,
+        },
+      ],
     },
     {
       label: "Kho Voucher",
@@ -146,12 +160,15 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
       <List dense disablePadding>
         {navItems.map((item) => {
           if (item.isGroup) {
+            const isOrdersGroup = item.label === "Đơn Mua";
+            const groupOpen = isOrdersGroup ? ordersOpen : accountOpen;
+            const toggleGroup = isOrdersGroup
+              ? () => setOrdersOpen((prev) => !prev)
+              : () => setAccountOpen((prev) => !prev);
+
             return (
               <Box key={item.label}>
-                <ListItemButton
-                  onClick={() => setAccountOpen((prev) => !prev)}
-                  sx={{ py: 1.2, px: 3 }}
-                >
+                <ListItemButton onClick={toggleGroup} sx={{ py: 1.2, px: 3 }}>
                   <ListItemIcon sx={{ minWidth: 32, color: "error.main" }}>
                     {item.icon}
                   </ListItemIcon>
@@ -162,18 +179,23 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
                       </Typography>
                     }
                   />
-                  {accountOpen ? (
+                  {groupOpen ? (
                     <ExpandLess fontSize="small" />
                   ) : (
                     <ExpandMore fontSize="small" />
                   )}
                 </ListItemButton>
-                <Collapse in={accountOpen} timeout="auto" unmountOnExit>
+                <Collapse in={groupOpen} timeout="auto" unmountOnExit>
                   <List dense disablePadding>
                     {item.children?.map((child) => (
                       <ListItemButton
                         key={child.path}
-                        selected={isActive(child.path)}
+                        selected={isActive(
+                          child.path,
+                          "includeSubPaths" in child
+                            ? child.includeSubPaths
+                            : false,
+                        )}
                         onClick={() => navigate(child.path)}
                         sx={{
                           pl: 7,
@@ -200,7 +222,12 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
                             <Typography
                               variant="body2"
                               color={
-                                isActive(child.path)
+                                isActive(
+                                  child.path,
+                                  "includeSubPaths" in child
+                                    ? child.includeSubPaths
+                                    : false,
+                                )
                                   ? "error.main"
                                   : "text.primary"
                               }
@@ -259,4 +286,11 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
 };
 
 // Icon components used inside the sidebar (kept local for clarity)
-export { PersonIcon, LocationIcon, LockIcon, OrderIcon, VoucherIcon, ReturnIcon };
+export {
+  PersonIcon,
+  LocationIcon,
+  LockIcon,
+  OrderIcon,
+  VoucherIcon,
+  ReturnIcon,
+};

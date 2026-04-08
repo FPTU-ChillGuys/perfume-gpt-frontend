@@ -25,6 +25,7 @@ import {
   type OrderReturnRequest,
   type ReturnRequestStatus,
 } from "../services/orderService";
+import { formatDateTimeVN } from "@/utils/dateTime";
 
 type ReturnTabStatus = "All" | ReturnRequestStatus;
 
@@ -77,8 +78,7 @@ const statusColor = (
   return "default";
 };
 
-const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("vi-VN") : "-";
+const formatDate = (value?: string | null) => formatDateTimeVN(value);
 
 const formatCurrency = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;

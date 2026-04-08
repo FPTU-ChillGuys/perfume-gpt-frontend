@@ -34,6 +34,8 @@ import {
   AddBox as AddBoxIcon,
   Category as CategoryIcon,
   ShoppingCart as ShoppingCartIcon,
+  PointOfSale as PointOfSaleIcon,
+  Tv as TvIcon,
   Cancel as CancelIcon,
   AssignmentReturn as AssignmentReturnIcon,
   Slideshow as SlideshowIcon,
@@ -179,6 +181,12 @@ const menuGroups: SidebarMenuGroup[] = [
         text: "Quản lý sản phẩm",
         icon: <CategoryIcon />,
         path: "/staff/products",
+        roles: ["staff"],
+      },
+      {
+        text: "Rà soát giao dịch thu chi",
+        icon: <AccountBalanceWalletIcon />,
+        path: "/staff/payment-transactions",
         roles: ["staff"],
       },
     ],
@@ -662,24 +670,36 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               >
                 {user?.email}
               </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  display: "inline-block",
-                  mt: 0.5,
-                  px: 1,
-                  py: 0.25,
-                  bgcolor: "primary.main",
-                  color: "white",
-                  borderRadius: 1,
-                  fontSize: "0.7rem",
-                  textTransform: "uppercase",
-                }}
-              >
-                {user?.role}
-              </Typography>
             </MenuItem>
             <Divider />
+            {user?.role === "staff" && (
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  navigate("/checkout/counter/staff");
+                }}
+                sx={{ py: 1.5 }}
+              >
+                <ListItemIcon>
+                  <PointOfSaleIcon fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="body2">Checkout tại quầy</Typography>
+              </MenuItem>
+            )}
+            {user?.role === "staff" && (
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  navigate("/checkout/counter/display");
+                }}
+                sx={{ py: 1.5 }}
+              >
+                <ListItemIcon>
+                  <TvIcon fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="body2">Màn hình khách tại quầy</Typography>
+              </MenuItem>
+            )}
             <MenuItem
               onClick={() => {
                 handleMenuClose();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -25,9 +25,14 @@ import ImageIcon from "@mui/icons-material/Image";
 import PlayCircleOutlineIcon from "@mui/icons-material/PlayCircleOutline";
 import LocalPrintshopOutlinedIcon from "@mui/icons-material/LocalPrintshopOutlined";
 import Sync from "@mui/icons-material/Sync";
+import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import CheckIcon from "@mui/icons-material/Check";
 import momoLogo from "@/assets/momo.png";
 import vnpayLogo from "@/assets/vnpay.jpg";
 import storeLogo from "@/assets/store.png";
+import transfer from "@/assets/transfer.png";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
   orderService,
@@ -36,6 +41,7 @@ import {
 } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
 import type { OrderResponse } from "@/types/order";
+import { formatDateTimeVN } from "@/utils/dateTime";
 
 const REJECT_REASON_SUGGESTIONS = [
   "Yêu cầu quá thời hạn hỗ trợ đổi trả",
@@ -65,7 +71,32 @@ const REFUND_METHOD_OPTIONS: {
     label: "Cash In Store",
     iconSrc: storeLogo,
   },
+  {
+    value: "ExternalBankTransfer",
+    label: "External Bank Transfer",
+    iconSrc: transfer,
+  },
 ];
+
+const REFUND_METHOD_LABEL: Record<ReturnRefundMethod, string> = {
+  VnPay: "VNPay",
+  Momo: "MoMo",
+  CashInStore: "Cash In Store",
+  ExternalBankTransfer: "External Bank Transfer",
+};
+
+const MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH = 6;
+const REFUND_DIALOG_TOP_NOTE =
+  "Bạn có thể chọn hoàn qua cổng thanh toán ban đầu hoặc chuyển khoản thủ công khi cổng hoàn tự động bị treo/lỗi.";
+const REFUND_DIALOG_METHOD_TITLE = "Chọn phương thức hoàn tiền";
+const REFUND_DIALOG_MANUAL_MISSING_BANK_INFO_NOTE =
+  "Yêu cầu này chưa có đủ thông tin tài khoản ngân hàng của khách. Vui lòng yêu cầu khách bổ sung trước khi duyệt chuyển khoản.";
+const REFUND_DIALOG_MANUAL_REFERENCE_LABEL =
+  "Mã giao dịch chuyển khoản thủ công *";
+const REFUND_DIALOG_MANUAL_REFERENCE_HELPER =
+  "Tối thiểu 6 ký tự (ví dụ: FT123456).";
+const REFUND_DIALOG_CONFIRM_NOTE =
+  "Bạn có chắc chắn muốn xác nhận hoàn tiền cho yêu cầu này không? Hành động này không thể hoàn tác.";
 
 const statusLabel = (status?: string) => {
   if (status === "Pending") return "Chờ duyệt";
@@ -83,9 +114,10 @@ const shippingStatusLabel = (status?: string | null) => {
   if (!status) return "-";
 
   if (status === "Pending") return "Chờ lấy hàng";
-  if (status === "Confirmed") return "Đã xác nhận";
+  if (status === "ReadyToPick") return "Chờ lấy hàng";
   if (status === "PickedUp") return "Đã lấy hàng";
   if (status === "InTransit") return "Đang vận chuyển";
+  if (status === "Delivering") return "Đang giao hàng";
   if (status === "OutForDelivery") return "Đang giao hàng";
   if (status === "Delivered") return "Giao hàng thành công";
   if (status === "DeliveryFailed") return "Giao hàng thất bại";
@@ -121,8 +153,7 @@ const returnReasonLabel = (reason?: string | null) => {
   return reason;
 };
 
-const formatDate = (value?: string | null) =>
-  value ? new Date(value).toLocaleString("vi-VN") : "-";
+const formatDate = (value?: string | null) => formatDateTimeVN(value);
 
 const formatCurrency = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;
@@ -131,6 +162,38 @@ const toNumber = (value: unknown) => {
   const parsed = Number(value ?? 0);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const normalizeMoneyInput = (value: string) => {
+  const digitsOnly = value.replace(/\D/g, "");
+  if (!digitsOnly) {
+    return "";
+  }
+
+  return digitsOnly.replace(/^0+(?=\d)/, "");
+};
+
+const formatMoneyInput = (value: string) => {
+  if (!value) {
+    return "";
+  }
+
+  return value.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+interface VietQrBank {
+  name: string;
+  code: string;
+  bin: string;
+  shortName?: string;
+  short_name?: string;
+}
+
+const stripVietnameseDiacritics = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
 
 const isVideoMedia = (url: string, mimeType?: string | null) => {
   if (mimeType?.toLowerCase().startsWith("video/")) {
@@ -174,6 +237,7 @@ const MediaPreviewDialog = ({
 
 export const OrderReturnRequestDetailPage = () => {
   const { showToast } = useToast();
+  const showToastRef = useRef(showToast);
   const navigate = useNavigate();
   const location = useLocation();
   const { returnRequestId } = useParams<{ returnRequestId: string }>();
@@ -212,7 +276,7 @@ export const OrderReturnRequestDetailPage = () => {
   const [moreInfoDialogOpen, setMoreInfoDialogOpen] = useState(false);
   const [moreInfoReason, setMoreInfoReason] = useState("");
 
-  const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState(0);
+  const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState("0");
   const [inspectionRestocked, setInspectionRestocked] = useState(false);
   const [inspectionResultNote, setInspectionResultNote] = useState("");
   const [inspectionRejectDialogOpen, setInspectionRejectDialogOpen] =
@@ -222,12 +286,195 @@ export const OrderReturnRequestDetailPage = () => {
   const [refundConfirmOpen, setRefundConfirmOpen] = useState(false);
   const [selectedRefundMethod, setSelectedRefundMethod] =
     useState<ReturnRefundMethod>("VnPay");
+  const [manualTransactionReference, setManualTransactionReference] =
+    useState("");
+  const [copiedRefundInfo, setCopiedRefundInfo] = useState(false);
+  const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
+
+  const hasRefundBankInfo = Boolean(
+    request?.refundBankName ||
+    request?.refundAccountNumber ||
+    request?.refundAccountName,
+  );
+
+  const originalOnlineRefundMethod = useMemo<ReturnRefundMethod | null>(() => {
+    const transactions = order?.paymentTransactions ?? [];
+
+    const successfulPayment = transactions.find(
+      (transaction) =>
+        transaction.transactionType === "Payment" &&
+        transaction.status === "Success" &&
+        (transaction.paymentMethod === "VnPay" ||
+          transaction.paymentMethod === "Momo"),
+    );
+
+    if (successfulPayment?.paymentMethod === "VnPay") {
+      return "VnPay";
+    }
+
+    if (successfulPayment?.paymentMethod === "Momo") {
+      return "Momo";
+    }
+
+    return null;
+  }, [order?.paymentTransactions]);
+
+  const refundMethodOptions = useMemo<ReturnRefundMethod[]>(() => {
+    const options: ReturnRefundMethod[] = ["ExternalBankTransfer"];
+
+    if (originalOnlineRefundMethod) {
+      options.unshift(originalOnlineRefundMethod);
+    }
+
+    return options;
+  }, [originalOnlineRefundMethod]);
+
+  const effectiveRefundMethod = selectedRefundMethod;
+  const isManualTransferRefund =
+    effectiveRefundMethod === "ExternalBankTransfer";
+  const trimmedManualTransactionReference = manualTransactionReference.trim();
+  const isManualReferenceTooShort =
+    isManualTransferRefund &&
+    trimmedManualTransactionReference.length <
+      MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH;
+  const selectedRefundModeNote = isManualTransferRefund
+    ? "Đang chọn: Chuyển khoản thủ công"
+    : "Đang chọn: Hoàn qua cổng thanh toán ban đầu";
+  const refundAmount = toNumber(
+    request?.approvedRefundAmount ??
+      request?.requestedRefundAmount ??
+      request?.refundableAmount,
+  );
+  const orderCodeForRefund = request?.orderCode || request?.orderId || "-";
+
+  useEffect(() => {
+    if (
+      !refundConfirmOpen ||
+      effectiveRefundMethod !== "ExternalBankTransfer"
+    ) {
+      return;
+    }
+
+    if (vietQrBanks.length > 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadVietQrBanks = async () => {
+      try {
+        const response = await fetch("https://api.vietqr.io/v2/banks", {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const json = (await response.json()) as { data?: VietQrBank[] };
+        if (Array.isArray(json.data)) {
+          setVietQrBanks(json.data);
+        }
+      } catch {
+        // Keep UI usable even when VietQR bank list is unavailable.
+      }
+    };
+
+    void loadVietQrBanks();
+
+    return () => controller.abort();
+  }, [effectiveRefundMethod, refundConfirmOpen, vietQrBanks.length]);
+
+  const matchedRefundBankBin = useMemo(() => {
+    const refundBankName = request?.refundBankName;
+    if (!refundBankName || vietQrBanks.length === 0) {
+      return "";
+    }
+
+    const normalizedRefundBankName = stripVietnameseDiacritics(refundBankName)
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const matchedBank = vietQrBanks.find((bank) => {
+      const candidates = [bank.shortName, bank.short_name, bank.code, bank.name]
+        .filter(Boolean)
+        .map((item) =>
+          stripVietnameseDiacritics(String(item))
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, " ")
+            .replace(/\s+/g, " ")
+            .trim(),
+        );
+
+      return candidates.some(
+        (candidate) =>
+          candidate &&
+          (normalizedRefundBankName.includes(candidate) ||
+            candidate.includes(normalizedRefundBankName)),
+      );
+    });
+
+    return matchedBank?.bin || "";
+  }, [request?.refundBankName, vietQrBanks]);
+
+  const vietQrImageUrl = useMemo(() => {
+    if (
+      effectiveRefundMethod !== "ExternalBankTransfer" ||
+      !matchedRefundBankBin ||
+      !request?.refundAccountNumber ||
+      refundAmount <= 0
+    ) {
+      return "";
+    }
+
+    const addInfo = encodeURIComponent(`Hoan tien don ${orderCodeForRefund}`);
+    const accountName = encodeURIComponent(request.refundAccountName || "");
+
+    return `https://img.vietqr.io/image/${matchedRefundBankBin}-${request.refundAccountNumber}-compact2.jpg?amount=${refundAmount}&addInfo=${addInfo}&accountName=${accountName}`;
+  }, [
+    effectiveRefundMethod,
+    matchedRefundBankBin,
+    orderCodeForRefund,
+    refundAmount,
+    request?.refundAccountName,
+    request?.refundAccountNumber,
+  ]);
+
+  const handleCopyRefundInfo = async () => {
+    const textToCopy = [
+      "📌 YEU CAU HOAN TIEN",
+      `- Ma don: ${orderCodeForRefund}`,
+      `- Ngan hang: ${request?.refundBankName || "-"}`,
+      `- STK: ${request?.refundAccountNumber || "-"}`,
+      `- Chu TK: ${request?.refundAccountName || "-"}`,
+      `- So tien: ${refundAmount}đ`,
+      `- Noi dung CK: Hoan tien don ${orderCodeForRefund}`,
+    ].join("\n");
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedRefundInfo(true);
+      setTimeout(() => setCopiedRefundInfo(false), 1800);
+    } catch {
+      showToast("Không thể copy thông tin. Vui lòng thử lại.", "error");
+    }
+  };
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxMediaUrl, setLightboxMediaUrl] = useState("");
   const [lightboxMediaMimeType, setLightboxMediaMimeType] = useState<
     string | null
   >(null);
+  const shouldShowStaffNote =
+    request?.status === "Rejected" || request?.status === "RequestMoreInfo";
+  const canStartInspection =
+    request?.returnShippingInfo?.status === "Delivered";
+
+  useEffect(() => {
+    showToastRef.current = showToast;
+  }, [showToast]);
 
   const loadDetail = useCallback(async () => {
     if (!returnRequestId) {
@@ -250,21 +497,24 @@ export const OrderReturnRequestDetailPage = () => {
       }
 
       setInspectionApprovedRefund(
-        toNumber(
-          fullRequest.approvedRefundAmount ?? fullRequest.requestedRefundAmount,
+        String(
+          toNumber(
+            fullRequest.approvedRefundAmount ??
+              fullRequest.requestedRefundAmount,
+          ),
         ),
       );
       setInspectionRestocked(Boolean(fullRequest.isRestocked));
       setInspectionResultNote(fullRequest.inspectionNote || "");
     } catch (error) {
-      showToast(
+      showToastRef.current(
         error instanceof Error ? error.message : "Không thể tải chi tiết",
         "error",
       );
     } finally {
       setIsLoading(false);
     }
-  }, [returnRequestId, showToast]);
+  }, [returnRequestId]);
 
   useEffect(() => {
     void loadDetail();
@@ -353,7 +603,9 @@ export const OrderReturnRequestDetailPage = () => {
       return;
     }
 
-    if (inspectionApprovedRefund < 0) {
+    const approvedRefundAmount = toNumber(inspectionApprovedRefund);
+
+    if (approvedRefundAmount < 0) {
       showToast("Số tiền hoàn được duyệt không hợp lệ", "warning");
       return;
     }
@@ -361,7 +613,7 @@ export const OrderReturnRequestDetailPage = () => {
     setIsSaving(true);
     try {
       await orderService.completeReturnInspection(request.id, {
-        approvedRefundAmount: inspectionApprovedRefund,
+        approvedRefundAmount,
         isRestocked: inspectionRestocked,
         inspectionNote: inspectionResultNote.trim() || null,
       });
@@ -409,11 +661,25 @@ export const OrderReturnRequestDetailPage = () => {
       return;
     }
 
+    if (isManualReferenceTooShort) {
+      showToast(
+        `Mã giao dịch cần tối thiểu ${MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH} ký tự`,
+        "warning",
+      );
+      return;
+    }
+
     setIsSaving(true);
     setRefundConfirmOpen(false);
     try {
-      await orderService.refundReturnRequest(request.id, selectedRefundMethod);
+      await orderService.refundReturnRequest(
+        request.id,
+        effectiveRefundMethod,
+        isManualTransferRefund ? trimmedManualTransactionReference : null,
+        null,
+      );
       await refreshAfterAction("Đã hoàn tiền cho khách hàng");
+      setManualTransactionReference("");
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Không thể hoàn tiền",
@@ -705,7 +971,7 @@ export const OrderReturnRequestDetailPage = () => {
                   </Box>
                   <Box>
                     <Typography variant="caption" color="text.secondary">
-                      Tiền yêu cầu hoàn
+                      Tiền ước tính hoàn
                     </Typography>
                     <Typography fontWeight={700} color="#ee4d2d">
                       {formatCurrency(request.requestedRefundAmount)}
@@ -810,14 +1076,18 @@ export const OrderReturnRequestDetailPage = () => {
                           {request.customerNote?.trim() || "-"}
                         </Typography>
                       </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          Ghi chú nhân viên
-                        </Typography>
-                        <Typography sx={{ whiteSpace: "pre-wrap" }}>
-                          {request.staffNote?.trim() || "-"}
-                        </Typography>
-                      </Box>
+                      {shouldShowStaffNote && (
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">
+                            Ghi chú nhân viên / kiểm định
+                          </Typography>
+                          <Typography sx={{ whiteSpace: "pre-wrap" }}>
+                            {request.staffNote?.trim() ||
+                              request.inspectionNote?.trim() ||
+                              "-"}
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
                   </Box>
                 </Box>
@@ -1037,6 +1307,14 @@ export const OrderReturnRequestDetailPage = () => {
                   <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
                     Bắt đầu kiểm định khi shop đã nhận hàng
                   </Typography>
+
+                  {!canStartInspection && (
+                    <Alert severity="warning" sx={{ mb: 1.5 }}>
+                      Kiện hàng hoàn chưa giao tới kho. Chỉ có thể bắt đầu kiểm
+                      định khi trạng thái vận chuyển là "Giao hàng thành công".
+                    </Alert>
+                  )}
+
                   <Stack direction="row" justifyContent="flex-end">
                     <Button
                       variant="contained"
@@ -1044,7 +1322,7 @@ export const OrderReturnRequestDetailPage = () => {
                       onClick={() => {
                         void handleStartInspection();
                       }}
-                      disabled={isSaving}
+                      disabled={isSaving || !canStartInspection}
                     >
                       Bắt đầu kiểm định
                     </Button>
@@ -1060,13 +1338,20 @@ export const OrderReturnRequestDetailPage = () => {
 
                   <TextField
                     fullWidth
-                    type="number"
+                    type="text"
                     label="Số tiền hoàn được duyệt"
-                    value={inspectionApprovedRefund}
-                    onChange={(event) =>
-                      setInspectionApprovedRefund(toNumber(event.target.value))
-                    }
-                    inputProps={{ min: 0 }}
+                    value={formatMoneyInput(inspectionApprovedRefund)}
+                    onChange={(event) => {
+                      setInspectionApprovedRefund(
+                        normalizeMoneyInput(event.target.value),
+                      );
+                    }}
+                    onBlur={() => {
+                      if (!inspectionApprovedRefund) {
+                        setInspectionApprovedRefund("0");
+                      }
+                    }}
+                    inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
                   />
 
                   <FormControlLabel
@@ -1077,6 +1362,8 @@ export const OrderReturnRequestDetailPage = () => {
                         onChange={(event) =>
                           setInspectionRestocked(event.target.checked)
                         }
+                        icon={<RadioButtonUncheckedIcon />}
+                        checkedIcon={<CheckCircleOutlineIcon />}
                       />
                     }
                     label="Nhập lại kho"
@@ -1139,7 +1426,11 @@ export const OrderReturnRequestDetailPage = () => {
                       variant="contained"
                       color="success"
                       onClick={() => {
-                        setSelectedRefundMethod("VnPay");
+                        setManualTransactionReference("");
+                        setCopiedRefundInfo(false);
+                        setSelectedRefundMethod(
+                          originalOnlineRefundMethod ?? "ExternalBankTransfer",
+                        );
                         setRefundConfirmOpen(true);
                       }}
                       disabled={isSaving}
@@ -1339,12 +1630,21 @@ export const OrderReturnRequestDetailPage = () => {
 
       <Dialog
         open={refundConfirmOpen}
-        onClose={() => !isSaving && setRefundConfirmOpen(false)}
+        onClose={() => {
+          if (!isSaving) {
+            setRefundConfirmOpen(false);
+            setCopiedRefundInfo(false);
+          }
+        }}
       >
         <DialogTitle>Xác nhận hoàn tiền</DialogTitle>
         <DialogContent>
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            {REFUND_DIALOG_TOP_NOTE}
+          </Alert>
+
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Chọn phương thức hoàn tiền:
+            {REFUND_DIALOG_METHOD_TITLE}
           </Typography>
 
           <Stack
@@ -1354,7 +1654,9 @@ export const OrderReturnRequestDetailPage = () => {
             useFlexGap
             mb={2}
           >
-            {REFUND_METHOD_OPTIONS.map((option) => {
+            {REFUND_METHOD_OPTIONS.filter((option) =>
+              refundMethodOptions.includes(option.value),
+            ).map((option) => {
               const active = selectedRefundMethod === option.value;
               return (
                 <Paper
@@ -1391,10 +1693,164 @@ export const OrderReturnRequestDetailPage = () => {
             })}
           </Stack>
 
-          <Typography>
-            Bạn có chắc chắn muốn xác nhận hoàn tiền cho yêu cầu này không? Hành
-            động này không thể hoàn tác.
-          </Typography>
+          <Chip
+            label={selectedRefundModeNote}
+            color={isManualTransferRefund ? "warning" : "info"}
+            variant="outlined"
+            size="small"
+            sx={{ mb: 1.5 }}
+          />
+
+          {isManualTransferRefund && (
+            <Box sx={{ mb: 2 }}>
+              {hasRefundBankInfo ? (
+                <Box sx={{ mb: 1.5 }}>
+                  <Stack
+                    direction={{ xs: "column", md: "row" }}
+                    spacing={2}
+                    alignItems="stretch"
+                  >
+                    <Box
+                      sx={{
+                        flex: 1.2,
+                        p: 1.5,
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        bgcolor: "grey.50",
+                      }}
+                    >
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        mb={1}
+                      >
+                        <Typography variant="body2" fontWeight={700}>
+                          Thông tin tài khoản hoàn tiền của khách
+                        </Typography>
+                        <Tooltip
+                          title={
+                            copiedRefundInfo
+                              ? "Đã copy thông tin"
+                              : "Copy thông tin hoàn tiền"
+                          }
+                        >
+                          <span>
+                            <IconButton
+                              size="small"
+                              color={copiedRefundInfo ? "success" : "default"}
+                              onClick={() => {
+                                void handleCopyRefundInfo();
+                              }}
+                              aria-label="Copy thông tin hoàn tiền"
+                            >
+                              {copiedRefundInfo ? (
+                                <CheckIcon />
+                              ) : (
+                                <ContentCopyIcon />
+                              )}
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Stack>
+
+                      <Stack spacing={0.6}>
+                        <Typography variant="body2" color="text.secondary">
+                          Ngân hàng: <b>{request?.refundBankName || "-"}</b>
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Số tài khoản:{" "}
+                          <b>{request?.refundAccountNumber || "-"}</b>
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Chủ tài khoản:{" "}
+                          <b>{request?.refundAccountName || "-"}</b>
+                        </Typography>
+                        <Typography
+                          variant="body1"
+                          fontWeight={800}
+                          sx={{ color: "#16a34a", pt: 0.5 }}
+                        >
+                          Số tiền hoàn: {formatCurrency(refundAmount)}
+                        </Typography>
+                      </Stack>
+                    </Box>
+
+                    <Box
+                      sx={{
+                        flex: 1,
+                        minWidth: { xs: "100%", md: 260 },
+                        p: 1.5,
+                        borderRadius: 1,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        bgcolor: "#fff",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {vietQrImageUrl ? (
+                        <Box
+                          component="img"
+                          src={vietQrImageUrl}
+                          alt="Mã QR chuyển khoản hoàn tiền"
+                          sx={{ width: "100%", maxWidth: 280, borderRadius: 1 }}
+                        />
+                      ) : (
+                        <Alert severity="warning" sx={{ width: "100%" }}>
+                          Không thể tạo mã QR do thiếu thông tin ngân hàng.
+                        </Alert>
+                      )}
+                    </Box>
+                  </Stack>
+                </Box>
+              ) : (
+                <Alert severity="warning" sx={{ mb: 1.5 }}>
+                  {REFUND_DIALOG_MANUAL_MISSING_BANK_INFO_NOTE}
+                </Alert>
+              )}
+
+              <TextField
+                fullWidth
+                required
+                error={isManualReferenceTooShort}
+                label={REFUND_DIALOG_MANUAL_REFERENCE_LABEL}
+                value={manualTransactionReference}
+                onChange={(event) =>
+                  setManualTransactionReference(event.target.value)
+                }
+                helperText={REFUND_DIALOG_MANUAL_REFERENCE_HELPER}
+              />
+            </Box>
+          )}
+
+          <Box
+            sx={{
+              mb: 2,
+              p: 1.25,
+              borderRadius: 1,
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "grey.50",
+            }}
+          >
+            <Box display="flex" justifyContent="space-between" gap={2}>
+              <Typography variant="body2" color="text.secondary">
+                Số tiền cần hoàn
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                sx={{ color: "#16a34a" }}
+              >
+                {formatCurrency(refundAmount)}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Typography variant="body2">{REFUND_DIALOG_CONFIRM_NOTE}</Typography>
         </DialogContent>
         <DialogActions>
           <Button
@@ -1409,7 +1865,11 @@ export const OrderReturnRequestDetailPage = () => {
             onClick={() => {
               void handleRefund();
             }}
-            disabled={isSaving}
+            disabled={
+              isSaving ||
+              (isManualTransferRefund &&
+                (!hasRefundBankInfo || isManualReferenceTooShort))
+            }
           >
             {isSaving ? <CircularProgress size={24} /> : "Xác nhận hoàn tiền"}
           </Button>

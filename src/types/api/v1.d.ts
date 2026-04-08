@@ -3132,6 +3132,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cart/pos-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PreviewPosOrderRequest"];
+                    "text/json": components["schemas"]["PreviewPosOrderRequest"];
+                    "application/*+json": components["schemas"]["PreviewPosOrderRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPreviewPosOrderResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPreviewPosOrderResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPreviewPosOrderResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cart/items": {
         parameters: {
             query?: never;
@@ -5341,6 +5384,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ordercancelrequests/my-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Status?: components["schemas"]["CancelRequestStatus"];
+                    IsRefundRequired?: boolean;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ordercancelrequests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ordercancelrequests/{id}/process": {
         parameters: {
             query?: never;
@@ -5967,6 +6116,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    UserId?: string;
                     Status?: components["schemas"]["OrderStatus"];
                     Type?: components["schemas"]["OrderType"];
                     PaymentStatus?: components["schemas"]["PaymentStatus"];
@@ -6078,6 +6228,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders/byordercode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    orderCode?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders/my-orders/{orderId}/invoice": {
         parameters: {
             query?: never;
@@ -6139,68 +6350,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/orders/user/{userId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    Status?: components["schemas"]["OrderStatus"];
-                    Type?: components["schemas"]["OrderType"];
-                    PaymentStatus?: components["schemas"]["PaymentStatus"];
-                    FromDate?: string;
-                    ToDate?: string;
-                    SearchTerm?: string;
-                    PageNumber?: number;
-                    PageSize?: number;
-                    SortBy?: string;
-                    SortOrder?: string;
-                    IsDescending?: boolean;
-                };
-                header?: never;
-                path: {
-                    userId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/orders": {
         parameters: {
             query?: never;
@@ -6211,6 +6360,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    UserId?: string;
                     Status?: components["schemas"]["OrderStatus"];
                     Type?: components["schemas"]["OrderType"];
                     PaymentStatus?: components["schemas"]["PaymentStatus"];
@@ -6383,68 +6533,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/orders/staff/{staffId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    Status?: components["schemas"]["OrderStatus"];
-                    Type?: components["schemas"]["OrderType"];
-                    PaymentStatus?: components["schemas"]["PaymentStatus"];
-                    FromDate?: string;
-                    ToDate?: string;
-                    SearchTerm?: string;
-                    PageNumber?: number;
-                    PageSize?: number;
-                    SortBy?: string;
-                    SortOrder?: string;
-                    IsDescending?: boolean;
-                };
-                header?: never;
-                path: {
-                    staffId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/orders/checkout": {
         parameters: {
             query?: never;
@@ -6597,82 +6685,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/orders/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    BarCodes?: string[];
-                    WardCode?: string;
-                    DistrictId?: number;
-                    VoucherCode?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPreviewOrderResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/orders/{orderId}/status": {
+    "/api/orders/{orderId}/staff-prepare": {
         parameters: {
             query?: never;
             header?: never;
@@ -6689,13 +6702,7 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateOrderStatusRequest"];
-                    "text/json": components["schemas"]["UpdateOrderStatusRequest"];
-                    "application/*+json": components["schemas"]["UpdateOrderStatusRequest"];
-                };
-            };
+            requestBody?: never;
             responses: {
                 /** @description OK */
                 200: {
@@ -6744,6 +6751,84 @@ export interface paths {
             };
         };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{orderId}/staff-cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StaffCancelOrderRequest"];
+                    "text/json": components["schemas"]["StaffCancelOrderRequest"];
+                    "application/*+json": components["schemas"]["StaffCancelOrderRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -7078,6 +7163,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orders/{orderId}/deliver-in-store": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders/{orderId}/swap-damaged": {
         parameters: {
             query?: never;
@@ -7316,84 +7473,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/payments/{paymentId}/method": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    paymentId: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PaymentInformation"];
-                    "text/json": components["schemas"]["PaymentInformation"];
-                    "application/*+json": components["schemas"]["PaymentInformation"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-            };
-        };
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -8888,6 +8967,80 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/productvariants/for-pos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    Barcode?: string;
+                    Sku?: string;
+                    Name?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -11080,6 +11233,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/for-pos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    phoneOrEmail?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/staff-lookup": {
         parameters: {
             query?: never;
@@ -12012,6 +12226,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfCustomerForPosResponse: {
+            payload?: null | components["schemas"]["CustomerForPosResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfExcelTemplateResponse: {
             payload?: null | components["schemas"]["ExcelTemplateResponse"];
             success?: boolean;
@@ -12271,6 +12492,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfOrderCancelRequestResponse: {
+            payload?: null | components["schemas"]["OrderCancelRequestResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfOrderResponse: {
             payload?: null | components["schemas"]["OrderResponse"];
             success?: boolean;
@@ -12418,8 +12646,8 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
-        BaseResponseOfPreviewOrderResponse: {
-            payload?: null | components["schemas"]["PreviewOrderResponse"];
+        BaseResponseOfPreviewPosOrderResponse: {
+            payload?: null | components["schemas"]["PreviewPosOrderResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -12441,6 +12669,13 @@ export interface components {
         };
         BaseResponseOfProductResponse: {
             payload?: null | components["schemas"]["ProductResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfProductVariantForPosResponse: {
+            payload?: null | components["schemas"]["ProductVariantForPosResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -12671,7 +12906,6 @@ export interface components {
             startDate?: null | string;
             /** Format: date-time */
             endDate?: null | string;
-            autoStopWhenBatchEmpty?: boolean;
             /** Format: int32 */
             maxUsage?: null | number;
             /** Format: int32 */
@@ -12827,20 +13061,18 @@ export interface components {
             expectedArrivalDate: string;
         };
         CreateInStoreOrderRequest: {
+            scannedItems: components["schemas"]["PosScanItemRequest"][];
             voucherCode?: null | string;
+            /** Format: uuid */
+            customerId?: null | string;
             isPickupInStore?: boolean;
-            orderDetails: components["schemas"]["CreateOrderDetailRequest"][];
             recipient?: null | components["schemas"]["ContactAddressInformation"];
             payment: components["schemas"]["PaymentInformation"];
+            /** Format: decimal */
+            expectedTotalPrice?: null | number;
         };
         CreateOlfactoryFamilyRequest: {
             name: string;
-        };
-        CreateOrderDetailRequest: {
-            /** Format: uuid */
-            variantId: string;
-            /** Format: int32 */
-            quantity?: number;
         };
         CreateOrderRequest: {
             voucherCode?: null | string;
@@ -12876,6 +13108,9 @@ export interface components {
             isRefundOnly?: boolean;
             returnItems: components["schemas"]["ReturnItemDto"][];
             customerNote?: null | string;
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
             /** Format: uuid */
             savedAddressId?: null | string;
             recipient?: null | components["schemas"]["ContactAddressInformation"];
@@ -12964,6 +13199,15 @@ export interface components {
             /** Format: int32 */
             familyId?: number;
             familyName: string;
+        };
+        CustomerForPosResponse: {
+            /** Format: uuid */
+            id?: string;
+            fullName: string;
+            phoneNumber: string;
+            email: string;
+            /** Format: int32 */
+            loyaltyPoint?: number;
         };
         CustomerNotePreferenceResponse: {
             /** Format: int32 */
@@ -13196,8 +13440,6 @@ export interface components {
         /** @enum {string} */
         LoyaltyTransactionType: "Spend" | "Earn";
         ManualChangeRequest: {
-            /** Format: uuid */
-            userId?: string;
             transactionType?: components["schemas"]["LoyaltyTransactionType"];
             /** Format: int32 */
             points?: number;
@@ -13232,6 +13474,7 @@ export interface components {
             id?: string;
             /** Format: uuid */
             orderId?: string;
+            orderCode: string;
             /** Format: uuid */
             requestedById?: string;
             requestedByEmail?: null | string;
@@ -13244,6 +13487,9 @@ export interface components {
             /** Format: decimal */
             refundAmount?: null | number;
             isRefunded?: boolean;
+            refundBankName?: null | string;
+            refundAccountName?: null | string;
+            refundAccountNumber?: null | string;
             vnpTransactionNo?: null | string;
             /** Format: date-time */
             createdAt?: string;
@@ -13264,16 +13510,6 @@ export interface components {
             /** Format: decimal */
             refunablePrice?: number;
             /** Format: decimal */
-            total?: number;
-        };
-        OrderDetailListItems: {
-            /** Format: uuid */
-            variantId?: string;
-            variantName: string;
-            imageUrl: string;
-            /** Format: int32 */
-            quantity?: number;
-            /** Format: int32 */
             total?: number;
         };
         OrderDetailResponse: {
@@ -13315,8 +13551,11 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
+            paymentExpiresAt?: null | string;
+            /** Format: date-time */
             updatedAt?: null | string;
             orderDetails: components["schemas"]["OrderDetailListItem"][];
+            paymentTransactions?: null | components["schemas"]["PaymentInfoResponse"][];
         };
         OrderResponse: {
             /** Format: uuid */
@@ -13390,6 +13629,9 @@ export interface components {
             approvedRefundAmount?: null | number;
             isRefunded?: boolean;
             isRefundOnly?: boolean;
+            refundBankName?: null | string;
+            refundAccountName?: null | string;
+            refundAccountNumber?: null | string;
             vnpTransactionNo?: null | string;
             isRestocked?: boolean;
             returnShippingInfo?: null | components["schemas"]["ReturnShippingInfoResponse"];
@@ -13401,7 +13643,7 @@ export interface components {
             updatedAt?: null | string;
         };
         /** @enum {string} */
-        OrderStatus: "Pending" | "Processing" | "Delivering" | "Delivered" | "Returning" | "Cancelled" | "Partial_Returned" | "Returned";
+        OrderStatus: "Pending" | "Preparing" | "ReadyToPick" | "Delivering" | "Delivered" | "Returning" | "Cancelled" | "Partial_Returned" | "Returned";
         /** @enum {string} */
         OrderType: "Online" | "Offline";
         PagedResultOfAvailableVoucherResponse: {
@@ -13652,7 +13894,7 @@ export interface components {
             method?: components["schemas"]["PaymentMethod"];
         };
         /** @enum {string} */
-        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore";
+        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer";
         /** @enum {string} */
         PaymentStatus: "Unpaid" | "Paid" | "Partial_Refunded" | "Refunded";
         PaymentTransactionAdminItemResponse: {
@@ -13660,6 +13902,7 @@ export interface components {
             id?: string;
             /** Format: uuid */
             orderId?: string;
+            orderCode: string;
             method?: components["schemas"]["PaymentMethod"];
             transactionType?: components["schemas"]["TransactionType"];
             transactionStatus?: components["schemas"]["TransactionStatus"];
@@ -13732,16 +13975,46 @@ export interface components {
             code: string;
             items: components["schemas"]["PickListItemResponse"][];
         };
-        PreviewOrderResponse: {
-            items: components["schemas"]["OrderDetailListItems"][];
+        PosOrderDetailListItem: {
+            /** Format: uuid */
+            variantId?: string;
+            /** Format: uuid */
+            batchId?: string;
+            variantName?: string;
+            batchCode?: string;
+            imageUrl?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: decimal */
+            unitPrice?: number;
             /** Format: decimal */
             subTotal?: number;
             /** Format: decimal */
-            shippingFee?: number;
+            discount?: number;
+            /** Format: decimal */
+            finalTotal?: number;
+        };
+        PosScanItemRequest: {
+            barcode: string;
+            batchCode: string;
+            /** Format: int32 */
+            quantity?: number;
+        };
+        PreviewPosOrderRequest: {
+            scannedItems: components["schemas"]["PosScanItemRequest"][];
+            voucherCode?: null | string;
+            /** Format: uuid */
+            customerId?: null | string;
+            sessionId?: null | string;
+        };
+        PreviewPosOrderResponse: {
+            items?: components["schemas"]["PosOrderDetailListItem"][];
+            /** Format: decimal */
+            subTotal?: number;
             /** Format: decimal */
             discount?: number;
             /** Format: decimal */
-            total?: number;
+            totalPrice?: number;
         };
         ProblemDetails: {
             type?: null | string;
@@ -13755,6 +14028,7 @@ export interface components {
             isApproved?: boolean;
             staffNote?: null | string;
             refundMethod?: components["schemas"]["PaymentMethod"];
+            manualTransactionReference?: null | string;
         };
         ProcessInitialReturnDto: {
             isApproved?: boolean;
@@ -13763,6 +14037,8 @@ export interface components {
         };
         ProcessRefundRequest: {
             refundMethod?: components["schemas"]["PaymentMethod"];
+            manualTransactionReference?: null | string;
+            note?: null | string;
         };
         ProductAttributeDto: {
             /** Format: int32 */
@@ -13896,6 +14172,20 @@ export interface components {
             noteId?: number;
             name: string;
             type?: components["schemas"]["NoteType"];
+        };
+        ProductVariantForPosResponse: {
+            /** Format: uuid */
+            id?: string;
+            barcode: string;
+            sku: string;
+            name: string;
+            /** Format: int32 */
+            volumeMl?: number;
+            concentrationName: string;
+            displayName: string;
+            /** Format: decimal */
+            basePrice?: number;
+            primaryImageUrl?: null | string;
         };
         ProductVariantResponse: {
             /** Format: uuid */
@@ -14245,9 +14535,13 @@ export interface components {
             shippedDate?: null | string;
         };
         /** @enum {string} */
-        ShippingStatus: "Pending" | "Delivering" | "Delivered" | "Cancelled" | "Returning" | "Returned";
+        ShippingStatus: "UnAssigned" | "ReadyToPick" | "Delivering" | "Delivered" | "Cancelled" | "Returning" | "Returned";
         /** @enum {string} */
         ShippingType: "Forward" | "Return";
+        StaffCancelOrderRequest: {
+            reason?: components["schemas"]["CancelOrderReason"];
+            note?: null | string;
+        };
         StaffLookupItem: {
             /** Format: uuid */
             id?: string;
@@ -14359,6 +14653,8 @@ export interface components {
         SwapDamagedStockRequest: {
             /** Format: uuid */
             damagedReservationId: string;
+            /** Format: int32 */
+            damagedQuantity?: number;
             damageNote?: null | string;
         };
         SwapDamagedStockResponse: {
@@ -14507,10 +14803,6 @@ export interface components {
             savedAddressId?: null | string;
             recipientInformation?: null | components["schemas"]["ContactAddressInformation"];
         };
-        UpdateOrderStatusRequest: {
-            status?: components["schemas"]["OrderStatus"];
-            note?: null | string;
-        };
         UpdateProductRequest: {
             name: string;
             /** Format: int32 */
@@ -14541,6 +14833,9 @@ export interface components {
         };
         UpdateReturnRequestDto: {
             customerNote?: null | string;
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
             temporaryMediaIds?: null | string[];
             removeMediaIds?: null | string[];
         };
@@ -14600,6 +14895,9 @@ export interface components {
         UsageStatus: number;
         UserCancelOrderRequest: {
             reason?: components["schemas"]["CancelOrderReason"];
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
         };
         UserCredentialsResponse: {
             /** Format: uuid */
@@ -14791,7 +15089,7 @@ export interface components {
             SupportType?: number;
             /** Format: int32 */
             Status?: number;
-            CreatedDate: string;
+            CreatedDate?: null | string;
             UpdatedDate: string;
         };
     };

@@ -37,8 +37,13 @@ interface GetAllOrdersParams extends GetMyOrdersParams {
 
 export type OrderCancelRequest =
   components["schemas"]["OrderCancelRequestResponse"];
-export type ProcessCancelRequestBody =
-  components["schemas"]["ProcessCancelRequest"];
+export type ProcessCancelRequestBody = Omit<
+  components["schemas"]["ProcessCancelRequest"],
+  "refundMethod"
+> & {
+  refundMethod?: PaymentMethod | null;
+  manualTransactionReference?: string | null;
+};
 
 export interface PagedCancelRequests {
   items: OrderCancelRequest[];
@@ -51,16 +56,21 @@ export interface PagedCancelRequests {
 export type CreateReturnRequestDto =
   components["schemas"]["CreateReturnRequestDto"];
 export type ReturnOrderReason = components["schemas"]["ReturnOrderReason"];
+export type CancelOrderReason = components["schemas"]["CancelOrderReason"];
 export type ContactAddressInformation =
   components["schemas"]["ContactAddressInformation"];
 export interface CreateReturnRequestPayload {
   orderId: string;
   reason: ReturnOrderReason;
+  isRefundOnly?: boolean;
   returnItems: {
     orderDetailId: string;
     quantity: number;
   }[];
   customerNote?: string | null;
+  refundBankName?: string | null;
+  refundAccountNumber?: string | null;
+  refundAccountName?: string | null;
   savedAddressId?: string | null;
   recipient?: ContactAddressInformation | null;
   temporaryMediaIds?: string[] | null;
@@ -74,9 +84,17 @@ export type ProcessInitialReturnDto =
 export type StartInspectionDto = components["schemas"]["StartInspectionDto"];
 export type RecordInspectionDto = components["schemas"]["RecordInspectionDto"];
 export type RejectInspectionDto = components["schemas"]["RejectInspectionDto"];
+export type PickListResponse = components["schemas"]["PickListResponse"];
+export type PickListItemResponse =
+  components["schemas"]["PickListItemResponse"];
+export type PickListBatchInfo = components["schemas"]["PickListBatchInfo"];
+export type SwapDamagedStockRequest =
+  components["schemas"]["SwapDamagedStockRequest"];
+export type SwapDamagedStockResponse =
+  components["schemas"]["SwapDamagedStockResponse"];
 export type ReturnRefundMethod = Extract<
   PaymentMethod,
-  "VnPay" | "Momo" | "CashInStore"
+  "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer"
 >;
 
 export type ReturnRequestStatus =
@@ -129,6 +147,9 @@ export interface OrderReturnRequest {
   inspectedByName?: string | null;
   reason?: string | null;
   customerNote?: string | null;
+  refundBankName?: string | null;
+  refundAccountNumber?: string | null;
+  refundAccountName?: string | null;
   staffNote?: string | null;
   inspectionNote?: string | null;
   status?: ReturnRequestStatus;
@@ -281,6 +302,21 @@ class OrderService {
       customerNote:
         this.getValue<string | null>(item, ["customerNote", "CustomerNote"]) ??
         null,
+      refundBankName:
+        this.getValue<string | null>(item, [
+          "refundBankName",
+          "RefundBankName",
+        ]) ?? null,
+      refundAccountNumber:
+        this.getValue<string | null>(item, [
+          "refundAccountNumber",
+          "RefundAccountNumber",
+        ]) ?? null,
+      refundAccountName:
+        this.getValue<string | null>(item, [
+          "refundAccountName",
+          "RefundAccountName",
+        ]) ?? null,
       staffNote:
         this.getValue<string | null>(item, ["staffNote", "StaffNote"]) ?? null,
       inspectionNote:
@@ -504,16 +540,83 @@ class OrderService {
     }
   }
 
+  async getMyCancelRequests(
+    params?: GetOrderCancelRequestsParams,
+  ): Promise<PagedCancelRequests> {
+    try {
+      const response = await apiInstance.GET(
+        "/api/ordercancelrequests/my-requests",
+        {
+          params: {
+            query: params,
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to load my cancel requests",
+        );
+      }
+
+      const payload = response.data.payload;
+      return {
+        items: payload?.items || [],
+        totalCount: payload?.totalCount || 0,
+        pageNumber: payload?.pageNumber || 1,
+        pageSize: payload?.pageSize || 10,
+        totalPages: payload?.totalPages || 1,
+      };
+    } catch (error: any) {
+      console.error("Error fetching my cancel requests:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load my cancel requests",
+      );
+    }
+  }
+
+  async getCancelRequestById(id: string): Promise<OrderCancelRequest> {
+    try {
+      const response = await apiInstance.GET("/api/ordercancelrequests/{id}", {
+        params: {
+          path: { id },
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Failed to load cancel request detail",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error fetching cancel request detail:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to load cancel request detail",
+      );
+    }
+  }
+
   async processCancelRequest(
     id: string,
     body: ProcessCancelRequestBody,
   ): Promise<string> {
     try {
+      const requestBody = {
+        ...body,
+        refundMethod: body.refundMethod ?? undefined,
+      };
+
       const response = await apiInstance.POST(
         "/api/ordercancelrequests/{id}/process",
         {
           params: { path: { id } },
-          body,
+          body: requestBody,
         },
       );
 
@@ -917,10 +1020,26 @@ class OrderService {
   async refundReturnRequest(
     id: string,
     refundMethod: ReturnRefundMethod,
+    manualTransactionReference?: string | null,
+    note?: string | null,
   ): Promise<string> {
     try {
       const accessToken = getStoredAccessToken();
       const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/${id}/refund`;
+
+      const requestBody: Record<string, string> = {
+        refundMethod,
+      };
+
+      const trimmedManualReference = manualTransactionReference?.trim();
+      if (trimmedManualReference) {
+        requestBody.manualTransactionReference = trimmedManualReference;
+      }
+
+      const trimmedNote = note?.trim();
+      if (trimmedNote) {
+        requestBody.note = trimmedNote;
+      }
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -932,13 +1051,25 @@ class OrderService {
               }
             : {}),
         },
-        body: JSON.stringify({ refundMethod }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json().catch(() => null);
 
       if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Không thể hoàn tiền");
+        const message = data?.message || "Không thể hoàn tiền";
+
+        // Gateway refunds can return conflict-style errors while another attempt is processing.
+        if (
+          response.status === 409 ||
+          /xung đột|conflict|đang xử lý giao dịch/i.test(String(message))
+        ) {
+          throw new Error(
+            `${message} Vui lòng chờ trong giây lát rồi thử lại để tránh gửi trùng yêu cầu hoàn tiền.`,
+          );
+        }
+
+        throw new Error(message);
       }
 
       return data.message || "Hoàn tiền thành công";
@@ -1061,8 +1192,12 @@ class OrderService {
       const requestBody: CreateReturnRequestDto = {
         orderId: payload.orderId,
         reason: payload.reason,
+        isRefundOnly: payload.isRefundOnly ?? false,
         returnItems: payload.returnItems,
         customerNote: payload.customerNote ?? null,
+        refundBankName: payload.refundBankName ?? null,
+        refundAccountNumber: payload.refundAccountNumber ?? null,
+        refundAccountName: payload.refundAccountName ?? null,
         savedAddressId: payload.savedAddressId ?? null,
         recipient: payload.recipient ?? null,
         temporaryMediaIds: payload.temporaryMediaIds ?? null,
@@ -1299,40 +1434,158 @@ class OrderService {
     status: OrderStatus,
     note?: string,
   ): Promise<void> {
+    // Backward-compatible wrapper for old callers.
+    if (status === "Preparing") {
+      await this.staffPrepareOrder(orderId);
+      return;
+    }
+
+    if (status === "Cancelled") {
+      await this.staffCancelOrder(orderId, "ChangedMind", note);
+      return;
+    }
+
+    throw new Error(
+      "Trạng thái này không thể cập nhật thủ công với schema hiện tại",
+    );
+  }
+
+  async staffPrepareOrder(orderId: string): Promise<string> {
     try {
-      const response = await apiInstance.PUT("/api/orders/{orderId}/status", {
-        params: {
-          path: { orderId },
+      const response = await apiInstance.PUT(
+        "/api/orders/{orderId}/staff-prepare",
+        {
+          params: {
+            path: { orderId },
+          },
         },
-        body: {
-          status,
-          note: note || null,
-        },
-      });
+      );
 
       if (!response.data?.success) {
-        throw new Error(
-          response.data?.message || "Failed to update order status",
-        );
+        throw new Error(response.data?.message || "Failed to prepare order");
       }
+
+      return response.data.message || "Order prepared successfully";
     } catch (error: any) {
-      console.error("Error updating order status:", error);
+      console.error("Error preparing order:", error);
       throw new Error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to update order status",
+          "Failed to prepare order",
       );
     }
   }
 
-  async cancelOrder(orderId: string, reason?: string): Promise<string> {
+  async staffCancelOrder(
+    orderId: string,
+    reason: CancelOrderReason,
+    note?: string,
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/orders/{orderId}/staff-cancel",
+        {
+          params: {
+            path: { orderId },
+          },
+          body: {
+            reason,
+            note: note || null,
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to cancel order");
+      }
+
+      return response.data.message || "Order canceled successfully";
+    } catch (error: any) {
+      console.error("Error canceling order by staff:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to cancel order",
+      );
+    }
+  }
+
+  async getOrderPickList(orderId: string): Promise<PickListResponse> {
+    try {
+      const response = await apiInstance.GET("/api/orders/{orderId}/picklist", {
+        params: {
+          path: { orderId },
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Failed to get order picklist",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error getting order picklist:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to get order picklist",
+      );
+    }
+  }
+
+  async swapDamagedOrderReservation(
+    orderId: string,
+    payload: SwapDamagedStockRequest,
+  ): Promise<SwapDamagedStockResponse> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/orders/{orderId}/swap-damaged",
+        {
+          params: {
+            path: { orderId },
+          },
+          body: payload,
+        },
+      );
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Failed to swap damaged reservation",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error swapping damaged reservation:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to swap damaged reservation",
+      );
+    }
+  }
+
+  async cancelOrder(
+    orderId: string,
+    reason?: CancelOrderReason,
+    refundInfo?: {
+      refundBankName?: string | null;
+      refundAccountNumber?: string | null;
+      refundAccountName?: string | null;
+    },
+  ): Promise<string> {
     try {
       const response = await apiInstance.POST("/api/orders/{orderId}/cancel", {
         params: {
           path: { orderId },
         },
         body: {
-          reason: (reason || undefined) as any,
+          reason: reason || undefined,
+          refundBankName: refundInfo?.refundBankName ?? null,
+          refundAccountNumber: refundInfo?.refundAccountNumber ?? null,
+          refundAccountName: refundInfo?.refundAccountName ?? null,
         },
       });
 

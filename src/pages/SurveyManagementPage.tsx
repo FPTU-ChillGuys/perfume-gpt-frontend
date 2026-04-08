@@ -200,46 +200,34 @@ export default function SurveyManagementPage() {
 
     return (
         <AdminLayout>
-            <Container maxWidth="xl">
-                <Paper sx={{ width: "100%", overflow: "hidden" }}>
-                    <Box sx={{ p: 3 }}>
-                        {/* Header */}
-                        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
-                            <SurveyIcon color="primary" sx={{ fontSize: 28 }} />
-                            <Typography variant="h5" fontWeight="bold" sx={{ flexGrow: 1 }}>
-                                Quản lý Survey
-                            </Typography>
-                            <Button
-                                variant="contained"
-                                startIcon={<AddIcon />}
-                                onClick={() => setAddOpen(true)}
-                                sx={{ borderRadius: 2, fontWeight: "bold", px: 3 }}
-                            >
-                                Thêm câu hỏi
-                            </Button>
-                        </Box>
-
-                        {/* Search */}
-                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 2, justifyContent: "space-between", alignItems: "center", mb: 3 }}>
-                            <TextField
-                                placeholder="Tìm kiếm câu hỏi hoặc câu trả lời..."
-                                variant="outlined"
-                                size="small"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                sx={{ minWidth: { xs: "100%", sm: 400 }, bgcolor: "background.paper" }}
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <SearchIcon />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                            />
-                            <Typography variant="body2" color="text.secondary">
-                                Tổng số: <strong>{filteredQuestions.length}</strong> câu hỏi
-                            </Typography>
-                        </Box>
+            <Box>
+                <Paper sx={{ p: 3, mb: 3 }}>
+                    <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr auto" }, alignItems: "center" }}>
+                        <TextField
+                            placeholder="Tìm kiếm câu hỏi hoặc câu trả lời..."
+                            variant="outlined"
+                            size="small"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            fullWidth
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={() => setAddOpen(true)}
+                            sx={{ height: 40 }}
+                        >
+                            Thêm câu hỏi
+                        </Button>
+                    </Box>
+                </Paper>
 
                         {/* Table */}
                         <TableContainer component={Paper}>
@@ -278,9 +266,7 @@ export default function SurveyManagementPage() {
                                 </TableBody>
                             </Table>
                         </TableContainer>
-                    </Box>
-                </Paper>
-            </Container>
+            </Box>
 
             <SurveyAddDialog
                 open={addOpen}

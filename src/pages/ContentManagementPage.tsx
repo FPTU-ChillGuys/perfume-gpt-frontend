@@ -664,17 +664,8 @@ export const ContentManagementPage = () => {
 
   return (
     <AdminLayout>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Stack spacing={4}>
-          <Box>
-            <Typography variant="h4" fontWeight={700} gutterBottom>
-              Quản lý banner & sản phẩm
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Điều phối nội dung hero banner và tài sản hình ảnh sản phẩm trong
-              cùng một bảng điều khiển.
-            </Typography>
-          </Box>
+      <Box>
+        <Stack spacing={3}>
 
           {/* Banner Section */}
           <Paper sx={{ p: 3 }}>
@@ -1145,7 +1136,7 @@ export const ContentManagementPage = () => {
             </Box>
           </Paper>
         </Stack>
-      </Container>
+      </Box>
 
       <BannerFormDialog
         open={bannerDialogOpen}

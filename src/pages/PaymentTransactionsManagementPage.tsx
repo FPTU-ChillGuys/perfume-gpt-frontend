@@ -34,17 +34,19 @@ import {
   type TransactionStatus,
   type PaymentTransactionOverviewResponse,
 } from "@/services/paymentManagementService";
+import { formatDateTimeVN } from "@/utils/dateTime";
 
 const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Tiền mặt tại quầy",
   VnPay: "VNPay",
   Momo: "MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
 };
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   Payment: "Thu",
-  Refund: "Hoàn tiền",
+  Refund: "Hoàn tiền",
 };
 
 const TRANSACTION_STATUS_LABELS: Record<TransactionStatus, string> = {
@@ -83,8 +85,7 @@ const formatCurrency = (value?: number) => {
 };
 
 const formatDateTime = (value?: string | null) => {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("vi-VN");
+  return formatDateTimeVN(value);
 };
 
 export const PaymentTransactionsManagementPage = () => {
@@ -345,6 +346,9 @@ export const PaymentTransactionsManagementPage = () => {
                 <MenuItem value="CashInStore">Tiền mặt tại quầy</MenuItem>
                 <MenuItem value="VnPay">VNPay</MenuItem>
                 <MenuItem value="Momo">MoMo</MenuItem>
+                <MenuItem value="ExternalBankTransfer">
+                  Chuyển khoản ngân hàng
+                </MenuItem>
               </Select>
             </FormControl>
 
@@ -406,7 +410,7 @@ export const PaymentTransactionsManagementPage = () => {
                 overview.transactions.items.map((item) => (
                   <TableRow key={item.id} hover>
                     <TableCell>{item.id ?? "-"}</TableCell>
-                    <TableCell>{item.orderId ?? "-"}</TableCell>
+                    <TableCell>{item.orderCode ?? "-"}</TableCell>
                     <TableCell>
                       <Chip
                         size="small"

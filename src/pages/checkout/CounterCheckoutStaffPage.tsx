@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Add, Delete, Remove, Search } from "@mui/icons-material";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Container,
   Dialog,
@@ -11,795 +12,1720 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  FormHelperText,
+  FormControlLabel,
   IconButton,
-  Link,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
   MenuItem,
+  Radio,
+  RadioGroup,
   Paper,
   Stack,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import {
-  Delete,
-  Launch,
-  Payments,
-  PointOfSale,
-  QrCodeScanner,
-} from "@mui/icons-material";
-import { MainLayout } from "@/layouts/MainLayout";
+import { BatchSelectionModal } from "@/components/checkout/BatchSelectionModal";
+import { PosBarcodeScanner } from "@/components/checkout/PosBarcodeScanner";
+import { useDebounce } from "@/hooks/useDebounce";
+import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 import { useToast } from "@/hooks/useToast";
+import { MainLayout } from "@/layouts/MainLayout";
+import {
+  posService,
+  type PosBatchDetail,
+  type PosCustomerForLookup,
+  type PosPreviewRequest,
+  type PosPreviewResponse,
+  type PosProductVariant,
+} from "@/services/posService";
 import { orderService } from "@/services/orderService";
-import { productService } from "@/services/productService";
+import { addressService } from "@/services/addressService";
 import type {
   CreateInStoreOrderRequest,
   PaymentMethod,
 } from "@/types/checkout";
-import type { OrderResponse } from "@/types/order";
-import type { ProductVariant } from "@/types/product";
-
-const COUNTER_DISPLAY_ORDER_KEY = "counter:display:orderId";
-const COUNTER_DISPLAY_COMMAND_KEY = "counter:display:command";
-
-const PAYMENT_CHOICES: { value: PaymentMethod; label: string }[] = [
-  { value: "CashInStore", label: "Tiền mặt tại quầy" },
-  { value: "VnPay", label: "VNPay" },
-  { value: "Momo", label: "MoMo" },
-];
-
-const ONLINE_PAYMENT_METHODS: PaymentMethod[] = ["VnPay", "Momo"];
+import type {
+  DistrictResponse,
+  ProvinceResponse,
+  WardResponse,
+} from "@/types/address";
+import storeIcon from "@/assets/store.png";
+import codIcon from "@/assets/cod.png";
+import vnpayIcon from "@/assets/vnpay.jpg";
+import momoIcon from "@/assets/momo.png";
+import transferIcon from "@/assets/transfer.png";
 
 const formatCurrency = (value?: number) =>
-  new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
+  `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))}đ`;
 
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const panelSx = {
+  p: 3,
+  borderRadius: 3,
+  border: "1px solid",
+  borderColor: "divider",
+  boxShadow: "0 8px 30px rgba(15, 23, 42, 0.06)",
+  bgcolor: "background.paper",
+};
 
-const isSupportedPaymentMethod = (
-  value?: string | null,
-): value is PaymentMethod =>
-  PAYMENT_CHOICES.some((choice) => choice.value === value);
+const PICKUP_PAYMENT_METHODS: PaymentMethod[] = [
+  "CashInStore",
+  "VnPay",
+  "Momo",
+];
+const DELIVERY_PAYMENT_METHODS: PaymentMethod[] = [
+  "CashOnDelivery",
+  "VnPay",
+  "Momo",
+  "ExternalBankTransfer",
+];
 
-const isUuid = (value: string) => UUID_REGEX.test(value.trim());
+const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  CashOnDelivery: "Thanh toán khi nhận hàng",
+  VnPay: "VNPay",
+  Momo: "MoMo",
+  CashInStore: "Tiền mặt tại quầy",
+  ExternalBankTransfer: "Chuyển khoản",
+};
 
-interface DraftOrderItem {
+const PAYMENT_METHOD_ICON: Partial<Record<PaymentMethod, string>> = {
+  CashInStore: storeIcon,
+  CashOnDelivery: codIcon,
+  VnPay: vnpayIcon,
+  Momo: momoIcon,
+  ExternalBankTransfer: transferIcon,
+};
+
+interface PosCartItem {
+  key: string;
   variantId: string;
   variantName: string;
-  productName?: string | null;
+  sku: string;
+  barcode: string;
+  imageUrl?: string | null;
   unitPrice: number;
+  batchId?: string;
+  batchCode: string;
+  maxQuantity: number;
   quantity: number;
-  thumbnail?: string;
 }
+
+interface GroupedCartItem {
+  groupKey: string;
+  variantId: string;
+  variantName: string;
+  sku: string;
+  barcode: string;
+  imageUrl?: string | null;
+  unitPrice: number;
+  totalQuantity: number;
+  batchItems: PosCartItem[];
+}
+
+type BatchModalMode = "add" | "switch";
+
+const getVariantKey = (variant: PosProductVariant) =>
+  variant.id || `${variant.sku}-${variant.barcode}`;
+
+const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
+const GUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+type CartDisplaySyncItem = {
+  variantId: string;
+  batchId: string;
+  variantName: string;
+  batchCode: string;
+  imageUrl: string;
+  quantity: number;
+  unitPrice: number;
+  subTotal: number;
+  discount: number;
+  finalTotal: number;
+};
+
+type CartDisplaySyncPayload = {
+  items: CartDisplaySyncItem[];
+  subTotal: number;
+  discount: number;
+  totalPrice: number;
+};
+
+const toGuidOrEmpty = (value?: string | null) => {
+  const raw = (value || "").trim();
+  return GUID_REGEX.test(raw) ? raw : EMPTY_GUID;
+};
+
+const toSafeNumber = (value: unknown) => {
+  const num = Number(value ?? 0);
+  return Number.isFinite(num) ? num : 0;
+};
 
 export const CounterCheckoutStaffPage = () => {
   const { showToast } = useToast();
+  const { syncCartToCustomer } = useSignalR<PosPreviewResponse>({
+    hubUrl: POS_HUB_URL,
+    sessionId: "COUNTER_01",
+  });
 
-  const [orderCodeInput, setOrderCodeInput] = useState("");
-  const [loadedOrder, setLoadedOrder] = useState<OrderResponse | null>(null);
-  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchResults, setSearchResults] = useState<PosProductVariant[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
-  const [selectedPaymentMethod, setSelectedPaymentMethod] =
+  const [selectedVariant, setSelectedVariant] =
+    useState<PosProductVariant | null>(null);
+  const [editingCartItemKey, setEditingCartItemKey] = useState<string | null>(
+    null,
+  );
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
+  const [isLoadingBatches, setIsLoadingBatches] = useState(false);
+  const [batchOptions, setBatchOptions] = useState<PosBatchDetail[]>([]);
+  const [batchModalMode, setBatchModalMode] = useState<BatchModalMode>("add");
+  const [modalCurrentBatchCode, setModalCurrentBatchCode] = useState<
+    string | undefined
+  >(undefined);
+
+  const [voucherInput, setVoucherInput] = useState("");
+  const [appliedVoucherCode, setAppliedVoucherCode] = useState("");
+  const [cartItems, setCartItems] = useState<PosCartItem[]>([]);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState("");
+  const [previewData, setPreviewData] = useState<PosPreviewResponse | null>(
+    null,
+  );
+
+  const [isPickupInStore, setIsPickupInStore] = useState(true);
+  const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("CashInStore");
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-
-  const [variantIdInput, setVariantIdInput] = useState("");
-  const [quantityInput, setQuantityInput] = useState(1);
-  const [draftItems, setDraftItems] = useState<DraftOrderItem[]>([]);
-  const [isAddingVariant, setIsAddingVariant] = useState(false);
-  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
-
+  const [customerLookupKeyword, setCustomerLookupKeyword] = useState("");
+  const [customerLookupResults, setCustomerLookupResults] = useState<
+    PosCustomerForLookup[]
+  >([]);
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<PosCustomerForLookup | null>(null);
+  const [isLookingUpCustomer, setIsLookingUpCustomer] = useState(false);
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
-  const [recipientAddress, setRecipientAddress] = useState("");
-  const [voucherCode, setVoucherCode] = useState("");
+  const [streetAddress, setStreetAddress] = useState("");
+  const [provinces, setProvinces] = useState<ProvinceResponse[]>([]);
+  const [districts, setDistricts] = useState<DistrictResponse[]>([]);
+  const [wards, setWards] = useState<WardResponse[]>([]);
+  const [selectedProvince, setSelectedProvince] =
+    useState<ProvinceResponse | null>(null);
+  const [selectedDistrict, setSelectedDistrict] =
+    useState<DistrictResponse | null>(null);
+  const [selectedWard, setSelectedWard] = useState<WardResponse | null>(null);
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [isLoadingWards, setIsLoadingWards] = useState(false);
+  const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
+  const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
 
-  const [qrDialogOpen, setQrDialogOpen] = useState(false);
-  const [paymentUrl, setPaymentUrl] = useState("");
-
-  const paymentId = useMemo(
-    () => loadedOrder?.paymentTransactions?.[0]?.id || "",
-    [loadedOrder],
+  const totalQuantityInCart = useMemo(
+    () => cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
+    [cartItems],
   );
 
-  const paymentStatus = loadedOrder?.paymentStatus || "Unpaid";
-  const isPaid = paymentStatus === "Paid";
-  const isOnlineMethod = ONLINE_PAYMENT_METHODS.includes(selectedPaymentMethod);
-  const draftSubtotal = useMemo(
-    () =>
-      draftItems.reduce(
-        (sum, item) =>
-          sum + Number(item.unitPrice ?? 0) * Number(item.quantity ?? 0),
-        0,
-      ),
-    [draftItems],
-  );
+  const paymentMethodsByMode = isPickupInStore
+    ? PICKUP_PAYMENT_METHODS
+    : DELIVERY_PAYMENT_METHODS;
 
-  const syncMethodFromOrder = (order: OrderResponse) => {
-    const methodFromOrder = order.paymentTransactions?.[0]?.paymentMethod;
-    if (isSupportedPaymentMethod(methodFromOrder)) {
-      setSelectedPaymentMethod(methodFromOrder);
-    }
-  };
-
-  const broadcastDisplayOrder = (orderId?: string) => {
-    if (!orderId) return;
-    window.localStorage.setItem(COUNTER_DISPLAY_ORDER_KEY, orderId);
-  };
-
-  const clearDisplayOrder = () => {
-    window.localStorage.setItem(
-      COUNTER_DISPLAY_COMMAND_KEY,
-      `clear:${Date.now()}`,
-    );
-  };
-
-  const clearStaffState = () => {
-    setLoadedOrder(null);
-    setOrderCodeInput("");
-    setPaymentUrl("");
-    setQrDialogOpen(false);
-    setVariantIdInput("");
-    setQuantityInput(1);
-    setDraftItems([]);
-    setRecipientName("");
-    setRecipientPhone("");
-    setRecipientAddress("");
-    setVoucherCode("");
-    setSelectedPaymentMethod("CashInStore");
-  };
-
-  const refreshLoadedOrder = async (orderId: string) => {
-    const latest = await orderService.getOrderById(orderId);
-    setLoadedOrder(latest);
-    syncMethodFromOrder(latest);
-    broadcastDisplayOrder(latest.id);
-  };
-
-  const hydrateVariantInfo = (
-    variant: ProductVariant,
-    quantity: number,
-  ): DraftOrderItem => {
-    const label = variant.productName
-      ? `${variant.productName}${variant.volumeMl ? ` ${variant.volumeMl}ml` : ""}`
-      : variant.sku || variant.barcode || "Biến thể";
-
-    return {
-      variantId: variant.id ?? "",
-      variantName: label,
-      productName: variant.productName,
-      unitPrice: Number(variant.basePrice ?? 0),
-      quantity,
-      thumbnail: variant.media?.[0]?.url || undefined,
-    };
-  };
-
-  const handleAddVariant = async () => {
-    const trimmed = variantIdInput.trim();
-    if (!trimmed) {
-      showToast("Vui lòng nhập mã biến thể", "warning");
-      return;
-    }
-    if (!isUuid(trimmed)) {
-      showToast("Mã biến thể phải đúng định dạng UUID", "warning");
-      return;
-    }
-    if (quantityInput <= 0) {
-      showToast("Số lượng phải lớn hơn 0", "warning");
-      return;
+  const validateCheckoutInputs = () => {
+    if (cartItems.length === 0) {
+      showToast("Vui lòng thêm sản phẩm trước khi checkout", "warning");
+      return false;
     }
 
-    try {
-      setIsAddingVariant(true);
-      const variant = await productService.getVariantById(trimmed);
-      if (!variant.id) {
-        throw new Error("Không tìm thấy mã biến thể hợp lệ");
+    if (!isPickupInStore) {
+      if (
+        !recipientName.trim() ||
+        !recipientPhone.trim() ||
+        !streetAddress.trim()
+      ) {
+        showToast("Vui lòng điền đầy đủ thông tin người nhận", "warning");
+        return false;
       }
 
-      setDraftItems((prev) => {
-        const existingIndex = prev.findIndex(
-          (item) => item.variantId === variant.id,
-        );
-        if (existingIndex !== -1) {
-          const updated = [...prev];
-          const existingItem = updated[existingIndex];
-          if (!existingItem) return prev;
-          updated[existingIndex] = {
-            ...existingItem,
-            quantity: Number(existingItem.quantity ?? 0) + quantityInput,
-          };
-          return updated;
-        }
-
-        return [...prev, hydrateVariantInfo(variant, quantityInput)];
-      });
-
-      setVariantIdInput("");
-      setQuantityInput(1);
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Không thể thêm sản phẩm",
-        "error",
-      );
-    } finally {
-      setIsAddingVariant(false);
-    }
-  };
-
-  const removeDraftItem = (variantId: string) => {
-    setDraftItems((prev) =>
-      prev.filter((item) => item.variantId !== variantId),
-    );
-  };
-
-  const updateQuantity = (variantId: string, quantity: number) => {
-    if (quantity <= 0) return;
-    setDraftItems((prev) =>
-      prev.map((item) =>
-        item.variantId === variantId
-          ? {
-              ...item,
-              quantity,
-            }
-          : item,
-      ),
-    );
-  };
-
-  const handleCreateOrder = async () => {
-    if (draftItems.length === 0) {
-      showToast("Vui lòng thêm ít nhất 1 sản phẩm", "warning");
-      return;
-    }
-
-    const validOrderDetails = draftItems
-      .map((item) => ({
-        variantId: (item.variantId || "").trim(),
-        quantity: Number(item.quantity ?? 0),
-      }))
-      .filter((item) => item.variantId.length > 0 && item.quantity > 0);
-
-    if (validOrderDetails.length === 0) {
-      showToast("Không có sản phẩm hợp lệ", "error");
-      return;
-    }
-
-    const payload: CreateInStoreOrderRequest = {
-      voucherCode: voucherCode.trim() || null,
-      isPickupInStore: true,
-      orderDetails: validOrderDetails,
-      recipient: {
-        contactName: recipientName,
-        contactPhoneNumber: recipientPhone,
-        districtId: 0,
-        districtName: "",
-        wardCode: "",
-        wardName: "",
-        provinceId: 0,
-        provinceName: "",
-        fullAddress: recipientAddress,
-      },
-      payment: {
-        method: selectedPaymentMethod,
-      },
-    };
-
-    try {
-      setIsCreatingOrder(true);
-      const result = await orderService.checkoutInStore(payload);
-      const newOrderId = result.orderId;
-
-      if (!newOrderId) {
-        throw new Error("Không nhận được mã đơn hàng sau khi tạo đơn");
+      if (!selectedProvince || !selectedDistrict || !selectedWard) {
+        showToast("Vui lòng chọn đầy đủ tỉnh/quận/phường", "warning");
+        return false;
       }
-
-      setOrderCodeInput(newOrderId);
-      await refreshLoadedOrder(newOrderId);
-      setDraftItems([]);
-      setVoucherCode("");
-      showToast("Tạo đơn tại quầy thành công", "success");
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Không thể tạo đơn tại quầy",
-        "error",
-      );
-    } finally {
-      setIsCreatingOrder(false);
     }
+
+    return true;
   };
 
-  const handleLoadOrder = async () => {
-    const trimmed = orderCodeInput.trim();
-    if (!trimmed) {
-      showToast("Vui lòng nhập mã đơn hàng", "warning");
+  const renderPaymentMethodOption = (method: PaymentMethod) => {
+    const icon = PAYMENT_METHOD_ICON[method];
+
+    return (
+      <Stack direction="row" spacing={1} alignItems="center">
+        {icon && (
+          <Box
+            component="img"
+            src={icon}
+            alt={PAYMENT_METHOD_LABEL[method]}
+            sx={{ width: 20, height: 20, objectFit: "contain" }}
+          />
+        )}
+        <span>{PAYMENT_METHOD_LABEL[method]}</span>
+      </Stack>
+    );
+  };
+
+  const handleSearch = async () => {
+    const value = searchKeyword.trim();
+    if (!value) {
+      showToast("Vui lòng nhập SKU hoặc tên sản phẩm", "warning");
       return;
     }
 
     try {
-      setIsLoadingOrder(true);
-      const order = await orderService.getOrderById(trimmed);
-      setLoadedOrder(order);
-      syncMethodFromOrder(order);
-      broadcastDisplayOrder(order.id);
-      showToast("Đã tải đơn hàng", "success");
-    } catch (error) {
-      setLoadedOrder(null);
-      showToast(
-        error instanceof Error ? error.message : "Không thể tải đơn hàng",
-        "error",
-      );
-    } finally {
-      setIsLoadingOrder(false);
-    }
-  };
+      setIsSearching(true);
+      const found = await posService.searchVariantsForPos(value);
 
-  const handleProcessPayment = async () => {
-    if (!loadedOrder?.id) {
-      showToast("Vui lòng tải đơn hàng trước", "warning");
-      return;
-    }
-    if (!paymentId) {
-      showToast("Đơn hàng chưa có thông tin giao dịch thanh toán", "error");
-      return;
-    }
-    if (isPaid) {
-      showToast("Đơn hàng đã được thanh toán", "info");
-      return;
-    }
-
-    try {
-      setIsProcessingPayment(true);
-
-      if (isOnlineMethod) {
-        const response = await orderService.retryPayment(
-          paymentId,
-          selectedPaymentMethod,
-        );
-        if (!response.url) {
-          throw new Error("Không lấy được URL thanh toán");
-        }
-
-        setPaymentUrl(response.url);
-        setQrDialogOpen(true);
-        showToast("Đã tạo mã QR thanh toán", "success");
+      if (found.length === 0) {
+        setSearchResults([]);
+        showToast("Không tìm thấy sản phẩm phù hợp", "info");
         return;
       }
 
-      await orderService.confirmPayment(paymentId, true);
-      clearDisplayOrder();
-      clearStaffState();
-      showToast("Xác nhận thanh toán tiền mặt thành công", "success");
+      setSearchResults(found);
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : "Không thể xử lý thanh toán",
+        error instanceof Error ? error.message : "Không thể tìm sản phẩm",
         "error",
       );
     } finally {
-      setIsProcessingPayment(false);
+      setIsSearching(false);
     }
   };
 
-  const openCustomerScreen = () => {
-    if (!loadedOrder?.id) {
-      showToast("Chưa có đơn hàng để hiển thị", "warning");
+  const handleBarcodeDetected = useCallback(
+    async (barcode: string) => {
+      try {
+        setIsSearching(true);
+        const variant = await posService.getVariantByBarcode(barcode);
+
+        if (!variant) {
+          setSearchResults([]);
+          showToast(`Không tìm thấy sản phẩm cho mã ${barcode}`, "warning");
+          return;
+        }
+
+        setSearchResults([variant]);
+        setSearchKeyword(barcode);
+      } catch (error) {
+        showToast(
+          error instanceof Error ? error.message : "Không thể xử lý mã quét",
+          "error",
+        );
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [showToast],
+  );
+
+  const handleOpenBatchModal = async (variant: PosProductVariant) => {
+    if (!variant.id) {
+      showToast("Sản phẩm không hợp lệ", "error");
       return;
     }
-    broadcastDisplayOrder(loadedOrder.id);
-    window.open(
-      `/checkout/counter/display?orderId=${loadedOrder.id}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
+
+    try {
+      setBatchModalMode("add");
+      setModalCurrentBatchCode(undefined);
+      setEditingCartItemKey(null);
+      setSelectedVariant(variant);
+      setBatchOptions([]);
+      setIsBatchModalOpen(true);
+      setIsLoadingBatches(true);
+
+      const batches = await posService.getBatchesByVariant(variant.id);
+      setBatchOptions(batches);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách batch",
+        "error",
+      );
+      setIsBatchModalOpen(false);
+    } finally {
+      setIsLoadingBatches(false);
+    }
   };
 
-  const qrImageUrl = paymentUrl
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
-        paymentUrl,
-      )}`
-    : "";
+  const handleEditBatchInCart = async (item: PosCartItem) => {
+    if (!item.variantId) {
+      showToast("Không thể đổi batch cho sản phẩm này", "warning");
+      return;
+    }
+
+    try {
+      setBatchModalMode("switch");
+      setModalCurrentBatchCode(item.batchCode);
+      setEditingCartItemKey(item.key);
+      setSelectedVariant({
+        id: item.variantId,
+        barcode: item.barcode,
+        sku: item.sku,
+        name: item.variantName,
+        displayName: item.variantName,
+        basePrice: item.unitPrice,
+        concentrationName: "",
+      });
+      setBatchOptions([]);
+      setIsBatchModalOpen(true);
+      setIsLoadingBatches(true);
+
+      const batches = await posService.getBatchesByVariant(item.variantId);
+      setBatchOptions(batches);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách batch",
+        "error",
+      );
+      setIsBatchModalOpen(false);
+      setEditingCartItemKey(null);
+    } finally {
+      setIsLoadingBatches(false);
+    }
+  };
+
+  const handleAddAnotherBatchInCart = async (group: GroupedCartItem) => {
+    if (!group.variantId) {
+      showToast("Không thể thêm batch cho sản phẩm này", "warning");
+      return;
+    }
+
+    try {
+      setBatchModalMode("add");
+      setModalCurrentBatchCode(undefined);
+      setEditingCartItemKey(null);
+      setSelectedVariant({
+        id: group.variantId,
+        barcode: group.barcode,
+        sku: group.sku,
+        name: group.variantName,
+        displayName: group.variantName,
+        basePrice: group.unitPrice,
+        concentrationName: "",
+      });
+      setBatchOptions([]);
+      setIsBatchModalOpen(true);
+      setIsLoadingBatches(true);
+
+      const batches = await posService.getBatchesByVariant(group.variantId);
+      setBatchOptions(batches);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải danh sách batch",
+        "error",
+      );
+      setIsBatchModalOpen(false);
+    } finally {
+      setIsLoadingBatches(false);
+    }
+  };
+
+  const handleSelectBatch = (batch: PosBatchDetail) => {
+    if (!selectedVariant) return;
+
+    const variantId = selectedVariant.id || "";
+    const batchKey = batch.id || batch.batchCode;
+    const key = `${variantId}:${batchKey}`;
+    const rawMax = Number(batch.remainingQuantity ?? 0);
+    const maxQuantity = rawMax > 0 ? rawMax : Number.MAX_SAFE_INTEGER;
+    let outOfStockWarning = false;
+
+    setCartItems((prev) => {
+      if (editingCartItemKey) {
+        const target = prev.find((item) => item.key === editingCartItemKey);
+        if (!target) return prev;
+
+        if (target.key === key) {
+          const nextQuantity = Math.min(target.quantity, maxQuantity);
+          if (nextQuantity < target.quantity) {
+            outOfStockWarning = true;
+          }
+
+          return prev.map((item) =>
+            item.key === target.key
+              ? {
+                  ...item,
+                  batchId: batch.id,
+                  batchCode: batch.batchCode,
+                  maxQuantity,
+                  quantity: nextQuantity,
+                }
+              : item,
+          );
+        }
+
+        const duplicate = prev.find((item) => item.key === key);
+        if (duplicate) {
+          const mergedQuantity = duplicate.quantity + target.quantity;
+          const nextQuantity = Math.min(mergedQuantity, maxQuantity);
+          if (nextQuantity < mergedQuantity) {
+            outOfStockWarning = true;
+          }
+
+          return prev
+            .filter((item) => item.key !== target.key)
+            .map((item) =>
+              item.key === key
+                ? {
+                    ...item,
+                    quantity: nextQuantity,
+                    batchId: batch.id,
+                    batchCode: batch.batchCode,
+                    maxQuantity,
+                  }
+                : item,
+            );
+        }
+
+        const nextQuantity = Math.min(target.quantity, maxQuantity);
+        if (nextQuantity < target.quantity) {
+          outOfStockWarning = true;
+        }
+
+        return prev.map((item) =>
+          item.key === target.key
+            ? {
+                ...item,
+                key,
+                batchId: batch.id,
+                batchCode: batch.batchCode,
+                maxQuantity,
+                quantity: nextQuantity,
+              }
+            : item,
+        );
+      }
+
+      const existed = prev.find((item) => item.key === key);
+      if (existed) {
+        const nextQuantity = Math.min(
+          existed.quantity + 1,
+          existed.maxQuantity,
+        );
+        if (nextQuantity === existed.quantity) {
+          outOfStockWarning = true;
+        }
+
+        return prev.map((item) =>
+          item.key === key
+            ? {
+                ...item,
+                quantity: nextQuantity,
+              }
+            : item,
+        );
+      }
+
+      return [
+        ...prev,
+        {
+          key,
+          variantId,
+          variantName: selectedVariant.displayName || selectedVariant.name,
+          sku: selectedVariant.sku,
+          barcode: selectedVariant.barcode,
+          imageUrl: selectedVariant.primaryImageUrl,
+          unitPrice: Number(selectedVariant.basePrice ?? 0),
+          batchId: batch.id,
+          batchCode: batch.batchCode,
+          maxQuantity,
+          quantity: 1,
+        },
+      ];
+    });
+
+    if (outOfStockWarning) {
+      showToast("Số lượng đã đạt tối đa theo tồn kho của batch", "warning");
+    }
+
+    setIsBatchModalOpen(false);
+    setSelectedVariant(null);
+    setEditingCartItemKey(null);
+    setSearchResults([]);
+    setSearchKeyword("");
+  };
+
+  const updateQuantity = (key: string, quantity: number) => {
+    if (quantity <= 0) return;
+    let outOfStockWarning = false;
+
+    setCartItems((prev) => {
+      const current = prev.find((item) => item.key === key);
+      if (!current) return prev;
+
+      const nextQuantity = Math.min(quantity, current.maxQuantity);
+      if (nextQuantity < quantity) {
+        outOfStockWarning = true;
+      }
+
+      return prev.map((item) =>
+        item.key === key ? { ...item, quantity: nextQuantity } : item,
+      );
+    });
+
+    if (outOfStockWarning) {
+      showToast("Không thể vượt quá số lượng còn lại của batch", "warning");
+    }
+  };
+
+  const removeCartItem = (key: string) => {
+    setCartItems((prev) => prev.filter((item) => item.key !== key));
+  };
+
+  const handleApplyVoucher = () => {
+    const nextCode = voucherInput.trim();
+    setAppliedVoucherCode(nextCode);
+
+    if (nextCode) {
+      showToast("Đã áp dụng mã giảm giá", "success");
+      return;
+    }
+
+    showToast("Đã bỏ mã giảm giá", "info");
+  };
+
+  const localSubtotal = useMemo(
+    () =>
+      cartItems.reduce(
+        (sum, item) => sum + Number(item.unitPrice ?? 0) * item.quantity,
+        0,
+      ),
+    [cartItems],
+  );
+
+  const groupedCartItems = useMemo<GroupedCartItem[]>(() => {
+    const map = new Map<string, GroupedCartItem>();
+
+    cartItems.forEach((item) => {
+      const groupKey = item.variantId || `${item.sku}:${item.variantName}`;
+      const current = map.get(groupKey);
+
+      if (!current) {
+        map.set(groupKey, {
+          groupKey,
+          variantId: item.variantId,
+          variantName: item.variantName,
+          sku: item.sku,
+          barcode: item.barcode,
+          imageUrl: item.imageUrl,
+          unitPrice: item.unitPrice,
+          totalQuantity: item.quantity,
+          batchItems: [item],
+        });
+        return;
+      }
+
+      current.totalQuantity += item.quantity;
+      current.batchItems.push(item);
+    });
+
+    return Array.from(map.values());
+  }, [cartItems]);
+
+  const previewPayload = useMemo<PosPreviewRequest>(
+    () => ({
+      scannedItems: cartItems.map((item) => ({
+        barcode: item.barcode,
+        batchCode: item.batchCode,
+        quantity: item.quantity,
+      })),
+      voucherCode: appliedVoucherCode.trim() || null,
+    }),
+    [appliedVoucherCode, cartItems],
+  );
+
+  const debouncedPreviewPayload = useDebounce(previewPayload, 500);
+
+  const toCartDisplaySyncPayload = useCallback(
+    (data: PosPreviewResponse): CartDisplaySyncPayload => {
+      const mappedItems = cartItems.map((cartItem) => {
+        const matchedPreviewItem = data.items?.find(
+          (previewItem) =>
+            previewItem.batchCode === cartItem.batchCode &&
+            (previewItem.variantId === cartItem.variantId ||
+              previewItem.variantName === cartItem.variantName),
+        );
+
+        const unitPrice = toSafeNumber(
+          matchedPreviewItem?.unitPrice ?? cartItem.unitPrice,
+        );
+        const subTotal = toSafeNumber(
+          matchedPreviewItem?.subTotal ?? unitPrice * cartItem.quantity,
+        );
+        const discount = toSafeNumber(matchedPreviewItem?.discount ?? 0);
+        const finalTotal = toSafeNumber(
+          matchedPreviewItem?.finalTotal ?? subTotal - discount,
+        );
+
+        return {
+          variantId: toGuidOrEmpty(
+            matchedPreviewItem?.variantId ?? cartItem.variantId,
+          ),
+          batchId: toGuidOrEmpty(
+            matchedPreviewItem?.batchId ?? cartItem.batchId,
+          ),
+          variantName:
+            matchedPreviewItem?.variantName?.trim() || cartItem.variantName,
+          batchCode: matchedPreviewItem?.batchCode || cartItem.batchCode,
+          imageUrl: matchedPreviewItem?.imageUrl || cartItem.imageUrl || "",
+          quantity: Math.max(0, Number(cartItem.quantity || 0)),
+          unitPrice,
+          subTotal,
+          discount,
+          finalTotal,
+        };
+      });
+
+      const computedSubTotal = mappedItems.reduce(
+        (sum, item) => sum + item.subTotal,
+        0,
+      );
+      const computedDiscount = mappedItems.reduce(
+        (sum, item) => sum + item.discount,
+        0,
+      );
+      const computedTotal = mappedItems.reduce(
+        (sum, item) => sum + item.finalTotal,
+        0,
+      );
+
+      return {
+        items: mappedItems,
+        subTotal: toSafeNumber(data.subTotal ?? computedSubTotal),
+        discount: toSafeNumber(data.discount ?? computedDiscount),
+        totalPrice: toSafeNumber(data.totalPrice ?? computedTotal),
+      };
+    },
+    [cartItems],
+  );
+
+  useEffect(() => {
+    if (debouncedPreviewPayload.scannedItems.length === 0) {
+      setPreviewData(null);
+      setPreviewError("");
+      setIsPreviewLoading(false);
+      void syncCartToCustomer({
+        items: [],
+        subTotal: 0,
+        discount: 0,
+        totalPrice: 0,
+      } satisfies CartDisplaySyncPayload);
+      return;
+    }
+
+    let isCancelled = false;
+
+    const loadPreview = async () => {
+      try {
+        setIsPreviewLoading(true);
+        const data = await posService.previewOrder(debouncedPreviewPayload);
+        if (!isCancelled) {
+          setPreviewData(data);
+          setPreviewError("");
+          void syncCartToCustomer(toCartDisplaySyncPayload(data));
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setPreviewData(null);
+          setPreviewError(
+            error instanceof Error ? error.message : "Không thể tính tổng tiền",
+          );
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsPreviewLoading(false);
+        }
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [debouncedPreviewPayload, syncCartToCustomer, toCartDisplaySyncPayload]);
+
+  useEffect(() => {
+    setPaymentMethod(isPickupInStore ? "CashInStore" : "CashOnDelivery");
+  }, [isPickupInStore]);
+
+  useEffect(() => {
+    const loadProvinces = async () => {
+      try {
+        setIsLoadingProvinces(true);
+        const data = await addressService.getProvinces();
+        setProvinces(data);
+      } catch {
+        showToast("Không thể tải danh sách tỉnh/thành", "warning");
+      } finally {
+        setIsLoadingProvinces(false);
+      }
+    };
+
+    loadProvinces();
+  }, [showToast]);
+
+  const loadDistricts = async (provinceId: number) => {
+    try {
+      setIsLoadingDistricts(true);
+      const data = await addressService.getDistricts(provinceId);
+      setDistricts(data);
+    } catch {
+      showToast("Không thể tải quận/huyện", "warning");
+    } finally {
+      setIsLoadingDistricts(false);
+    }
+  };
+
+  const loadWards = async (districtId: number) => {
+    try {
+      setIsLoadingWards(true);
+      const data = await addressService.getWards(districtId);
+      setWards(data);
+    } catch {
+      showToast("Không thể tải phường/xã", "warning");
+    } finally {
+      setIsLoadingWards(false);
+    }
+  };
+
+  const handleLookupCustomer = async () => {
+    const keyword = customerLookupKeyword.trim();
+    if (!keyword) {
+      setCustomerLookupResults([]);
+      return;
+    }
+
+    try {
+      setIsLookingUpCustomer(true);
+      const customers = await posService.lookupCustomerByPhoneOrEmail(keyword);
+      setCustomerLookupResults(customers);
+
+      if (customers.length === 0) {
+        showToast("Không tìm thấy khách hàng", "info");
+        return;
+      }
+    } finally {
+      setIsLookingUpCustomer(false);
+    }
+  };
+
+  const handleSelectCustomer = (customer: PosCustomerForLookup) => {
+    setSelectedCustomer(customer);
+    if (!recipientPhone) {
+      setRecipientPhone(customer.phoneNumber || "");
+    }
+    if (!recipientName) {
+      setRecipientName(customer.fullName || "");
+    }
+  };
+
+  const handleClearSelectedCustomer = () => {
+    setSelectedCustomer(null);
+  };
+
+  const handleOpenCheckoutConfirm = () => {
+    if (!validateCheckoutInputs()) return;
+    setIsCheckoutConfirmOpen(true);
+  };
+
+  const handleCheckoutInStore = async () => {
+    if (!validateCheckoutInputs()) return;
+
+    const paymentMethodAtCheckout = paymentMethod;
+    const expectedTotal = Number(previewData?.totalPrice ?? localSubtotal);
+    const payload: CreateInStoreOrderRequest = {
+      scannedItems: cartItems.map((item) => ({
+        barcode: item.barcode,
+        batchCode: item.batchCode,
+        quantity: item.quantity,
+      })),
+      voucherCode: appliedVoucherCode.trim() || null,
+      customerId: selectedCustomer?.id || null,
+      isPickupInStore,
+      payment: {
+        method: paymentMethod,
+      },
+      expectedTotalPrice: expectedTotal,
+      recipient: isPickupInStore
+        ? null
+        : {
+            contactName: recipientName.trim(),
+            contactPhoneNumber: recipientPhone.trim(),
+            districtId: selectedDistrict?.DistrictID || 0,
+            districtName: selectedDistrict?.DistrictName || "",
+            wardCode: selectedWard?.WardCode || "",
+            wardName: selectedWard?.WardName || "",
+            provinceId: selectedProvince?.ProvinceID || 0,
+            provinceName: selectedProvince?.ProvinceName || "",
+            fullAddress: streetAddress.trim(),
+          },
+    };
+
+    try {
+      setIsSubmittingCheckout(true);
+      const result = await orderService.checkoutInStore(payload);
+
+      showToast(
+        result.orderId
+          ? `Checkout thành công. Mã đơn: ${result.orderId}`
+          : "Checkout thành công",
+        "success",
+      );
+
+      if (paymentMethodAtCheckout === "CashInStore") {
+        void (async () => {
+          try {
+            const paymentId = result.orderId?.trim();
+
+            if (!paymentId) {
+              showToast(
+                "Checkout tiền mặt thành công nhưng thiếu paymentId để xác nhận tự động",
+                "warning",
+              );
+              return;
+            }
+
+            await orderService.confirmPayment(paymentId, true);
+          } catch {
+            showToast(
+              "Đơn đã tạo nhưng xác nhận thanh toán tiền mặt tự động thất bại",
+              "warning",
+            );
+          }
+        })();
+      }
+
+      setCartItems([]);
+      setSearchResults([]);
+      setSearchKeyword("");
+      setVoucherInput("");
+      setAppliedVoucherCode("");
+      setCustomerLookupKeyword("");
+      setCustomerLookupResults([]);
+      setSelectedCustomer(null);
+      setRecipientName("");
+      setRecipientPhone("");
+      setStreetAddress("");
+      setSelectedProvince(null);
+      setSelectedDistrict(null);
+      setSelectedWard(null);
+      setDistricts([]);
+      setWards([]);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Checkout thất bại",
+        "error",
+      );
+    } finally {
+      setIsSubmittingCheckout(false);
+    }
+  };
 
   return (
     <MainLayout>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Typography variant="h4" fontWeight={700} mb={3}>
-          Thanh toán tại quầy
+      <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 4 } }}>
+        <Typography variant="h4" fontWeight={800} mb={0.75}>
+          Tính tiền tại quầy (POS)
+        </Typography>
+        <Typography variant="body2" color="text.secondary" mb={3.5}>
+          Luồng: Quét/Tìm sản phẩm - Chọn batch - Thêm vào giỏ - Tính tiền tự
+          động.
         </Typography>
 
         <Stack
-          direction={{ xs: "column", md: "row" }}
-          spacing={3}
-          alignItems="flex-start"
+          direction={{ xs: "column", lg: "row" }}
+          spacing={2.5}
+          alignItems={{ xs: "stretch", lg: "flex-start" }}
         >
           <Box flex={1} width="100%">
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" fontWeight={600} mb={2}>
-                Tải đơn hàng theo mã
-              </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+            <Paper
+              sx={{
+                ...panelSx,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                mb={2}
+              >
+                <Typography variant="h6" fontWeight={700}>
+                  Giỏ hàng tại quầy
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {groupedCartItems.length} sản phẩm
+                </Typography>
+              </Stack>
+
+              <Box
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1.5,
+                  bgcolor: "grey.50",
+                  maxHeight: { xs: 380, lg: 320 },
+                  overflow: "auto",
+                  minHeight: 180,
+                }}
+              >
+                {cartItems.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có sản phẩm trong giỏ. Hãy thêm sản phẩm từ cột tìm
+                    kiếm/quét mã.
+                  </Typography>
+                ) : (
+                  <List
+                    disablePadding
+                    sx={{ maxHeight: "100%", overflowY: "auto" }}
+                  >
+                    {groupedCartItems.map((group, groupIndex) => (
+                      <Box key={group.groupKey}>
+                        <ListItem
+                          disableGutters
+                          sx={{ py: 1.25, alignItems: "flex-start" }}
+                        >
+                          <ListItemAvatar sx={{ minWidth: 56 }}>
+                            {group.imageUrl ? (
+                              <Box
+                                component="img"
+                                src={group.imageUrl}
+                                alt={group.variantName}
+                                sx={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 1.5,
+                                  objectFit: "cover",
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              />
+                            ) : (
+                              <Box
+                                sx={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 1.5,
+                                  bgcolor: "grey.100",
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              />
+                            )}
+                          </ListItemAvatar>
+
+                          <ListItemText
+                            primary={
+                              <Typography fontWeight={700}>
+                                {group.variantName}
+                              </Typography>
+                            }
+                            secondaryTypographyProps={{ component: "div" }}
+                            secondary={
+                              <Stack
+                                direction="row"
+                                alignItems="center"
+                                spacing={1}
+                                flexWrap="wrap"
+                              >
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  SKU: {group.sku} | Tổng SL:{" "}
+                                  {group.totalQuantity}
+                                </Typography>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() =>
+                                    handleAddAnotherBatchInCart(group)
+                                  }
+                                  sx={{ py: 0, minHeight: 24 }}
+                                >
+                                  + Batch khác
+                                </Button>
+                              </Stack>
+                            }
+                          />
+
+                          <Typography fontWeight={800} color="text.primary">
+                            {formatCurrency(
+                              group.unitPrice * group.totalQuantity,
+                            )}
+                          </Typography>
+                        </ListItem>
+
+                        <Stack spacing={1} sx={{ mb: 1.25, ml: 7 }}>
+                          {group.batchItems.map((item) => (
+                            <Stack
+                              key={item.key}
+                              direction="row"
+                              alignItems="center"
+                              justifyContent="space-between"
+                              spacing={1}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Batch: {item.batchCode}
+                                <Button
+                                  size="small"
+                                  variant="text"
+                                  onClick={() => handleEditBatchInCart(item)}
+                                  sx={{ ml: 1, minWidth: 0, px: 0.5 }}
+                                >
+                                  Đổi
+                                </Button>
+                              </Typography>
+
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                                sx={{
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                  borderRadius: 1.5,
+                                  px: 0.5,
+                                  py: 0.25,
+                                  bgcolor: "background.paper",
+                                }}
+                              >
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    updateQuantity(item.key, item.quantity - 1)
+                                  }
+                                  disabled={item.quantity <= 1}
+                                >
+                                  <Remove fontSize="small" />
+                                </IconButton>
+                                <TextField
+                                  size="small"
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => {
+                                    const value = Number(e.target.value);
+                                    if (Number.isFinite(value) && value > 0) {
+                                      updateQuantity(item.key, value);
+                                    }
+                                  }}
+                                  sx={{ width: 58 }}
+                                />
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    updateQuantity(item.key, item.quantity + 1)
+                                  }
+                                >
+                                  <Add fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => removeCartItem(item.key)}
+                                >
+                                  <Delete fontSize="small" />
+                                </IconButton>
+                              </Stack>
+                            </Stack>
+                          ))}
+                        </Stack>
+
+                        {groupIndex < groupedCartItems.length - 1 && (
+                          <Divider />
+                        )}
+                      </Box>
+                    ))}
+                  </List>
+                )}
+              </Box>
+
+              <Stack direction="row" spacing={1.25} sx={{ mt: 2 }}>
                 <TextField
-                  label="Mã đơn hàng"
-                  value={orderCodeInput}
-                  onChange={(e) => setOrderCodeInput(e.target.value)}
+                  placeholder="Mã giảm giá"
+                  value={voucherInput}
+                  onChange={(e) => setVoucherInput(e.target.value)}
                   fullWidth
                 />
                 <Button
                   variant="contained"
-                  startIcon={
-                    isLoadingOrder ? (
-                      <CircularProgress size={18} />
-                    ) : (
-                      <QrCodeScanner />
-                    )
-                  }
-                  onClick={handleLoadOrder}
-                  disabled={isLoadingOrder}
+                  onClick={handleApplyVoucher}
+                  disabled={voucherInput.trim() === appliedVoucherCode.trim()}
+                  sx={{ minWidth: 112 }}
                 >
-                  Tải đơn
+                  Áp dụng
                 </Button>
               </Stack>
-            </Paper>
 
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} mb={2}>
-                Tạo đơn nhanh tại quầy
-              </Typography>
+              <Box
+                sx={{
+                  mt: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 2,
+                  bgcolor: "background.default",
+                }}
+              >
+                <Stack spacing={1}>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Tạm tính</Typography>
+                    <Typography>{formatCurrency(localSubtotal)}</Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Giảm giá</Typography>
+                    <Typography>
+                      {formatCurrency(Number(previewData?.discount ?? 0))}
+                    </Typography>
+                  </Stack>
+                  <Divider sx={{ my: 0.5 }} />
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography fontWeight={800}>Tổng tiền</Typography>
+                    <Typography fontWeight={800} color="error.main">
+                      {formatCurrency(
+                        Number(
+                          previewData?.totalPrice ??
+                            previewData?.subTotal ??
+                            localSubtotal,
+                        ),
+                      )}
+                    </Typography>
+                  </Stack>
 
-              <Stack spacing={2}>
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <TextField
-                    label="Mã biến thể"
-                    value={variantIdInput}
-                    onChange={(e) => setVariantIdInput(e.target.value)}
-                    fullWidth
+                  {isPreviewLoading && (
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <CircularProgress size={16} />
+                      <Typography variant="body2" color="text.secondary">
+                        Đang tính tổng tiền...
+                      </Typography>
+                    </Stack>
+                  )}
+
+                  {previewError && (
+                    <Alert severity="warning">{previewError}</Alert>
+                  )}
+                </Stack>
+              </Box>
+
+              <Box
+                sx={{
+                  mt: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 2,
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Typography fontWeight={700} mb={1.25}>
+                  Checkout tại quầy
+                </Typography>
+
+                <RadioGroup
+                  row
+                  value={isPickupInStore ? "pickup" : "delivery"}
+                  onChange={(e) =>
+                    setIsPickupInStore(e.target.value === "pickup")
+                  }
+                >
+                  <FormControlLabel
+                    value="pickup"
+                    control={<Radio size="small" />}
+                    label="Khách lấy tại quầy"
                   />
+                  <FormControlLabel
+                    value="delivery"
+                    control={<Radio size="small" />}
+                    label="Giao về địa chỉ khách"
+                  />
+                </RadioGroup>
+
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  alignItems="stretch"
+                  sx={{ mt: 1.5 }}
+                >
                   <TextField
-                    label="Số lượng"
-                    type="number"
-                    value={quantityInput}
-                    onChange={(e) => {
-                      const next = Number(e.target.value);
-                      setQuantityInput(
-                        Number.isFinite(next) && next > 0 ? next : 1,
-                      );
-                    }}
-                    sx={{ width: { xs: "100%", sm: 140 } }}
+                    label="SĐT khách hàng (nếu có tài khoản)"
+                    value={customerLookupKeyword}
+                    onChange={(e) => setCustomerLookupKeyword(e.target.value)}
+                    fullWidth
                   />
                   <Button
                     variant="outlined"
-                    onClick={handleAddVariant}
-                    disabled={isAddingVariant}
-                    sx={{ whiteSpace: "nowrap" }}
+                    onClick={handleLookupCustomer}
+                    disabled={isLookingUpCustomer}
+                    aria-label="Tìm khách hàng"
+                    sx={{
+                      minWidth: { xs: "100%", sm: 52 },
+                      width: { xs: "100%", sm: 52 },
+                      px: 0,
+                    }}
                   >
-                    {isAddingVariant ? <CircularProgress size={18} /> : "Thêm"}
+                    {isLookingUpCustomer ? (
+                      <CircularProgress size={18} />
+                    ) : (
+                      <Search fontSize="small" />
+                    )}
                   </Button>
                 </Stack>
 
-                {draftItems.length > 0 ? (
-                  <Paper variant="outlined" sx={{ p: 2 }}>
-                    <Stack spacing={1.5}>
-                      {draftItems.map((item) => (
-                        <Box
-                          key={item.variantId}
-                          display="flex"
-                          alignItems="center"
-                          gap={1.5}
+                {customerLookupResults.length > 0 && (
+                  <Box
+                    sx={{
+                      mt: 1,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1.5,
+                      maxHeight: 160,
+                      overflowY: "auto",
+                      bgcolor: "grey.50",
+                    }}
+                  >
+                    {customerLookupResults.map((customer) => {
+                      const isSelected = selectedCustomer?.id === customer.id;
+                      return (
+                        <Button
+                          key={customer.id}
+                          fullWidth
+                          variant="text"
+                          onClick={() => handleSelectCustomer(customer)}
+                          sx={{
+                            justifyContent: "flex-start",
+                            textTransform: "none",
+                            px: 1.5,
+                            py: 1,
+                            borderRadius: 0,
+                            bgcolor: isSelected
+                              ? "action.selected"
+                              : "transparent",
+                            borderBottom: "1px solid",
+                            borderColor: "divider",
+                          }}
                         >
-                          <Box flex={1} minWidth={0}>
-                            <Typography fontWeight={600} noWrap>
-                              {item.productName || item.variantName}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              noWrap
-                            >
-                              {item.variantId}
-                            </Typography>
-                          </Box>
-                          <TextField
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => {
-                              const next = Number(e.target.value);
-                              updateQuantity(
-                                item.variantId,
-                                Number.isFinite(next) && next > 0
-                                  ? next
-                                  : item.quantity,
-                              );
-                            }}
-                            sx={{ width: 84 }}
-                          />
                           <Typography
-                            fontWeight={600}
-                            minWidth={100}
-                            textAlign="right"
+                            variant="body2"
+                            sx={{ textAlign: "left", width: "100%" }}
                           >
-                            {formatCurrency(item.unitPrice * item.quantity)}
+                            {customer.fullName} - {customer.phoneNumber}
                           </Typography>
-                          <IconButton
-                            color="error"
-                            onClick={() => removeDraftItem(item.variantId)}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </Box>
-                      ))}
-                    </Stack>
-                    <Divider sx={{ my: 2 }} />
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography>Tạm tính</Typography>
-                      <Typography fontWeight={700}>
-                        {formatCurrency(draftSubtotal)}
-                      </Typography>
-                    </Stack>
-                  </Paper>
-                ) : (
-                  <FormHelperText>
-                    Chưa có sản phẩm trong đơn nháp.
-                  </FormHelperText>
+                        </Button>
+                      );
+                    })}
+                  </Box>
+                )}
+
+                {selectedCustomer && (
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    spacing={1}
+                    sx={{ mt: 1 }}
+                  >
+                    <Typography variant="body2" color="success.main">
+                      Khách hàng đã chọn: {selectedCustomer.fullName} -{" "}
+                      {selectedCustomer.phoneNumber}
+                    </Typography>
+                    <Button
+                      size="small"
+                      variant="text"
+                      color="inherit"
+                      onClick={handleClearSelectedCustomer}
+                      sx={{ whiteSpace: "nowrap" }}
+                    >
+                      Bỏ chọn
+                    </Button>
+                  </Stack>
+                )}
+
+                {!isPickupInStore && (
+                  <Stack spacing={1.25} sx={{ mt: 1.5 }}>
+                    <TextField
+                      label="Tên người nhận"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      fullWidth
+                    />
+                    <TextField
+                      label="Số điện thoại người nhận"
+                      value={recipientPhone}
+                      onChange={(e) => setRecipientPhone(e.target.value)}
+                      fullWidth
+                    />
+                    <Autocomplete
+                      options={provinces}
+                      getOptionLabel={(option) => option.ProvinceName || ""}
+                      value={selectedProvince}
+                      onChange={(_, value) => {
+                        setSelectedProvince(value);
+                        setSelectedDistrict(null);
+                        setSelectedWard(null);
+                        setDistricts([]);
+                        setWards([]);
+                        if (value?.ProvinceID) {
+                          loadDistricts(value.ProvinceID);
+                        }
+                      }}
+                      loading={isLoadingProvinces}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Tỉnh/Thành phố" />
+                      )}
+                    />
+                    <Autocomplete
+                      options={districts}
+                      getOptionLabel={(option) => option.DistrictName || ""}
+                      value={selectedDistrict}
+                      onChange={(_, value) => {
+                        setSelectedDistrict(value);
+                        setSelectedWard(null);
+                        setWards([]);
+                        if (value?.DistrictID) {
+                          loadWards(value.DistrictID);
+                        }
+                      }}
+                      loading={isLoadingDistricts}
+                      disabled={!selectedProvince}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Quận/Huyện" />
+                      )}
+                    />
+                    <Autocomplete
+                      options={wards}
+                      getOptionLabel={(option) => option.WardName || ""}
+                      value={selectedWard}
+                      onChange={(_, value) => setSelectedWard(value)}
+                      loading={isLoadingWards}
+                      disabled={!selectedDistrict}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Phường/Xã" />
+                      )}
+                    />
+                    <TextField
+                      label="Địa chỉ cụ thể"
+                      value={streetAddress}
+                      onChange={(e) => setStreetAddress(e.target.value)}
+                      fullWidth
+                    />
+                  </Stack>
                 )}
 
                 <TextField
-                  label="Mã giảm giá"
-                  value={voucherCode}
-                  onChange={(e) => setVoucherCode(e.target.value)}
-                />
-
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <TextField
-                    label="Tên khách (tuỳ chọn)"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    fullWidth
-                  />
-                  <TextField
-                    label="SĐT (tuỳ chọn)"
-                    value={recipientPhone}
-                    onChange={(e) => setRecipientPhone(e.target.value)}
-                    fullWidth
-                  />
-                </Stack>
-
-                <TextField
-                  label="Địa chỉ/Ghi chú (tuỳ chọn)"
-                  value={recipientAddress}
-                  onChange={(e) => setRecipientAddress(e.target.value)}
-                />
-
-                <Button
-                  variant="contained"
-                  color="error"
-                  size="large"
-                  onClick={handleCreateOrder}
-                  disabled={isCreatingOrder}
-                >
-                  {isCreatingOrder ? (
-                    <CircularProgress size={22} />
-                  ) : (
-                    "Tạo đơn tại quầy"
-                  )}
-                </Button>
-              </Stack>
-            </Paper>
-
-            <Paper sx={{ p: 3, mt: 3 }}>
-              <Typography variant="h6" fontWeight={600} mb={2}>
-                Xử lý thanh toán
-              </Typography>
-
-              <Stack spacing={2}>
-                <TextField
                   select
+                  fullWidth
                   label="Phương thức thanh toán"
-                  value={selectedPaymentMethod}
+                  value={paymentMethod}
                   onChange={(e) =>
-                    setSelectedPaymentMethod(e.target.value as PaymentMethod)
+                    setPaymentMethod(e.target.value as PaymentMethod)
                   }
-                  disabled={!loadedOrder?.id || isPaid}
+                  SelectProps={{
+                    renderValue: (selected) =>
+                      renderPaymentMethodOption(selected as PaymentMethod),
+                  }}
+                  sx={{ mt: 1.5 }}
                 >
-                  {PAYMENT_CHOICES.map((choice) => (
-                    <MenuItem key={choice.value} value={choice.value}>
-                      {choice.label}
+                  {paymentMethodsByMode.map((method) => (
+                    <MenuItem key={method} value={method}>
+                      {renderPaymentMethodOption(method)}
                     </MenuItem>
                   ))}
                 </TextField>
 
-                <Alert severity={isOnlineMethod ? "info" : "warning"}>
-                  {isOnlineMethod
-                    ? "Thanh toán online: hệ thống sẽ hiển thị QR để khách quét."
-                    : "Thanh toán tiền mặt/COD: nhân viên bấm xác nhận đã nhận tiền."}
-                </Alert>
-
                 <Button
                   variant="contained"
-                  color={isOnlineMethod ? "primary" : "success"}
                   size="large"
-                  startIcon={isOnlineMethod ? <Payments /> : <PointOfSale />}
-                  onClick={handleProcessPayment}
-                  disabled={!loadedOrder?.id || isProcessingPayment || isPaid}
+                  fullWidth
+                  sx={{ mt: 1.75 }}
+                  onClick={handleOpenCheckoutConfirm}
+                  disabled={isSubmittingCheckout || cartItems.length === 0}
                 >
-                  {isProcessingPayment ? (
-                    <CircularProgress size={22} />
-                  ) : isOnlineMethod ? (
-                    "Hiển thị QR thanh toán"
-                  ) : (
-                    "Xác nhận đã thanh toán"
-                  )}
+                  {isSubmittingCheckout ? "Đang checkout..." : "Checkout"}
                 </Button>
-              </Stack>
+              </Box>
             </Paper>
           </Box>
 
           <Box flex={1} width="100%">
-            <Paper sx={{ p: 3, position: "sticky", top: 88 }}>
+            <Paper
+              sx={{
+                ...panelSx,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Typography variant="h6" fontWeight={700} mb={2}>
+                Tìm kiếm và quét mã
+              </Typography>
+
               <Stack
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.25}
+                mb={2}
               >
-                <Typography variant="h6" fontWeight={600}>
-                  Thông tin đơn hàng
-                </Typography>
-                <Tooltip title="Mở màn hình cho khách">
-                  <span>
-                    <IconButton
-                      onClick={openCustomerScreen}
-                      disabled={!loadedOrder?.id}
-                    >
-                      <Launch />
-                    </IconButton>
-                  </span>
-                </Tooltip>
+                <TextField
+                  label="Nhập SKU hoặc tên sản phẩm"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
+                  fullWidth
+                />
+                <Button
+                  variant="contained"
+                  aria-label="Tìm kiếm theo SKU hoặc tên sản phẩm"
+                  startIcon={
+                    isSearching ? (
+                      <CircularProgress color="inherit" size={16} />
+                    ) : (
+                      <Search />
+                    )
+                  }
+                  onClick={handleSearch}
+                  disabled={isSearching}
+                  sx={{ minWidth: 52, px: 1.5 }}
+                ></Button>
               </Stack>
 
-              <Divider sx={{ my: 2 }} />
-
-              {loadedOrder ? (
-                <Stack spacing={2}>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    alignItems="center"
-                    flexWrap="wrap"
-                  >
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      Mã đơn:
-                    </Typography>
-                    <Chip label={loadedOrder.id} size="small" />
-                  </Stack>
-
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography>Trạng thái thanh toán:</Typography>
-                    <Chip
-                      label={isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
-                      color={isPaid ? "success" : "warning"}
-                      size="small"
-                    />
-                  </Stack>
-
-                  <Typography>
-                    Mã khách: {loadedOrder.customerName || "Khách lẻ"}
-                  </Typography>
-                  <Typography>
-                    Trạng thái đơn: {loadedOrder.status || "-"}
-                  </Typography>
-                  <Typography>
-                    Voucher: {loadedOrder.voucherCode || "Không có"}
-                  </Typography>
-
-                  <Divider />
-
-                  <Stack spacing={1}>
-                    {loadedOrder.orderDetails?.map((detail) => (
-                      <Box
-                        key={detail.id}
-                        display="flex"
-                        alignItems="center"
-                        gap={1.5}
-                      >
-                        {detail.imageUrl ? (
-                          <Box
-                            component="img"
-                            src={detail.imageUrl}
-                            alt={detail.variantName || "Sản phẩm"}
-                            sx={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: 1,
-                              objectFit: "cover",
-                              flexShrink: 0,
-                            }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: 1,
-                              bgcolor: "grey.100",
-                              color: "text.secondary",
-                              fontSize: "0.65rem",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              flexShrink: 0,
-                            }}
-                          >
-                            No Image
-                          </Box>
-                        )}
-                        <Box flex={1} minWidth={0}>
-                          <Typography noWrap>{detail.variantName}</Typography>
-                        </Box>
-                        <Typography sx={{ whiteSpace: "nowrap" }}>
-                          x{detail.quantity} • {formatCurrency(detail.total)}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-
-                  <Divider />
-
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography fontWeight={600}>Tổng cộng</Typography>
-                    <Typography fontWeight={700} color="error">
-                      {formatCurrency(loadedOrder.totalAmount)}
-                    </Typography>
-                  </Stack>
-                </Stack>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Chưa có đơn hàng nào được tải. Hãy nhập mã đơn để bắt đầu
-                  thanh toán.
+              <Box
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 2,
+                  minHeight: 120,
+                  bgcolor: "grey.50",
+                }}
+              >
+                <Typography variant="subtitle1" fontWeight={700} mb={1}>
+                  Kết quả sản phẩm
                 </Typography>
-              )}
+
+                {searchResults.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có kết quả. Hãy nhập từ khoá hoặc quét mã vạch để tìm.
+                  </Typography>
+                ) : (
+                  <List disablePadding>
+                    {searchResults.map((variant) => (
+                      <ListItem
+                        key={getVariantKey(variant)}
+                        disableGutters
+                        secondaryAction={
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleOpenBatchModal(variant)}
+                          >
+                            Add
+                          </Button>
+                        }
+                        sx={{ pr: 10 }}
+                      >
+                        <ListItemAvatar sx={{ minWidth: 56 }}>
+                          {variant.primaryImageUrl ? (
+                            <Box
+                              component="img"
+                              src={variant.primaryImageUrl}
+                              alt={variant.displayName || variant.name}
+                              sx={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 1.5,
+                                objectFit: "cover",
+                                border: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 1.5,
+                                bgcolor: "grey.100",
+                                border: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            />
+                          )}
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Typography fontWeight={700}>
+                              {variant.displayName || variant.name}
+                            </Typography>
+                          }
+                          secondaryTypographyProps={{ component: "div" }}
+                          secondary={
+                            <>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                SKU: {variant.sku}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Giá:{" "}
+                                {formatCurrency(Number(variant.basePrice ?? 0))}
+                              </Typography>
+                            </>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </Box>
+
+              <PosBarcodeScanner onDetected={handleBarcodeDetected} />
             </Paper>
           </Box>
         </Stack>
 
         <Dialog
-          open={qrDialogOpen}
-          onClose={() => setQrDialogOpen(false)}
-          maxWidth="xs"
+          open={isCheckoutConfirmOpen}
+          onClose={() => setIsCheckoutConfirmOpen(false)}
+          maxWidth="sm"
           fullWidth
         >
-          <DialogTitle>QR thanh toán</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} alignItems="center">
-              {paymentUrl ? (
-                <Box
-                  component="img"
-                  src={qrImageUrl}
-                  alt="QR thanh toán"
-                  sx={{
-                    width: 280,
-                    height: 280,
-                    borderRadius: 1,
-                    border: "1px solid",
-                    borderColor: "divider",
-                  }}
-                />
-              ) : (
-                <Typography color="text.secondary">Chưa có mã QR</Typography>
+          <DialogTitle>Xác nhận thông tin checkout</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={1.25}>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Hình thức nhận</Typography>
+                <Typography fontWeight={600}>
+                  {isPickupInStore
+                    ? "Khách lấy tại quầy"
+                    : "Giao về địa chỉ khách"}
+                </Typography>
+              </Stack>
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Typography color="text.secondary">
+                  Phương thức thanh toán
+                </Typography>
+                {renderPaymentMethodOption(paymentMethod)}
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Khách hàng</Typography>
+                <Typography fontWeight={600} textAlign="right">
+                  {selectedCustomer
+                    ? `${selectedCustomer.fullName} - ${selectedCustomer.phoneNumber}`
+                    : "Khách lẻ"}
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Số sản phẩm</Typography>
+                <Typography fontWeight={600}>
+                  {groupedCartItems.length} dòng / {totalQuantityInCart} món
+                </Typography>
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Mã giảm giá</Typography>
+                <Typography fontWeight={600}>
+                  {appliedVoucherCode || "Không áp dụng"}
+                </Typography>
+              </Stack>
+
+              {!isPickupInStore && (
+                <>
+                  <Divider sx={{ my: 0.5 }} />
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Thông tin giao hàng
+                  </Typography>
+                  <Typography variant="body2">
+                    {recipientName} - {recipientPhone}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {streetAddress}, {selectedWard?.WardName},{" "}
+                    {selectedDistrict?.DistrictName},{" "}
+                    {selectedProvince?.ProvinceName}
+                  </Typography>
+                </>
               )}
 
-              {paymentUrl && (
-                <Link
-                  href={paymentUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  underline="hover"
-                >
-                  Mở link thanh toán
-                </Link>
-              )}
+              <Divider sx={{ my: 0.5 }} />
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Tổng thanh toán</Typography>
+                <Typography fontWeight={800} color="error.main">
+                  {formatCurrency(
+                    Number(previewData?.totalPrice ?? localSubtotal),
+                  )}
+                </Typography>
+              </Stack>
             </Stack>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setQrDialogOpen(false)}>Đóng</Button>
+            <Button
+              onClick={() => setIsCheckoutConfirmOpen(false)}
+              disabled={isSubmittingCheckout}
+            >
+              Quay lại
+            </Button>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                setIsCheckoutConfirmOpen(false);
+                await handleCheckoutInStore();
+              }}
+              disabled={isSubmittingCheckout}
+            >
+              Xác nhận checkout
+            </Button>
           </DialogActions>
         </Dialog>
+
+        <BatchSelectionModal
+          open={isBatchModalOpen}
+          loading={isLoadingBatches}
+          mode={batchModalMode}
+          currentBatchCode={modalCurrentBatchCode}
+          variantName={
+            selectedVariant?.displayName || selectedVariant?.name || ""
+          }
+          batches={batchOptions}
+          onClose={() => {
+            setIsBatchModalOpen(false);
+            setSelectedVariant(null);
+            setEditingCartItemKey(null);
+            setModalCurrentBatchCode(undefined);
+          }}
+          onSelectBatch={handleSelectBatch}
+        />
       </Container>
     </MainLayout>
   );

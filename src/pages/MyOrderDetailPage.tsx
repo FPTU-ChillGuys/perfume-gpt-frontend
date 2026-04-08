@@ -38,13 +38,14 @@ import {
   VideocamOutlined,
   DeleteOutline,
   PlayCircleOutline,
-  Sync,
   Receipt,
   Payments,
+  CheckCircle,
   LocalShipping,
-  MoveToInbox,
+  Storage,
   StarBorder,
   Person,
+  Sync,
   LocationOn,
   Phone,
   CancelOutlined,
@@ -52,11 +53,15 @@ import {
   Add,
   Remove,
   RadioButtonUnchecked,
-  CheckCircle,
+  Inventory,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
-import type { ReturnOrderReason } from "@/services/orderService";
+import type {
+  OrderCancelRequest,
+  OrderReturnRequest,
+  ReturnOrderReason,
+} from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
 import { productService } from "@/services/productService";
 import { userService } from "@/services/userService";
@@ -79,8 +84,18 @@ import {
   type ReviewDialogTarget,
 } from "@/types/review";
 import { orderStatusLabels } from "@/utils/orderStatus";
+import {
+  CANCEL_ORDER_REASON_OPTIONS,
+  mapCancelReasonInputToEnum,
+} from "@/utils/cancelOrderReason";
+import { formatDateTimeCompactVN, formatDateVN } from "@/utils/dateTime";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
+import codIcon from "@/assets/cod.png";
+import storeIcon from "@/assets/store.png";
+import vnpayIcon from "@/assets/vnpay.jpg";
+import momoIcon from "@/assets/momo.png";
+import transericon from "@/assets/transfer.png";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -94,7 +109,23 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   CashInStore: "Thanh toán tiền mặt tại quầy",
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
 };
+
+const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
+  CashOnDelivery: codIcon,
+  CashInStore: storeIcon,
+  VnPay: vnpayIcon,
+  Momo: momoIcon,
+  ExternalBankTransfer: transericon,
+};
+
+const RETRY_PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
+  "CashOnDelivery",
+  "CashInStore",
+  "VnPay",
+  "Momo",
+];
 
 const REVIEW_STATUS_CHIP: Record<
   ReviewStatus,
@@ -108,9 +139,10 @@ const REVIEW_STATUS_CHIP: Record<
 /** Maps OrderStatus → active stepper index (0-based, -1 = canceled/returned) */
 const STATUS_TO_STEP: Record<OrderStatus, number> = {
   Pending: 0,
-  Processing: 1,
-  Delivering: 3,
-  Delivered: 4,
+  Preparing: 2,
+  ReadyToPick: 3,
+  Delivering: 4,
+  Delivered: 5,
   Returning: -2,
   Cancelled: -1,
   Partial_Returned: -2,
@@ -120,9 +152,17 @@ const STATUS_TO_STEP: Record<OrderStatus, number> = {
 const STEPS = [
   { label: "Đơn Hàng Đã Đặt", Icon: Receipt },
   { label: "Đơn Hàng Đã Thanh Toán", Icon: Payments },
-  { label: "Đã Giao Cho ĐVVC", Icon: LocalShipping },
-  { label: "Đang Giao Hàng", Icon: MoveToInbox },
+  { label: "Đang Chuẩn Bị", Icon: Inventory },
+  { label: "Chờ Lấy Hàng", Icon: Storage },
+  { label: "Đang Giao Hàng", Icon: LocalShipping },
   { label: "Đánh Giá", Icon: StarBorder },
+];
+
+const RETURN_STEPS = [
+  { label: "Đã tạo yêu cầu trả hàng", Icon: AssignmentReturn },
+  { label: "Đang gửi hàng hoàn về shop", Icon: LocalShipping },
+  { label: "Shop đã nhận hàng hoàn", Icon: Inventory },
+  { label: "Hoàn tiền hoàn tất", Icon: Payments },
 ];
 
 const RETURN_REASON_OPTIONS: { value: ReturnOrderReason; label: string }[] = [
@@ -133,13 +173,13 @@ const RETURN_REASON_OPTIONS: { value: ReturnOrderReason; label: string }[] = [
   { value: "ChangedMind", label: "Đổi ý, không còn nhu cầu" },
 ];
 
-const CANCEL_REASON_SUGGESTIONS = [
-  "Tôi muốn thay đổi sản phẩm trong đơn",
-  "Tôi muốn đổi địa chỉ nhận hàng",
-  "Tôi không còn nhu cầu mua nữa",
-  "Tôi đã đặt nhầm sản phẩm",
-  "Tôi muốn thay đổi phương thức thanh toán",
-];
+interface VietQrBank {
+  id: number;
+  name: string;
+  shortName?: string;
+  short_name?: string;
+  logo?: string;
+}
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -147,15 +187,87 @@ const fmt = (v?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(v ?? 0))}đ`;
 
 const fmtDate = (s?: string | null) => {
-  if (!s) return null;
-  const d = new Date(s);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")} ${d.getDate().toString().padStart(2, "0")}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getFullYear()}`;
+  return formatDateTimeCompactVN(s);
 };
 
 const fmtDateShort = (s?: string | null) => {
-  if (!s) return "-";
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? "-" : d.toLocaleDateString("vi-VN");
+  return formatDateVN(s);
+};
+
+const stripVietnameseDiacritics = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+
+const normalizeRefundAccountNumber = (value: string) =>
+  stripVietnameseDiacritics(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+const normalizeRefundAccountName = (value: string) =>
+  stripVietnameseDiacritics(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trimStart();
+
+const getBankDisplayName = (bank: VietQrBank) => {
+  const shortName = (bank.shortName || bank.short_name || "").trim();
+  return shortName ? `${shortName} - ${bank.name}` : bank.name;
+};
+
+const returnShippingStatusLabel = (status?: string | null) => {
+  if (!status) return "Chưa có thông tin vận chuyển hoàn trả";
+  if (status === "Pending") return "Chờ lấy hàng hoàn";
+  if (status === "Confirmed") return "Đã xác nhận lấy hàng hoàn";
+  if (status === "ReadyToPick") return "Chờ lấy hàng hoàn";
+  if (status === "PickedUp") return "Đã lấy hàng hoàn";
+  if (status === "InTransit") return "Đang vận chuyển hàng hoàn";
+  if (status === "Delivering") return "Đang giao hàng hoàn về shop";
+  if (status === "OutForDelivery") return "Đang giao hàng hoàn về shop";
+  if (status === "Delivered") return "Shop đã nhận hàng hoàn";
+  if (status === "DeliveryFailed") return "Giao hàng hoàn thất bại";
+  if (status === "Returned") return "Hàng hoàn đã trả về";
+  if (status === "Cancelled") return "Đơn vận chuyển hoàn đã hủy";
+  return status;
+};
+
+const returnRequestStatusLabel = (status?: string | null) => {
+  if (!status) return "Đã gửi yêu cầu trả hàng";
+  if (status === "Pending") return "Yêu cầu đang chờ duyệt";
+  if (status === "ApprovedForReturn") return "Yêu cầu đã được duyệt trả hàng";
+  if (status === "Inspecting") return "Shop đang kiểm tra hàng hoàn";
+  if (status === "ReadyForRefund") return "Sẵn sàng hoàn tiền";
+  if (status === "Completed") return "Yêu cầu trả hàng đã hoàn tất";
+  if (status === "Rejected") return "Yêu cầu trả hàng đã bị từ chối";
+  if (status === "RequestMoreInfo") return "Cần bổ sung thông tin trả hàng";
+  return `Yêu cầu trả hàng: ${status}`;
+};
+
+const isSupportedPaymentMethod = (
+  value?: string | null,
+): value is PaymentMethod =>
+  value === "CashOnDelivery" ||
+  value === "CashInStore" ||
+  value === "VnPay" ||
+  value === "Momo";
+
+const RETURN_REQUEST_BLOCKED_STATUSES = new Set([
+  "Pending",
+  "ApprovedForReturn",
+  "RequestMoreInfo",
+]);
+
+const CANCEL_REQUEST_BLOCKED_STATUSES = new Set(["Pending"]);
+
+const cancelRequestStatusLabel = (status?: string | null) => {
+  if (!status) return "Đã gửi yêu cầu hủy đơn";
+  if (status === "Pending") return "Yêu cầu hủy đơn đang chờ xử lý";
+  if (status === "Approved") return "Yêu cầu hủy đơn đã được duyệt";
+  if (status === "Rejected") return "Yêu cầu hủy đơn đã bị từ chối";
+  return `Yêu cầu hủy đơn: ${status}`;
 };
 
 // ─── Order Stepper ──────────────────────────────────────────────────────────
@@ -166,6 +278,8 @@ interface StepperProps {
   paidAt?: string | null;
   updatedAt?: string | null;
   totalAmount?: number | null;
+  returnShippingStatus?: string | null;
+  returnRequestStatus?: string | null;
 }
 
 const OrderStepper = ({
@@ -174,13 +288,32 @@ const OrderStepper = ({
   paidAt,
   updatedAt,
   totalAmount,
+  returnShippingStatus,
+  returnRequestStatus,
 }: StepperProps) => {
-  // If already paid, ensure at least step 1 is active regardless of status
   const baseStep = STATUS_TO_STEP[status] ?? 0;
-  const activeStep = paidAt && baseStep < 1 ? 1 : baseStep;
+  const isReturnFlow =
+    status === "Returning" ||
+    status === "Partial_Returned" ||
+    status === "Returned";
+
+  const returnActiveStep =
+    status === "Returned" ||
+    returnRequestStatus === "Completed" ||
+    returnRequestStatus === "Refunded"
+      ? 3
+      : returnShippingStatus === "Delivered" ||
+          returnRequestStatus === "Inspecting" ||
+          returnRequestStatus === "ReadyForRefund"
+        ? 2
+        : returnShippingStatus
+          ? 1
+          : 0;
+
+  // If already paid, ensure at least step 1 is active for normal order flow.
+  const activeStep = paidAt && baseStep >= 0 && baseStep < 1 ? 1 : baseStep;
   const isCanceled = status === "Cancelled";
-  const isReturned = status === "Returned";
-  const isSpecial = isCanceled || isReturned;
+  const isSpecial = isCanceled;
 
   /** Date label shown below each step */
   const stepDates: (string | null)[] = [
@@ -202,6 +335,139 @@ const OrderStepper = ({
 
   const GREEN = "#26aa99";
   const GRAY = "#ccc";
+
+  if (isReturnFlow) {
+    return (
+      <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={1}
+          mb={2}
+          sx={{
+            bgcolor: "#fff8e1",
+            border: "1px solid #ffe082",
+            borderRadius: 1,
+            p: 1.5,
+          }}
+        >
+          <AssignmentReturn sx={{ color: "#f57c00" }} />
+          <Typography fontWeight={600} color="warning.dark">
+            Đơn hàng đang trong quá trình hoàn trả
+          </Typography>
+        </Box>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Trạng thái hoàn trả hiện tại:{" "}
+          <b>{returnShippingStatusLabel(returnShippingStatus)}</b>
+        </Typography>
+
+        <Box
+          display="flex"
+          alignItems="flex-start"
+          sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
+        >
+          {RETURN_STEPS.map((step, idx) => {
+            const completed = idx <= returnActiveStep;
+            const isCurrent = idx === returnActiveStep;
+            const circleColor = completed ? GREEN : GRAY;
+            const lineColor = idx < returnActiveStep ? GREEN : GRAY;
+
+            return (
+              <Box
+                key={step.label}
+                display="flex"
+                alignItems="flex-start"
+                sx={{ flex: idx < RETURN_STEPS.length - 1 ? 1 : "none" }}
+              >
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  sx={{ minWidth: 100 }}
+                >
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      border: `2px solid ${circleColor}`,
+                      bgcolor: completed ? GREEN : "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: isCurrent ? `0 0 0 4px ${GREEN}33` : "none",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <step.Icon
+                      sx={{
+                        fontSize: 26,
+                        color: completed ? "#fff" : GRAY,
+                      }}
+                    />
+                  </Box>
+
+                  <Typography
+                    variant="caption"
+                    align="center"
+                    fontWeight={isCurrent ? 700 : 500}
+                    sx={{
+                      mt: 1,
+                      color: completed ? "#333" : "text.disabled",
+                      maxWidth: 120,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {step.label}
+                  </Typography>
+
+                  {idx === 0 && createdAt && (
+                    <Typography
+                      variant="caption"
+                      align="center"
+                      sx={{ color: "text.secondary", mt: 0.25, fontSize: 11 }}
+                    >
+                      {fmtDate(createdAt)}
+                    </Typography>
+                  )}
+
+                  {idx === RETURN_STEPS.length - 1 &&
+                    status === "Returned" &&
+                    updatedAt && (
+                      <Typography
+                        variant="caption"
+                        align="center"
+                        sx={{
+                          color: "text.secondary",
+                          mt: 0.25,
+                          fontSize: 11,
+                        }}
+                      >
+                        {fmtDate(updatedAt)}
+                      </Typography>
+                    )}
+                </Box>
+
+                {idx < RETURN_STEPS.length - 1 && (
+                  <Box
+                    sx={{
+                      flex: 1,
+                      height: 3,
+                      bgcolor: lineColor,
+                      mt: "27px",
+                      mx: 0.5,
+                      minWidth: 20,
+                    }}
+                  />
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
@@ -324,7 +590,7 @@ const OrderStepper = ({
                 <Box
                   sx={{
                     flex: 1,
-                    height: 2,
+                    height: 3,
                     bgcolor: lineColor,
                     mt: "27px",
                     mx: 0.5,
@@ -355,6 +621,10 @@ export const MyOrderDetailPage = () => {
   const { showToast } = useToast();
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
   const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [orderReturnRequest, setOrderReturnRequest] =
+    useState<OrderReturnRequest | null>(null);
+  const [orderCancelRequest, setOrderCancelRequest] =
+    useState<OrderCancelRequest | null>(null);
   const [myReviews, setMyReviews] = useState<ReviewResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -370,14 +640,32 @@ export const MyOrderDetailPage = () => {
   );
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [selectedCancelRefundBank, setSelectedCancelRefundBank] =
+    useState<VietQrBank | null>(null);
+  const [cancelRefundBankName, setCancelRefundBankName] = useState("");
+  const [cancelRefundAccountNumber, setCancelRefundAccountNumber] =
+    useState("");
+  const [cancelRefundAccountName, setCancelRefundAccountName] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
   const [isSyncingShipping, setIsSyncingShipping] = useState(false);
+  const [isRetryPaymentDialogOpen, setIsRetryPaymentDialogOpen] =
+    useState(false);
+  const [isRetryingPayment, setIsRetryingPayment] = useState(false);
+  const [selectedRetryPaymentMethod, setSelectedRetryPaymentMethod] =
+    useState<PaymentMethod>("CashOnDelivery");
 
-  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(
-    Boolean(locationState.requestReturn),
-  );
+  const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [returnReason, setReturnReason] = useState<ReturnOrderReason | "">("");
+  const [isRefundOnly, setIsRefundOnly] = useState(false);
   const [returnNote, setReturnNote] = useState("");
+  const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
+  const [isLoadingVietQrBanks, setIsLoadingVietQrBanks] = useState(false);
+  const [vietQrBankError, setVietQrBankError] = useState<string | null>(null);
+  const [selectedRefundBank, setSelectedRefundBank] =
+    useState<VietQrBank | null>(null);
+  const [refundBankName, setRefundBankName] = useState("");
+  const [refundAccountNumber, setRefundAccountNumber] = useState("");
+  const [refundAccountName, setRefundAccountName] = useState("");
   const [returnMediaFiles, setReturnMediaFiles] = useState<File[]>([]);
   const [returnItemQuantities, setReturnItemQuantities] = useState<
     Record<string, number>
@@ -409,12 +697,6 @@ export const MyOrderDetailPage = () => {
     useState(false);
 
   useEffect(() => {
-    if (locationState.requestReturn) {
-      setIsReturnDialogOpen(true);
-    }
-  }, [locationState.requestReturn]);
-
-  useEffect(() => {
     void userService.getUserMe().then(setUserInfo).catch(console.error);
   }, []);
 
@@ -430,6 +712,71 @@ export const MyOrderDetailPage = () => {
         ]);
         setOrder(orderData);
         setMyReviews(reviewData);
+
+        try {
+          const myReturnRequests = await orderService.getMyReturnRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          });
+
+          const matchedRequest = myReturnRequests.items
+            .filter((item) => item.orderId === orderData.id)
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt || 0).getTime() -
+                new Date(a.createdAt || 0).getTime(),
+            )[0];
+
+          const latestRequest = matchedRequest ?? null;
+          setOrderReturnRequest(latestRequest);
+
+          if (locationState.requestReturn) {
+            const latestStatus = latestRequest?.status;
+            const hasBlockingRequest = Boolean(
+              latestStatus && RETURN_REQUEST_BLOCKED_STATUSES.has(latestStatus),
+            );
+
+            if (hasBlockingRequest) {
+              showToast(
+                `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel(latestStatus)}`,
+                "info",
+              );
+            } else {
+              setIsReturnDialogOpen(true);
+              setReturnFormError("");
+            }
+          }
+        } catch {
+          setOrderReturnRequest(null);
+
+          if (locationState.requestReturn) {
+            setIsReturnDialogOpen(true);
+            setReturnFormError("");
+          }
+        }
+
+        try {
+          const myCancelRequests = await orderService.getMyCancelRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          });
+
+          const matchedCancelRequest = myCancelRequests.items
+            .filter((item) => item.orderId === orderData.id)
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt || 0).getTime() -
+                new Date(a.createdAt || 0).getTime(),
+            )[0];
+
+          setOrderCancelRequest(matchedCancelRequest ?? null);
+        } catch {
+          setOrderCancelRequest(null);
+        }
       } catch (err: unknown) {
         setError(
           err instanceof Error
@@ -441,7 +788,7 @@ export const MyOrderDetailPage = () => {
       }
     };
     void load();
-  }, [orderId]);
+  }, [locationState.requestReturn, orderId, showToast]);
 
   const reviewsIndex = useMemo(() => {
     const map: Record<string, ReviewResponse> = {};
@@ -464,6 +811,14 @@ export const MyOrderDetailPage = () => {
         | null
     )?.isReturnalbe,
   );
+  const hasBlockingReturnRequest = Boolean(
+    orderReturnRequest?.id &&
+    RETURN_REQUEST_BLOCKED_STATUSES.has(orderReturnRequest.status ?? ""),
+  );
+  const hasBlockingCancelRequest = Boolean(
+    orderCancelRequest?.id &&
+    CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
+  );
 
   const getCancelBehavior = (currentOrder: OrderResponse | null) => {
     if (!currentOrder?.status) {
@@ -471,7 +826,9 @@ export const MyOrderDetailPage = () => {
     }
 
     const isPending = currentOrder.status === "Pending";
-    const isProcessing = currentOrder.status === "Processing";
+    const isPreparingOrReadyToPick =
+      currentOrder.status === "Preparing" ||
+      currentOrder.status === "ReadyToPick";
     const isPaid = currentOrder.paymentStatus === "Paid";
 
     if (isPending && !isPaid) {
@@ -482,7 +839,7 @@ export const MyOrderDetailPage = () => {
       };
     }
 
-    if ((isPending && isPaid) || isProcessing) {
+    if ((isPending && isPaid) || isPreparingOrReadyToPick) {
       return {
         mode: "request" as const,
         buttonLabel: "Yêu cầu hủy đơn hàng",
@@ -545,6 +902,93 @@ export const MyOrderDetailPage = () => {
     return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
   }, [order?.paymentTransactions]);
 
+  const latestPaymentTransaction = useMemo(
+    () =>
+      [...(order?.paymentTransactions ?? [])]
+        .reverse()
+        .find((transaction) => transaction?.id),
+    [order?.paymentTransactions],
+  );
+
+  const latestPaymentMethod = useMemo(
+    () =>
+      [...(order?.paymentTransactions ?? [])]
+        .reverse()
+        .find((transaction) => transaction?.paymentMethod)?.paymentMethod,
+    [order?.paymentTransactions],
+  );
+
+  const currentPaymentMethod = useMemo<PaymentMethod | null>(() => {
+    const value = latestPaymentMethod;
+    return isSupportedPaymentMethod(value) ? value : null;
+  }, [latestPaymentMethod]);
+
+  const paymentId = latestPaymentTransaction?.id ?? null;
+  const isCodPaymentOrder = currentPaymentMethod === "CashOnDelivery";
+
+  const isPendingUnpaid =
+    order?.status === "Pending" && order?.paymentStatus === "Unpaid";
+
+  const isPickupInStoreOrder = Boolean(
+    order &&
+    (order.type === "Offline" || (!order.recipientInfo && !order.shippingInfo)),
+  );
+
+  const allowedRetryPaymentMethods = useMemo(
+    () =>
+      RETRY_PAYMENT_METHOD_OPTIONS.filter((method) =>
+        isPickupInStoreOrder
+          ? method !== "CashOnDelivery"
+          : method !== "CashInStore",
+      ),
+    [isPickupInStoreOrder],
+  );
+
+  const canRetryPaymentInDetail = isPendingUnpaid && Boolean(paymentId);
+
+  const isCurrentOnlineMethod =
+    currentPaymentMethod === "VnPay" || currentPaymentMethod === "Momo";
+
+  const shouldRequireCancelRefundInfo =
+    cancelBehavior?.mode === "request" && isCurrentOnlineMethod;
+
+  const canSubmitCancelRequest =
+    cancelReason.trim().length > 0 &&
+    (!shouldRequireCancelRefundInfo ||
+      (cancelRefundBankName.trim() &&
+        cancelRefundAccountNumber.trim() &&
+        cancelRefundAccountName.trim()));
+
+  const paymentExpiresAtLabel = useMemo(() => {
+    const rawExpiresAt = order?.paymentExpiresAt;
+    if (!rawExpiresAt) {
+      return null;
+    }
+
+    const formatted = fmtDate(rawExpiresAt);
+    return formatted || null;
+  }, [order?.paymentExpiresAt]);
+
+  useEffect(() => {
+    if (!canRetryPaymentInDetail) {
+      return;
+    }
+
+    if (
+      currentPaymentMethod &&
+      allowedRetryPaymentMethods.includes(currentPaymentMethod)
+    ) {
+      setSelectedRetryPaymentMethod(currentPaymentMethod);
+      return;
+    }
+
+    setSelectedRetryPaymentMethod(allowedRetryPaymentMethods[0] ?? "VnPay");
+  }, [
+    allowedRetryPaymentMethods,
+    canRetryPaymentInDetail,
+    currentPaymentMethod,
+  ]);
+
   const returnMediaPreviews = useMemo(
     () =>
       returnMediaFiles.map((file, index) => ({
@@ -566,12 +1010,65 @@ export const MyOrderDetailPage = () => {
     [returnMediaFiles],
   );
 
+  useEffect(() => {
+    const shouldLoadVietQrBanks =
+      isReturnDialogOpen ||
+      (isCancelDialogOpen && shouldRequireCancelRefundInfo);
+
+    if (!shouldLoadVietQrBanks || vietQrBanks.length > 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadVietQrBanks = async () => {
+      try {
+        setIsLoadingVietQrBanks(true);
+        setVietQrBankError(null);
+
+        const response = await fetch("https://api.vietqr.io/v2/banks", {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể tải danh sách ngân hàng");
+        }
+
+        const json = (await response.json()) as { data?: VietQrBank[] };
+        setVietQrBanks(Array.isArray(json.data) ? json.data : []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setVietQrBankError("Không tải được danh sách ngân hàng từ VietQR");
+      } finally {
+        setIsLoadingVietQrBanks(false);
+      }
+    };
+
+    void loadVietQrBanks();
+
+    return () => {
+      controller.abort();
+    };
+  }, [
+    isCancelDialogOpen,
+    isReturnDialogOpen,
+    shouldRequireCancelRefundInfo,
+    vietQrBanks.length,
+  ]);
+
   const selectedReturnItems = useMemo(
     () =>
       (order?.orderDetails ?? [])
         .map((item) => {
           const id = item.id ?? "";
           const max = Number(item.quantity ?? 0);
+          const refundableUnitPrice = Number(
+            item.refunablePrice ?? item.unitPrice ?? 0,
+          );
           const requested = Math.min(
             Math.max(0, Number(returnItemQuantities[id] ?? 0)),
             max,
@@ -580,6 +1077,7 @@ export const MyOrderDetailPage = () => {
             orderDetailId: id,
             requested,
             max,
+            refundableUnitPrice,
             item,
           };
         })
@@ -591,13 +1089,17 @@ export const MyOrderDetailPage = () => {
     () =>
       selectedReturnItems.reduce(
         (sum, entry) =>
-          sum + Number(entry.item.unitPrice ?? 0) * Number(entry.requested),
+          sum + entry.refundableUnitPrice * Number(entry.requested),
         0,
       ),
     [selectedReturnItems],
   );
 
   const isReturnAddressValid = useMemo(() => {
+    if (isRefundOnly) {
+      return true;
+    }
+
     if (pickupAddressMode === "saved") {
       return Boolean(selectedSavedAddressId);
     }
@@ -625,6 +1127,7 @@ export const MyOrderDetailPage = () => {
     selectedSavedAddressId,
     selectedWard?.WardCode,
     selectedWard?.WardName,
+    isRefundOnly,
   ]);
 
   const canSubmitReturnRequest = useMemo(
@@ -633,10 +1136,16 @@ export const MyOrderDetailPage = () => {
         returnReason &&
         selectedReturnItems.length > 0 &&
         returnVideoFiles.length > 0 &&
+        refundBankName.trim() &&
+        refundAccountNumber.trim() &&
+        refundAccountName.trim() &&
         isReturnAddressValid,
       ),
     [
       isReturnAddressValid,
+      refundAccountName,
+      refundAccountNumber,
+      refundBankName,
       returnVideoFiles.length,
       returnReason,
       selectedReturnItems.length,
@@ -686,15 +1195,56 @@ export const MyOrderDetailPage = () => {
   const handleCancelOrder = async () => {
     if (!order?.id) return;
 
+    if (hasBlockingCancelRequest) {
+      showToast(
+        `Đơn hàng này đã có yêu cầu hủy. ${cancelRequestStatusLabel(orderCancelRequest?.status)}`,
+        "info",
+      );
+      return;
+    }
+
     const reason = cancelReason.trim();
     if (!reason) {
       showToast("Vui lòng nhập lý do hủy đơn hàng", "warning");
       return;
     }
 
+    const cancelReasonEnum = mapCancelReasonInputToEnum(reason);
+    if (!cancelReasonEnum) {
+      showToast("Lý do hủy không hợp lệ", "warning");
+      return;
+    }
+
+    const trimmedCancelRefundBankName = cancelRefundBankName.trim();
+    const trimmedCancelRefundAccountNumber = cancelRefundAccountNumber.trim();
+    const trimmedCancelRefundAccountName = cancelRefundAccountName.trim();
+
+    if (
+      shouldRequireCancelRefundInfo &&
+      (!trimmedCancelRefundBankName ||
+        !trimmedCancelRefundAccountNumber ||
+        !trimmedCancelRefundAccountName)
+    ) {
+      showToast(
+        "Vui lòng điền đầy đủ thông tin tài khoản hoàn tiền",
+        "warning",
+      );
+      return;
+    }
+
     try {
       setIsCancelling(true);
-      await orderService.cancelOrder(order.id, reason);
+      await orderService.cancelOrder(order.id, cancelReasonEnum, {
+        refundBankName: shouldRequireCancelRefundInfo
+          ? trimmedCancelRefundBankName
+          : null,
+        refundAccountNumber: shouldRequireCancelRefundInfo
+          ? trimmedCancelRefundAccountNumber
+          : null,
+        refundAccountName: shouldRequireCancelRefundInfo
+          ? trimmedCancelRefundAccountName
+          : null,
+      });
       showToast(
         cancelBehavior?.mode === "direct"
           ? "Đã hủy đơn hàng thành công"
@@ -703,9 +1253,30 @@ export const MyOrderDetailPage = () => {
       );
       setIsCancelDialogOpen(false);
       setCancelReason("");
+      setSelectedCancelRefundBank(null);
+      setCancelRefundBankName("");
+      setCancelRefundAccountNumber("");
+      setCancelRefundAccountName("");
       if (orderId) {
-        const refreshed = await orderService.getMyOrderById(orderId);
+        const [refreshed, myCancelRequests] = await Promise.all([
+          orderService.getMyOrderById(orderId),
+          orderService.getMyCancelRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          }),
+        ]);
         setOrder(refreshed);
+
+        const latestCancelRequest = myCancelRequests.items
+          .filter((item) => item.orderId === refreshed.id)
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime(),
+          )[0];
+        setOrderCancelRequest(latestCancelRequest ?? null);
       }
     } catch (error) {
       showToast(
@@ -717,9 +1288,67 @@ export const MyOrderDetailPage = () => {
     }
   };
 
+  const handleOpenRetryPaymentDialog = () => {
+    if (!canRetryPaymentInDetail) {
+      showToast("Đơn hàng hiện không thể thanh toán lại", "warning");
+      return;
+    }
+
+    setIsRetryPaymentDialogOpen(true);
+  };
+
+  const handleRetryPaymentFromDetail = async () => {
+    if (!paymentId) {
+      showToast("Không tìm thấy giao dịch thanh toán", "error");
+      return;
+    }
+
+    try {
+      setIsRetryingPayment(true);
+      const response = await orderService.retryPayment(
+        paymentId,
+        selectedRetryPaymentMethod,
+      );
+
+      if (
+        selectedRetryPaymentMethod === "VnPay" ||
+        selectedRetryPaymentMethod === "Momo"
+      ) {
+        if (!response.url) {
+          throw new Error("Không lấy được đường dẫn thanh toán");
+        }
+
+        window.location.href = response.url;
+        return;
+      }
+
+      showToast("Đơn hàng đã được xác nhận!", "success");
+      setIsRetryPaymentDialogOpen(false);
+
+      if (orderId) {
+        const refreshedOrder = await orderService.getMyOrderById(orderId);
+        setOrder(refreshedOrder);
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể thanh toán lại đơn hàng",
+        "error",
+      );
+    } finally {
+      setIsRetryingPayment(false);
+    }
+  };
+
   const resetReturnDialogState = () => {
     setReturnReason("");
+    setIsRefundOnly(false);
     setReturnNote("");
+    setSelectedRefundBank(null);
+    setRefundBankName("");
+    setRefundAccountNumber("");
+    setRefundAccountName("");
     setReturnMediaFiles([]);
     setReturnItemQuantities({});
     setPickupAddressMode(savedAddresses.length ? "saved" : "custom");
@@ -736,9 +1365,69 @@ export const MyOrderDetailPage = () => {
     });
   };
 
-  const openReturnRequestDialog = () => {
+  const openReturnRequestDialog = async () => {
+    if (hasBlockingReturnRequest) {
+      showToast(
+        `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel(orderReturnRequest?.status)}`,
+        "info",
+      );
+      return;
+    }
+
+    const currentOrderId = order?.id ?? orderId;
+    if (!currentOrderId) {
+      return;
+    }
+
+    try {
+      const myReturnRequests = await orderService.getMyReturnRequests({
+        PageNumber: 1,
+        PageSize: 100,
+        SortBy: "CreatedAt",
+        SortOrder: "desc",
+      });
+
+      const latestRequest = myReturnRequests.items
+        .filter((item) => item.orderId === currentOrderId)
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt || 0).getTime() -
+            new Date(a.createdAt || 0).getTime(),
+        )[0];
+
+      if (latestRequest) {
+        setOrderReturnRequest(latestRequest);
+
+        if (RETURN_REQUEST_BLOCKED_STATUSES.has(latestRequest.status ?? "")) {
+          showToast(
+            `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel(latestRequest.status)}`,
+            "info",
+          );
+          return;
+        }
+      }
+    } catch {
+      // keep local state fallback if this pre-check request fails
+    }
+
     setIsReturnDialogOpen(true);
     setReturnFormError("");
+  };
+
+  const openCancelDialog = () => {
+    if (hasBlockingCancelRequest) {
+      showToast(
+        `Đơn hàng này đã có yêu cầu hủy. ${cancelRequestStatusLabel(orderCancelRequest?.status)}`,
+        "info",
+      );
+      return;
+    }
+
+    setIsCancelDialogOpen(true);
+    setSelectedCancelRefundBank(null);
+    setCancelRefundBankName("");
+    setCancelRefundAccountNumber("");
+    setCancelRefundAccountName("");
   };
 
   const closeReturnRequestDialog = () => {
@@ -959,11 +1648,29 @@ export const MyOrderDetailPage = () => {
       return;
     }
 
+    const trimmedRefundBankName = refundBankName.trim();
+    const trimmedRefundAccountNumber = refundAccountNumber.trim();
+    const trimmedRefundAccountName = refundAccountName.trim();
+
+    if (
+      !trimmedRefundBankName ||
+      !trimmedRefundAccountNumber ||
+      !trimmedRefundAccountName
+    ) {
+      setReturnFormError(
+        "Vui lòng điền đầy đủ thông tin tài khoản nhận hoàn tiền",
+      );
+      return;
+    }
+
     let savedAddressId: string | null | undefined = null;
     let recipient: components["schemas"]["ContactAddressInformation"] | null =
       null;
 
-    if (pickupAddressMode === "saved") {
+    if (isRefundOnly) {
+      savedAddressId = null;
+      recipient = null;
+    } else if (pickupAddressMode === "saved") {
       if (!selectedSavedAddressId) {
         setReturnFormError("Vui lòng chọn địa chỉ lấy hàng");
         return;
@@ -1012,21 +1719,31 @@ export const MyOrderDetailPage = () => {
       await orderService.createReturnRequest({
         orderId: order.id,
         reason: returnReason,
+        isRefundOnly,
         returnItems: selectedReturnItems.map((entry) => ({
           orderDetailId: entry.orderDetailId,
           quantity: entry.requested,
         })),
         customerNote: returnNote.trim() || null,
+        refundBankName: trimmedRefundBankName,
+        refundAccountNumber: trimmedRefundAccountNumber,
+        refundAccountName: trimmedRefundAccountName,
         savedAddressId,
         recipient,
         temporaryMediaIds: temporaryMediaIds.length ? temporaryMediaIds : null,
       });
 
       showToast("Đã gửi yêu cầu trả hàng thành công", "success");
-      closeReturnRequestDialog();
+      setIsReturnDialogOpen(false);
+      resetReturnDialogState();
+
       if (orderId) {
-        const refreshed = await orderService.getMyOrderById(orderId);
-        setOrder(refreshed);
+        try {
+          const refreshed = await orderService.getMyOrderById(orderId);
+          setOrder(refreshed);
+        } catch {
+          // Keep the dialog closed even if refresh fails.
+        }
       }
     } catch (error) {
       showToast(
@@ -1171,8 +1888,42 @@ export const MyOrderDetailPage = () => {
                       paidAt={order.paidAt}
                       updatedAt={order.updatedAt}
                       totalAmount={order.totalAmount}
+                      returnShippingStatus={
+                        orderReturnRequest?.returnShippingInfo?.status
+                      }
+                      returnRequestStatus={orderReturnRequest?.status}
                     />
                   </Box>
+
+                  {canRetryPaymentInDetail && (
+                    <Alert severity="warning" sx={{ mx: 3, mt: 2 }}>
+                      <Stack spacing={0.5}>
+                        <Typography variant="body2" fontWeight={600}>
+                          Đơn hàng đang chờ xử lý và chưa thanh toán.
+                        </Typography>
+                        <Typography variant="body2">
+                          Bạn có thể thanh toán lại hoặc đổi phương thức thanh
+                          toán.
+                        </Typography>
+                        {isCurrentOnlineMethod && paymentExpiresAtLabel && (
+                          <Typography variant="body2" color="error.main">
+                            Hạn thanh toán: {paymentExpiresAtLabel}
+                          </Typography>
+                        )}
+                        <Box>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="warning"
+                            onClick={handleOpenRetryPaymentDialog}
+                            sx={{ mt: 0.5 }}
+                          >
+                            Thanh toán lại ngay
+                          </Button>
+                        </Box>
+                      </Stack>
+                    </Alert>
+                  )}
 
                   <Box
                     sx={{
@@ -1521,36 +2272,102 @@ export const MyOrderDetailPage = () => {
                             {paymentMethodLabel}
                           </Typography>
                         </Box>
+
+                        {isPendingUnpaid &&
+                          isCurrentOnlineMethod &&
+                          paymentExpiresAtLabel && (
+                            <Box
+                              display="flex"
+                              justifyContent="space-between"
+                              gap={2}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Hạn thanh toán
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                color="error.main"
+                                textAlign="right"
+                              >
+                                {paymentExpiresAtLabel}
+                              </Typography>
+                            </Box>
+                          )}
                       </Stack>
                     </Paper>
 
                     {(cancelBehavior ||
+                      canRetryPaymentInDetail ||
                       (order.status === "Delivered" && isOrderReturnable)) && (
                       <Box display="flex" justifyContent="flex-end">
                         <Stack direction="row" spacing={1} flexWrap="wrap">
-                          {cancelBehavior && (
+                          {canRetryPaymentInDetail && (
                             <Button
-                              variant="outlined"
-                              color={
-                                cancelBehavior.mode === "direct"
-                                  ? "error"
-                                  : "warning"
-                              }
-                              onClick={() => setIsCancelDialogOpen(true)}
+                              variant="contained"
+                              color="warning"
+                              onClick={handleOpenRetryPaymentDialog}
                             >
-                              {cancelBehavior.buttonLabel}
+                              Thanh toán lại
                             </Button>
+                          )}
+
+                          {cancelBehavior && (
+                            <Tooltip
+                              title={
+                                hasBlockingCancelRequest
+                                  ? cancelRequestStatusLabel(
+                                      orderCancelRequest?.status,
+                                    )
+                                  : ""
+                              }
+                            >
+                              <span>
+                                <Button
+                                  variant="outlined"
+                                  color={
+                                    cancelBehavior.mode === "direct"
+                                      ? "error"
+                                      : "warning"
+                                  }
+                                  onClick={openCancelDialog}
+                                  disabled={hasBlockingCancelRequest}
+                                >
+                                  {hasBlockingCancelRequest
+                                    ? "Đã gửi yêu cầu hủy đơn"
+                                    : cancelBehavior.buttonLabel}
+                                </Button>
+                              </span>
+                            </Tooltip>
                           )}
 
                           {order.status === "Delivered" &&
                             isOrderReturnable && (
-                              <Button
-                                variant="contained"
-                                color="warning"
-                                onClick={openReturnRequestDialog}
+                              <Tooltip
+                                title={
+                                  hasBlockingReturnRequest
+                                    ? returnRequestStatusLabel(
+                                        orderReturnRequest?.status,
+                                      )
+                                    : ""
+                                }
                               >
-                                Yêu cầu trả hàng
-                              </Button>
+                                <span>
+                                  <Button
+                                    variant="contained"
+                                    color="warning"
+                                    onClick={openReturnRequestDialog}
+                                    disabled={hasBlockingReturnRequest}
+                                  >
+                                    {hasBlockingReturnRequest
+                                      ? "Đã gửi yêu cầu trả hàng"
+                                      : "Yêu cầu trả hàng"}
+                                  </Button>
+                                </span>
+                              </Tooltip>
                             )}
                         </Stack>
                       </Box>
@@ -1569,6 +2386,10 @@ export const MyOrderDetailPage = () => {
           if (isCancelling) return;
           setIsCancelDialogOpen(false);
           setCancelReason("");
+          setSelectedCancelRefundBank(null);
+          setCancelRefundBankName("");
+          setCancelRefundAccountNumber("");
+          setCancelRefundAccountName("");
         }}
         maxWidth="sm"
         fullWidth
@@ -1597,20 +2418,164 @@ export const MyOrderDetailPage = () => {
             />
 
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {CANCEL_REASON_SUGGESTIONS.map((reason) => {
-                const isSelected = cancelReason.trim() === reason;
+              {CANCEL_ORDER_REASON_OPTIONS.map((option) => {
+                const isSelected = cancelReason.trim() === option.label;
                 return (
                   <Chip
-                    key={reason}
+                    key={option.value}
                     clickable
-                    label={reason}
+                    label={option.label}
                     color={isSelected ? "warning" : "default"}
-                    onClick={() => setCancelReason(reason)}
+                    onClick={() => setCancelReason(option.label)}
                     sx={{ maxWidth: "100%" }}
                   />
                 );
               })}
             </Stack>
+
+            {shouldRequireCancelRefundInfo && (
+              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                <Stack spacing={1.25}>
+                  <Typography variant="subtitle2" fontWeight={700}>
+                    Thông tin tài khoản nhận hoàn tiền
+                  </Typography>
+                  <Alert severity="info" sx={{ py: 0.5 }}>
+                    Đơn thanh toán online cần thông tin tài khoản để hỗ trợ hoàn
+                    tiền linh hoạt khi cổng hoàn tự động lỗi hoặc cần chuyển
+                    khoản thủ công.
+                  </Alert>
+                  <Autocomplete
+                    options={vietQrBanks}
+                    freeSolo
+                    value={selectedCancelRefundBank}
+                    inputValue={cancelRefundBankName}
+                    loading={isLoadingVietQrBanks}
+                    getOptionLabel={(option) =>
+                      typeof option === "string"
+                        ? option
+                        : getBankDisplayName(option)
+                    }
+                    isOptionEqualToValue={(option, value) =>
+                      option.id === value.id
+                    }
+                    onInputChange={(_, value) => {
+                      setCancelRefundBankName(value);
+                      if (
+                        selectedCancelRefundBank &&
+                        getBankDisplayName(selectedCancelRefundBank) !== value
+                      ) {
+                        setSelectedCancelRefundBank(null);
+                      }
+                    }}
+                    onChange={(_, bank) => {
+                      if (!bank) {
+                        setSelectedCancelRefundBank(null);
+                        return;
+                      }
+
+                      if (typeof bank === "string") {
+                        setSelectedCancelRefundBank(null);
+                        setCancelRefundBankName(bank);
+                        return;
+                      }
+
+                      setSelectedCancelRefundBank(bank);
+                      setCancelRefundBankName(getBankDisplayName(bank));
+                    }}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props}>
+                        <Stack
+                          direction="row"
+                          spacing={1.25}
+                          alignItems="center"
+                        >
+                          {option.logo ? (
+                            <Box
+                              component="img"
+                              src={option.logo}
+                              alt={
+                                option.shortName ||
+                                option.short_name ||
+                                option.name
+                              }
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                objectFit: "contain",
+                                borderRadius: 0.5,
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 0.5,
+                                bgcolor: "grey.100",
+                              }}
+                            />
+                          )}
+                          <Box>
+                            <Typography variant="body2" fontWeight={600}>
+                              {option.shortName ||
+                                option.short_name ||
+                                option.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {option.name}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
+                    )}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Ngân hàng nhận tiền *"
+                        size="small"
+                        error={Boolean(vietQrBankError)}
+                        helperText={
+                          vietQrBankError ||
+                          "Chọn ngân hàng từ danh sách VietQR"
+                        }
+                      />
+                    )}
+                  />
+                  <TextField
+                    label="Số tài khoản *"
+                    value={cancelRefundAccountNumber}
+                    onChange={(e) =>
+                      setCancelRefundAccountNumber(
+                        normalizeRefundAccountNumber(e.target.value),
+                      )
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{
+                      inputMode: "text",
+                      autoCapitalize: "characters",
+                    }}
+                    helperText="Tự động viết HOA, không dấu, không khoảng trắng, không ký tự đặc biệt"
+                  />
+                  <TextField
+                    label="Tên chủ tài khoản *"
+                    value={cancelRefundAccountName}
+                    onChange={(e) =>
+                      setCancelRefundAccountName(
+                        normalizeRefundAccountName(e.target.value),
+                      )
+                    }
+                    fullWidth
+                    size="small"
+                    inputProps={{ autoCapitalize: "characters" }}
+                    helperText="Tự động viết HOA, không dấu, không ký tự đặc biệt"
+                  />
+                </Stack>
+              </Paper>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -1618,6 +2583,10 @@ export const MyOrderDetailPage = () => {
             onClick={() => {
               setIsCancelDialogOpen(false);
               setCancelReason("");
+              setSelectedCancelRefundBank(null);
+              setCancelRefundBankName("");
+              setCancelRefundAccountNumber("");
+              setCancelRefundAccountName("");
             }}
             disabled={isCancelling}
           >
@@ -1627,13 +2596,110 @@ export const MyOrderDetailPage = () => {
             color={cancelBehavior?.mode === "direct" ? "error" : "warning"}
             variant="contained"
             onClick={handleCancelOrder}
-            disabled={isCancelling || cancelReason.trim().length === 0}
+            disabled={isCancelling || !canSubmitCancelRequest}
           >
             {isCancelling
               ? "Đang xử lý..."
               : cancelBehavior?.mode === "direct"
                 ? "Xác nhận hủy"
                 : "Gửi yêu cầu"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={isRetryPaymentDialogOpen}
+        onClose={() => {
+          if (isRetryingPayment) return;
+          setIsRetryPaymentDialogOpen(false);
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Thanh toán lại đơn hàng</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              Chọn phương thức thanh toán để tiếp tục.
+            </Typography>
+
+            {isCurrentOnlineMethod && paymentExpiresAtLabel && (
+              <Alert severity="warning">
+                Giao dịch hiện tại sẽ hết hạn lúc <b>{paymentExpiresAtLabel}</b>
+                .
+              </Alert>
+            )}
+
+            <RadioGroup
+              value={selectedRetryPaymentMethod}
+              onChange={(e) =>
+                setSelectedRetryPaymentMethod(e.target.value as PaymentMethod)
+              }
+            >
+              {allowedRetryPaymentMethods.map((method) => (
+                <FormControlLabel
+                  key={method}
+                  value={method}
+                  control={<Radio size="small" />}
+                  label={
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={1.25}
+                      py={0.25}
+                    >
+                      <Box
+                        component="img"
+                        src={PAYMENT_METHOD_ICONS[method]}
+                        alt={PAYMENT_METHOD_LABELS[method]}
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          objectFit: "contain",
+                          borderRadius: 1,
+                          border: "1px solid",
+                          borderColor: "divider",
+                          bgcolor: "#fff",
+                          p: 0.4,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <Typography variant="body2" fontWeight={500}>
+                        {PAYMENT_METHOD_LABELS[method]}
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{
+                    m: 0,
+                    mb: 0.75,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                    px: 1.25,
+                    py: 0.25,
+                  }}
+                />
+              ))}
+            </RadioGroup>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setIsRetryPaymentDialogOpen(false)}
+            disabled={isRetryingPayment}
+          >
+            Đóng
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleRetryPaymentFromDetail}
+            disabled={
+              isRetryingPayment ||
+              !allowedRetryPaymentMethods.includes(selectedRetryPaymentMethod)
+            }
+          >
+            {isRetryingPayment ? "Đang xử lý..." : "Thanh toán ngay"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1659,6 +2725,9 @@ export const MyOrderDetailPage = () => {
                 {(order?.orderDetails ?? []).map((item, index) => {
                   const detailId = item.id ?? "";
                   const maxQty = Number(item.quantity ?? 0);
+                  const refundableUnitPrice = Number(
+                    item.refunablePrice ?? item.unitPrice ?? 0,
+                  );
                   const selectedQty = Math.min(
                     maxQty,
                     Math.max(0, Number(returnItemQuantities[detailId] ?? 0)),
@@ -1728,6 +2797,13 @@ export const MyOrderDetailPage = () => {
                             >
                               Đã mua: {maxQty}
                             </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
+                              Đơn giá hoàn tiền: {fmt(refundableUnitPrice)}
+                            </Typography>
                           </Box>
                         </Stack>
 
@@ -1792,6 +2868,24 @@ export const MyOrderDetailPage = () => {
                   );
                 })}
               </Stack>
+
+              <Divider sx={{ my: 1.5 }} />
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Tạm tính hoàn tiền
+                </Typography>
+                <Typography
+                  variant="subtitle1"
+                  fontWeight={700}
+                  color="#ee4d2d"
+                >
+                  {fmt(estimatedRefundAmount)}
+                </Typography>
+              </Box>
             </Paper>
 
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
@@ -1817,7 +2911,30 @@ export const MyOrderDetailPage = () => {
 
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
               <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                3. Mô tả thêm và bằng chứng (ảnh/video)
+                3. Phương án giải quyết
+              </Typography>
+              <RadioGroup
+                value={isRefundOnly ? "refund-only" : "return-and-refund"}
+                onChange={(e) =>
+                  setIsRefundOnly(e.target.value === "refund-only")
+                }
+              >
+                <FormControlLabel
+                  value="return-and-refund"
+                  control={<Radio />}
+                  label="Trả hàng & Hoàn tiền"
+                />
+                <FormControlLabel
+                  value="refund-only"
+                  control={<Radio />}
+                  label="Hoàn tiền (Không trả hàng)"
+                />
+              </RadioGroup>
+            </Paper>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                4. Mô tả thêm và bằng chứng (ảnh/video)
               </Typography>
               <Stack spacing={1.25}>
                 <TextField
@@ -1969,149 +3086,274 @@ export const MyOrderDetailPage = () => {
 
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
               <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                4. Địa chỉ lấy hàng
+                Thông tin tài khoản nhận hoàn tiền
               </Typography>
               <Stack spacing={1.25}>
-                <RadioGroup
-                  row
-                  value={pickupAddressMode}
-                  onChange={(e) =>
-                    setPickupAddressMode(e.target.value as "saved" | "custom")
+                <Alert severity="info" sx={{ mb: 0.5 }}>
+                  Vui lòng nhập chính xác thông tin tài khoản để hệ thống hỗ trợ
+                  hoàn tiền linh hoạt khi cần chuyển khoản thủ công hoặc cổng
+                  hoàn tiền tự động gặp lỗi.
+                </Alert>
+                <Autocomplete
+                  options={vietQrBanks}
+                  freeSolo
+                  value={selectedRefundBank}
+                  inputValue={refundBankName}
+                  loading={isLoadingVietQrBanks}
+                  getOptionLabel={(option) =>
+                    typeof option === "string"
+                      ? option
+                      : getBankDisplayName(option)
                   }
-                >
-                  <FormControlLabel
-                    value="saved"
-                    control={<Radio />}
-                    label="Chọn địa chỉ hiện có"
-                  />
-                  <FormControlLabel
-                    value="custom"
-                    control={<Radio />}
-                    label="Nhập địa chỉ mới"
-                  />
-                </RadioGroup>
+                  isOptionEqualToValue={(option, value) =>
+                    option.id === value.id
+                  }
+                  onInputChange={(_, value) => {
+                    setRefundBankName(value);
+                    if (
+                      selectedRefundBank &&
+                      getBankDisplayName(selectedRefundBank) !== value
+                    ) {
+                      setSelectedRefundBank(null);
+                    }
+                  }}
+                  onChange={(_, bank) => {
+                    if (!bank) {
+                      setSelectedRefundBank(null);
+                      return;
+                    }
 
-                {pickupAddressMode === "saved" ? (
-                  <>
-                    {isLoadingAddresses ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      <Select
-                        fullWidth
-                        size="small"
-                        value={selectedSavedAddressId}
-                        onChange={(e) =>
-                          setSelectedSavedAddressId(e.target.value)
-                        }
-                        displayEmpty
-                      >
-                        <MenuItem value="" disabled>
-                          Chọn địa chỉ lấy hàng
-                        </MenuItem>
-                        {savedAddresses.map((address) => (
-                          <MenuItem key={address.id} value={address.id || ""}>
-                            {`${address.recipientName} | ${address.recipientPhoneNumber} | ${address.street}, ${address.ward}, ${address.district}, ${address.city}`}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    )}
-                  </>
-                ) : (
-                  <Stack spacing={1.25}>
+                    if (typeof bank === "string") {
+                      setSelectedRefundBank(null);
+                      setRefundBankName(bank);
+                      return;
+                    }
+
+                    setSelectedRefundBank(bank);
+                    setRefundBankName(getBankDisplayName(bank));
+                  }}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props}>
+                      <Stack direction="row" spacing={1.25} alignItems="center">
+                        {option.logo ? (
+                          <Box
+                            component="img"
+                            src={option.logo}
+                            alt={
+                              option.shortName ||
+                              option.short_name ||
+                              option.name
+                            }
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              objectFit: "contain",
+                              borderRadius: 0.5,
+                            }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: 28,
+                              height: 28,
+                              borderRadius: 0.5,
+                              bgcolor: "grey.100",
+                            }}
+                          />
+                        )}
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {option.shortName ||
+                              option.short_name ||
+                              option.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {option.name}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    </Box>
+                  )}
+                  renderInput={(params) => (
                     <TextField
-                      label="Tên liên hệ *"
+                      {...params}
+                      label="Ngân hàng nhận tiền *"
                       size="small"
-                      value={customRecipient.contactName}
-                      onChange={(e) =>
-                        setCustomRecipient((prev) => ({
-                          ...prev,
-                          contactName: e.target.value,
-                        }))
+                      error={Boolean(vietQrBankError)}
+                      helperText={
+                        vietQrBankError || "Chọn ngân hàng từ danh sách VietQR"
                       }
                     />
-                    <TextField
-                      label="Số điện thoại *"
-                      size="small"
-                      value={customRecipient.contactPhoneNumber}
-                      onChange={(e) =>
-                        setCustomRecipient((prev) => ({
-                          ...prev,
-                          contactPhoneNumber: e.target.value,
-                        }))
-                      }
-                    />
-                    <Autocomplete
-                      options={provinces}
-                      value={selectedProvince}
-                      loading={isLoadingProvinces}
-                      getOptionLabel={(option) => option.ProvinceName || ""}
-                      onChange={handleProvinceChange}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Tỉnh/Thành phố *"
-                          size="small"
-                        />
-                      )}
-                    />
-                    <Autocomplete
-                      options={districts}
-                      value={selectedDistrict}
-                      loading={isLoadingDistricts}
-                      disabled={!selectedProvince}
-                      getOptionLabel={(option) => option.DistrictName || ""}
-                      onChange={handleDistrictChange}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Quận/Huyện *"
-                          size="small"
-                        />
-                      )}
-                    />
-                    <Autocomplete
-                      options={wards}
-                      value={selectedWard}
-                      loading={isLoadingWards}
-                      disabled={!selectedDistrict}
-                      getOptionLabel={(option) => option.WardName || ""}
-                      onChange={handleWardChange}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Phường/Xã *"
-                          size="small"
-                        />
-                      )}
-                    />
-                    <TextField
-                      label="Số nhà, tên đường *"
-                      size="small"
-                      value={customRecipient.fullAddress}
-                      onChange={(e) =>
-                        setCustomRecipient((prev) => ({
-                          ...prev,
-                          fullAddress: e.target.value,
-                        }))
-                      }
-                    />
-                  </Stack>
-                )}
+                  )}
+                />
+                <TextField
+                  label="Số tài khoản *"
+                  value={refundAccountNumber}
+                  onChange={(e) =>
+                    setRefundAccountNumber(
+                      normalizeRefundAccountNumber(e.target.value),
+                    )
+                  }
+                  fullWidth
+                  size="small"
+                  inputProps={{
+                    inputMode: "text",
+                    autoCapitalize: "characters",
+                  }}
+                  helperText="Tự động viết HOA, không dấu, không khoảng trắng, không ký tự đặc biệt"
+                />
+                <TextField
+                  label="Tên chủ tài khoản *"
+                  value={refundAccountName}
+                  onChange={(e) =>
+                    setRefundAccountName(
+                      normalizeRefundAccountName(e.target.value),
+                    )
+                  }
+                  fullWidth
+                  size="small"
+                  inputProps={{
+                    autoCapitalize: "characters",
+                  }}
+                  helperText="Tự động viết HOA, không dấu, không ký tự đặc biệt"
+                />
               </Stack>
             </Paper>
 
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              <Typography variant="body2" color="text.secondary">
-                Tạm tính hoàn tiền
-              </Typography>
-              <Typography variant="subtitle1" fontWeight={700} color="#ee4d2d">
-                {fmt(estimatedRefundAmount)}
-              </Typography>
-            </Box>
+            {!isRefundOnly && (
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                <Typography variant="subtitle2" fontWeight={700} mb={1}>
+                  5. Địa chỉ lấy hàng
+                </Typography>
+                <Stack spacing={1.25}>
+                  <RadioGroup
+                    row
+                    value={pickupAddressMode}
+                    onChange={(e) =>
+                      setPickupAddressMode(e.target.value as "saved" | "custom")
+                    }
+                  >
+                    <FormControlLabel
+                      value="saved"
+                      control={<Radio />}
+                      label="Chọn địa chỉ hiện có"
+                    />
+                    <FormControlLabel
+                      value="custom"
+                      control={<Radio />}
+                      label="Nhập địa chỉ mới"
+                    />
+                  </RadioGroup>
+
+                  {pickupAddressMode === "saved" ? (
+                    <>
+                      {isLoadingAddresses ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Select
+                          fullWidth
+                          size="small"
+                          value={selectedSavedAddressId}
+                          onChange={(e) =>
+                            setSelectedSavedAddressId(e.target.value)
+                          }
+                          displayEmpty
+                        >
+                          <MenuItem value="" disabled>
+                            Chọn địa chỉ lấy hàng
+                          </MenuItem>
+                          {savedAddresses.map((address) => (
+                            <MenuItem key={address.id} value={address.id || ""}>
+                              {`${address.recipientName} | ${address.recipientPhoneNumber} | ${address.street}, ${address.ward}, ${address.district}, ${address.city}`}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      )}
+                    </>
+                  ) : (
+                    <Stack spacing={1.25}>
+                      <TextField
+                        label="Tên liên hệ *"
+                        size="small"
+                        value={customRecipient.contactName}
+                        onChange={(e) =>
+                          setCustomRecipient((prev) => ({
+                            ...prev,
+                            contactName: e.target.value,
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Số điện thoại *"
+                        size="small"
+                        value={customRecipient.contactPhoneNumber}
+                        onChange={(e) =>
+                          setCustomRecipient((prev) => ({
+                            ...prev,
+                            contactPhoneNumber: e.target.value,
+                          }))
+                        }
+                      />
+                      <Autocomplete
+                        options={provinces}
+                        value={selectedProvince}
+                        loading={isLoadingProvinces}
+                        getOptionLabel={(option) => option.ProvinceName || ""}
+                        onChange={handleProvinceChange}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Tỉnh/Thành phố *"
+                            size="small"
+                          />
+                        )}
+                      />
+                      <Autocomplete
+                        options={districts}
+                        value={selectedDistrict}
+                        loading={isLoadingDistricts}
+                        disabled={!selectedProvince}
+                        getOptionLabel={(option) => option.DistrictName || ""}
+                        onChange={handleDistrictChange}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Quận/Huyện *"
+                            size="small"
+                          />
+                        )}
+                      />
+                      <Autocomplete
+                        options={wards}
+                        value={selectedWard}
+                        loading={isLoadingWards}
+                        disabled={!selectedDistrict}
+                        getOptionLabel={(option) => option.WardName || ""}
+                        onChange={handleWardChange}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Phường/Xã *"
+                            size="small"
+                          />
+                        )}
+                      />
+                      <TextField
+                        label="Số nhà, tên đường *"
+                        size="small"
+                        value={customRecipient.fullAddress}
+                        onChange={(e) =>
+                          setCustomRecipient((prev) => ({
+                            ...prev,
+                            fullAddress: e.target.value,
+                          }))
+                        }
+                      />
+                    </Stack>
+                  )}
+                </Stack>
+              </Paper>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions

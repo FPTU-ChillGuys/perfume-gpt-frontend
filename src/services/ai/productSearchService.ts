@@ -65,7 +65,7 @@ class AiProductSearchService {
         searchText: string,
     ): Promise<PagedProductListWithVariants> {
         try {
-            const response = await aiApiInstance.GET(`${this.SEMANTIC_SEARCH_ENDPOINT}v2` as any, {
+            const response = await aiApiInstance.GET(`${this.SEMANTIC_SEARCH_ENDPOINT}v3` as any, {
                 params: {
                     query: { searchText, PageNumber: 1, PageSize: 5 },
                 },

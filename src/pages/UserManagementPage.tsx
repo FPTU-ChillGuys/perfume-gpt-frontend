@@ -93,7 +93,17 @@ const MOCK_USERS: UserItem[] = Array.from({ length: 32 }, (_, i) => ({
 // ─── Helpers ────────────────────────────────────────────────────────────────
 const roleConfig: Record<
   UserRole,
-  { label: string; color: "default" | "primary" | "error" | "warning" | "success" | "info" | "secondary" }
+  {
+    label: string;
+    color:
+      | "default"
+      | "primary"
+      | "error"
+      | "warning"
+      | "success"
+      | "info"
+      | "secondary";
+  }
 > = {
   user: { label: "Khách hàng", color: "default" },
   staff: { label: "Nhân viên", color: "info" },
@@ -234,7 +244,10 @@ export const UserManagementPage = () => {
     return matchSearch && matchRole && matchStatus;
   });
 
-  const paginated = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const paginated = filtered.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage,
+  );
 
   const handleToggleStatus = (user: UserItem) => {
     // TODO: call API PATCH /api/users/{id}/status
@@ -253,17 +266,14 @@ export const UserManagementPage = () => {
 
   return (
     <AdminLayout>
-      <Box p={3}>
+      <Box>
         {/* Header */}
-        <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-          <Box>
-            <Typography variant="h5" fontWeight={700}>
-              Quản lý người dùng
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mt={0.5}>
-              Danh sách tài khoản trong hệ thống
-            </Typography>
-          </Box>
+        <Stack
+          direction="row"
+          justifyContent="flex-end"
+          alignItems="center"
+          mb={3}
+        >
           <Tooltip title="Chưa có API tạo người dùng">
             <span>
               <Button
@@ -280,9 +290,19 @@ export const UserManagementPage = () => {
         {/* Filters */}
         <Paper
           elevation={0}
-          sx={{ p: 2, mb: 2, border: "1px solid", borderColor: "divider", borderRadius: 2 }}
+          sx={{
+            p: 2,
+            mb: 2,
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 2,
+          }}
         >
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            spacing={2}
+            alignItems="center"
+          >
             <TextField
               size="small"
               placeholder="Tìm theo tên, email, SĐT..."
@@ -327,7 +347,9 @@ export const UserManagementPage = () => {
               <Select
                 label="Trạng thái"
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as UserStatus | "")}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as UserStatus | "")
+                }
               >
                 <MenuItem value="">Tất cả</MenuItem>
                 <MenuItem value="active">Hoạt động</MenuItem>
@@ -349,7 +371,12 @@ export const UserManagementPage = () => {
         {/* Table */}
         <Paper
           elevation={0}
-          sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2, overflow: "hidden" }}
+          sx={{
+            border: "1px solid",
+            borderColor: "divider",
+            borderRadius: 2,
+            overflow: "hidden",
+          }}
         >
           {loading ? (
             <Box display="flex" justifyContent="center" py={6}>
@@ -360,14 +387,18 @@ export const UserManagementPage = () => {
               <TableContainer>
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ bgcolor: "action.hover" }}>
+                    <TableRow sx={{ bgcolor: "grey.50" }}>
                       <TableCell sx={{ fontWeight: 700 }}>Người dùng</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Liên hệ</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Vai trò</TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Trạng thái</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Điểm loyalty</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>
+                        Điểm loyalty
+                      </TableCell>
                       <TableCell sx={{ fontWeight: 700 }}>Ngày tạo</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Đăng nhập cuối</TableCell>
+                      <TableCell sx={{ fontWeight: 700 }}>
+                        Đăng nhập cuối
+                      </TableCell>
                       <TableCell align="center" sx={{ fontWeight: 700 }}>
                         Thao tác
                       </TableCell>
@@ -376,7 +407,11 @@ export const UserManagementPage = () => {
                   <TableBody>
                     {paginated.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} align="center" sx={{ py: 6, color: "text.secondary" }}>
+                        <TableCell
+                          colSpan={8}
+                          align="center"
+                          sx={{ py: 6, color: "text.secondary" }}
+                        >
                           Không có dữ liệu
                         </TableCell>
                       </TableRow>
@@ -388,21 +423,39 @@ export const UserManagementPage = () => {
                           sx={{ opacity: user.status === "banned" ? 0.6 : 1 }}
                         >
                           <TableCell>
-                            <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Stack
+                              direction="row"
+                              spacing={1.5}
+                              alignItems="center"
+                            >
                               <Avatar
                                 src={user.avatarUrl || undefined}
-                                sx={{ width: 36, height: 36, fontSize: 13, fontWeight: 700 }}
+                                sx={{
+                                  width: 36,
+                                  height: 36,
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                }}
                               >
                                 {getInitials(user.fullName)}
                               </Avatar>
-                              <Typography variant="body2" fontWeight={600} noWrap>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                noWrap
+                              >
                                 {user.fullName}
                               </Typography>
                             </Stack>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2">{user.email}</Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography variant="body2">
+                              {user.email}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {user.phoneNumber || "—"}
                             </Typography>
                           </TableCell>
@@ -427,13 +480,21 @@ export const UserManagementPage = () => {
                             </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2">{formatDate(user.createdAt)}</Typography>
+                            <Typography variant="body2">
+                              {formatDate(user.createdAt)}
+                            </Typography>
                           </TableCell>
                           <TableCell>
-                            <Typography variant="body2">{formatDate(user.lastLoginAt)}</Typography>
+                            <Typography variant="body2">
+                              {formatDate(user.lastLoginAt)}
+                            </Typography>
                           </TableCell>
                           <TableCell align="center">
-                            <Stack direction="row" spacing={0.5} justifyContent="center">
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              justifyContent="center"
+                            >
                               <Tooltip title="Xem chi tiết">
                                 <IconButton
                                   size="small"
@@ -451,7 +512,11 @@ export const UserManagementPage = () => {
                               >
                                 <IconButton
                                   size="small"
-                                  color={user.status === "active" ? "error" : "success"}
+                                  color={
+                                    user.status === "active"
+                                      ? "error"
+                                      : "success"
+                                  }
                                   onClick={() => handleToggleStatus(user)}
                                 >
                                   {user.status === "active" ? (
@@ -491,7 +556,10 @@ export const UserManagementPage = () => {
         </Paper>
       </Box>
 
-      <UserDetailDialog user={selectedUser} onClose={() => setSelectedUser(null)} />
+      <UserDetailDialog
+        user={selectedUser}
+        onClose={() => setSelectedUser(null)}
+      />
     </AdminLayout>
   );
 };

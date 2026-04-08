@@ -172,10 +172,7 @@ export const InventoryReportLogsPage = () => {
                 </Box>
 
                 <CustomTabPanel value={tabValue} index={0}>
-                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
-                        <Typography variant="h5" fontWeight="bold" color="primary.dark">
-                            Lịch sử Báo cáo Tồn kho
-                        </Typography>
+                    <Box display="flex" justifyContent="flex-end" mb={3}>
                         <Tooltip title="Tạo báo cáo tồn kho bằng AI">
                             <Button
                                 variant="contained"

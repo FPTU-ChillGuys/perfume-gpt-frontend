@@ -19,62 +19,50 @@ import {
   Typography,
 } from "@mui/material";
 import { MainLayout } from "@/layouts/MainLayout";
-import {
-  orderService,
-  type OrderReturnRequest,
-  type ReturnRequestStatus,
-} from "@/services/orderService";
+import { orderService, type OrderCancelRequest } from "@/services/orderService";
 import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
 import { useToast } from "@/hooks/useToast";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
+import {
+  CANCEL_ORDER_REASON_OPTIONS,
+  type CancelOrderReason,
+} from "@/utils/cancelOrderReason";
 import { formatDateTimeVN } from "@/utils/dateTime";
 
-const STATUS_TABS: { label: string; value: ReturnRequestStatus | "All" }[] = [
+type CancelRequestStatus = "Pending" | "Approved" | "Rejected";
+
+const STATUS_TABS: { label: string; value: CancelRequestStatus | "All" }[] = [
   { label: "Tất cả", value: "All" },
-  { label: "Chờ duyệt", value: "Pending" },
-  { label: "Bổ sung bằng chứng", value: "RequestMoreInfo" },
-  { label: "Đã duyệt", value: "ApprovedForReturn" },
-  { label: "Đang kiểm định", value: "Inspecting" },
-  { label: "Chờ hoàn tiền", value: "ReadyForRefund" },
-  { label: "Đã hoàn tiền", value: "Completed" },
+  { label: "Chờ xử lý", value: "Pending" },
+  { label: "Đã duyệt", value: "Approved" },
   { label: "Từ chối", value: "Rejected" },
 ];
 
 const statusLabel = (status?: string) => {
-  if (status === "Pending") return "Chờ duyệt";
-  if (status === "RequestMoreInfo") return "Bổ sung bằng chứng";
-  if (status === "ApprovedForReturn") return "Đã duyệt";
-  if (status === "Inspecting") return "Đang kiểm định";
-  if (status === "ReadyForRefund") return "Chờ hoàn tiền";
-  if (status === "Completed") return "Đã hoàn tiền";
+  if (status === "Pending") return "Chờ xử lý";
+  if (status === "Approved") return "Đã duyệt";
   if (status === "Rejected") return "Từ chối";
   return status || "-";
 };
 
-const returnReasonLabel = (reason?: string | null) => {
-  if (!reason) return "Không có lý do";
-
-  if (reason === "DamagedProduct") return "Hàng bể vỡ / hư hỏng";
-  if (reason === "WrongItemReceived") return "Người bán gửi sai hàng";
-  if (reason === "ItemNotAsDescribed") return "Hàng không đúng mô tả";
-  if (reason === "ChangedMind") return "Đổi ý, không còn nhu cầu";
-  if (reason === "AllergicReaction") return "Không phù hợp / kích ứng";
-
-  return reason;
-};
-
 const statusColor = (
   status?: string,
-): "default" | "warning" | "info" | "success" | "error" => {
+): "default" | "warning" | "success" | "error" => {
   if (status === "Pending") return "warning";
-  if (status === "RequestMoreInfo") return "warning";
-  if (status === "ApprovedForReturn") return "info";
-  if (status === "Inspecting") return "info";
-  if (status === "ReadyForRefund") return "success";
+  if (status === "Approved") return "success";
   if (status === "Rejected") return "error";
-  if (status === "Completed") return "success";
   return "default";
+};
+
+const cancelReasonLabel = (reason?: string | null) => {
+  if (!reason) return "Không có lý do";
+
+  const matchedReason = CANCEL_ORDER_REASON_OPTIONS.find(
+    (item) => item.value === (reason as CancelOrderReason),
+  );
+
+  return matchedReason?.label || reason;
 };
 
 const formatDate = (value?: string | null) => formatDateTimeVN(value);
@@ -82,14 +70,14 @@ const formatDate = (value?: string | null) => formatDateTimeVN(value);
 const formatCurrency = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;
 
-export const MyReturnRequestsPage = () => {
+export const MyCancelRequestsPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
   const backState = location.state as
     | {
-        status?: ReturnRequestStatus | "All";
+        status?: CancelRequestStatus | "All";
         page?: number;
         pageSize?: number;
       }
@@ -113,12 +101,11 @@ export const MyReturnRequestsPage = () => {
       : 10;
 
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
-
-  const [requests, setRequests] = useState<OrderReturnRequest[]>([]);
+  const [requests, setRequests] = useState<OrderCancelRequest[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(initialPageSize);
-  const [status, setStatus] = useState<ReturnRequestStatus | "All">(
+  const [status, setStatus] = useState<CancelRequestStatus | "All">(
     initialStatus,
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -127,10 +114,10 @@ export const MyReturnRequestsPage = () => {
     setIsLoading(true);
     try {
       const { items, totalCount: count } =
-        await orderService.getMyReturnRequests({
+        await orderService.getMyCancelRequests({
           PageNumber: page,
           PageSize: pageSize,
-          Status: status,
+          Status: status === "All" ? undefined : status,
           SortBy: "CreatedAt",
           SortOrder: "desc",
         });
@@ -140,13 +127,13 @@ export const MyReturnRequestsPage = () => {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể tải danh sách yêu cầu hoàn trả",
+          : "Không thể tải danh sách yêu cầu hủy",
         "error",
       );
     } finally {
       setIsLoading(false);
     }
-  }, [page, pageSize, status, showToast]);
+  }, [page, pageSize, showToast, status]);
 
   useEffect(() => {
     void userService.getUserMe().then(setUserInfo).catch(console.error);
@@ -229,11 +216,10 @@ export const MyReturnRequestsPage = () => {
                       color="text.secondary"
                       gutterBottom
                     >
-                      Chưa có yêu cầu hoàn trả nào
+                      Chưa có yêu cầu hủy đơn nào
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      Các yêu cầu hoàn trả sản phẩm của bạn sẽ xuất hiện tại
-                      đây.
+                      Các yêu cầu hủy đơn của bạn sẽ hiển thị tại đây.
                     </Typography>
                   </Box>
                 ) : (
@@ -281,36 +267,22 @@ export const MyReturnRequestsPage = () => {
 
                         <Divider sx={{ mb: 1.5 }} />
 
-                        <Stack
-                          direction={{ xs: "column", sm: "row" }}
-                          justifyContent="space-between"
-                          alignItems={{ xs: "flex-start", sm: "center" }}
-                          spacing={1}
-                        >
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{ maxWidth: "60%" }}
-                          >
+                        <Stack spacing={0.75}>
+                          <Typography variant="body2" color="text.secondary">
                             <strong>Lý do:</strong>{" "}
-                            {returnReasonLabel(request.reason)}
+                            {cancelReasonLabel(request.reason)}
                           </Typography>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                          >
-                            <Typography variant="body2" color="text.secondary">
-                              Yêu cầu hoàn:
-                            </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            <strong>Số tiền hoàn:</strong>{" "}
                             <Typography
-                              variant="subtitle1"
+                              component="span"
+                              variant="subtitle2"
                               fontWeight={700}
                               sx={{ color: "#ee4d2d" }}
                             >
-                              {formatCurrency(request.requestedRefundAmount)}
+                              {formatCurrency(request.refundAmount)}
                             </Typography>
-                          </Stack>
+                          </Typography>
                         </Stack>
 
                         <Divider sx={{ my: 1.5 }} />
@@ -321,7 +293,7 @@ export const MyReturnRequestsPage = () => {
                             variant="outlined"
                             onClick={() => {
                               if (!request.id) return;
-                              navigate(`/my-return-requests/${request.id}`, {
+                              navigate(`/my-cancel-requests/${request.id}`, {
                                 state: {
                                   status,
                                   page,
@@ -399,4 +371,4 @@ export const MyReturnRequestsPage = () => {
   );
 };
 
-export default MyReturnRequestsPage;
+export default MyCancelRequestsPage;
