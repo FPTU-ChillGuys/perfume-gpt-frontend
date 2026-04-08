@@ -688,14 +688,39 @@ class OrderService {
 
       const accessToken = getStoredAccessToken();
       const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests${query.size ? `?${query.toString()}` : ""}`;
+      const requestHeaders: HeadersInit = {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      };
 
-      const response = await fetch(endpoint, {
+      let response = await fetch(endpoint, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
+        cache: "no-store",
+        headers: requestHeaders,
       });
+
+      if (response.status === 304) {
+        let retryUrl = `${endpoint}${endpoint.includes("?") ? "&" : "?"}_ts=${Date.now()}`;
+
+        try {
+          if (typeof window !== "undefined") {
+            const parsed = new URL(endpoint, window.location.origin);
+            parsed.searchParams.set("_ts", Date.now().toString());
+            retryUrl = parsed.toString();
+          }
+        } catch {
+          // keep fallback retryUrl
+        }
+
+        response = await fetch(retryUrl, {
+          method: "GET",
+          cache: "no-store",
+          headers: requestHeaders,
+        });
+      }
 
       const data = await response.json().catch(() => null);
 
@@ -788,14 +813,39 @@ class OrderService {
 
       const accessToken = getStoredAccessToken();
       const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests/my-requests${query.size ? `?${query.toString()}` : ""}`;
+      const requestHeaders: HeadersInit = {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      };
 
-      const response = await fetch(endpoint, {
+      let response = await fetch(endpoint, {
         method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
+        cache: "no-store",
+        headers: requestHeaders,
       });
+
+      if (response.status === 304) {
+        let retryUrl = `${endpoint}${endpoint.includes("?") ? "&" : "?"}_ts=${Date.now()}`;
+
+        try {
+          if (typeof window !== "undefined") {
+            const parsed = new URL(endpoint, window.location.origin);
+            parsed.searchParams.set("_ts", Date.now().toString());
+            retryUrl = parsed.toString();
+          }
+        } catch {
+          // keep fallback retryUrl
+        }
+
+        response = await fetch(retryUrl, {
+          method: "GET",
+          cache: "no-store",
+          headers: requestHeaders,
+        });
+      }
 
       const data = await response.json().catch(() => null);
 

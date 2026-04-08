@@ -190,17 +190,14 @@ class ProductReviewService {
   ): Promise<BulkActionResultOfstring> {
     try {
       const accessToken = getStoredAccessToken();
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/reviews/${reviewId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-          },
-          body: JSON.stringify(payload),
+      const response = await fetch(`/api/reviews/${reviewId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
-      );
+        body: JSON.stringify(payload),
+      });
 
       const data = await response.json().catch(() => null);
 
@@ -297,7 +294,7 @@ class ProductReviewService {
 
     try {
       const accessToken = getStoredAccessToken();
-      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/reviews/images/temporary`;
+      const endpoint = "/api/reviews/images/temporary";
 
       let lastErrorMessage = "Không thể tải ảnh tạm thời";
 

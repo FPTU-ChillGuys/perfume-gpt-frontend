@@ -7,8 +7,6 @@ export type UserCredentials = components["schemas"]["UserCredentialsResponse"];
 export type UserAvatar = components["schemas"]["MediaResponse"];
 
 class UserService {
-  private readonly API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
   async getUserMe(): Promise<UserCredentials> {
     const response = await apiInstance.GET("/api/users/me");
     if (!response.data?.success) {
@@ -73,7 +71,7 @@ class UserService {
     formData.append("Avatar", file);
     formData.append("AltText", altText || "");
 
-    const response = await fetch(`${this.API_BASE_URL}/api/users/avatar`, {
+    const response = await fetch(`/api/users/avatar`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,

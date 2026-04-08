@@ -2,24 +2,19 @@ import { apiInstance } from "@/lib/api";
 import type { UserProfile, UpdateProfileRequest } from "../types/profile";
 import { getStoredAccessToken } from "@/utils/authStorage";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 class ProfileService {
   private readonly PROFILE_ENDPOINT = "/api/profiles";
 
   async getMyProfile(): Promise<UserProfile> {
     try {
       const accessToken = getStoredAccessToken();
-      const response = await fetch(
-        `${API_BASE_URL}${this.PROFILE_ENDPOINT}/me`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "*/*",
-          },
+      const response = await fetch(`${this.PROFILE_ENDPOINT}/me`, {
+        method: "GET",
+        headers: {
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          Accept: "*/*",
         },
-      );
+      });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

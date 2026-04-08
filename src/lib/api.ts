@@ -22,7 +22,19 @@ const resolveApiBaseUrl = () => {
   const configured = normalizeBaseUrl(
     import.meta.env.VITE_API_BASE_URL as string | undefined,
   );
-  return configured || "/";
+
+  if (typeof window !== "undefined") {
+    const isProductionHost =
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    // On deployed frontend, always use same-origin so rewrite/proxy rules handle routing.
+    if (isProductionHost) {
+      return "";
+    }
+  }
+
+  return configured || "";
 };
 
 const resolveAiBaseUrl = () => {
