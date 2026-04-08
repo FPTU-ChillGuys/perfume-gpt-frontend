@@ -690,6 +690,8 @@ class OrderService {
       const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests${query.size ? `?${query.toString()}` : ""}`;
       const requestHeaders: HeadersInit = {
         "Content-Type": "application/json",
+        Accept: "application/json",
+        "ngrok-skip-browser-warning": "true",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Pragma: "no-cache",
         Expires: "0",
@@ -722,7 +724,25 @@ class OrderService {
         });
       }
 
-      const data = await response.json().catch(() => null);
+      const responseText = await response.text();
+      const contentType = response.headers.get("content-type") || "";
+      let data: any = null;
+
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          throw new Error(
+            `API không trả JSON hợp lệ (status ${response.status}) tại ${endpoint}`,
+          );
+        }
+      }
+
+      if (contentType.toLowerCase().includes("text/html")) {
+        throw new Error(
+          `API trả về HTML (status ${response.status}) thay vì JSON tại ${endpoint}`,
+        );
+      }
       const hasPayloadEnvelope =
         data !== null &&
         typeof data === "object" &&
@@ -832,6 +852,8 @@ class OrderService {
       const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests/my-requests${query.size ? `?${query.toString()}` : ""}`;
       const requestHeaders: HeadersInit = {
         "Content-Type": "application/json",
+        Accept: "application/json",
+        "ngrok-skip-browser-warning": "true",
         "Cache-Control": "no-cache, no-store, must-revalidate",
         Pragma: "no-cache",
         Expires: "0",
@@ -864,7 +886,25 @@ class OrderService {
         });
       }
 
-      const data = await response.json().catch(() => null);
+      const responseText = await response.text();
+      const contentType = response.headers.get("content-type") || "";
+      let data: any = null;
+
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch {
+          throw new Error(
+            `API không trả JSON hợp lệ (status ${response.status}) tại ${endpoint}`,
+          );
+        }
+      }
+
+      if (contentType.toLowerCase().includes("text/html")) {
+        throw new Error(
+          `API trả về HTML (status ${response.status}) thay vì JSON tại ${endpoint}`,
+        );
+      }
       const hasPayloadEnvelope =
         data !== null &&
         typeof data === "object" &&
