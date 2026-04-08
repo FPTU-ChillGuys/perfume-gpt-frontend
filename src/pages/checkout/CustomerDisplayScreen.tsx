@@ -193,12 +193,16 @@ export const CustomerDisplayScreen = () => {
   useEffect(() => {
     if (!paymentCompletedData) return;
 
-    if ((paymentCompletedData.status || "").toLowerCase() !== "success") {
+    // 🔴 Bắt lỗi Casing
+    const rawStatus =
+      paymentCompletedData.status || (paymentCompletedData as any).Status || "";
+
+    if (rawStatus.toLowerCase() !== "success") {
       return;
     }
 
     setActivePaymentUrl("");
-    setShowCheckoutSuccess(true);
+    setShowCheckoutSuccess(true); // Nhảy tick xanh cho khách xem
   }, [paymentCompletedData]);
 
   return (

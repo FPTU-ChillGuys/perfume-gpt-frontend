@@ -270,28 +270,36 @@ export const CounterCheckoutStaffPage = () => {
   useEffect(() => {
     if (!paymentCompletedData) return;
 
-    const status = (paymentCompletedData.status || "").toLowerCase();
-    const eventKey = [
-      paymentCompletedData.orderId,
-      paymentCompletedData.paymentId,
-      paymentCompletedData.status,
-      paymentCompletedData.message,
-    ].join(":");
+    // 🔴 Lấy data bao phủ cả trường hợp camelCase và PascalCase từ C#
+    const rawStatus =
+      paymentCompletedData.status || (paymentCompletedData as any).Status || "";
+    const rawMessage =
+      paymentCompletedData.message ||
+      (paymentCompletedData as any).Message ||
+      "Đã xác nhận thanh toán thành công";
+    const rawOrderId =
+      paymentCompletedData.orderId ||
+      (paymentCompletedData as any).OrderId ||
+      "PAID";
+    const rawPaymentId =
+      paymentCompletedData.paymentId ||
+      (paymentCompletedData as any).PaymentId ||
+      "";
 
-    if (handledPaymentEventRef.current === eventKey) {
-      return;
-    }
+    const status = rawStatus.toLowerCase();
+    const eventKey = [rawOrderId, rawPaymentId, rawStatus, rawMessage].join(
+      ":",
+    );
 
+    if (handledPaymentEventRef.current === eventKey) return;
     handledPaymentEventRef.current = eventKey;
 
-    if (status !== "success") {
-      return;
-    }
+    if (status !== "success") return;
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
-    setIsPaymentQrOpen(false);
-    setCheckoutSuccessRef(paymentCompletedData.orderId || "PAID");
+    setIsPaymentQrOpen(false); // Tắt Modal QR
+    setCheckoutSuccessRef(rawOrderId); // Bật cục Tick Xanh bự
 
     void syncCartToCustomer({
       items: [],
@@ -301,10 +309,15 @@ export const CounterCheckoutStaffPage = () => {
       paymentUrl: null,
     } satisfies CartDisplaySyncPayload);
 
-    showToast(
-      paymentCompletedData.message || "Đã xác nhận thanh toán thành công",
-      "success",
-    );
+    showToast(rawMessage, "success");
+
+    // 🔴 Dọn dẹp giỏ hàng khi KHÁCH ĐÃ THANH TOÁN XONG
+    setCartItems([]);
+    setSearchResults([]);
+    setSearchKeyword("");
+    setVoucherInput("");
+    setAppliedVoucherCode("");
+    handleClearSelectedCustomer();
   }, [paymentCompletedData, showToast, syncCartToCustomer]);
 
   const validateCheckoutInputs = () => {
@@ -960,10 +973,12 @@ export const CounterCheckoutStaffPage = () => {
       setIsSubmittingCheckout(true);
       const result = await orderService.checkoutInStore(payload);
 
+      // 1. NẾU LÀ VNPAY/MOMO (CÓ LINK QR)
       if (result.url) {
         paymentQrUrlRef.current = result.url;
         setPaymentQrUrl(result.url);
         setIsPaymentQrOpen(true);
+        // Đồng bộ giỏ hàng rỗng + mã QR sang màn hình khách
         void syncCartToCustomer({
           items: [],
           subTotal: 0,
@@ -971,11 +986,13 @@ export const CounterCheckoutStaffPage = () => {
           totalPrice: 0,
           paymentUrl: result.url,
         } satisfies CartDisplaySyncPayload);
-      } else {
-        paymentQrUrlRef.current = null;
-        setPaymentQrUrl(null);
+        // Không được xóa giỏ hàng, để yên đó chờ SignalR gọi về!
+        setIsSubmittingCheckout(false);
+        return;
       }
-
+      // 2. NẾU LÀ TIỀN MẶT TẠI QUẦY (KHÔNG CÓ QR) -> Chạy logic như cũ
+      paymentQrUrlRef.current = null;
+      setPaymentQrUrl(null);
       showToast(
         result.orderId
           ? `Checkout thành công. Mã đơn: ${result.orderId}`
@@ -983,7 +1000,6 @@ export const CounterCheckoutStaffPage = () => {
         "success",
       );
       setCheckoutSuccessRef(result.orderId ?? "");
-
       if (paymentMethodAtCheckout === "CashInStore") {
         void (async () => {
           try {
@@ -996,7 +1012,8 @@ export const CounterCheckoutStaffPage = () => {
               );
               return;
             }
-
+            setCartItems([]);
+            setSearchResults([]);
             await orderService.confirmPayment(paymentId, true);
           } catch {
             showToast(
