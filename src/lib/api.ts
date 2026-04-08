@@ -3,6 +3,48 @@ import createFetchClient, { type Middleware } from "openapi-fetch";
 import { markApiRequestEnd, markApiRequestStart } from "@/utils/perfMetrics";
 import { clearStoredAuth, getStoredAccessToken } from "@/utils/authStorage";
 
+const normalizeBaseUrl = (value?: string) =>
+  (value || "").trim().replace(/\/+$/, "");
+
+const isLocalhostUrl = (value?: string) => {
+  const raw = normalizeBaseUrl(value);
+  if (!raw) return false;
+
+  try {
+    const parsed = new URL(raw);
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+};
+
+const resolveApiBaseUrl = () => {
+  const configured = normalizeBaseUrl(
+    import.meta.env.VITE_API_BASE_URL as string | undefined,
+  );
+  return configured || "/";
+};
+
+const resolveAiBaseUrl = () => {
+  const chatbotConfigured = normalizeBaseUrl(
+    import.meta.env.VITE_CHATBOT_BASE_URL as string | undefined,
+  );
+  const apiConfigured = resolveApiBaseUrl();
+
+  // On production hosts, ignore accidental localhost chatbot base URL.
+  if (typeof window !== "undefined") {
+    const isProductionHost =
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    if (isProductionHost && isLocalhostUrl(chatbotConfigured)) {
+      return apiConfigured;
+    }
+  }
+
+  return chatbotConfigured || apiConfigured;
+};
+
 const middleware: Middleware = {
   async onRequest({ request }) {
     markApiRequestStart(request);
@@ -52,12 +94,12 @@ const middleware: Middleware = {
 };
 
 export const apiInstance = createFetchClient<paths>({
-  baseUrl: import.meta.env.VITE_API_BASE_URL,
+  baseUrl: resolveApiBaseUrl(),
 });
 apiInstance.use(middleware);
 
 // AI backend (separate server — paths not in the main OpenAPI schema)
 export const aiApiInstance = createFetchClient<Record<string, any>>({
-  baseUrl: import.meta.env.VITE_CHATBOT_BASE_URL,
+  baseUrl: resolveAiBaseUrl(),
 });
 aiApiInstance.use(middleware);
