@@ -1313,6 +1313,15 @@ export const CounterCheckoutStaffPage = () => {
       return;
     }
 
+    if (rawOrderId === lastPaidOrderIdRef.current) {
+      console.log("[POS][PAYMENT_LINK_UPDATED_EVENT] Ignored after success", {
+        orderId: rawOrderId,
+        paymentId: rawPaymentId,
+        lastPaidOrderId: lastPaidOrderIdRef.current,
+      });
+      return;
+    }
+
     console.log("[POS][PAYMENT_LINK_UPDATED_EVENT]", {
       orderId: rawOrderId,
       paymentId: rawPaymentId,

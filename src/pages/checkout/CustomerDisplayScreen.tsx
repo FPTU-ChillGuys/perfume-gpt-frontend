@@ -313,6 +313,10 @@ export const CustomerDisplayScreen = () => {
       (paymentLinkUpdatedData as { PaymentId?: string }).PaymentId ||
       "";
 
+    if (rawOrderId && rawOrderId === lastSuccessfulOrderIdRef.current) {
+      return;
+    }
+
     if (rawOrderId) {
       latestPaymentOrderIdRef.current = rawOrderId;
     }
