@@ -356,10 +356,20 @@ export const CounterCheckoutStaffPage = () => {
       ":",
     );
 
+    console.log("[POS][PAYMENT_COMPLETED_EVENT]", {
+      orderId: rawOrderId,
+      paymentId: rawPaymentId || null,
+      status: rawStatus,
+      message: rawMessage,
+      eventKey,
+    });
+
     if (handledPaymentEventRef.current === eventKey) return;
     handledPaymentEventRef.current = eventKey;
 
-    if (status !== "success") return;
+    if (status !== "success" && status !== "paid" && status !== "completed") {
+      return;
+    }
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);

@@ -165,6 +165,19 @@ export const CustomerDisplayScreen = () => {
     };
   }, [items.length, paymentUrl]);
 
+  useEffect(() => {
+    // Nếu giỏ đã về rỗng và payload không còn paymentUrl thì đóng QR cũ.
+    if (items.length !== 0 || paymentUrl) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      setActivePaymentUrl("");
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [items.length, paymentUrl]);
+
   const displayPaymentUrl = activePaymentUrl || paymentUrl;
 
   useEffect(() => {
@@ -205,7 +218,12 @@ export const CustomerDisplayScreen = () => {
       (paymentCompletedData as { OrderId?: string }).OrderId ||
       "";
 
-    if (rawStatus.toLowerCase() !== "success") {
+    const normalizedStatus = rawStatus.toLowerCase();
+    if (
+      normalizedStatus !== "success" &&
+      normalizedStatus !== "paid" &&
+      normalizedStatus !== "completed"
+    ) {
       return;
     }
 
