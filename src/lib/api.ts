@@ -68,7 +68,14 @@ const middleware: Middleware = {
         url.hostname.includes("ngrok-free.app") ||
         url.hostname.includes("ngrok-free.dev");
 
-      if (isNgrokHost) {
+      const isApiLikePath =
+        url.pathname.startsWith("/api/") ||
+        url.pathname === "/api" ||
+        url.pathname.startsWith("/trends/") ||
+        url.pathname === "/trends";
+
+      // Forward this header for API-like requests so ngrok does not return browser warning HTML.
+      if (isNgrokHost || isApiLikePath) {
         request.headers.set("ngrok-skip-browser-warning", "true");
       }
     } catch {
@@ -87,6 +94,26 @@ const middleware: Middleware = {
   },
   onResponse({ request, response }) {
     markApiRequestEnd(request, response?.status);
+
+    try {
+      const url = new URL(request.url);
+      const contentType = response?.headers?.get("content-type") || "";
+      const isApiLikePath =
+        url.pathname.startsWith("/api/") ||
+        url.pathname === "/api" ||
+        url.pathname.startsWith("/trends/") ||
+        url.pathname === "/trends";
+
+      if (isApiLikePath && contentType.toLowerCase().includes("text/html")) {
+        throw new Error(
+          "API trả về HTML thay vì JSON. Kiểm tra Vercel rewrite hoặc ngrok tunnel.",
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        return Promise.reject(error);
+      }
+    }
 
     if (response?.status === 401) {
       // Handle unauthorized - but skip redirect if already on login page

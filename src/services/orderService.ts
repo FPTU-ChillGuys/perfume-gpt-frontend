@@ -723,12 +723,29 @@ class OrderService {
       }
 
       const data = await response.json().catch(() => null);
+      const hasPayloadEnvelope =
+        data !== null &&
+        typeof data === "object" &&
+        "payload" in (data as Record<string, unknown>);
+      const isPayloadOnlySuccess = Array.isArray(data) || hasPayloadEnvelope;
+      const isDeclaredSuccess =
+        data !== null &&
+        typeof data === "object" &&
+        "success" in (data as Record<string, unknown>)
+          ? Boolean((data as { success?: boolean }).success)
+          : false;
 
-      if (!response.ok || !data?.success) {
+      if (!response.ok || (!isDeclaredSuccess && !isPayloadOnlySuccess)) {
         throw new Error(data?.message || "Không thể tải yêu cầu trả hàng");
       }
 
-      const payload = data.payload as
+      const payload = (
+        Array.isArray(data)
+          ? data
+          : hasPayloadEnvelope
+            ? (data as { payload?: unknown }).payload
+            : null
+      ) as
         | {
             items?: unknown[];
             totalCount?: number;
@@ -848,14 +865,31 @@ class OrderService {
       }
 
       const data = await response.json().catch(() => null);
+      const hasPayloadEnvelope =
+        data !== null &&
+        typeof data === "object" &&
+        "payload" in (data as Record<string, unknown>);
+      const isPayloadOnlySuccess = Array.isArray(data) || hasPayloadEnvelope;
+      const isDeclaredSuccess =
+        data !== null &&
+        typeof data === "object" &&
+        "success" in (data as Record<string, unknown>)
+          ? Boolean((data as { success?: boolean }).success)
+          : false;
 
-      if (!response.ok || !data?.success) {
+      if (!response.ok || (!isDeclaredSuccess && !isPayloadOnlySuccess)) {
         throw new Error(
           data?.message || "Không thể tải yêu cầu trả hàng của bạn",
         );
       }
 
-      const payload = data.payload as
+      const payload = (
+        Array.isArray(data)
+          ? data
+          : hasPayloadEnvelope
+            ? (data as { payload?: unknown }).payload
+            : null
+      ) as
         | {
             items?: unknown[];
             totalCount?: number;
