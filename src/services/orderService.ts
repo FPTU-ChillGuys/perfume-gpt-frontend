@@ -1656,8 +1656,20 @@ class OrderService {
     paymentId: string,
     method: PaymentMethod,
     posSessionId?: string,
+    debugCallId?: string,
   ): Promise<CheckoutResponse> {
     try {
+      const retryRequestPayload = {
+        method,
+        posSessionId: posSessionId || null,
+      };
+
+      console.log("[OrderService][retryPayment] request", {
+        debugCallId: debugCallId || null,
+        paymentId,
+        payload: retryRequestPayload,
+      });
+
       const response = await apiInstance.POST(
         "/api/payments/{paymentId}/retry",
         {
@@ -1666,10 +1678,7 @@ class OrderService {
               paymentId,
             },
           },
-          body: {
-            method,
-            posSessionId: posSessionId || null,
-          },
+          body: retryRequestPayload,
         },
       );
 
@@ -1677,10 +1686,74 @@ class OrderService {
         throw new Error(response.data?.message || "Failed to retry payment");
       }
 
-      // Return URL for redirect payment or orderId for cash payment
+      const payload = response.data.payload as
+        | string
+        | {
+            url?: string;
+            orderId?: string;
+            paymentId?: string;
+            paymentUrl?: string;
+            Url?: string;
+            OrderId?: string;
+            PaymentId?: string;
+            PaymentUrl?: string;
+          }
+        | null
+        | undefined;
+
+      if (typeof payload === "string") {
+        const normalized = payload.trim();
+        const isRedirectUrl = /^https?:\/\//i.test(normalized);
+
+        const parsed = {
+          url: isRedirectUrl ? normalized : undefined,
+          orderId: isRedirectUrl ? undefined : normalized,
+          paymentId: isRedirectUrl ? undefined : normalized,
+        };
+
+        console.log("[OrderService][retryPayment] response", {
+          debugCallId: debugCallId || null,
+          rawPayload: payload,
+          parsed,
+        });
+
+        return parsed;
+      }
+
+      if (payload && typeof payload === "object") {
+        const parsed = {
+          url:
+            payload.url ||
+            payload.paymentUrl ||
+            payload.Url ||
+            payload.PaymentUrl,
+          orderId: payload.orderId || payload.OrderId,
+          paymentId: payload.paymentId || payload.PaymentId,
+        };
+
+        console.log("[OrderService][retryPayment] response", {
+          debugCallId: debugCallId || null,
+          rawPayload: payload,
+          parsed,
+        });
+
+        return parsed;
+      }
+
+      console.log("[OrderService][retryPayment] response", {
+        debugCallId: debugCallId || null,
+        rawPayload: payload,
+        parsed: {
+          url: undefined,
+          orderId: undefined,
+          paymentId: undefined,
+        },
+      });
+
       return {
-        url: response.data.payload ?? undefined,
-        orderId: response.data.payload ?? undefined,
+        url: undefined,
+        orderId: undefined,
+        paymentId: undefined,
       };
     } catch (error: any) {
       console.error("Error retrying payment:", error);
@@ -1696,18 +1769,27 @@ class OrderService {
     paymentId: string,
     isSuccess: boolean,
     failureReason?: string,
+    debugCallId?: string,
   ): Promise<boolean> {
     try {
+      const confirmPayload = {
+        isSuccess,
+        failureReason,
+      };
+
+      console.log("[OrderService][confirmPayment] request", {
+        debugCallId: debugCallId || null,
+        paymentId,
+        payload: confirmPayload,
+      });
+
       const response = await apiInstance.PUT(
         "/api/payments/{paymentId}/confirm",
         {
           params: {
             path: { paymentId },
           },
-          body: {
-            isSuccess,
-            failureReason,
-          },
+          body: confirmPayload,
         },
       );
 
@@ -1715,7 +1797,15 @@ class OrderService {
         throw new Error(response.data?.message || "Failed to confirm payment");
       }
 
-      return Boolean(response.data.payload);
+      const parsed = Boolean(response.data.payload);
+
+      console.log("[OrderService][confirmPayment] response", {
+        debugCallId: debugCallId || null,
+        paymentId,
+        success: parsed,
+      });
+
+      return parsed;
     } catch (error: any) {
       console.error("Error confirming payment:", error);
       throw new Error(

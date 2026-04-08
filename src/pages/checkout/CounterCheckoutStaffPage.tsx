@@ -187,6 +187,9 @@ const toSafeNumber = (value: unknown) => {
 const isHttpUrl = (value?: string | null) =>
   /^https?:\/\//i.test((value || "").trim());
 
+const createDebugCallId = (prefix: string) =>
+  `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
 export const CounterCheckoutStaffPage = () => {
   const { showToast } = useToast();
   const {
@@ -947,21 +950,77 @@ export const CounterCheckoutStaffPage = () => {
         handledPaymentFailedEventRef.current = "";
         handledPaymentEventRef.current = "";
 
+        const retryCallId = createDebugCallId("pos-retry");
+        console.log("[POS][RETRY] Start", {
+          retryCallId,
+          orderId: failedPaymentAction.orderId,
+          previousPaymentId: failedPaymentAction.paymentId,
+          method: paymentMethod,
+          requiresCashConfirm,
+          posSessionId: POS_SESSION_ID,
+        });
+
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
           paymentMethod,
           POS_SESSION_ID,
+          retryCallId,
         );
 
+        console.log("[POS][RETRY] Response", {
+          retryCallId,
+          result,
+        });
+
+        const paymentIdForRetry =
+          (result.paymentId || "").trim() || failedPaymentAction.paymentId;
+
+        console.log("[POS][RETRY] PaymentId resolution", {
+          retryCallId,
+          previousPaymentId: failedPaymentAction.paymentId,
+          paymentIdFromRetryResult: (result.paymentId || "").trim() || null,
+          paymentIdUsedForNextStep: paymentIdForRetry,
+        });
+
+        if (paymentIdForRetry !== failedPaymentAction.paymentId) {
+          setFailedPaymentAction((prev) => {
+            if (!prev || prev.orderId !== failedPaymentAction.orderId) {
+              return prev;
+            }
+
+            return {
+              ...prev,
+              paymentId: paymentIdForRetry,
+            };
+          });
+        }
+
         if (requiresCashConfirm) {
+          const confirmCallId = `${retryCallId}-confirm`;
+          console.log("[POS][CONFIRM] Start", {
+            confirmCallId,
+            fromRetryCallId: retryCallId,
+            orderId: failedPaymentAction.orderId,
+            paymentIdUsedForConfirm: paymentIdForRetry,
+            payload: {
+              isSuccess: true,
+              failureReason: undefined,
+            },
+          });
+
           await orderService.confirmPayment(
-            failedPaymentAction.paymentId,
+            paymentIdForRetry,
             true,
+            undefined,
+            confirmCallId,
           );
-          finalizeRetryAsPaid(
-            failedPaymentAction.orderId,
-            failedPaymentAction.paymentId,
-          );
+
+          console.log("[POS][CONFIRM] Success", {
+            confirmCallId,
+            paymentIdUsedForConfirm: paymentIdForRetry,
+          });
+
+          finalizeRetryAsPaid(failedPaymentAction.orderId, paymentIdForRetry);
           showToast("Đã xác nhận thanh toán tiền mặt", "success");
           return;
         }
@@ -1061,6 +1120,15 @@ export const CounterCheckoutStaffPage = () => {
     if (handledPaymentFailedEventRef.current === failedEventKey) {
       return;
     }
+
+    console.log("[POS][PAYMENT_FAILED_EVENT]", {
+      orderId: rawOrderId,
+      paymentId: rawPaymentId || null,
+      status,
+      message: rawMessage,
+      failedEventKey,
+    });
+
     handledPaymentFailedEventRef.current = failedEventKey;
 
     paymentQrUrlRef.current = null;
@@ -1113,6 +1181,12 @@ export const CounterCheckoutStaffPage = () => {
     if (!rawOrderId || !rawPaymentId || !rawPaymentUrl) {
       return;
     }
+
+    console.log("[POS][PAYMENT_LINK_UPDATED_EVENT]", {
+      orderId: rawOrderId,
+      paymentId: rawPaymentId,
+      paymentUrl: rawPaymentUrl,
+    });
 
     paymentQrUrlRef.current = rawPaymentUrl;
     setPaymentQrUrl(rawPaymentUrl);

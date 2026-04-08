@@ -11,4 +11,5 @@ export type CreateInStoreOrderRequest =
 export interface CheckoutResponse {
   url?: string; // VnPay/Momo payment URL
   orderId?: string;
+  paymentId?: string;
 }
