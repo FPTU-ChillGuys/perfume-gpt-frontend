@@ -59,11 +59,11 @@ export const LoginPage = () => {
       )) as any;
       // Redirect after successful login
       if (userData?.role === "admin") {
-        window.location.href = "/admin/dashboard";
+        navigate("/admin/dashboard", { replace: true });
       } else if (userData?.role === "staff") {
-        window.location.href = "/staff/dashboard";
+        navigate("/staff/dashboard", { replace: true });
       } else {
-        window.location.href = "/";
+        navigate("/", { replace: true });
       }
     } catch (err: any) {
       console.error("Google login error:", err);
@@ -98,11 +98,11 @@ export const LoginPage = () => {
       const userData = (await login({ credential: email, password })) as any;
       // Redirect after successful login
       if (userData?.role === "admin") {
-        window.location.href = "/admin/dashboard";
+        navigate("/admin/dashboard", { replace: true });
       } else if (userData?.role === "staff") {
-        window.location.href = "/staff/dashboard";
+        navigate("/staff/dashboard", { replace: true });
       } else {
-        window.location.href = "/";
+        navigate("/", { replace: true });
       }
     } catch (err: any) {
       console.error("Login error:", err);
