@@ -16,6 +16,30 @@ import type {
 } from "@/types/checkout";
 import type { components } from "@/types/api/v1";
 
+const normalizeBaseUrl = (value?: string) =>
+  (value || "").trim().replace(/\/+$/, "");
+
+const resolveDirectApiBaseUrl = () => {
+  const configured = normalizeBaseUrl(
+    import.meta.env.VITE_API_BASE_URL as string | undefined,
+  );
+
+  if (typeof window !== "undefined") {
+    const isProductionHost =
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    // On deployed frontend, prefer same-origin `/api/*` so platform rewrites/proxies handle CORS.
+    if (isProductionHost) {
+      return "";
+    }
+  }
+
+  return configured;
+};
+
+const DIRECT_API_BASE_URL = resolveDirectApiBaseUrl();
+
 interface GetMyOrdersParams {
   Status?: OrderStatus;
   Type?: OrderType;
@@ -663,7 +687,7 @@ class OrderService {
       }
 
       const accessToken = getStoredAccessToken();
-      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests${query.size ? `?${query.toString()}` : ""}`;
+      const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests${query.size ? `?${query.toString()}` : ""}`;
 
       const response = await fetch(endpoint, {
         method: "GET",
@@ -763,7 +787,7 @@ class OrderService {
       }
 
       const accessToken = getStoredAccessToken();
-      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/my-requests${query.size ? `?${query.toString()}` : ""}`;
+      const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests/my-requests${query.size ? `?${query.toString()}` : ""}`;
 
       const response = await fetch(endpoint, {
         method: "GET",
@@ -1025,7 +1049,7 @@ class OrderService {
   ): Promise<string> {
     try {
       const accessToken = getStoredAccessToken();
-      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/${id}/refund`;
+      const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests/${id}/refund`;
 
       const requestBody: Record<string, string> = {
         refundMethod,
@@ -1087,7 +1111,7 @@ class OrderService {
     }
 
     const accessToken = getStoredAccessToken();
-    const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/videos/temporary`;
+    const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests/videos/temporary`;
     let lastErrorMessage = "Không thể tải tệp đính kèm tạm thời";
 
     const tryUpload = async (
@@ -1163,7 +1187,7 @@ class OrderService {
     }
 
     // Backward-compatible fallback for older return media endpoint contracts.
-    const fallbackEndpoint = `${import.meta.env.VITE_API_BASE_URL}/api/orderreturnrequests/images/temporary`;
+    const fallbackEndpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests/images/temporary`;
     const fallback = await tryUpload((fileList) => {
       const formData = new FormData();
       fileList.forEach((file) => {
