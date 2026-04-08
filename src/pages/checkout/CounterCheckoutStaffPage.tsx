@@ -170,7 +170,7 @@ type CartDisplaySyncPayload = {
 
 type FailedPaymentAction = {
   orderId: string;
-  paymentId: string;
+  paymentId?: string;
   message: string;
 };
 
@@ -183,6 +183,9 @@ const toSafeNumber = (value: unknown) => {
   const num = Number(value ?? 0);
   return Number.isFinite(num) ? num : 0;
 };
+
+const isHttpUrl = (value?: string | null) =>
+  /^https?:\/\//i.test((value || "").trim());
 
 export const CounterCheckoutStaffPage = () => {
   const { showToast } = useToast();
@@ -250,8 +253,12 @@ export const CounterCheckoutStaffPage = () => {
   const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null);
   const paymentQrUrlRef = useRef<string | null>(null);
   const handledPaymentEventRef = useRef<string>("");
+  const handledPaymentFailedEventRef = useRef<string>("");
+  const syncCartToCustomerRef = useRef(syncCartToCustomer);
   const [failedPaymentAction, setFailedPaymentAction] =
     useState<FailedPaymentAction | null>(null);
+  const [isResolvingFailedPayment, setIsResolvingFailedPayment] =
+    useState(false);
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
   const [isStaffCancelDialogOpen, setIsStaffCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
@@ -282,6 +289,10 @@ export const CounterCheckoutStaffPage = () => {
   useEffect(() => {
     paymentQrUrlRef.current = paymentQrUrl;
   }, [paymentQrUrl]);
+
+  useEffect(() => {
+    syncCartToCustomerRef.current = syncCartToCustomer;
+  }, [syncCartToCustomer]);
 
   useEffect(() => {
     if (!paymentCompletedData) return;
@@ -318,7 +329,7 @@ export const CounterCheckoutStaffPage = () => {
     setPaymentQrUrl(null);
     setCheckoutSuccessRef(rawOrderId);
 
-    void syncCartToCustomer({
+    void syncCartToCustomerRef.current({
       items: [],
       subTotal: 0,
       discount: 0,
@@ -335,24 +346,32 @@ export const CounterCheckoutStaffPage = () => {
     setVoucherInput("");
     setAppliedVoucherCode("");
     handleClearSelectedCustomer();
-  }, [paymentCompletedData, syncCartToCustomer]);
+  }, [paymentCompletedData]);
 
   const handleRetryFailedPayment = async () => {
     if (!failedPaymentAction?.paymentId) {
-      showToast("Không tìm thấy paymentId để retry", "warning");
+      showToast("Không tìm thấy paymentId để thử lại", "warning");
       return;
     }
 
     try {
       setIsRetryingPayment(true);
+      // Allow re-processing the same fail/success DTO after a new retry attempt.
+      handledPaymentFailedEventRef.current = "";
+      handledPaymentEventRef.current = "";
+
       const result = await orderService.retryPayment(
         failedPaymentAction.paymentId,
         paymentMethod,
+        POS_SESSION_ID,
       );
 
-      if (result.url) {
-        paymentQrUrlRef.current = result.url;
-        setPaymentQrUrl(result.url);
+      const retryPayload = (result.url || result.orderId || "").trim();
+      const isOnlineRedirect = isHttpUrl(retryPayload);
+
+      if (isOnlineRedirect) {
+        paymentQrUrlRef.current = retryPayload;
+        setPaymentQrUrl(retryPayload);
 
         const currentPayload = previewData
           ? toCartDisplaySyncPayload(previewData)
@@ -378,20 +397,69 @@ export const CounterCheckoutStaffPage = () => {
               paymentUrl: null,
             };
 
-        void syncCartToCustomer({
+        void syncCartToCustomerRef.current({
           ...currentPayload,
-          paymentUrl: result.url,
+          paymentUrl: retryPayload,
         } satisfies CartDisplaySyncPayload);
 
         showToast("Đã tạo lại giao dịch thanh toán", "success");
         return;
       }
 
-      setCheckoutSuccessRef(failedPaymentAction.orderId);
-      setFailedPaymentAction(null);
+      if (paymentMethod === "CashInStore") {
+        try {
+          await orderService.confirmPayment(
+            failedPaymentAction.paymentId,
+            true,
+          );
+        } catch {
+          // Continue with order-status fallback when confirm API is not required or fails.
+        }
+      }
+
+      try {
+        const order = await orderService.getOrderById(
+          failedPaymentAction.orderId,
+        );
+        const rawPaymentStatus =
+          ((order as unknown as Record<string, unknown>).paymentStatus as
+            | string
+            | undefined) ||
+          ((order as unknown as Record<string, unknown>).PaymentStatus as
+            | string
+            | undefined) ||
+          "";
+
+        const paymentStatus = rawPaymentStatus.toLowerCase();
+        if (
+          paymentStatus === "paid" ||
+          paymentStatus === "success" ||
+          paymentStatus === "completed"
+        ) {
+          setCheckoutSuccessRef(failedPaymentAction.orderId);
+          setFailedPaymentAction(null);
+          return;
+        }
+
+        if (
+          paymentStatus === "failed" ||
+          paymentStatus === "cancelled" ||
+          paymentStatus === "canceled"
+        ) {
+          showToast("Thanh toán lại thất bại", "error");
+          return;
+        }
+      } catch {
+        // Fall through to neutral info message.
+      }
+
+      showToast(
+        "Đã gửi yêu cầu thanh toán lại. Vui lòng chờ hệ thống xác nhận.",
+        "info",
+      );
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : "Retry thanh toán thất bại",
+        error instanceof Error ? error.message : "Thanh toán lại thất bại",
         "error",
       );
     } finally {
@@ -927,6 +995,143 @@ export const CounterCheckoutStaffPage = () => {
     [cartItems],
   );
 
+  const toFallbackCartDisplaySyncPayload =
+    useCallback((): CartDisplaySyncPayload => {
+      const mappedItems = cartItems.map((item) => {
+        const subTotal = toSafeNumber(item.unitPrice * item.quantity);
+        return {
+          variantId: toGuidOrEmpty(item.variantId),
+          batchId: toGuidOrEmpty(item.batchId),
+          variantName: item.variantName,
+          batchCode: item.batchCode,
+          imageUrl: item.imageUrl || "",
+          quantity: Math.max(0, Number(item.quantity || 0)),
+          unitPrice: toSafeNumber(item.unitPrice),
+          subTotal,
+          discount: 0,
+          finalTotal: subTotal,
+        };
+      });
+
+      return {
+        items: mappedItems,
+        subTotal: toSafeNumber(localSubtotal),
+        discount: 0,
+        totalPrice: toSafeNumber(localSubtotal),
+        paymentUrl: paymentQrUrlRef.current,
+      };
+    }, [cartItems, localSubtotal]);
+
+  const extractPaymentIdFromOrder = useCallback((order: unknown): string => {
+    if (!order || typeof order !== "object") return "";
+
+    const raw = order as Record<string, unknown>;
+    const directPaymentId =
+      (raw.paymentId as string | undefined) ||
+      (raw.PaymentId as string | undefined) ||
+      "";
+
+    if (directPaymentId.trim()) {
+      return directPaymentId.trim();
+    }
+
+    const transactions =
+      (raw.paymentTransactions as unknown[] | undefined) ||
+      (raw.PaymentTransactions as unknown[] | undefined) ||
+      (raw.payments as unknown[] | undefined) ||
+      (raw.Payments as unknown[] | undefined) ||
+      [];
+
+    for (let i = transactions.length - 1; i >= 0; i -= 1) {
+      const tx = transactions[i];
+      if (!tx || typeof tx !== "object") continue;
+
+      const txRaw = tx as Record<string, unknown>;
+      const txId =
+        (txRaw.id as string | undefined) ||
+        (txRaw.Id as string | undefined) ||
+        (txRaw.paymentId as string | undefined) ||
+        (txRaw.PaymentId as string | undefined) ||
+        "";
+
+      if (txId.trim()) {
+        return txId.trim();
+      }
+    }
+
+    return "";
+  }, []);
+
+  const toOrderDetailsSyncPayload = useCallback(
+    (order: unknown): CartDisplaySyncPayload | null => {
+      if (!order || typeof order !== "object") return null;
+
+      const raw = order as Record<string, unknown>;
+      const details =
+        (raw.orderDetails as unknown[] | undefined) ||
+        (raw.OrderDetails as unknown[] | undefined) ||
+        [];
+
+      if (!Array.isArray(details) || details.length === 0) {
+        return null;
+      }
+
+      const mappedItems = details
+        .filter((item) => item && typeof item === "object")
+        .map((item) => {
+          const d = item as Record<string, unknown>;
+          const quantity = toSafeNumber(d.quantity ?? d.Quantity);
+          const unitPrice = toSafeNumber(d.unitPrice ?? d.UnitPrice);
+          const subTotal = toSafeNumber(
+            d.total ?? d.Total ?? unitPrice * quantity,
+          );
+
+          return {
+            variantId: toGuidOrEmpty(
+              (d.variantId as string | undefined) ||
+                (d.VariantId as string | undefined),
+            ),
+            batchId: toGuidOrEmpty(
+              (d.batchId as string | undefined) ||
+                (d.BatchId as string | undefined),
+            ),
+            variantName: (
+              (d.variantName as string | undefined) ||
+              (d.VariantName as string | undefined) ||
+              "Sản phẩm"
+            ).trim(),
+            batchCode:
+              (d.batchCode as string | undefined) ||
+              (d.BatchCode as string | undefined) ||
+              "",
+            imageUrl:
+              (d.imageUrl as string | undefined) ||
+              (d.ImageUrl as string | undefined) ||
+              "",
+            quantity,
+            unitPrice,
+            subTotal,
+            discount: 0,
+            finalTotal: subTotal,
+          };
+        });
+
+      const subTotal = mappedItems.reduce(
+        (sum, item) => sum + item.subTotal,
+        0,
+      );
+
+      return {
+        items: mappedItems,
+        subTotal,
+        discount: 0,
+        totalPrice: subTotal,
+        paymentUrl: null,
+      };
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!paymentFailedData) return;
 
@@ -947,6 +1152,17 @@ export const CounterCheckoutStaffPage = () => {
       (paymentFailedData as { PaymentId?: string }).PaymentId ||
       "";
     const status = rawStatus.toLowerCase();
+    const failedEventKey = [
+      rawOrderId,
+      rawPaymentId,
+      rawStatus,
+      rawMessage,
+    ].join(":");
+
+    if (handledPaymentFailedEventRef.current === failedEventKey) {
+      return;
+    }
+    handledPaymentFailedEventRef.current = failedEventKey;
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
@@ -954,24 +1170,57 @@ export const CounterCheckoutStaffPage = () => {
     showToast(rawMessage, "error");
 
     if (status === "failed" || status === "error" || status === "cancelled") {
-      if (rawOrderId && rawPaymentId) {
+      if (rawOrderId) {
         setFailedPaymentAction({
           orderId: rawOrderId,
-          paymentId: rawPaymentId,
+          paymentId: rawPaymentId || undefined,
           message: rawMessage,
         });
+
+        void (async () => {
+          try {
+            setIsResolvingFailedPayment(true);
+            const order = await orderService.getOrderById(rawOrderId);
+            const resolvedPaymentId =
+              rawPaymentId || extractPaymentIdFromOrder(order);
+
+            setFailedPaymentAction((prev) => {
+              if (!prev || prev.orderId !== rawOrderId) return prev;
+              return {
+                ...prev,
+                paymentId: resolvedPaymentId || prev.paymentId,
+              };
+            });
+
+            const orderPayload = toOrderDetailsSyncPayload(order);
+            if (orderPayload) {
+              void syncCartToCustomerRef.current(orderPayload);
+            }
+          } catch {
+            // Keep failed UI, retry button will stay disabled until paymentId is available.
+          } finally {
+            setIsResolvingFailedPayment(false);
+          }
+        })();
       }
     }
 
     if (previewData) {
-      void syncCartToCustomer(toCartDisplaySyncPayload(previewData));
+      void syncCartToCustomerRef.current(toCartDisplaySyncPayload(previewData));
+    } else {
+      void syncCartToCustomerRef.current({
+        ...toFallbackCartDisplaySyncPayload(),
+        paymentUrl: null,
+      });
     }
   }, [
     paymentFailedData,
     previewData,
     showToast,
-    syncCartToCustomer,
+    extractPaymentIdFromOrder,
     toCartDisplaySyncPayload,
+    toOrderDetailsSyncPayload,
+    toFallbackCartDisplaySyncPayload,
   ]);
 
   useEffect(() => {
@@ -979,7 +1228,7 @@ export const CounterCheckoutStaffPage = () => {
       setPreviewData(null);
       setPreviewError("");
       setIsPreviewLoading(false);
-      void syncCartToCustomer({
+      void syncCartToCustomerRef.current({
         items: [],
         subTotal: 0,
         discount: 0,
@@ -988,6 +1237,9 @@ export const CounterCheckoutStaffPage = () => {
       } satisfies CartDisplaySyncPayload);
       return;
     }
+
+    // Sync local cart ngay khi thay đổi để màn khách hiển thị tức thì.
+    void syncCartToCustomerRef.current(toFallbackCartDisplaySyncPayload());
 
     let isCancelled = false;
 
@@ -998,7 +1250,7 @@ export const CounterCheckoutStaffPage = () => {
         if (!isCancelled) {
           setPreviewData(data);
           setPreviewError("");
-          void syncCartToCustomer(toCartDisplaySyncPayload(data));
+          void syncCartToCustomerRef.current(toCartDisplaySyncPayload(data));
         }
       } catch (error) {
         if (!isCancelled) {
@@ -1019,7 +1271,11 @@ export const CounterCheckoutStaffPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [debouncedPreviewPayload, syncCartToCustomer, toCartDisplaySyncPayload]);
+  }, [
+    debouncedPreviewPayload,
+    toCartDisplaySyncPayload,
+    toFallbackCartDisplaySyncPayload,
+  ]);
 
   useEffect(() => {
     setPaymentMethod(isPickupInStore ? "CashInStore" : "CashOnDelivery");
@@ -1171,7 +1427,7 @@ export const CounterCheckoutStaffPage = () => {
               paymentUrl: null,
             };
 
-        void syncCartToCustomer({
+        void syncCartToCustomerRef.current({
           ...currentPayload,
           paymentUrl: result.url,
         } satisfies CartDisplaySyncPayload);
@@ -1747,17 +2003,25 @@ export const CounterCheckoutStaffPage = () => {
 
                 {failedPaymentAction ? (
                   <>
-                    <Alert severity="error" sx={{ mt: 1.5 }}>
-                      {failedPaymentAction.message}
-                    </Alert>
                     <Typography
                       variant="body2"
                       color="text.secondary"
                       sx={{ mt: 1 }}
                     >
                       Đơn {failedPaymentAction.orderId} thanh toán lỗi. Bạn có
-                      thể đổi phương thức và retry hoặc hủy đơn.
+                      thể đổi phương thức và thử lại hoặc hủy đơn.
                     </Typography>
+                    {!failedPaymentAction.paymentId && (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ mt: 0.75, display: "block" }}
+                      >
+                        {isResolvingFailedPayment
+                          ? "Đang tải paymentId từ đơn hàng..."
+                          : "Chưa lấy được paymentId để thử lại, vui lòng đợi hoặc thử lại."}
+                      </Typography>
+                    )}
                     <Stack
                       direction={{ xs: "column", sm: "row" }}
                       spacing={1.25}
@@ -1768,11 +2032,16 @@ export const CounterCheckoutStaffPage = () => {
                         size="large"
                         fullWidth
                         onClick={handleRetryFailedPayment}
-                        disabled={isRetryingPayment || isCancellingOrder}
+                        disabled={
+                          isRetryingPayment ||
+                          isCancellingOrder ||
+                          isResolvingFailedPayment ||
+                          !failedPaymentAction.paymentId
+                        }
                       >
                         {isRetryingPayment
-                          ? "Đang retry..."
-                          : "Retry thanh toán"}
+                          ? "Đang thanh toán lại..."
+                          : " Thanh toán lại"}
                       </Button>
                       <Button
                         variant="outlined"

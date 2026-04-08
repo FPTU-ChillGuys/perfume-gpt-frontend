@@ -6,6 +6,7 @@ import { isTokenExpired } from "@/utils/jwt";
 type UseSignalROptions = {
   hubUrl: string;
   sessionId: string;
+  requireAuth?: boolean;
 };
 
 export type PosPaymentCompletedPayload = {
@@ -148,9 +149,18 @@ const getValidSignalRToken = (): string => {
   return token;
 };
 
+const LOCAL_SYNC_KEY_PREFIX = "pos:customer-display:";
+const LOCAL_SYNC_CHANNEL_PREFIX = "pos-customer-display:";
+
+type LocalSyncEnvelope = {
+  payload: unknown;
+  ts: number;
+};
+
 export const useSignalR = <T = unknown>({
   hubUrl,
   sessionId,
+  requireAuth = true,
 }: UseSignalROptions) => {
   const [customerDisplayData, setCustomerDisplayData] = useState<T | null>(
     null,
@@ -169,6 +179,35 @@ export const useSignalR = <T = unknown>({
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const startPromiseRef = useRef<Promise<void> | null>(null);
   const pendingSyncPayloadRef = useRef<unknown | null>(null);
+  const requireAuthRef = useRef(requireAuth);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+
+  const localSyncKey = `${LOCAL_SYNC_KEY_PREFIX}${sessionId}`;
+  const localSyncChannelName = `${LOCAL_SYNC_CHANNEL_PREFIX}${sessionId}`;
+
+  const publishLocalSync = useCallback(
+    (payload: unknown) => {
+      if (typeof window === "undefined") return;
+
+      const envelope: LocalSyncEnvelope = {
+        payload,
+        ts: Date.now(),
+      };
+
+      try {
+        window.localStorage.setItem(localSyncKey, JSON.stringify(envelope));
+      } catch {
+        // Ignore localStorage quota/access errors.
+      }
+
+      try {
+        broadcastChannelRef.current?.postMessage(envelope);
+      } catch {
+        // Ignore BroadcastChannel post errors.
+      }
+    },
+    [localSyncKey],
+  );
 
   const invokeSyncToCustomer = useCallback(
     async (payload: unknown) => {
@@ -203,9 +242,10 @@ export const useSignalR = <T = unknown>({
   const syncCartToCustomer = useCallback(
     async (cartData: unknown) => {
       pendingSyncPayloadRef.current = cartData;
+      publishLocalSync(cartData);
       await invokeSyncToCustomer(cartData);
     },
-    [invokeSyncToCustomer],
+    [invokeSyncToCustomer, publishLocalSync],
   );
 
   const notifyPaymentSuccess = useCallback(
@@ -230,13 +270,74 @@ export const useSignalR = <T = unknown>({
 
   useEffect(() => {
     let isMounted = true;
+    requireAuthRef.current = requireAuth;
+    let cleanupLocal: (() => void) | undefined;
+
+    if (typeof window !== "undefined") {
+      if (typeof BroadcastChannel !== "undefined") {
+        broadcastChannelRef.current = new BroadcastChannel(
+          localSyncChannelName,
+        );
+      }
+
+      const handleLocalEnvelope = (envelope: LocalSyncEnvelope | null) => {
+        if (!envelope || !isMounted) return;
+        setCustomerDisplayData(envelope.payload as T);
+        setLastEvent("received-local-sync");
+      };
+
+      const onStorage = (event: StorageEvent) => {
+        if (event.key !== localSyncKey || !event.newValue) return;
+
+        try {
+          const parsed = JSON.parse(event.newValue) as LocalSyncEnvelope;
+          handleLocalEnvelope(parsed);
+        } catch {
+          // Ignore invalid local sync payload.
+        }
+      };
+
+      const onChannelMessage = (event: MessageEvent<LocalSyncEnvelope>) => {
+        handleLocalEnvelope(event.data);
+      };
+
+      window.addEventListener("storage", onStorage);
+      broadcastChannelRef.current?.addEventListener(
+        "message",
+        onChannelMessage,
+      );
+
+      try {
+        const existing = window.localStorage.getItem(localSyncKey);
+        if (existing) {
+          const parsed = JSON.parse(existing) as LocalSyncEnvelope;
+          handleLocalEnvelope(parsed);
+        }
+      } catch {
+        // Ignore restore errors.
+      }
+
+      cleanupLocal = () => {
+        window.removeEventListener("storage", onStorage);
+        if (broadcastChannelRef.current) {
+          broadcastChannelRef.current.removeEventListener(
+            "message",
+            onChannelMessage,
+          );
+          broadcastChannelRef.current.close();
+          broadcastChannelRef.current = null;
+        }
+      };
+    }
 
     if (!sessionId.trim()) {
       setIsConnected(false);
       setConnectionState(signalR.HubConnectionState.Disconnected);
       setLastEvent("missing-session-id");
       setError(null);
-      return;
+      return () => {
+        cleanupLocal?.();
+      };
     }
 
     const setSafeConnectionState = (
@@ -256,7 +357,7 @@ export const useSignalR = <T = unknown>({
         );
         const accessToken = getValidSignalRToken();
 
-        if (!accessToken) {
+        if (requireAuthRef.current && !accessToken) {
           if (isMounted) {
             setError(
               "Thiếu access token để kết nối POS Hub. Vui lòng đăng nhập lại.",
@@ -309,14 +410,19 @@ export const useSignalR = <T = unknown>({
             shouldBypassNgrokWarning = false;
           }
 
+          const connectionOptions: signalR.IHttpConnectionOptions = {
+            headers: shouldBypassNgrokWarning
+              ? { "ngrok-skip-browser-warning": "true" }
+              : undefined,
+            transport: signalR.HttpTransportType.LongPolling,
+          };
+
+          if (requireAuthRef.current) {
+            connectionOptions.accessTokenFactory = () => getValidSignalRToken();
+          }
+
           const connection = new signalR.HubConnectionBuilder()
-            .withUrl(candidateUrl, {
-              accessTokenFactory: () => getValidSignalRToken(),
-              headers: shouldBypassNgrokWarning
-                ? { "ngrok-skip-browser-warning": "true" }
-                : undefined,
-              transport: signalR.HttpTransportType.LongPolling,
-            })
+            .withUrl(candidateUrl, connectionOptions)
             .configureLogging(signalR.LogLevel.None)
             .withAutomaticReconnect()
             .build();
@@ -491,6 +597,7 @@ export const useSignalR = <T = unknown>({
 
     return () => {
       isMounted = false;
+      cleanupLocal?.();
 
       const cleanup = async () => {
         const connection = connectionRef.current;
@@ -528,7 +635,14 @@ export const useSignalR = <T = unknown>({
 
       void cleanup();
     };
-  }, [hubUrl, invokeSyncToCustomer, sessionId]);
+  }, [
+    hubUrl,
+    invokeSyncToCustomer,
+    localSyncChannelName,
+    localSyncKey,
+    requireAuth,
+    sessionId,
+  ]);
 
   return {
     customerDisplayData,

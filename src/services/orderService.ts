@@ -1655,6 +1655,7 @@ class OrderService {
   async retryPayment(
     paymentId: string,
     method: PaymentMethod,
+    posSessionId?: string,
   ): Promise<CheckoutResponse> {
     try {
       const response = await apiInstance.POST(
@@ -1667,6 +1668,7 @@ class OrderService {
           },
           body: {
             method,
+            posSessionId: posSessionId || null,
           },
         },
       );

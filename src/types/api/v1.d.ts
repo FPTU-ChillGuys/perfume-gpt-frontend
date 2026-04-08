@@ -13970,6 +13970,7 @@ export interface components {
         };
         PaymentInformation: {
             method?: components["schemas"]["PaymentMethod"];
+            posSessionId?: null | string;
         };
         /** @enum {string} */
         PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer" | "PayOs";

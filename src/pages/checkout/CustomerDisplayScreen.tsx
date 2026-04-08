@@ -45,6 +45,7 @@ export const CustomerDisplayScreen = () => {
     useSignalR<PosPreviewResponse>({
       hubUrl: POS_HUB_URL,
       sessionId: "COUNTER_01",
+      requireAuth: false,
     });
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
