@@ -110,6 +110,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
   ExternalBankTransfer: "Chuyển khoản ngân hàng",
+  PayOs: "Thanh toán qua PayOS",
 };
 
 const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
@@ -118,6 +119,7 @@ const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
   VnPay: vnpayIcon,
   Momo: momoIcon,
   ExternalBankTransfer: transericon,
+  PayOs: transericon,
 };
 
 const RETRY_PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [

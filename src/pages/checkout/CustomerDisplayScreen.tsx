@@ -23,10 +23,11 @@ type DisplayItem = {
 };
 
 export const CustomerDisplayScreen = () => {
-  const { customerDisplayData, isConnected } = useSignalR<PosPreviewResponse>({
-    hubUrl: POS_HUB_URL,
-    sessionId: "COUNTER_01",
-  });
+  const { customerDisplayData, isConnected, paymentCompletedData } =
+    useSignalR<PosPreviewResponse>({
+      hubUrl: POS_HUB_URL,
+      sessionId: "COUNTER_01",
+    });
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
   const previousItemCountRef = useRef(0);
@@ -188,6 +189,17 @@ export const CustomerDisplayScreen = () => {
       window.clearTimeout(timerId);
     };
   }, [showCheckoutSuccess]);
+
+  useEffect(() => {
+    if (!paymentCompletedData) return;
+
+    if ((paymentCompletedData.status || "").toLowerCase() !== "success") {
+      return;
+    }
+
+    setActivePaymentUrl("");
+    setShowCheckoutSuccess(true);
+  }, [paymentCompletedData]);
 
   return (
     <div className="h-screen w-full overflow-hidden bg-slate-950 text-white">

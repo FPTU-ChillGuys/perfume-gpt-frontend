@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
@@ -9,10 +9,10 @@ import {
   Divider,
   CircularProgress,
   Stack,
-  Chip,
 } from "@mui/material";
 import { CheckCircle } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
+import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 
 const formatCurrency = (value?: string | number) => {
   const numValue =
@@ -32,10 +32,19 @@ const formatDateTime = (dateStr?: string) => {
   return `${day}/${month}/${year} ${hour}:${minute}:${second}`;
 };
 
+const extractPosSessionIdFromOrderInfo = (orderInfo?: string | null) => {
+  const decoded = decodeURIComponent(orderInfo || "").trim();
+  if (!decoded) return "";
+
+  const match = decoded.match(/PosSessionId\s*:\s*([A-Za-z0-9_-]+)/i);
+  return match?.[1]?.trim() || "";
+};
+
 export const PaymentSuccessPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
+  const isPaymentSignalSentRef = useRef(false);
 
   useEffect(() => {
     // Simulate loading time
@@ -47,6 +56,15 @@ export const PaymentSuccessPage = () => {
   }, []);
 
   const orderId = searchParams.get("orderId");
+  const paymentId =
+    searchParams.get("paymentId") || searchParams.get("vnp_TxnRef");
+  const orderInfo = searchParams.get("vnp_OrderInfo");
+  const posSessionIdFromOrderInfo = extractPosSessionIdFromOrderInfo(orderInfo);
+  const posSessionId =
+    searchParams.get("sessionId") ||
+    searchParams.get("posSessionId") ||
+    posSessionIdFromOrderInfo;
+  const responseCode = searchParams.get("vnp_ResponseCode");
   const source = searchParams.get("source");
   const isCheckoutSuccess = source === "checkout";
   const amount = searchParams.get("vnp_Amount");
@@ -54,7 +72,46 @@ export const PaymentSuccessPage = () => {
   const cardType = searchParams.get("vnp_CardType");
   const payDate = searchParams.get("vnp_PayDate");
   const transactionNo = searchParams.get("vnp_TransactionNo");
-  const orderInfo = searchParams.get("vnp_OrderInfo");
+
+  const { isConnected, notifyPaymentSuccess } = useSignalR({
+    hubUrl: POS_HUB_URL,
+    sessionId: posSessionId,
+  });
+
+  useEffect(() => {
+    const isSuccess = !responseCode || responseCode === "00";
+
+    if (
+      !isSuccess ||
+      !posSessionId ||
+      !orderId ||
+      isPaymentSignalSentRef.current
+    ) {
+      return;
+    }
+
+    if (!isConnected) {
+      return;
+    }
+
+    isPaymentSignalSentRef.current = true;
+
+    void notifyPaymentSuccess({
+      orderId,
+      paymentId: paymentId || undefined,
+      status: "Success",
+      message: "Thanh toán thành công",
+    }).catch(() => {
+      isPaymentSignalSentRef.current = false;
+    });
+  }, [
+    isConnected,
+    notifyPaymentSuccess,
+    orderId,
+    paymentId,
+    posSessionId,
+    responseCode,
+  ]);
 
   if (isLoading) {
     return (

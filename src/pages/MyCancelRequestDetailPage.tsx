@@ -55,6 +55,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
   ExternalBankTransfer: "Chuyển khoản ngân hàng",
+  PayOs: "Thanh toán qua PayOS",
 };
 
 export const MyCancelRequestDetailPage = () => {

@@ -42,6 +42,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   VnPay: "VNPay",
   Momo: "MoMo",
   ExternalBankTransfer: "Chuyển khoản ngân hàng",
+  PayOs: "PayOS",
 };
 
 const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {

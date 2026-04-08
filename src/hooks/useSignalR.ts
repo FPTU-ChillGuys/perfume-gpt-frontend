@@ -8,6 +8,13 @@ type UseSignalROptions = {
   sessionId: string;
 };
 
+export type PosPaymentCompletedPayload = {
+  orderId: string;
+  paymentId?: string;
+  status: string;
+  message: string;
+};
+
 const resolvePosHubUrl = () => {
   const explicitHubUrl = (
     (import.meta.env.VITE_POS_HUB_URL as string | undefined) ||
@@ -154,6 +161,8 @@ export const useSignalR = <T = unknown>({
     signalR.HubConnectionState.Disconnected,
   );
   const [lastEvent, setLastEvent] = useState("idle");
+  const [paymentCompletedData, setPaymentCompletedData] =
+    useState<PosPaymentCompletedPayload | null>(null);
 
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const startPromiseRef = useRef<Promise<void> | null>(null);
@@ -197,8 +206,36 @@ export const useSignalR = <T = unknown>({
     [invokeSyncToCustomer],
   );
 
+  const notifyPaymentSuccess = useCallback(
+    async (payload: PosPaymentCompletedPayload) => {
+      if (!sessionId.trim()) {
+        throw new Error("Thiếu sessionId để gửi thông báo thanh toán");
+      }
+
+      const connection = connectionRef.current;
+
+      if (
+        !connection ||
+        connection.state !== signalR.HubConnectionState.Connected
+      ) {
+        throw new Error("SignalR chưa kết nối để gửi trạng thái thanh toán");
+      }
+
+      await connection.invoke("NotifyPaymentSuccess", sessionId, payload);
+    },
+    [sessionId],
+  );
+
   useEffect(() => {
     let isMounted = true;
+
+    if (!sessionId.trim()) {
+      setIsConnected(false);
+      setConnectionState(signalR.HubConnectionState.Disconnected);
+      setLastEvent("missing-session-id");
+      setError(null);
+      return;
+    }
 
     const setSafeConnectionState = (
       state: signalR.HubConnectionState,
@@ -287,6 +324,15 @@ export const useSignalR = <T = unknown>({
             setCustomerDisplayData(data);
             setLastEvent("received-update-customer-display");
           });
+
+          connection.on(
+            "PaymentCompleted",
+            (payload: PosPaymentCompletedPayload) => {
+              if (!isMounted) return;
+              setPaymentCompletedData(payload);
+              setLastEvent("received-payment-completed");
+            },
+          );
 
           connection.onclose((closeError) => {
             if (isMounted) {
@@ -475,10 +521,12 @@ export const useSignalR = <T = unknown>({
 
   return {
     customerDisplayData,
+    paymentCompletedData,
     isConnected,
     connectionState,
     lastEvent,
     error,
     syncCartToCustomer,
+    notifyPaymentSuccess,
   };
 };

@@ -95,6 +95,7 @@ const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   Momo: "MoMo",
   CashInStore: "Tiền mặt tại quầy",
   ExternalBankTransfer: "Chuyển khoản",
+  PayOs: "PayOS",
 };
 
 const PAYMENT_METHOD_ICON: Partial<Record<PaymentMethod, string>> = {
@@ -103,6 +104,7 @@ const PAYMENT_METHOD_ICON: Partial<Record<PaymentMethod, string>> = {
   VnPay: vnpayIcon,
   Momo: momoIcon,
   ExternalBankTransfer: transferIcon,
+  PayOs: transferIcon,
 };
 
 interface PosCartItem {
@@ -139,6 +141,7 @@ const getVariantKey = (variant: PosProductVariant) =>
 const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 const GUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const POS_SESSION_ID = "COUNTER_01";
 
 type CartDisplaySyncItem = {
   variantId: string;
@@ -173,10 +176,11 @@ const toSafeNumber = (value: unknown) => {
 
 export const CounterCheckoutStaffPage = () => {
   const { showToast } = useToast();
-  const { syncCartToCustomer } = useSignalR<PosPreviewResponse>({
-    hubUrl: POS_HUB_URL,
-    sessionId: "COUNTER_01",
-  });
+  const { syncCartToCustomer, paymentCompletedData } =
+    useSignalR<PosPreviewResponse>({
+      hubUrl: POS_HUB_URL,
+      sessionId: POS_SESSION_ID,
+    });
 
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchResults, setSearchResults] = useState<PosProductVariant[]>([]);
@@ -236,6 +240,7 @@ export const CounterCheckoutStaffPage = () => {
   const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null);
   const paymentQrUrlRef = useRef<string | null>(null);
   const [isPaymentQrOpen, setIsPaymentQrOpen] = useState(false);
+  const handledPaymentEventRef = useRef<string>("");
 
   const totalQuantityInCart = useMemo(
     () => cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
@@ -261,6 +266,46 @@ export const CounterCheckoutStaffPage = () => {
   useEffect(() => {
     paymentQrUrlRef.current = paymentQrUrl;
   }, [paymentQrUrl]);
+
+  useEffect(() => {
+    if (!paymentCompletedData) return;
+
+    const status = (paymentCompletedData.status || "").toLowerCase();
+    const eventKey = [
+      paymentCompletedData.orderId,
+      paymentCompletedData.paymentId,
+      paymentCompletedData.status,
+      paymentCompletedData.message,
+    ].join(":");
+
+    if (handledPaymentEventRef.current === eventKey) {
+      return;
+    }
+
+    handledPaymentEventRef.current = eventKey;
+
+    if (status !== "success") {
+      return;
+    }
+
+    paymentQrUrlRef.current = null;
+    setPaymentQrUrl(null);
+    setIsPaymentQrOpen(false);
+    setCheckoutSuccessRef(paymentCompletedData.orderId || "PAID");
+
+    void syncCartToCustomer({
+      items: [],
+      subTotal: 0,
+      discount: 0,
+      totalPrice: 0,
+      paymentUrl: null,
+    } satisfies CartDisplaySyncPayload);
+
+    showToast(
+      paymentCompletedData.message || "Đã xác nhận thanh toán thành công",
+      "success",
+    );
+  }, [paymentCompletedData, showToast, syncCartToCustomer]);
 
   const validateCheckoutInputs = () => {
     if (cartItems.length === 0) {
@@ -895,6 +940,7 @@ export const CounterCheckoutStaffPage = () => {
         method: paymentMethod,
       },
       expectedTotalPrice: expectedTotal,
+      posSessionId: POS_SESSION_ID,
       recipient: isPickupInStore
         ? null
         : {
