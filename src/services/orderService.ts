@@ -1421,13 +1421,6 @@ class OrderService {
     request: CreateInStoreOrderRequest,
   ): Promise<CheckoutResponse> {
     try {
-      console.log("[OrderService][checkoutInStore] request", {
-        paymentMethod: request.payment?.method,
-        expectedTotalPrice: request.expectedTotalPrice,
-        posSessionId: request.posSessionId,
-        scannedItemsCount: request.scannedItems?.length || 0,
-      });
-
       const response = await apiInstance.POST("/api/orders/checkout-in-store", {
         body: request,
       });
@@ -1453,22 +1446,15 @@ class OrderService {
 
       if (typeof payload === "string") {
         const isRedirectUrl = /^https?:\/\//i.test(payload);
-        const parsed = {
+        return {
           url: isRedirectUrl ? payload : undefined,
           orderId: isRedirectUrl ? undefined : payload,
           paymentId: undefined,
         };
-
-        console.log("[OrderService][checkoutInStore] response", {
-          rawPayload: payload,
-          parsed,
-        });
-
-        return parsed;
       }
 
       if (payload && typeof payload === "object") {
-        const parsed = {
+        return {
           url:
             payload.url ||
             payload.paymentUrl ||
@@ -1477,23 +1463,7 @@ class OrderService {
           orderId: payload.orderId || payload.OrderId,
           paymentId: payload.paymentId || payload.PaymentId,
         };
-
-        console.log("[OrderService][checkoutInStore] response", {
-          rawPayload: payload,
-          parsed,
-        });
-
-        return parsed;
       }
-
-      console.log("[OrderService][checkoutInStore] response", {
-        rawPayload: payload,
-        parsed: {
-          orderId: undefined,
-          url: undefined,
-          paymentId: undefined,
-        },
-      });
 
       return {
         orderId: undefined,
@@ -1860,12 +1830,6 @@ class OrderService {
         posSessionId: posSessionId || null,
       };
 
-      console.log("[OrderService][retryPayment] request", {
-        debugCallId: debugCallId || null,
-        paymentId,
-        payload: retryRequestPayload,
-      });
-
       const response = await apiInstance.POST(
         "/api/payments/{paymentId}/retry",
         {
@@ -1907,12 +1871,6 @@ class OrderService {
           paymentId: isRedirectUrl ? undefined : normalized,
         };
 
-        console.log("[OrderService][retryPayment] response", {
-          debugCallId: debugCallId || null,
-          rawPayload: payload,
-          parsed,
-        });
-
         return parsed;
       }
 
@@ -1927,24 +1885,8 @@ class OrderService {
           paymentId: payload.paymentId || payload.PaymentId,
         };
 
-        console.log("[OrderService][retryPayment] response", {
-          debugCallId: debugCallId || null,
-          rawPayload: payload,
-          parsed,
-        });
-
         return parsed;
       }
-
-      console.log("[OrderService][retryPayment] response", {
-        debugCallId: debugCallId || null,
-        rawPayload: payload,
-        parsed: {
-          url: undefined,
-          orderId: undefined,
-          paymentId: undefined,
-        },
-      });
 
       return {
         url: undefined,
@@ -1973,12 +1915,6 @@ class OrderService {
         failureReason,
       };
 
-      console.log("[OrderService][confirmPayment] request", {
-        debugCallId: debugCallId || null,
-        paymentId,
-        payload: confirmPayload,
-      });
-
       const response = await apiInstance.PUT(
         "/api/payments/{paymentId}/confirm",
         {
@@ -1994,12 +1930,6 @@ class OrderService {
       }
 
       const parsed = Boolean(response.data.payload);
-
-      console.log("[OrderService][confirmPayment] response", {
-        debugCallId: debugCallId || null,
-        paymentId,
-        success: parsed,
-      });
 
       return parsed;
     } catch (error: any) {

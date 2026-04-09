@@ -453,7 +453,6 @@ export const useSignalR = <T = unknown>({
             "PaymentCompleted",
             (payload: PosPaymentCompletedPayload) => {
               if (!isMounted) return;
-              console.log("[SignalR][PaymentCompleted] received", payload);
               setPaymentCompletedData(payload);
               setLastEvent("received-payment-completed");
             },
@@ -463,7 +462,6 @@ export const useSignalR = <T = unknown>({
             "PaymentFailed",
             (payload: PosPaymentCompletedPayload) => {
               if (!isMounted) return;
-              console.log("[SignalR][PaymentFailed] received", payload);
               setPaymentFailedData(payload);
               setLastEvent("received-payment-failed");
             },
@@ -473,7 +471,6 @@ export const useSignalR = <T = unknown>({
             "PaymentLinkUpdated",
             (payload: PosPaymentLinkPayload) => {
               if (!isMounted) return;
-              console.log("[SignalR][PaymentLinkUpdated] received", payload);
               setPaymentLinkUpdatedData(payload);
               setLastEvent("received-payment-link-updated");
             },
