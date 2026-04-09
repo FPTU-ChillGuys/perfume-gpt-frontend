@@ -66,7 +66,7 @@ import codIcon from "@/assets/cod.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
 import transferIcon from "@/assets/transfer.png";
-import payOsIcon from "@/assets/payos.png";
+import payOsIcon from "@/assets/payOs.png";
 
 const formatCurrency = (value?: number) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))}đ`;
