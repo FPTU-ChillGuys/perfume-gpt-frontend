@@ -315,8 +315,8 @@ export const LoginPage = () => {
           </Divider>
 
           {/* Social Login */}
-          <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+            <Box>
               <GoogleLogin
                 onSuccess={handleGoogleLoginSuccess}
                 onError={handleGoogleLoginError}
@@ -326,22 +326,6 @@ export const LoginPage = () => {
                 text="continue_with"
               />
             </Box>
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<Facebook />}
-              sx={{
-                py: 0.8,
-                borderColor: "divider",
-                color: "text.primary",
-                "&:hover": {
-                  borderColor: "divider",
-                  bgcolor: "action.hover",
-                },
-              }}
-            >
-              Facebook
-            </Button>
           </Box>
 
           {/* Sign Up Link */}

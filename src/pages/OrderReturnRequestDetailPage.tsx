@@ -114,6 +114,7 @@ const shippingStatusLabel = (status?: string | null) => {
   if (!status) return "-";
 
   if (status === "Pending") return "Chờ lấy hàng";
+  if (status === "UnAssigned") return "Chờ lấy hàng";
   if (status === "ReadyToPick") return "Chờ lấy hàng";
   if (status === "PickedUp") return "Đã lấy hàng";
   if (status === "InTransit") return "Đang vận chuyển";
@@ -154,7 +155,7 @@ const returnReasonLabel = (reason?: string | null) => {
 };
 
 const returnOptionLabel = (isRefundOnly?: boolean | null) =>
-  isRefundOnly ? "Hoàn trả (Không trả hàng)" : "Trả hàng/Hoàn trả";
+  isRefundOnly ? "Hoàn tiền (Không trả hàng)" : "Trả hàng & Hoàn tiền";
 
 const formatDate = (value?: string | null) => formatDateTimeVN(value);
 
