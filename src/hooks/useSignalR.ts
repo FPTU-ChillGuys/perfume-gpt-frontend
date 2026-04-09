@@ -277,6 +277,13 @@ export const useSignalR = <T = unknown>({
     [sessionId],
   );
 
+  const clearPaymentSignalREvents = useCallback(() => {
+    setPaymentCompletedData(null);
+    setPaymentFailedData(null);
+    setPaymentLinkUpdatedData(null);
+    setLastEvent("payment-events-cleared");
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     requireAuthRef.current = requireAuth;
@@ -676,5 +683,6 @@ export const useSignalR = <T = unknown>({
     error,
     syncCartToCustomer,
     notifyPaymentSuccess,
+    clearPaymentSignalREvents,
   };
 };

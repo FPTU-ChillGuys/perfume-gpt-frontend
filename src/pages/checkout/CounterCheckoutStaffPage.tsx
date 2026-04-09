@@ -169,8 +169,6 @@ type CartDisplaySyncPayload = {
   discount: number;
   totalPrice: number;
   paymentUrl?: string | null;
-  checkoutStatus?: string | null;
-  checkoutOrderId?: string | null;
 };
 
 type FailedPaymentAction = {
@@ -229,6 +227,7 @@ export const CounterCheckoutStaffPage = () => {
     paymentFailedData,
     paymentLinkUpdatedData,
     notifyPaymentSuccess,
+    clearPaymentSignalREvents,
   } = useSignalR<PosPreviewResponse>({
     hubUrl: POS_HUB_URL,
     sessionId: POS_SESSION_ID,
@@ -440,6 +439,12 @@ export const CounterCheckoutStaffPage = () => {
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
     setFailedPaymentAction(null);
+    handledPaymentEventRef.current = "";
+    handledPaymentFailedEventRef.current = "";
+    latestRetryOrderIdRef.current = "";
+    latestRetryPaymentIdRef.current = "";
+    lastPaidOrderIdRef.current = "";
+    clearPaymentSignalREvents();
 
     // Clear customer display ONLY when closing dialog
     void syncCartToCustomerRef.current({
@@ -448,95 +453,8 @@ export const CounterCheckoutStaffPage = () => {
       discount: 0,
       totalPrice: 0,
       paymentUrl: null,
-      checkoutStatus: null,
-      checkoutOrderId: null,
     } satisfies CartDisplaySyncPayload);
-  }, []);
-
-  const buildSuccessCartSyncPayload = useCallback(
-    (orderId: string): CartDisplaySyncPayload => {
-      if (previewData) {
-        const mappedItems = cartItems.map((cartItem) => {
-          const matchedPreviewItem = previewData.items?.find(
-            (previewItem) =>
-              previewItem.batchCode === cartItem.batchCode &&
-              (previewItem.variantId === cartItem.variantId ||
-                previewItem.variantName === cartItem.variantName),
-          );
-
-          const unitPrice = toSafeNumber(
-            matchedPreviewItem?.unitPrice ?? cartItem.unitPrice,
-          );
-          const subTotal = toSafeNumber(
-            matchedPreviewItem?.subTotal ?? unitPrice * cartItem.quantity,
-          );
-          const discount = toSafeNumber(matchedPreviewItem?.discount ?? 0);
-          const finalTotal = toSafeNumber(
-            matchedPreviewItem?.finalTotal ?? subTotal - discount,
-          );
-
-          return {
-            variantId: toGuidOrEmpty(cartItem.variantId),
-            batchId: toGuidOrEmpty(cartItem.batchId),
-            variantName: cartItem.variantName,
-            batchCode: cartItem.batchCode,
-            imageUrl: cartItem.imageUrl || "",
-            quantity: Math.max(0, Number(cartItem.quantity || 0)),
-            unitPrice,
-            subTotal,
-            discount,
-            finalTotal,
-          };
-        });
-
-        return {
-          items: mappedItems,
-          subTotal: toSafeNumber(previewData.subTotal),
-          discount: toSafeNumber(previewData.discount),
-          totalPrice: toSafeNumber(previewData.totalPrice),
-          paymentUrl: null,
-          checkoutStatus: "Success",
-          checkoutOrderId: orderId,
-        };
-      }
-
-      const mappedItems = cartItems.map((item) => {
-        const subTotal = toSafeNumber(item.unitPrice * item.quantity);
-        return {
-          variantId: toGuidOrEmpty(item.variantId),
-          batchId: toGuidOrEmpty(item.batchId),
-          variantName: item.variantName,
-          batchCode: item.batchCode,
-          imageUrl: item.imageUrl || "",
-          quantity: Math.max(0, Number(item.quantity || 0)),
-          unitPrice: toSafeNumber(item.unitPrice),
-          subTotal,
-          discount: 0,
-          finalTotal: subTotal,
-        };
-      });
-
-      const fallbackSubTotal = mappedItems.reduce(
-        (sum, item) => sum + item.subTotal,
-        0,
-      );
-      const fallbackTotal = mappedItems.reduce(
-        (sum, item) => sum + item.finalTotal,
-        0,
-      );
-
-      return {
-        items: mappedItems,
-        subTotal: toSafeNumber(fallbackSubTotal),
-        discount: 0,
-        totalPrice: toSafeNumber(fallbackTotal),
-        paymentUrl: null,
-        checkoutStatus: "Success",
-        checkoutOrderId: orderId,
-      };
-    },
-    [cartItems, previewData],
-  );
+  }, [clearPaymentSignalREvents]);
 
   const handleCashPaymentConfirm = useCallback(async () => {
     if (!pendingCheckoutPayload) return;
@@ -611,10 +529,6 @@ export const CounterCheckoutStaffPage = () => {
         showToast("Đã xác nhận thanh toán tiền mặt", "success");
         void openSuccessDialog(failedPaymentAction.orderId);
 
-        void syncCartToCustomerRef.current(
-          buildSuccessCartSyncPayload(failedPaymentAction.orderId),
-        );
-
         console.log("[POS][CashRetry] notifyPaymentSuccess invoke", {
           orderId: failedPaymentAction.orderId,
           paymentId: paymentIdForRetry,
@@ -671,10 +585,6 @@ export const CounterCheckoutStaffPage = () => {
       showToast("Thanh toán tiền mặt thành công!", "success");
       void openSuccessDialog(orderIdForInvoice);
 
-      void syncCartToCustomerRef.current(
-        buildSuccessCartSyncPayload(orderIdForInvoice),
-      );
-
       console.log("[POS][CashCheckout] notifyPaymentSuccess invoke", {
         orderId: orderIdForInvoice,
         paymentId: paymentIdForConfirm,
@@ -704,7 +614,6 @@ export const CounterCheckoutStaffPage = () => {
     cashReceived,
     cashDialogMode,
     failedPaymentAction,
-    buildSuccessCartSyncPayload,
     notifyPaymentSuccess,
     showToast,
     openSuccessDialog,
@@ -2107,10 +2016,6 @@ export const CounterCheckoutStaffPage = () => {
 
       showToast("Thanh toán thành công!", "success");
       void openSuccessDialog(orderIdForSuccess);
-
-      void syncCartToCustomerRef.current(
-        buildSuccessCartSyncPayload(orderIdForSuccess),
-      );
 
       console.log("[POS][Checkout] notifyPaymentSuccess invoke", {
         orderId: orderIdForSuccess,

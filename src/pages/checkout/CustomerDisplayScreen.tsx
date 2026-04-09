@@ -140,28 +140,6 @@ export const CustomerDisplayScreen = () => {
     ).trim();
   }, [customerDisplayData]);
 
-  const checkoutStatus = useMemo(() => {
-    return (
-      readProp<string>(
-        customerDisplayData,
-        "checkoutStatus",
-        "CheckoutStatus",
-      ) || ""
-    )
-      .trim()
-      .toLowerCase();
-  }, [customerDisplayData]);
-
-  const checkoutOrderIdFromSync = useMemo(() => {
-    return (
-      readProp<string>(
-        customerDisplayData,
-        "checkoutOrderId",
-        "CheckoutOrderId",
-      ) || ""
-    ).trim();
-  }, [customerDisplayData]);
-
   useEffect(() => {
     if (!paymentUrl) return;
 
@@ -271,40 +249,6 @@ export const CustomerDisplayScreen = () => {
       window.cancelAnimationFrame(frameId);
     };
   }, [displayPaymentUrl, items.length, paymentCompletedData]);
-
-  useEffect(() => {
-    if (
-      checkoutStatus !== "success" &&
-      checkoutStatus !== "paid" &&
-      checkoutStatus !== "completed"
-    ) {
-      return;
-    }
-
-    if (
-      checkoutOrderIdFromSync &&
-      checkoutOrderIdFromSync === lastSuccessfulOrderIdRef.current
-    ) {
-      return;
-    }
-
-    if (checkoutOrderIdFromSync) {
-      lastSuccessfulOrderIdRef.current = checkoutOrderIdFromSync;
-      lastFailedOrderIdRef.current = "";
-      latestPaymentOrderIdRef.current = "";
-      latestPaymentIdRef.current = "";
-    }
-
-    const frameId = window.requestAnimationFrame(() => {
-      setActivePaymentUrl("");
-      setSuccessOrderId(checkoutOrderIdFromSync || null);
-      setShowCheckoutSuccess(true);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, [checkoutOrderIdFromSync, checkoutStatus]);
 
   useEffect(() => {
     if (!paymentFailedData) return;
