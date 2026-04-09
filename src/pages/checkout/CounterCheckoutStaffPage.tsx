@@ -91,7 +91,6 @@ const DELIVERY_PAYMENT_METHODS: PaymentMethod[] = [
   "VnPay",
   "Momo",
   "PayOs",
-  "ExternalBankTransfer",
 ];
 
 const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
@@ -310,6 +309,20 @@ export const CounterCheckoutStaffPage = () => {
   const paymentMethodsByMode = isPickupInStore
     ? PICKUP_PAYMENT_METHODS
     : DELIVERY_PAYMENT_METHODS;
+
+  const selectablePaymentMethods = useMemo(
+    () =>
+      paymentMethodsByMode.filter(
+        (method) => method !== "ExternalBankTransfer",
+      ),
+    [paymentMethodsByMode],
+  );
+
+  useEffect(() => {
+    if (!selectablePaymentMethods.some((method) => method === paymentMethod)) {
+      setPaymentMethod(selectablePaymentMethods[0] ?? "CashInStore");
+    }
+  }, [paymentMethod, selectablePaymentMethods]);
 
   useEffect(() => {
     if (!checkoutSuccessRef) return;
@@ -1506,6 +1519,14 @@ export const CounterCheckoutStaffPage = () => {
       return;
     }
 
+    if (paymentMethod === "ExternalBankTransfer") {
+      showToast(
+        "Checkout tại quầy không hỗ trợ phương thức Chuyển khoản cho thanh toán lại",
+        "warning",
+      );
+      return;
+    }
+
     if (paymentMethod === "CashInStore") {
       setIsCashRetryConfirmOpen(true);
       return;
@@ -2154,7 +2175,7 @@ export const CounterCheckoutStaffPage = () => {
                   }}
                   sx={{ mt: 1.5 }}
                 >
-                  {paymentMethodsByMode.map((method) => (
+                  {selectablePaymentMethods.map((method) => (
                     <MenuItem key={method} value={method}>
                       {renderPaymentMethodOption(method)}
                     </MenuItem>

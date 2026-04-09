@@ -1963,6 +1963,34 @@ class OrderService {
       );
     }
   }
+
+  async deliverInStoreOrder(orderId: string): Promise<string> {
+    try {
+      const response = await apiInstance.PUT(
+        "/api/orders/{orderId}/deliver-in-store",
+        {
+          params: {
+            path: { orderId },
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to confirm in-store pickup",
+        );
+      }
+
+      return response.data.message || "Confirmed in-store pickup successfully";
+    } catch (error: any) {
+      console.error("Error confirming in-store pickup:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to confirm in-store pickup",
+      );
+    }
+  }
 }
 
 export const orderService = new OrderService();

@@ -133,6 +133,16 @@ const fmtDate = (s?: string | null) => {
   return formatDateTimeCompactVN(s);
 };
 
+const isSupportedPaymentMethod = (
+  value?: string | null,
+): value is PaymentMethod =>
+  value === "CashOnDelivery" ||
+  value === "CashInStore" ||
+  value === "VnPay" ||
+  value === "Momo" ||
+  value === "ExternalBankTransfer" ||
+  value === "PayOs";
+
 interface StepperProps {
   status: OrderStatus;
   createdAt?: string | null;
@@ -386,6 +396,10 @@ export const OrderManagementDetailPage = () => {
   const [swapDamageNote, setSwapDamageNote] = useState("");
   const [swappingBatchCode, setSwappingBatchCode] = useState("");
   const [isSwappingBatch, setIsSwappingBatch] = useState(false);
+  const [isInStoreCompletionDialogOpen, setIsInStoreCompletionDialogOpen] =
+    useState(false);
+  const [isCompletingInStorePickup, setIsCompletingInStorePickup] =
+    useState(false);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -532,6 +546,38 @@ export const OrderManagementDetailPage = () => {
 
     return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
   }, [order?.paymentTransactions]);
+
+  const latestPaymentTransaction = useMemo(
+    () =>
+      [...(order?.paymentTransactions ?? [])]
+        .reverse()
+        .find((transaction) => transaction?.id),
+    [order?.paymentTransactions],
+  );
+
+  const latestPaymentMethod = useMemo(
+    () =>
+      [...(order?.paymentTransactions ?? [])]
+        .reverse()
+        .find((transaction) => transaction?.paymentMethod)?.paymentMethod,
+    [order?.paymentTransactions],
+  );
+
+  const currentPaymentMethod = useMemo<PaymentMethod | null>(() => {
+    return isSupportedPaymentMethod(latestPaymentMethod)
+      ? latestPaymentMethod
+      : null;
+  }, [latestPaymentMethod]);
+
+  const paymentId = latestPaymentTransaction?.id ?? null;
+  const isPickupInStoreOrder = Boolean(
+    order &&
+      (order.type === "Offline" ||
+        (!order.recipientInfo && !order.shippingInfo)),
+  );
+  const canCompleteInStoreOrder =
+    order?.status === "ReadyToPick" && isPickupInStoreOrder;
+  const isCashInStoreOrderPayment = currentPaymentMethod === "CashInStore";
 
   const autoFulfillItems = useMemo<AutoFulfillItem[]>(() => {
     if (order?.status !== "Preparing") {
@@ -797,6 +843,62 @@ export const OrderManagementDetailPage = () => {
     } finally {
       setIsSyncingShipping(false);
     }
+  };
+
+  const completeInStorePickup = async () => {
+    if (!order?.id) {
+      return;
+    }
+
+    try {
+      setIsCompletingInStorePickup(true);
+
+      if (isCashInStoreOrderPayment) {
+        if (!paymentId) {
+          throw new Error("Không tìm thấy giao dịch để xác nhận đã thu tiền");
+        }
+
+        await orderService.confirmPayment(paymentId, true);
+        showToast("Đã xác nhận thu tiền tại quầy và hoàn tất đơn hàng", "success");
+      } else {
+        await orderService.deliverInStoreOrder(order.id);
+        showToast("Đã xác nhận khách nhận hàng tại cửa hàng", "success");
+      }
+
+      await loadOrder();
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Không thể xác nhận hoàn tất đơn nhận tại cửa hàng",
+        "error",
+      );
+    } finally {
+      setIsCompletingInStorePickup(false);
+    }
+  };
+
+  const handleCompleteInStoreAction = () => {
+    if (!canCompleteInStoreOrder) {
+      return;
+    }
+
+    if (isCashInStoreOrderPayment) {
+      if (!paymentId) {
+        showToast("Không tìm thấy giao dịch để xác nhận đã thu tiền", "error");
+        return;
+      }
+
+      setIsInStoreCompletionDialogOpen(true);
+      return;
+    }
+
+    void completeInStorePickup();
+  };
+
+  const handleConfirmCashInStoreCompletion = () => {
+    setIsInStoreCompletionDialogOpen(false);
+    void completeInStorePickup();
   };
 
   const toggleBatchDetails = (detailId?: string) => {
@@ -1447,7 +1549,11 @@ export const OrderManagementDetailPage = () => {
                           <Button
                             variant="contained"
                             onClick={handlePrepareOrder}
-                            disabled={isUpdating || isFulfilling}
+                            disabled={
+                              isUpdating ||
+                              isFulfilling ||
+                              isCompletingInStorePickup
+                            }
                             sx={{
                               bgcolor: "#2e7d32",
                               "&:hover": { bgcolor: "#1b5e20" },
@@ -1457,6 +1563,32 @@ export const OrderManagementDetailPage = () => {
                               ? "Đang xác nhận..."
                               : "Xác nhận đơn hàng"}
                           </Button>
+                        )}
+
+                        {canCompleteInStoreOrder && (
+                          <>
+                            <Alert severity="info">
+                              Đơn nhận tại cửa hàng đang ở trạng thái Chờ lấy
+                              hàng. Xác nhận khi khách đã đến nhận.
+                            </Alert>
+
+                            <Button
+                              variant="contained"
+                              color={
+                                isCashInStoreOrderPayment ? "warning" : "success"
+                              }
+                              onClick={handleCompleteInStoreAction}
+                              disabled={
+                                isUpdating ||
+                                isFulfilling ||
+                                isCompletingInStorePickup
+                              }
+                            >
+                              {isCompletingInStorePickup
+                                ? "Đang xác nhận..."
+                                : "Xác nhận khách đã nhận hàng"}
+                            </Button>
+                          </>
                         )}
 
                         {order.status === "Preparing" && !hasTrackingNumber && (
@@ -1697,7 +1829,11 @@ export const OrderManagementDetailPage = () => {
                                 variant="outlined"
                                 color="error"
                                 onClick={openCancelDialog}
-                                disabled={isUpdating || isFulfilling}
+                                disabled={
+                                  isUpdating ||
+                                  isFulfilling ||
+                                  isCompletingInStorePickup
+                                }
                                 sx={{ minWidth: 160 }}
                               >
                                 Hủy đơn hàng
@@ -1794,6 +1930,41 @@ export const OrderManagementDetailPage = () => {
           )}
         </Paper>
       </Box>
+
+      <Dialog
+        open={isInStoreCompletionDialogOpen}
+        onClose={() =>
+          !isCompletingInStorePickup && setIsInStoreCompletionDialogOpen(false)
+        }
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Xác nhận đã thu tiền tại quầy</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn xác nhận đã thu đủ số tiền <b>{fmt(total)}</b> cho đơn hàng <b>
+              {(order?.code || order?.id || orderId || "-").toUpperCase()}
+            </b>
+            ?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setIsInStoreCompletionDialogOpen(false)}
+            disabled={isCompletingInStorePickup}
+          >
+            Đóng
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleConfirmCashInStoreCompletion}
+            disabled={isCompletingInStorePickup}
+          >
+            {isCompletingInStorePickup ? "Đang xác nhận..." : "Xác nhận thu tiền"}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog
         open={isCancelDialogOpen}
