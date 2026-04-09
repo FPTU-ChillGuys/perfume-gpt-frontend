@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import {
+  Link as RouterLink,
+  useParams,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
 import {
   Alert,
   Autocomplete,
@@ -874,7 +879,10 @@ export const MyOrderDetailPage = () => {
     existing?: ReviewResponse | null,
   ) => {
     if (!orderDetailId || !variantId) return;
-    setReviewDialogMode(existing ? "edit" : "create");
+    if (existing) {
+      return;
+    }
+    setReviewDialogMode("create");
     setReviewDialogTarget({
       orderDetailId,
       variantId,
@@ -882,7 +890,7 @@ export const MyOrderDetailPage = () => {
       productName: variantName,
       thumbnailUrl: imageUrl ?? null,
     });
-    setSelectedReview(existing ?? null);
+    setSelectedReview(null);
     setIsReviewDialogOpen(true);
   };
 
@@ -1796,7 +1804,8 @@ export const MyOrderDetailPage = () => {
                   <Button
                     sx={{ mt: 2 }}
                     variant="outlined"
-                    onClick={() => navigate("/my-orders")}
+                    component={RouterLink}
+                    to="/my-orders"
                   >
                     Quay lại
                   </Button>
@@ -2161,6 +2170,7 @@ export const MyOrderDetailPage = () => {
                                           variant={
                                             existing ? "outlined" : "contained"
                                           }
+                                          disabled={Boolean(existing)}
                                           sx={
                                             existing
                                               ? {}
@@ -2181,7 +2191,9 @@ export const MyOrderDetailPage = () => {
                                             )
                                           }
                                         >
-                                          {existing ? "Chỉnh sửa" : "Đánh giá"}
+                                          {existing
+                                            ? "Đã đánh giá"
+                                            : "Đánh giá"}
                                         </Button>
                                       </Stack>
                                     </TableCell>

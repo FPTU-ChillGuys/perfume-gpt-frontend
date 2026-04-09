@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -995,7 +995,7 @@ const ProductDetailPage = () => {
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
-          <Button variant="contained" onClick={() => navigate("/")}>
+          <Button variant="contained" component={RouterLink} to="/">
             Quay lại trang chủ
           </Button>
         </Box>

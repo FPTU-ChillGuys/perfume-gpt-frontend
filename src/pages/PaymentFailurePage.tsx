@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Link as RouterLink,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Box,
   Container,
@@ -614,7 +618,8 @@ export const PaymentFailurePage = () => {
                     variant="contained"
                     color="error"
                     size="large"
-                    onClick={() => navigate("/checkout")}
+                    component={RouterLink}
+                    to="/checkout"
                     sx={{ minHeight: 44 }}
                   >
                     Về trang thanh toán
@@ -635,7 +640,8 @@ export const PaymentFailurePage = () => {
                   variant="outlined"
                   color="primary"
                   size="large"
-                  onClick={() => navigate("/")}
+                  component={RouterLink}
+                  to="/"
                   sx={{ minHeight: 44 }}
                 >
                   Về trang chủ

@@ -11,8 +11,17 @@ import {
   Alert,
   CircularProgress,
 } from "@mui/material";
-import { Visibility, VisibilityOff, ArrowBack, CheckCircle } from "@mui/icons-material";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Visibility,
+  VisibilityOff,
+  ArrowBack,
+  CheckCircle,
+} from "@mui/icons-material";
+import {
+  Link as RouterLink,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { authService } from "../services/authService";
 
 export const ResetPasswordPage = () => {
@@ -102,7 +111,8 @@ export const ResetPasswordPage = () => {
         <Button
           startIcon={<ArrowBack />}
           color="inherit"
-          onClick={() => navigate("/login")}
+          component={RouterLink}
+          to="/login"
           sx={{ fontWeight: 500 }}
         >
           QUAY LẠI ĐĂNG NHẬP
@@ -156,7 +166,8 @@ export const ResetPasswordPage = () => {
               <Button
                 variant="contained"
                 fullWidth
-                onClick={() => navigate("/forgot-password")}
+                component={RouterLink}
+                to="/forgot-password"
               >
                 Yêu cầu link mới
               </Button>
@@ -172,7 +183,8 @@ export const ResetPasswordPage = () => {
               <Button
                 variant="contained"
                 fullWidth
-                onClick={() => navigate("/login")}
+                component={RouterLink}
+                to="/login"
               >
                 Đăng nhập ngay
               </Button>
@@ -296,14 +308,11 @@ export const ResetPasswordPage = () => {
               >
                 Bạn đã nhớ mật khẩu?{" "}
                 <Link
-                  href="#"
+                  component={RouterLink}
+                  to="/login"
                   color="primary"
                   underline="hover"
                   fontWeight={600}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/login");
-                  }}
                 >
                   Đăng nhập ngay
                 </Link>

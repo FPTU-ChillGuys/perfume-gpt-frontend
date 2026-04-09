@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
   Box,
@@ -298,7 +298,8 @@ export const CartPage = () => {
         <Box display="flex" alignItems="center" gap={2} mb={4}>
           <Button
             startIcon={<ArrowBack />}
-            onClick={() => navigate("/")}
+            component={RouterLink}
+            to="/"
             variant="outlined"
             sx={{ minWidth: "auto" }}
           >
@@ -328,7 +329,8 @@ export const CartPage = () => {
             <Button
               variant="contained"
               color="error"
-              onClick={() => navigate("/")}
+              component={RouterLink}
+              to="/"
             >
               Khám phá ngay
             </Button>

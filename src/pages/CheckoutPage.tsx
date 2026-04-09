@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
@@ -47,6 +47,7 @@ import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
+import payOsIcon from "@/assets/payOs.png";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -80,6 +81,12 @@ const PAYMENT_METHODS: {
     label: "MoMo",
     description: "Thanh toán qua MoMo",
     icon: momoIcon,
+  },
+  {
+    value: "PayOs",
+    label: "PayOS",
+    description: "Thanh toán qua PayOS",
+    icon: payOsIcon,
   },
 ];
 
@@ -165,6 +172,10 @@ export const CheckoutPage = () => {
   useEffect(() => {
     setPaymentMethod(isPickupInStore ? "CashInStore" : "CashOnDelivery");
   }, [isPickupInStore]);
+
+  const allowedPaymentMethods: PaymentMethod[] = isPickupInStore
+    ? ["CashInStore", "VnPay", "Momo", "PayOs"]
+    : ["CashOnDelivery", "VnPay", "Momo"];
 
   // Update totals khi địa chỉ hoặc các thông tin liên quan thay đổi
   useEffect(() => {
@@ -555,7 +566,11 @@ export const CheckoutPage = () => {
       await refreshCart();
 
       // Handle payment redirect
-      if (paymentMethod === "VnPay" || paymentMethod === "Momo") {
+      if (
+        paymentMethod === "VnPay" ||
+        paymentMethod === "Momo" ||
+        paymentMethod === "PayOs"
+      ) {
         if (response.url) {
           window.location.href = response.url;
         } else {
@@ -605,7 +620,8 @@ export const CheckoutPage = () => {
           </Alert>
           <Button
             variant="contained"
-            onClick={() => navigate("/")}
+            component={RouterLink}
+            to="/"
             sx={{ mt: 2 }}
           >
             Tiếp tục mua sắm
@@ -621,7 +637,8 @@ export const CheckoutPage = () => {
         <Box display="flex" alignItems="center" gap={2} mb={4}>
           <Button
             startIcon={<ArrowBack />}
-            onClick={() => navigate("/cart")}
+            component={RouterLink}
+            to="/cart"
             variant="outlined"
             sx={{ minWidth: "auto" }}
           >
@@ -915,9 +932,7 @@ export const CheckoutPage = () => {
                 }
               >
                 {PAYMENT_METHODS.filter((m) =>
-                  isPickupInStore
-                    ? m.value !== "CashOnDelivery"
-                    : m.value !== "CashInStore",
+                  allowedPaymentMethods.includes(m.value),
                 ).map((method) => (
                   <FormControlLabel
                     key={method.value}

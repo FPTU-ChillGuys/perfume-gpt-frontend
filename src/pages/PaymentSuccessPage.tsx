@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Link as RouterLink,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Box,
   Container,
@@ -324,7 +328,8 @@ export const PaymentSuccessPage = () => {
                 variant="contained"
                 color="error"
                 size="large"
-                onClick={() => navigate("/")}
+                component={RouterLink}
+                to="/"
                 fullWidth
                 sx={{ minHeight: 44 }}
               >
@@ -335,9 +340,8 @@ export const PaymentSuccessPage = () => {
                   variant="outlined"
                   color="primary"
                   size="large"
-                  onClick={() =>
-                    navigate(orderId ? `/my-orders/${orderId}` : "/my-orders")
-                  }
+                  component={RouterLink}
+                  to={orderId ? `/my-orders/${orderId}` : "/my-orders"}
                   fullWidth
                   sx={{ minHeight: 44 }}
                 >

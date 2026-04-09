@@ -23,7 +23,7 @@ import {
   AssignmentReturn as ReturnIcon,
   Stars as LoyaltyIcon,
 } from "@mui/icons-material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import type { UserCredentials } from "@/services/userService";
 
@@ -106,6 +106,8 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
     >
       {/* User info */}
       <Box
+        component={RouterLink}
+        to="/profile"
         sx={{
           px: 3,
           pb: 2.5,
@@ -113,8 +115,9 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
           alignItems: "center",
           gap: 1.5,
           cursor: "pointer",
+          textDecoration: "none",
+          color: "inherit",
         }}
-        onClick={() => navigate("/profile")}
       >
         <Avatar
           sx={{
@@ -136,6 +139,8 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
             {displayName}
           </Typography>
           <Box
+            component={RouterLink}
+            to="/profile"
             sx={{
               display: "flex",
               alignItems: "center",
@@ -143,10 +148,10 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
               color: "text.secondary",
               cursor: "pointer",
               "&:hover": { color: "primary.main" },
+              textDecoration: "none",
             }}
             onClick={(e) => {
               e.stopPropagation();
-              navigate("/profile");
             }}
           >
             <EditIcon sx={{ fontSize: 12 }} />
@@ -190,13 +195,14 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
                     {item.children?.map((child) => (
                       <ListItemButton
                         key={child.path}
+                        component={RouterLink}
+                        to={child.path}
                         selected={isActive(
                           child.path,
                           "includeSubPaths" in child
                             ? child.includeSubPaths
                             : false,
                         )}
-                        onClick={() => navigate(child.path)}
                         sx={{
                           pl: 7,
                           py: 0.9,
@@ -247,8 +253,9 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
           return (
             <ListItemButton
               key={item.path}
+              component={RouterLink}
+              to={item.path!}
               selected={isActive(item.path!)}
-              onClick={() => navigate(item.path!)}
               sx={{
                 py: 1.2,
                 px: 3,

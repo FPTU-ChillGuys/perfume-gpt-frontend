@@ -10,7 +10,7 @@ import {
 import { useAuth } from "../hooks/useAuth";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { orderService } from "@/services/orderService";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import InventoryIcon from "@mui/icons-material/Inventory";
@@ -139,7 +139,8 @@ const StaffDashboard = () => {
                   key={link.path}
                   variant="outlined"
                   startIcon={link.icon}
-                  onClick={() => navigate(link.path)}
+                  component={RouterLink}
+                  to={link.path}
                 >
                   {link.label}
                 </Button>

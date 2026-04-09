@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -319,16 +319,18 @@ export const MyReturnRequestsPage = () => {
                           <Button
                             size="small"
                             variant="outlined"
-                            onClick={() => {
-                              if (!request.id) return;
-                              navigate(`/my-return-requests/${request.id}`, {
-                                state: {
-                                  status,
-                                  page,
-                                  pageSize,
-                                },
-                              });
+                            component={RouterLink}
+                            to={
+                              request.id
+                                ? `/my-return-requests/${request.id}`
+                                : "#"
+                            }
+                            state={{
+                              status,
+                              page,
+                              pageSize,
                             }}
+                            disabled={!request.id}
                             sx={{
                               borderColor: "#ee4d2d",
                               color: "#ee4d2d",

@@ -8,11 +8,10 @@ import {
   Alert,
 } from "@mui/material";
 import { CheckCircle, ErrorOutline, ArrowBack } from "@mui/icons-material";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { authService } from "../services/authService";
 
 export const VerifyEmailPage = () => {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const email = searchParams.get("email") || "";
@@ -37,7 +36,8 @@ export const VerifyEmailPage = () => {
       })
       .catch((err: any) => {
         setMessage(
-          err?.message || "Xác thực email thất bại. Liên kết có thể đã hết hạn.",
+          err?.message ||
+            "Xác thực email thất bại. Liên kết có thể đã hết hạn.",
         );
         setStatus("error");
       });
@@ -62,13 +62,19 @@ export const VerifyEmailPage = () => {
           py: 2,
         }}
       >
-        <Typography variant="h5" component="h1" color="primary" fontWeight="bold">
+        <Typography
+          variant="h5"
+          component="h1"
+          color="primary"
+          fontWeight="bold"
+        >
           PerfumeGPT
         </Typography>
         <Button
           startIcon={<ArrowBack />}
           color="inherit"
-          onClick={() => navigate("/login")}
+          component={RouterLink}
+          to="/login"
           sx={{ fontWeight: 500 }}
         >
           ĐI TỚI ĐĂNG NHẬP
@@ -77,7 +83,13 @@ export const VerifyEmailPage = () => {
 
       <Container
         maxWidth="sm"
-        sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", py: 2 }}
+        sx={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          py: 2,
+        }}
       >
         <Box
           sx={{
@@ -104,7 +116,9 @@ export const VerifyEmailPage = () => {
 
           {status === "success" && (
             <>
-              <CheckCircle sx={{ fontSize: 64, color: "success.main", mb: 2 }} />
+              <CheckCircle
+                sx={{ fontSize: 64, color: "success.main", mb: 2 }}
+              />
               <Typography variant="h6" fontWeight="bold" mb={1}>
                 Xác thực thành công!
               </Typography>
@@ -112,13 +126,15 @@ export const VerifyEmailPage = () => {
                 {message}
               </Alert>
               <Typography variant="body2" color="text.secondary" mb={3}>
-                Tài khoản của bạn đã được kích hoạt. Bạn có thể đăng nhập ngay bây giờ.
+                Tài khoản của bạn đã được kích hoạt. Bạn có thể đăng nhập ngay
+                bây giờ.
               </Typography>
               <Button
                 variant="contained"
                 fullWidth
                 size="large"
-                onClick={() => navigate("/login")}
+                component={RouterLink}
+                to="/login"
                 sx={{ fontWeight: 600, py: 1.2 }}
               >
                 ĐĂNG NHẬP NGAY
@@ -141,7 +157,8 @@ export const VerifyEmailPage = () => {
               <Button
                 variant="outlined"
                 fullWidth
-                onClick={() => navigate("/register")}
+                component={RouterLink}
+                to="/register"
               >
                 Đăng ký lại
               </Button>
@@ -152,7 +169,12 @@ export const VerifyEmailPage = () => {
 
       <Box
         component="footer"
-        sx={{ py: 1.5, textAlign: "center", borderTop: 1, borderColor: "divider" }}
+        sx={{
+          py: 1.5,
+          textAlign: "center",
+          borderTop: 1,
+          borderColor: "divider",
+        }}
       >
         <Typography variant="caption" color="text.secondary">
           © 2026 PERFUMEGPT — THE ART OF OLFACTORY INTELLIGENCE

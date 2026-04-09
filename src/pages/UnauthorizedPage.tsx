@@ -4,7 +4,7 @@ import SearchOffOutlinedIcon from "@mui/icons-material/SearchOffOutlined";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import ArrowBackOutlinedIcon from "@mui/icons-material/ArrowBackOutlined";
 import LoginOutlinedIcon from "@mui/icons-material/LoginOutlined";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { MainLayout } from "@/layouts/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -104,7 +104,8 @@ const UnauthorizedPage = () => {
               <Button
                 variant="contained"
                 startIcon={<HomeOutlinedIcon />}
-                onClick={() => navigate("/")}
+                component={RouterLink}
+                to="/"
               >
                 Về trang chủ
               </Button>
@@ -113,7 +114,8 @@ const UnauthorizedPage = () => {
                 <Button
                   variant="contained"
                   startIcon={<LoginOutlinedIcon />}
-                  onClick={() => navigate("/login")}
+                  component={RouterLink}
+                  to="/login"
                 >
                   Đăng nhập
                 </Button>

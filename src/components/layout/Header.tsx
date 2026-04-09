@@ -33,7 +33,7 @@ import {
   LightMode as LightModeIcon,
   DoneAll as DoneAllIcon,
 } from "@mui/icons-material";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
 import { useThemeMode } from "../../contexts/ThemeContext";
@@ -178,9 +178,6 @@ export const Header = () => {
 
     // Close dropdown if open
     setCartAnchorEl(null);
-
-    // Navigate to cart
-    navigate("/cart");
   };
 
   const handleDashboard = () => {
@@ -261,11 +258,11 @@ export const Header = () => {
           {/* Logo */}
           <Typography
             variant="h5"
-            component="h1"
             color="primary"
             fontWeight="bold"
-            sx={{ flexShrink: 0, cursor: "pointer" }}
-            onClick={() => navigate("/")}
+            sx={{ flexShrink: 0, cursor: "pointer", textDecoration: "none" }}
+            component={RouterLink}
+            to="/"
           >
             PerfumeGPT
           </Typography>
@@ -352,6 +349,8 @@ export const Header = () => {
             {!isBackOfficeRole && (
               <>
                 <IconButton
+                  component={RouterLink}
+                  to="/cart"
                   onClick={handleCartClick}
                   onMouseEnter={handleCartHover}
                   onMouseLeave={handleCartLeave}
@@ -513,9 +512,10 @@ export const Header = () => {
             ) : (
               <Button
                 startIcon={<PersonOutline />}
+                component={RouterLink}
+                to="/login"
                 color="inherit"
                 sx={{ fontWeight: 500 }}
-                onClick={() => navigate("/login")}
               >
                 Đăng nhập
               </Button>
@@ -537,7 +537,8 @@ export const Header = () => {
           {/* All products */}
           <Button
             color="inherit"
-            onClick={() => navigate("/products")}
+            component={RouterLink}
+            to="/products"
             sx={{
               fontWeight: 500,
               color: "text.primary",
@@ -552,11 +553,8 @@ export const Header = () => {
             <Button
               key={cat.id}
               color="inherit"
-              onClick={() =>
-                navigate(
-                  `/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`,
-                )
-              }
+              component={RouterLink}
+              to={`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`}
               sx={{
                 fontWeight: 500,
                 color: "text.primary",
@@ -593,11 +591,10 @@ export const Header = () => {
                 {overflowCategories.map((cat) => (
                   <MenuItem
                     key={cat.id}
+                    component={RouterLink}
+                    to={`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`}
                     onClick={() => {
                       setMoreAnchorEl(null);
-                      navigate(
-                        `/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`,
-                      );
                     }}
                   >
                     {toVietnameseCategoryName(cat.name)}
@@ -610,7 +607,8 @@ export const Header = () => {
           {/* Quiz AI */}
           <Button
             color="inherit"
-            onClick={() => navigate("/quiz")}
+            component={RouterLink}
+            to="/quiz"
             sx={{
               fontWeight: 500,
               color: "text.primary",

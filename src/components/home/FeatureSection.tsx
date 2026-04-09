@@ -5,7 +5,7 @@ import {
   Security,
   ArrowForward,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 const features = [
@@ -24,7 +24,6 @@ const features = [
 ];
 
 export const FeatureSection = () => {
-  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   return (
     <Box sx={{ py: 8, bgcolor: "background.paper" }}>
@@ -82,6 +81,8 @@ export const FeatureSection = () => {
               variant="outlined"
               size="large"
               color="secondary"
+              component={RouterLink}
+              to="/register"
               endIcon={<ArrowForward />}
               sx={{
                 borderWidth: 2,
@@ -90,10 +91,6 @@ export const FeatureSection = () => {
                   bgcolor: "secondary.main",
                   color: "white",
                 },
-              }}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/register");
               }}
             >
               ĐĂNG KÝ NGAY

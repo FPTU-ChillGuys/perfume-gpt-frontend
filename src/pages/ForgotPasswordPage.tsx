@@ -10,7 +10,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { ArrowBack, MarkEmailRead } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 
 export const ForgotPasswordPage = () => {
@@ -80,7 +80,8 @@ export const ForgotPasswordPage = () => {
         <Button
           startIcon={<ArrowBack />}
           color="inherit"
-          onClick={() => navigate("/login")}
+          component={RouterLink}
+          to="/login"
           sx={{ fontWeight: 500 }}
         >
           QUAY LẠI ĐĂNG NHẬP
@@ -140,7 +141,8 @@ export const ForgotPasswordPage = () => {
               <Button
                 variant="outlined"
                 fullWidth
-                onClick={() => navigate("/login")}
+                component={RouterLink}
+                to="/login"
               >
                 Quay lại đăng nhập
               </Button>
@@ -202,14 +204,11 @@ export const ForgotPasswordPage = () => {
               >
                 Bạn đã nhớ mật khẩu?{" "}
                 <Link
-                  href="#"
+                  component={RouterLink}
+                  to="/login"
                   color="primary"
                   underline="hover"
                   fontWeight={600}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/login");
-                  }}
                 >
                   Đăng nhập ngay
                 </Link>

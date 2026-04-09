@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Eye } from "lucide-react";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
@@ -37,7 +37,6 @@ export const ProductCard = ({
   const { showToast } = useToast();
   const { refreshCart } = useCart();
   const { openQuickView } = useProductQuickView();
-  const navigate = useNavigate();
   const [isAdding, setIsAdding] = useState(false);
 
   const formatPrice = (price: number) => {
@@ -49,7 +48,9 @@ export const ProductCard = ({
     Number.isFinite(maxPrice) &&
     maxPrice > salePrice;
 
-  const handleNavigateDetail = () => {
+  const detailHref = `/products/${id}`;
+
+  const handleProductLinkClick = () => {
     if (!id) {
       return;
     }
@@ -59,8 +60,6 @@ export const ProductCard = ({
       .catch((error) => {
         console.error("Failed to log product click", error);
       });
-
-    navigate(`/products/${id}`);
   };
 
   const handleAddToCart = async () => {
@@ -125,9 +124,10 @@ export const ProductCard = ({
       </div>
 
       {/* Image */}
-      <div
+      <Link
+        to={detailHref}
+        onClick={handleProductLinkClick}
         className="aspect-square bg-white flex items-center justify-center overflow-hidden p-4 cursor-pointer"
-        onClick={handleNavigateDetail}
       >
         {imageUrl ? (
           <img
@@ -143,22 +143,22 @@ export const ProductCard = ({
             <span className="text-sm">No Image</span>
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Info */}
       <div className="p-4 bg-gray-50 border-t border-gray-100">
-        <p
-          className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer text-center"
-          onClick={handleNavigateDetail}
+        <Link
+          to={detailHref}
+          onClick={handleProductLinkClick}
+          className="block"
         >
-          {brand}
-        </p>
-        <h3
-          className="text-sm font-medium text-gray-800 mb-2 line-clamp-2  min-h-10 cursor-pointer text-center"
-          onClick={handleNavigateDetail}
-        >
-          {name}
-        </h3>
+          <p className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer text-center">
+            {brand}
+          </p>
+          <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2  min-h-10 cursor-pointer text-center">
+            {name}
+          </h3>
+        </Link>
         <div className="flex min-h-6 items-center justify-center gap-1">
           {originalPrice && (
             <span className="text-xs text-gray-400 line-through">

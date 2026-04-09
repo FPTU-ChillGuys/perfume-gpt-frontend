@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Box,
   Container,
@@ -1029,7 +1029,8 @@ const AdminDashboard = () => {
                     {topProducts.map((p, i) => (
                       <Box
                         key={p.productId ?? i}
-                        onClick={() => navigate("/admin/products")}
+                        component={RouterLink}
+                        to="/admin/products"
                         sx={{
                           display: "flex",
                           alignItems: "center",

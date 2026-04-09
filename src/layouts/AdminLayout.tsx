@@ -47,7 +47,7 @@ import {
   LocalOffer as LocalOfferIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
 } from "@mui/icons-material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { importStockService } from "../services/importStockService";
 
@@ -375,6 +375,8 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         sx={{ mb: 0.5 }}
       >
         <ListItemButton
+          component={RouterLink}
+          to={item.path}
           onClick={() => handleNavigate(item.path)}
           sx={{
             borderRadius: 1,
@@ -496,6 +498,8 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
     return (
       <ListItem key={`collapsed-${group.key}`} disablePadding sx={{ mb: 0.5 }}>
         <ListItemButton
+          component={RouterLink}
+          to={navigatePath}
           onClick={() => handleNavigate(navigatePath)}
           title={group.text}
           sx={{
@@ -674,9 +678,10 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <Divider />
             {user?.role === "staff" && (
               <MenuItem
+                component={RouterLink}
+                to="/checkout/counter/staff"
                 onClick={() => {
                   handleMenuClose();
-                  navigate("/checkout/counter/staff");
                 }}
                 sx={{ py: 1.5 }}
               >
@@ -688,9 +693,10 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             )}
             {user?.role === "staff" && (
               <MenuItem
+                component={RouterLink}
+                to="/checkout/counter/display"
                 onClick={() => {
                   handleMenuClose();
-                  navigate("/checkout/counter/display");
                 }}
                 sx={{ py: 1.5 }}
               >
@@ -701,9 +707,10 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               </MenuItem>
             )}
             <MenuItem
+              component={RouterLink}
+              to="/"
               onClick={() => {
                 handleMenuClose();
-                navigate("/");
               }}
               sx={{ py: 1.5 }}
             >

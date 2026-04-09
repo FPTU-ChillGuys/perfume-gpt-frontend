@@ -18,7 +18,7 @@ import {
   Facebook,
   ArrowBack,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { GoogleLogin } from "@react-oauth/google";
 
@@ -145,7 +145,8 @@ export const LoginPage = () => {
         <Button
           startIcon={<ArrowBack />}
           color="inherit"
-          onClick={() => navigate("/")}
+          component={RouterLink}
+          to="/"
           sx={{ fontWeight: 500 }}
         >
           QUAY LẠI TRANG CHỦ
@@ -237,16 +238,13 @@ export const LoginPage = () => {
                   Mật khẩu
                 </Typography>
                 <Link
-                  href="#"
+                  component={RouterLink}
+                  to="/forgot-password"
                   variant="body2"
                   color="error"
                   underline="hover"
                   sx={{ fontSize: "0.875rem" }}
                   tabIndex={-1}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate("/forgot-password");
-                  }}
                 >
                   Quên mật khẩu?
                 </Link>
@@ -350,14 +348,11 @@ export const LoginPage = () => {
           <Typography variant="body2" textAlign="center" color="text.secondary">
             Bạn chưa có tài khoản?{" "}
             <Link
-              href="#"
+              component={RouterLink}
+              to="/register"
               color="primary"
               underline="hover"
               fontWeight={600}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/register");
-              }}
             >
               Đăng ký ngay
             </Link>

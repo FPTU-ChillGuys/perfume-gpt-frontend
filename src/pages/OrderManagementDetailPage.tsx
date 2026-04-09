@@ -777,13 +777,14 @@ export const OrderManagementDetailPage = () => {
   };
 
   const handleSyncShippingStatus = async () => {
-    if (!orderId) {
+    if (!orderId || !order?.customerId) {
+      showToast("Không tìm thấy thông tin khách hàng để đồng bộ đơn", "error");
       return;
     }
 
     try {
       setIsSyncingShipping(true);
-      await orderService.syncMyShippingStatus();
+      await orderService.syncShippingStatusByUserId(order.customerId);
       await loadOrder();
       showToast("Đã đồng bộ trạng thái vận chuyển", "success");
     } catch (err) {
