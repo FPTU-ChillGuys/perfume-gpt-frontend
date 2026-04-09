@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useReactToPrint } from "react-to-print";
 import {
   Add,
   CheckCircleRounded,
@@ -6,6 +7,7 @@ import {
   OpenInNew,
   Remove,
   Search,
+  Print as PrintIcon,
 } from "@mui/icons-material";
 import {
   Alert,
@@ -36,6 +38,7 @@ import {
 import { QRCodeSVG } from "qrcode.react";
 import { BatchSelectionModal } from "@/components/checkout/BatchSelectionModal";
 import { PosBarcodeScanner } from "@/components/checkout/PosBarcodeScanner";
+import { ReceiptTemplate } from "@/components/checkout/ReceiptTemplate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 import { useToast } from "@/hooks/useToast";
@@ -48,7 +51,7 @@ import {
   type PosPreviewResponse,
   type PosProductVariant,
 } from "@/services/posService";
-import { orderService } from "@/services/orderService";
+import { orderService, type OrderInvoice } from "@/services/orderService";
 import { addressService } from "@/services/addressService";
 import type {
   CreateInStoreOrderRequest,
@@ -295,11 +298,43 @@ export const CounterCheckoutStaffPage = () => {
   const [failedPaymentAction, setFailedPaymentAction] =
     useState<FailedPaymentAction | null>(null);
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
-  const [isCashRetryConfirmOpen, setIsCashRetryConfirmOpen] = useState(false);
   const [isStaffCancelDialogOpen, setIsStaffCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
   const [cancelNote, setCancelNote] = useState("");
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+
+  // Cash Payment Dialog states
+  const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
+  const [cashReceived, setCashReceived] = useState("");
+  const [pendingCheckoutPayload, setPendingCheckoutPayload] =
+    useState<CreateInStoreOrderRequest | null>(null);
+  const [cashDialogMode, setCashDialogMode] = useState<"checkout" | "retry">(
+    "checkout",
+  );
+
+  // Handler cho numpad
+  const handleNumpadClick = useCallback((value: string) => {
+    setCashReceived((prev) => {
+      if (value === "C") return "";
+      if (value === "⌫") return prev.slice(0, -1);
+
+      // Chỉ cho nhập số
+      if (!/^\d+$/.test(value)) return prev;
+
+      const newValue = prev + value;
+      // Giới hạn 15 chữ số
+      if (newValue.length > 15) return prev;
+
+      return newValue;
+    });
+  }, []);
+
+  // Success & Print Dialog states
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
+  const [orderInvoice, setOrderInvoice] = useState<OrderInvoice | null>(null);
+  const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   const totalQuantityInCart = useMemo(
     () => cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
@@ -317,6 +352,190 @@ export const CounterCheckoutStaffPage = () => {
       ),
     [paymentMethodsByMode],
   );
+
+  const cashChangeAmount = useMemo(() => {
+    const total = pendingCheckoutPayload?.expectedTotalPrice ?? 0;
+    const received = Number(cashReceived) || 0;
+    return Math.max(0, received - total);
+  }, [cashReceived, pendingCheckoutPayload?.expectedTotalPrice]);
+
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef,
+    documentTitle: `Hoa-don-${successOrderId || "ORDER"}`,
+  });
+
+  const loadOrderInvoice = useCallback(
+    async (orderId: string) => {
+      try {
+        setIsLoadingInvoice(true);
+        const invoice = await orderService.getOrderInvoice(orderId);
+        setOrderInvoice(invoice);
+      } catch (error) {
+        showToast(
+          error instanceof Error ? error.message : "Không thể tải hóa đơn",
+          "error",
+        );
+      } finally {
+        setIsLoadingInvoice(false);
+      }
+    },
+    [showToast],
+  );
+
+  const openSuccessDialog = useCallback(
+    async (orderId: string) => {
+      setSuccessOrderId(orderId);
+      setIsSuccessDialogOpen(true);
+      await loadOrderInvoice(orderId);
+
+      // Auto print sau 500ms
+      setTimeout(() => {
+        if (receiptRef.current) {
+          handlePrint();
+        }
+      }, 500);
+    },
+    [handlePrint, loadOrderInvoice],
+  );
+
+  const closeSuccessDialog = useCallback(() => {
+    // CHỈ KHI đóng dialog mới clear cart
+    setCartItems([]);
+    setSearchResults([]);
+    setSearchKeyword("");
+    setVoucherInput("");
+    setAppliedVoucherCode("");
+    setCustomerLookupKeyword("");
+    setCustomerLookupResults([]);
+    setSelectedCustomer(null);
+    setRecipientName("");
+    setRecipientPhone("");
+    setStreetAddress("");
+    setSelectedProvince(null);
+    setSelectedDistrict(null);
+    setSelectedWard(null);
+    setDistricts([]);
+    setWards([]);
+    handleClearSelectedCustomer();
+
+    setIsSuccessDialogOpen(false);
+    setSuccessOrderId(null);
+    setOrderInvoice(null);
+
+    // Clear customer display
+    void syncCartToCustomerRef.current({
+      items: [],
+      subTotal: 0,
+      discount: 0,
+      totalPrice: 0,
+      paymentUrl: null,
+    } satisfies CartDisplaySyncPayload);
+  }, []);
+
+  const handleCashPaymentConfirm = useCallback(async () => {
+    if (!pendingCheckoutPayload) return;
+
+    const total = pendingCheckoutPayload.expectedTotalPrice ?? 0;
+    const received = Number(cashReceived) || 0;
+
+    if (received < total) {
+      showToast("Số tiền nhận chưa đủ", "warning");
+      return;
+    }
+
+    try {
+      setIsSubmittingCheckout(true);
+      setIsCashPaymentDialogOpen(false);
+
+      // Mode retry: Gọi retry payment thay vì checkout mới
+      if (cashDialogMode === "retry") {
+        if (!failedPaymentAction?.paymentId) {
+          showToast("Không tìm thấy paymentId để retry", "warning");
+          return;
+        }
+
+        const retryCallId = createDebugCallId("pos-retry");
+
+        const result = await orderService.retryPayment(
+          failedPaymentAction.paymentId,
+          "CashInStore",
+          POS_SESSION_ID,
+          retryCallId,
+        );
+
+        const paymentIdFromRetryResponse = (result.paymentId || "").trim();
+        const paymentIdFromRetryUrl = extractPaymentIdFromRetryUrl(result.url);
+        const paymentIdForRetry =
+          paymentIdFromRetryResponse ||
+          paymentIdFromRetryUrl ||
+          failedPaymentAction.paymentId;
+
+        await orderService.confirmPayment(
+          paymentIdForRetry,
+          true,
+          undefined,
+          `${retryCallId}-confirm`,
+        );
+
+        finalizeRetryAsPaid(failedPaymentAction.orderId, paymentIdForRetry);
+
+        // Mở success dialog trực tiếp sau khi confirm thành công
+        showToast("Đã xác nhận thanh toán tiền mặt", "success");
+        void openSuccessDialog(failedPaymentAction.orderId);
+
+        setCashReceived("");
+        setPendingCheckoutPayload(null);
+        return;
+      }
+
+      // Mode checkout: Tạo order mới
+      const result = await orderService.checkoutInStore(pendingCheckoutPayload);
+
+      console.log("[Checkout Response]", result);
+      console.log("[Checkout Response] Keys:", Object.keys(result));
+      console.log("[Checkout Response] paymentId:", result.paymentId);
+      console.log("[Checkout Response] orderId:", result.orderId);
+
+      // Lấy paymentId hoặc orderId từ response
+      const responsePaymentId = (
+        result.paymentId ||
+        result.orderId ||
+        ""
+      ).trim();
+      if (!responsePaymentId) {
+        showToast(
+          "Checkout thành công nhưng thiếu payment/order ID",
+          "warning",
+        );
+        return;
+      }
+
+      await orderService.confirmPayment(responsePaymentId, true);
+
+      // Mở success dialog trực tiếp sau khi confirm thành công
+      showToast("Thanh toán tiền mặt thành công!", "success");
+      void openSuccessDialog(responsePaymentId);
+
+      // Reset cash payment states
+      setCashReceived("");
+      setPendingCheckoutPayload(null);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Thanh toán thất bại",
+        "error",
+      );
+    } finally {
+      setIsSubmittingCheckout(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- finalizeRetryAsPaid defined later
+  }, [
+    pendingCheckoutPayload,
+    cashReceived,
+    cashDialogMode,
+    failedPaymentAction,
+    showToast,
+    openSuccessDialog,
+  ]);
 
   useEffect(() => {
     if (!selectablePaymentMethods.some((method) => method === paymentMethod)) {
@@ -370,7 +589,9 @@ export const CounterCheckoutStaffPage = () => {
       ":",
     );
 
-    if (handledPaymentEventRef.current === eventKey) return;
+    if (handledPaymentEventRef.current === eventKey) {
+      return;
+    }
     handledPaymentEventRef.current = eventKey;
 
     if (status !== "success" && status !== "paid" && status !== "completed") {
@@ -379,27 +600,13 @@ export const CounterCheckoutStaffPage = () => {
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
-    setCheckoutSuccessRef(rawOrderId);
     lastPaidOrderIdRef.current = rawOrderId;
-
-    void syncCartToCustomerRef.current({
-      items: [],
-      subTotal: 0,
-      discount: 0,
-      totalPrice: 0,
-      paymentUrl: null,
-    } satisfies CartDisplaySyncPayload);
 
     setFailedPaymentAction(null);
 
-    // Dọn giỏ khi thanh toán thành công để bắt đầu ca mới
-    setCartItems([]);
-    setSearchResults([]);
-    setSearchKeyword("");
-    setVoucherInput("");
-    setAppliedVoucherCode("");
-    handleClearSelectedCustomer();
-  }, [paymentCompletedData]);
+    // Mở Success Dialog thay vì clear cart ngay
+    void openSuccessDialog(rawOrderId);
+  }, [paymentCompletedData, openSuccessDialog]);
 
   const openStaffCancelDialog = () => {
     if (!failedPaymentAction?.orderId) {
@@ -1190,12 +1397,13 @@ export const CounterCheckoutStaffPage = () => {
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
 
-    const vietnameseMessage = rawMessage.includes("cancelled") || rawMessage.includes("canceled")
-      ? "Giao dịch đã bị hủy"
-      : rawMessage.includes("failed") || rawMessage.includes("error")
-      ? "Thanh toán thất bại"
-      : rawMessage || "Giao dịch thất bại hoặc bị hủy";
-    
+    const vietnameseMessage =
+      rawMessage.includes("cancelled") || rawMessage.includes("canceled")
+        ? "Giao dịch đã bị hủy"
+        : rawMessage.includes("failed") || rawMessage.includes("error")
+          ? "Thanh toán thất bại"
+          : rawMessage || "Giao dịch thất bại hoặc bị hủy";
+
     showToast(vietnameseMessage, "error");
 
     if (status === "failed" || status === "error" || status === "cancelled") {
@@ -1421,6 +1629,45 @@ export const CounterCheckoutStaffPage = () => {
 
   const handleOpenCheckoutConfirm = () => {
     if (!validateCheckoutInputs()) return;
+
+    // Nếu là CashInStore -> Mở luôn cash payment dialog
+    if (paymentMethod === "CashInStore") {
+      const expectedTotal = Number(previewData?.totalPrice ?? localSubtotal);
+      const payload: CreateInStoreOrderRequest = {
+        scannedItems: cartItems.map((item) => ({
+          barcode: item.barcode,
+          batchCode: item.batchCode,
+          quantity: item.quantity,
+        })),
+        voucherCode: appliedVoucherCode.trim() || null,
+        customerId: selectedCustomer?.id || null,
+        isPickupInStore,
+        payment: {
+          method: paymentMethod,
+        },
+        expectedTotalPrice: expectedTotal,
+        posSessionId: POS_SESSION_ID,
+        recipient: isPickupInStore
+          ? null
+          : {
+              contactName: recipientName.trim(),
+              contactPhoneNumber: recipientPhone.trim(),
+              districtId: selectedDistrict?.DistrictID || 0,
+              districtName: selectedDistrict?.DistrictName || "",
+              wardCode: selectedWard?.WardCode || "",
+              wardName: selectedWard?.WardName || "",
+              provinceId: selectedProvince?.ProvinceID || 0,
+              provinceName: selectedProvince?.ProvinceName || "",
+              fullAddress: streetAddress.trim(),
+            },
+      };
+      setPendingCheckoutPayload(payload);
+      setCashDialogMode("checkout");
+      setIsCashPaymentDialogOpen(true);
+      return;
+    }
+
+    // Các payment method khác mở modal confirm
     setIsCheckoutConfirmOpen(true);
   };
 
@@ -1439,7 +1686,16 @@ export const CounterCheckoutStaffPage = () => {
     }
 
     if (paymentMethod === "CashInStore") {
-      setIsCashRetryConfirmOpen(true);
+      // Mở cash payment dialog cho retry
+      const expectedTotal = Number(previewData?.totalPrice ?? localSubtotal);
+      setPendingCheckoutPayload({
+        scannedItems: [],
+        payment: { method: "CashInStore" },
+        expectedTotalPrice: expectedTotal,
+        posSessionId: POS_SESSION_ID,
+      } as CreateInStoreOrderRequest);
+      setCashDialogMode("retry");
+      setIsCashPaymentDialogOpen(true);
       return;
     }
 
@@ -1480,6 +1736,15 @@ export const CounterCheckoutStaffPage = () => {
           },
     };
 
+    // KIỂM TRA PAYMENT METHOD TRƯỚC KHI GỌI API
+    if (paymentMethodAtCheckout === "CashInStore") {
+      // Mở dialog xác nhận tiền mặt TRƯỚC, chưa tạo order
+      setPendingCheckoutPayload(payload);
+      setIsCashPaymentDialogOpen(true);
+      return;
+    }
+
+    // Các payment method khác (VnPay, Momo, ...) mới gọi API để tạo order
     try {
       setIsSubmittingCheckout(true);
       const result = await orderService.checkoutInStore(payload);
@@ -1520,60 +1785,11 @@ export const CounterCheckoutStaffPage = () => {
         setIsSubmittingCheckout(false);
         return;
       }
-      // 2. NẾU LÀ TIỀN MẶT TẠI QUẦY (KHÔNG CÓ QR) -> Chạy logic như cũ
+
+      // 2. Các payment method khác clear cart như cũ
       paymentQrUrlRef.current = null;
       setPaymentQrUrl(null);
       setCheckoutSuccessRef(result.orderId ?? "");
-      if (paymentMethodAtCheckout === "CashInStore") {
-        void (async () => {
-          try {
-            const paymentId = result.orderId?.trim();
-
-            if (!paymentId) {
-              showToast(
-                "Checkout tiền mặt thành công nhưng thiếu paymentId để xác nhận tự động",
-                "warning",
-              );
-              return;
-            }
-            setCartItems([]);
-            setSearchResults([]);
-
-            console.log("[POS][CASH_CHECKOUT] confirmPayment start", {
-              paymentId,
-            });
-
-            await orderService.confirmPayment(paymentId, true);
-
-            console.log("[POS][CASH_CHECKOUT] confirmPayment success");
-
-            // Đồng bộ cart rỗng lên màn hình customer
-            void syncCartToCustomerRef.current({
-              items: [],
-              subTotal: 0,
-              discount: 0,
-              totalPrice: 0,
-              paymentUrl: null,
-            } satisfies CartDisplaySyncPayload);
-
-            // Gửi thông báo thanh toán thành công qua SignalR
-            void notifyPaymentSuccess({
-              orderId: paymentId,
-              paymentId: paymentId,
-              status: "Success",
-              message: "Thanh toán tiền mặt thành công",
-            }).catch(() => {
-              // Ignore notification errors
-            });
-          } catch (error) {
-            showToast(
-              "Đơn đã tạo nhưng xác nhận thanh toán tiền mặt tự động thất bại",
-              "warning",
-            );
-          }
-        })();
-      }
-
       setCartItems([]);
       setSearchResults([]);
       setSearchKeyword("");
@@ -2573,40 +2789,6 @@ export const CounterCheckoutStaffPage = () => {
         )}
 
         <Dialog
-          open={isCashRetryConfirmOpen}
-          onClose={() => setIsCashRetryConfirmOpen(false)}
-          maxWidth="xs"
-          fullWidth
-        >
-          <DialogTitle>Xác nhận đã nhận tiền mặt</DialogTitle>
-          <DialogContent dividers>
-            <Typography variant="body2" color="text.secondary">
-              Bạn xác nhận đã nhận đủ tiền từ khách hàng cho đơn này? Sau khi
-              xác nhận, hệ thống sẽ gọi retry thanh toán bằng tiền mặt và
-              confirm payment ngay lập tức.
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setIsCashRetryConfirmOpen(false)}
-              disabled={isRetryingPayment}
-            >
-              Chưa
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => {
-                setIsCashRetryConfirmOpen(false);
-                void executeRetryFailedPayment(true);
-              }}
-              disabled={isRetryingPayment}
-            >
-              {isRetryingPayment ? "Đang xử lý..." : "Đã nhận tiền"}
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        <Dialog
           open={isStaffCancelDialogOpen}
           onClose={() => setIsStaffCancelDialogOpen(false)}
           maxWidth="sm"
@@ -2678,6 +2860,220 @@ export const CounterCheckoutStaffPage = () => {
           }}
           onSelectBatch={handleSelectBatch}
         />
+
+        {/* Dialog 1: Xác nhận tiền mặt */}
+        <Dialog
+          open={isCashPaymentDialogOpen}
+          onClose={() => {
+            if (!isSubmittingCheckout) {
+              setIsCashPaymentDialogOpen(false);
+              setCashReceived("");
+            }
+          }}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            {cashDialogMode === "retry"
+              ? "Thanh toán lại bằng tiền mặt"
+              : "Xác nhận thanh toán tiền mặt"}
+          </DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2}>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Tổng tiền:</Typography>
+                <Typography fontWeight={700} fontSize="1.1rem">
+                  {formatCurrency(
+                    pendingCheckoutPayload?.expectedTotalPrice ?? 0,
+                  )}
+                </Typography>
+              </Stack>
+
+              {/* Display số tiền khách đưa */}
+              <Box>
+                <Typography variant="caption" color="text.secondary" mb={0.5}>
+                  Số tiền khách đưa
+                </Typography>
+                <Box
+                  sx={{
+                    border: 2,
+                    borderColor: "primary.main",
+                    borderRadius: 1,
+                    p: 2,
+                    bgcolor: "grey.50",
+                    textAlign: "right",
+                    minHeight: 56,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <Typography variant="h5" fontWeight={700} color="primary">
+                    {cashReceived
+                      ? new Intl.NumberFormat("vi-VN").format(
+                          Number(cashReceived),
+                        ) + "đ"
+                      : "0đ"}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Numpad */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 1,
+                }}
+              >
+                {[
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7",
+                  "8",
+                  "9",
+                  "C",
+                  "0",
+                  "⌫",
+                ].map((key) => (
+                  <Button
+                    key={key}
+                    variant={key === "C" ? "outlined" : "contained"}
+                    color={key === "C" ? "error" : "primary"}
+                    size="large"
+                    onClick={() => handleNumpadClick(key)}
+                    sx={{
+                      height: 56,
+                      fontSize: "1.25rem",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {key}
+                  </Button>
+                ))}
+              </Box>
+
+              {/* Shortcuts cho số tiền tròn */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 1,
+                }}
+              >
+                {[
+                  { label: "+10K", value: 10000 },
+                  { label: "+50K", value: 50000 },
+                  { label: "+100K", value: 100000 },
+                  { label: "+200K", value: 200000 },
+                  { label: "+500K", value: 500000 },
+                  { label: "+1M", value: 1000000 },
+                ].map((shortcut) => (
+                  <Button
+                    key={shortcut.value}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      const current = Number(cashReceived) || 0;
+                      setCashReceived(String(current + shortcut.value));
+                    }}
+                    sx={{ textTransform: "none" }}
+                  >
+                    {shortcut.label}
+                  </Button>
+                ))}
+              </Box>
+
+              {cashChangeAmount >= 0 && cashReceived && (
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography color="text.secondary">Tiền thừa:</Typography>
+                  <Typography fontWeight={700} fontSize="1.1rem" color="error">
+                    {formatCurrency(cashChangeAmount)}
+                  </Typography>
+                </Stack>
+              )}
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setIsCashPaymentDialogOpen(false);
+                setCashReceived("");
+              }}
+              disabled={isSubmittingCheckout}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleCashPaymentConfirm}
+              disabled={
+                isSubmittingCheckout ||
+                !cashReceived ||
+                Number(cashReceived) <
+                  (pendingCheckoutPayload?.expectedTotalPrice ?? 0)
+              }
+            >
+              {isSubmittingCheckout ? "Đang xử lý..." : "Xác nhận"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Dialog 2: Thanh toán thành công & In hóa đơn */}
+        <Dialog
+          open={isSuccessDialogOpen}
+          onClose={(_, reason) => {
+            // Chỉ cho phép đóng bằng nút "Đóng & Đón khách mới"
+            if (reason === "backdropClick" || reason === "escapeKeyDown") {
+              return;
+            }
+          }}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Thanh toán thành công!</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2} alignItems="center">
+              <CheckCircleRounded
+                sx={{ fontSize: 64, color: "success.main" }}
+              />
+              {successOrderId && (
+                <Typography variant="body2" color="text.secondary">
+                  Mã đơn hàng: <strong>{successOrderId}</strong>
+                </Typography>
+              )}
+              <Typography variant="body2" color="text.secondary">
+                Hóa đơn đã được in tự động.
+              </Typography>
+            </Stack>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center", gap: 1 }}>
+            <Button
+              variant="outlined"
+              startIcon={<PrintIcon />}
+              onClick={handlePrint}
+              disabled={isLoadingInvoice || !orderInvoice}
+            >
+              In lại
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={closeSuccessDialog}
+            >
+              Đóng &amp; Đón khách mới
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Hidden ReceiptTemplate for printing */}
+        <div style={{ display: "none" }}>
+          <ReceiptTemplate ref={receiptRef} invoice={orderInvoice} />
+        </div>
       </Container>
     </MainLayout>
   );
