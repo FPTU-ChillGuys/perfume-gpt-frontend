@@ -248,6 +248,12 @@ export const CustomerDisplayScreen = () => {
       return;
     }
 
+    // Ignore delayed success event when a checkout is no longer active
+    // (e.g., after staff clicked "Đón khách mới" and carts were cleared).
+    if (!displayPaymentUrl && items.length === 0) {
+      return;
+    }
+
     if (rawOrderId) {
       lastSuccessfulOrderIdRef.current = rawOrderId;
       lastFailedOrderIdRef.current = "";
@@ -264,7 +270,7 @@ export const CustomerDisplayScreen = () => {
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [paymentCompletedData]);
+  }, [displayPaymentUrl, items.length, paymentCompletedData]);
 
   useEffect(() => {
     if (

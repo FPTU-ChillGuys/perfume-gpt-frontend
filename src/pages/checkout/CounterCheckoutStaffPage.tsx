@@ -783,9 +783,8 @@ export const CounterCheckoutStaffPage = () => {
       rawOrderId &&
       activeRetryOrderId &&
       rawOrderId === activeRetryOrderId &&
-      rawPaymentId &&
       activeRetryPaymentId &&
-      rawPaymentId !== activeRetryPaymentId
+      (!rawPaymentId || rawPaymentId !== activeRetryPaymentId)
     ) {
       console.log(
         "[POS][SignalR][PaymentCompleted] skipped: stale retry payment",
