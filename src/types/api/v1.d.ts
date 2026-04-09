@@ -6228,7 +6228,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/orders/byordercode": {
+    "/api/orders/order-code": {
         parameters: {
             query?: never;
             header?: never;
@@ -13005,7 +13005,7 @@ export interface components {
         /** @enum {string} */
         CampaignType: "FlashSale" | "Clearance";
         /** @enum {string} */
-        CancelOrderReason: "ChangedMind" | "FoundBetterPrice" | "WrongShippingInformation" | "PaymentIssue" | "DeliveryTooLate" | "InsufficientStock";
+        CancelOrderReason: "ChangedMind" | "FoundBetterPrice" | "WrongShippingInformation" | "PaymentIssue" | "DeliveryTooLate" | "InsufficientStock" | "CustomerRequested" | "SuspectedFraud" | "UnreachableCustomer" | "PaymentTimeout" | "PricingOrSystemError" | "DamagedOrDefectiveStock" | "OutOfServiceArea" | "Other";
         /** @enum {string} */
         CancelRequestStatus: "Pending" | "Approved" | "Rejected";
         /** @enum {string} */

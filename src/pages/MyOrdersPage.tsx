@@ -59,7 +59,7 @@ import {
   orderTypeColors,
 } from "@/utils/orderStatus";
 import {
-  CANCEL_ORDER_REASON_OPTIONS,
+  CUSTOMER_CANCEL_ORDER_REASON_OPTIONS,
   mapCancelReasonInputToEnum,
 } from "@/utils/cancelOrderReason";
 import { formatDateTimeCompactVN } from "@/utils/dateTime";
@@ -1317,7 +1317,7 @@ export const MyOrdersPage = () => {
             />
 
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {CANCEL_ORDER_REASON_OPTIONS.map((option) => {
+              {CUSTOMER_CANCEL_ORDER_REASON_OPTIONS.map((option) => {
                 const isSelected = cancelReason.trim() === option.label;
                 return (
                   <Chip

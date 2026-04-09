@@ -15,7 +15,6 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
-  MenuItem,
   Paper,
   Stack,
   Table,
@@ -53,6 +52,7 @@ import {
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
   orderService,
+  type OrderCancelRequest,
   type PickListBatchInfo,
   type PickListItemResponse,
   type PickListResponse,
@@ -61,7 +61,7 @@ import { useToast } from "@/hooks/useToast";
 import type { PaymentMethod } from "@/types/checkout";
 import type { CarrierName, OrderResponse, OrderStatus } from "@/types/order";
 import {
-  CANCEL_ORDER_REASON_OPTIONS,
+  STAFF_CANCEL_ORDER_REASON_OPTIONS,
   type CancelOrderReason,
 } from "@/utils/cancelOrderReason";
 import {
@@ -352,6 +352,8 @@ const STAFF_CANCELABLE_STATUSES: OrderStatus[] = [
   "ReadyToPick",
 ];
 
+const CANCEL_REQUEST_BLOCKED_STATUSES = new Set(["Pending"]);
+
 const SWAP_DAMAGE_NOTE_SUGGESTIONS = [
   "Hàng móp méo, không đạt chất lượng",
   "Bao bì rách/tem niêm phong bị lỗi",
@@ -376,6 +378,8 @@ export const OrderManagementDetailPage = () => {
     defaultBackPath;
 
   const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [orderCancelRequest, setOrderCancelRequest] =
+    useState<OrderCancelRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
@@ -407,8 +411,29 @@ export const OrderManagementDetailPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await orderService.getOrderById(orderId);
+      const [data, cancelRequests] = await Promise.all([
+        orderService.getOrderById(orderId),
+        orderService
+          .getAllCancelRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          })
+          .catch(() => null),
+      ]);
+
+      const latestCancelRequest =
+        cancelRequests?.items
+          ?.filter((item) => item.orderId === data.id)
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime(),
+          )[0] ?? null;
+
       setOrder(data);
+      setOrderCancelRequest(latestCancelRequest);
       setCancelReason("");
       setCancelNote("");
       setIsPackagingConfirmed(false);
@@ -458,6 +483,22 @@ export const OrderManagementDetailPage = () => {
   const canPrepareOrder = order?.status === "Pending";
   const canCancelOrder =
     !!order?.status && STAFF_CANCELABLE_STATUSES.includes(order.status);
+  const hasBlockingCancelRequest = Boolean(
+    orderCancelRequest?.id &&
+      CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
+  );
+
+  const selectedCancelReasonLabel = useMemo(() => {
+    if (!cancelReason) {
+      return "";
+    }
+
+    return (
+      STAFF_CANCEL_ORDER_REASON_OPTIONS.find(
+        (option) => option.value === cancelReason,
+      )?.label || ""
+    );
+  }, [cancelReason]);
 
   const pickListItemMap = useMemo(() => {
     const map = new Map<string, PickListItemResponse>();
@@ -729,7 +770,10 @@ export const OrderManagementDetailPage = () => {
   };
 
   const openCancelDialog = () => {
-    if (!canCancelOrder) {
+    if (!canCancelOrder || hasBlockingCancelRequest) {
+      if (hasBlockingCancelRequest) {
+        showToast("Đơn hàng đã gửi yêu cầu hủy, đang chờ xử lý", "info");
+      }
       return;
     }
 
@@ -1838,13 +1882,16 @@ export const OrderManagementDetailPage = () => {
                                 color="error"
                                 onClick={openCancelDialog}
                                 disabled={
+                                  hasBlockingCancelRequest ||
                                   isUpdating ||
                                   isFulfilling ||
                                   isCompletingInStorePickup
                                 }
                                 sx={{ minWidth: 160 }}
                               >
-                                Hủy đơn hàng
+                                {hasBlockingCancelRequest
+                                  ? "Đã hủy đơn"
+                                  : "Hủy đơn hàng"}
                               </Button>
                             </Stack>
                           </>
@@ -1987,21 +2034,13 @@ export const OrderManagementDetailPage = () => {
           </DialogContentText>
 
           <TextField
-            select
             fullWidth
             label="Lý do hủy *"
-            value={cancelReason}
-            onChange={(event) =>
-              setCancelReason(event.target.value as CancelOrderReason)
-            }
+            value={selectedCancelReasonLabel}
+            placeholder="Chọn lý do bằng các chip bên dưới"
+            InputProps={{ readOnly: true }}
             sx={{ mb: 1.5 }}
-          >
-            {CANCEL_ORDER_REASON_OPTIONS.map((option) => (
-              <MenuItem key={option.value} value={option.value}>
-                {option.label}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
 
           <Stack
             direction="row"
@@ -2010,7 +2049,7 @@ export const OrderManagementDetailPage = () => {
             useFlexGap
             mb={1.5}
           >
-            {CANCEL_ORDER_REASON_OPTIONS.map((option) => (
+            {STAFF_CANCEL_ORDER_REASON_OPTIONS.map((option) => (
               <Chip
                 key={option.value}
                 clickable

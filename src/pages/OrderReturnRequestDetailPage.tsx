@@ -280,7 +280,7 @@ export const OrderReturnRequestDetailPage = () => {
   const [moreInfoDialogOpen, setMoreInfoDialogOpen] = useState(false);
   const [moreInfoReason, setMoreInfoReason] = useState("");
 
-  const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState("0");
+  const [inspectionApprovedRefund, setInspectionApprovedRefund] = useState("");
   const [inspectionRestocked, setInspectionRestocked] = useState(false);
   const [inspectionResultNote, setInspectionResultNote] = useState("");
   const [inspectionRejectDialogOpen, setInspectionRejectDialogOpen] =
@@ -476,6 +476,23 @@ export const OrderReturnRequestDetailPage = () => {
   const canStartInspection =
     request?.returnShippingInfo?.status === "Delivered";
 
+  const inspectionEstimatedRefundAmount = useMemo(
+    () =>
+      toNumber(
+        request?.requestedRefundAmount ?? request?.refundableAmount ?? 0,
+      ),
+    [request?.refundableAmount, request?.requestedRefundAmount],
+  );
+
+  const hasInspectionRefundInput = inspectionApprovedRefund.trim().length > 0;
+  const inspectionApprovedRefundNumber = hasInspectionRefundInput
+    ? toNumber(inspectionApprovedRefund)
+    : null;
+  const isInspectionRefundAmountValid =
+    inspectionApprovedRefundNumber !== null &&
+    inspectionApprovedRefundNumber >= 0 &&
+    inspectionApprovedRefundNumber <= inspectionEstimatedRefundAmount;
+
   useEffect(() => {
     showToastRef.current = showToast;
   }, [showToast]);
@@ -500,14 +517,7 @@ export const OrderReturnRequestDetailPage = () => {
         setOrder(null);
       }
 
-      setInspectionApprovedRefund(
-        String(
-          toNumber(
-            fullRequest.approvedRefundAmount ??
-              fullRequest.requestedRefundAmount,
-          ),
-        ),
-      );
+      setInspectionApprovedRefund("");
       setInspectionRestocked(Boolean(fullRequest.isRestocked));
       setInspectionResultNote(fullRequest.inspectionNote || "");
     } catch (error) {
@@ -607,10 +617,28 @@ export const OrderReturnRequestDetailPage = () => {
       return;
     }
 
+    if (!hasInspectionRefundInput) {
+      showToast("Vui lòng nhập số tiền hoàn được duyệt", "warning");
+      return;
+    }
+
     const approvedRefundAmount = toNumber(inspectionApprovedRefund);
 
+    if (inspectionEstimatedRefundAmount <= 0) {
+      showToast("Số tiền ước tính hoàn không hợp lệ", "warning");
+      return;
+    }
+
     if (approvedRefundAmount < 0) {
-      showToast("Số tiền hoàn được duyệt không hợp lệ", "warning");
+      showToast("Số tiền hoàn được duyệt phải lớn hơn hoặc bằng 0", "warning");
+      return;
+    }
+
+    if (approvedRefundAmount > inspectionEstimatedRefundAmount) {
+      showToast(
+        "Số tiền hoàn được duyệt phải nhỏ hơn hoặc bằng số tiền ước tính",
+        "warning",
+      );
       return;
     }
 
@@ -1354,16 +1382,34 @@ export const OrderReturnRequestDetailPage = () => {
                     label="Số tiền hoàn được duyệt"
                     value={formatMoneyInput(inspectionApprovedRefund)}
                     onChange={(event) => {
-                      setInspectionApprovedRefund(
-                        normalizeMoneyInput(event.target.value),
+                      const normalized = normalizeMoneyInput(
+                        event.target.value,
                       );
-                    }}
-                    onBlur={() => {
-                      if (!inspectionApprovedRefund) {
-                        setInspectionApprovedRefund("0");
+
+                      if (!normalized) {
+                        setInspectionApprovedRefund("");
+                        return;
                       }
+
+                      const nextValue = toNumber(normalized);
+                      const maxAllowed = inspectionEstimatedRefundAmount;
+
+                      if (maxAllowed >= 0 && nextValue > maxAllowed) {
+                        setInspectionApprovedRefund(String(maxAllowed));
+                        return;
+                      }
+
+                      setInspectionApprovedRefund(normalized);
                     }}
                     inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                    error={
+                      hasInspectionRefundInput && !isInspectionRefundAmountValid
+                    }
+                    helperText={
+                      inspectionEstimatedRefundAmount <= 0
+                        ? "Số tiền ước tính hoàn không hợp lệ"
+                        : `Số tiền phải >= 0 và <= ${formatCurrency(inspectionEstimatedRefundAmount)}`
+                    }
                   />
 
                   <FormControlLabel
@@ -1416,7 +1462,11 @@ export const OrderReturnRequestDetailPage = () => {
                       onClick={() => {
                         void handleCompleteInspection();
                       }}
-                      disabled={isSaving}
+                      disabled={
+                        isSaving ||
+                        !hasInspectionRefundInput ||
+                        !isInspectionRefundAmountValid
+                      }
                     >
                       Hoàn tất kiểm định
                     </Button>

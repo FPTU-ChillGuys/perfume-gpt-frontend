@@ -90,7 +90,7 @@ import {
 } from "@/types/review";
 import { orderStatusLabels } from "@/utils/orderStatus";
 import {
-  CANCEL_ORDER_REASON_OPTIONS,
+  CUSTOMER_CANCEL_ORDER_REASON_OPTIONS,
   mapCancelReasonInputToEnum,
 } from "@/utils/cancelOrderReason";
 import { formatDateTimeCompactVN, formatDateVN } from "@/utils/dateTime";
@@ -2470,7 +2470,7 @@ export const MyOrderDetailPage = () => {
             />
 
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              {CANCEL_ORDER_REASON_OPTIONS.map((option) => {
+              {CUSTOMER_CANCEL_ORDER_REASON_OPTIONS.map((option) => {
                 const isSelected = cancelReason.trim() === option.label;
                 return (
                   <Chip

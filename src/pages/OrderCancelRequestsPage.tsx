@@ -592,7 +592,7 @@ export const OrderCancelRequestsPage = () => {
                   <strong>Mã đơn</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>Khách hàng</strong>
+                  <strong>Người yêu cầu</strong>
                 </TableCell>
                 <TableCell>
                   <strong>Lý do</strong>

@@ -54,7 +54,7 @@ import type {
   CreateInStoreOrderRequest,
   PaymentMethod,
 } from "@/types/checkout";
-import { CANCEL_ORDER_REASON_OPTIONS } from "@/utils/cancelOrderReason";
+import { STAFF_CANCEL_ORDER_REASON_OPTIONS } from "@/utils/cancelOrderReason";
 import type { CancelOrderReason } from "@/services/orderService";
 import type {
   DistrictResponse,
@@ -2690,7 +2690,7 @@ export const CounterCheckoutStaffPage = () => {
                   setCancelReason(e.target.value as CancelOrderReason)
                 }
               >
-                {CANCEL_ORDER_REASON_OPTIONS.map((option) => (
+                {STAFF_CANCEL_ORDER_REASON_OPTIONS.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
                     {option.label}
                   </MenuItem>

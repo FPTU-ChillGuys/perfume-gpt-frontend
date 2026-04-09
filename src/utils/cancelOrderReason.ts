@@ -15,7 +15,49 @@ export const CANCEL_ORDER_REASON_OPTIONS: {
   { value: "PaymentIssue", label: "Tôi gặp vấn đề khi thanh toán" },
   { value: "DeliveryTooLate", label: "Thời gian giao hàng quá lâu" },
   { value: "InsufficientStock", label: "Sản phẩm không đủ số lượng" },
+  { value: "CustomerRequested", label: "Khách hàng yêu cầu hủy" },
+  { value: "SuspectedFraud", label: "Nghi ngờ đơn hàng giả mạo/gian lận" },
+  {
+    value: "UnreachableCustomer",
+    label: "Không thể liên lạc được với khách hàng",
+  },
+  { value: "PaymentTimeout", label: "Quá hạn thanh toán" },
+  {
+    value: "PricingOrSystemError",
+    label: "Lỗi hệ thống hoặc sai giá sản phẩm",
+  },
+  {
+    value: "DamagedOrDefectiveStock",
+    label: "Hàng kiểm tra trước khi giao bị lỗi/vỡ",
+  },
+  { value: "OutOfServiceArea", label: "Khu vực không hỗ trợ giao hàng" },
+  { value: "Other", label: "Lý do khác" },
 ];
+
+export const CUSTOMER_CANCEL_ORDER_REASON_OPTIONS =
+  CANCEL_ORDER_REASON_OPTIONS.filter(
+    (option) =>
+      option.value === "ChangedMind" ||
+      option.value === "FoundBetterPrice" ||
+      option.value === "WrongShippingInformation" ||
+      option.value === "PaymentIssue" ||
+      option.value === "DeliveryTooLate" ||
+      option.value === "InsufficientStock",
+  );
+
+export const STAFF_CANCEL_ORDER_REASON_OPTIONS =
+  CANCEL_ORDER_REASON_OPTIONS.filter(
+    (option) =>
+      option.value === "InsufficientStock" ||
+      option.value === "CustomerRequested" ||
+      option.value === "SuspectedFraud" ||
+      option.value === "UnreachableCustomer" ||
+      option.value === "PaymentTimeout" ||
+      option.value === "PricingOrSystemError" ||
+      option.value === "DamagedOrDefectiveStock" ||
+      option.value === "OutOfServiceArea" ||
+      option.value === "Other",
+  );
 
 const normalize = (value: string) =>
   value
