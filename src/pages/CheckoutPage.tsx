@@ -175,7 +175,7 @@ export const CheckoutPage = () => {
 
   const allowedPaymentMethods: PaymentMethod[] = isPickupInStore
     ? ["CashInStore", "VnPay", "Momo", "PayOs"]
-    : ["CashOnDelivery", "VnPay", "Momo"];
+    : ["CashOnDelivery", "VnPay", "Momo", "PayOs"];
 
   // Update totals khi địa chỉ hoặc các thông tin liên quan thay đổi
   useEffect(() => {
@@ -490,26 +490,31 @@ export const CheckoutPage = () => {
         return;
       }
 
-      // Build request
-      const request: CreateOrderRequest = {
-        voucherCode: voucherCode || null,
-        itemIds: selectedCartItemIds,
-        deliveryMethod: isPickupInStore ? "PickupInStore" : "Delivery",
-        payment: {
-          method: paymentMethod,
-        },
-      };
-
       if (selectedCartItemIds.length === 0) {
         showToast("Vui lòng chọn sản phẩm để thanh toán", "warning");
         return;
       }
+
+      // Build request following API nullable contract.
+      const request: CreateOrderRequest = {
+        voucherCode: voucherCode || null,
+        itemIds: selectedCartItemIds,
+        expectedTotalPrice: totals.totalPrice ?? null,
+        deliveryMethod: isPickupInStore ? "PickupInStore" : "Delivery",
+        savedAddressId: null,
+        recipient: null,
+        payment: {
+          method: paymentMethod,
+          posSessionId: null,
+        },
+      };
 
       // Add recipient info based on delivery method
       if (!isPickupInStore) {
         // Giao hàng tận nơi
         if (useNewAddress) {
           // Nhập địa chỉ mới -> truyền đầy đủ thông tin recipient
+          request.savedAddressId = null;
           request.recipient = {
             contactName: newAddress.recipientName,
             contactPhoneNumber: newAddress.recipientPhoneNumber,
@@ -523,21 +528,13 @@ export const CheckoutPage = () => {
           };
         } else {
           // Chọn địa chỉ có sẵn -> truyền savedAddressId để backend resolve địa chỉ
-          request.savedAddressId = selectedAddressId;
+          request.savedAddressId = selectedAddressId || null;
+          request.recipient = null;
         }
       } else {
         // Nhận tại cửa hàng -> không cần thông tin địa chỉ giao hàng
-        request.recipient = {
-          contactName: "",
-          contactPhoneNumber: "",
-          districtId: 0,
-          districtName: "",
-          wardCode: "",
-          wardName: "",
-          provinceId: 0,
-          provinceName: "",
-          fullAddress: "",
-        };
+        request.savedAddressId = null;
+        request.recipient = null;
       }
 
       // Call checkout API
