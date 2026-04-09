@@ -6563,9 +6563,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -6574,9 +6574,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
                 /** @description Not Found */
@@ -6585,9 +6585,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
                 /** @description Internal Server Error */
@@ -6596,9 +6596,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
             };
@@ -6639,9 +6639,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
                 /** @description Bad Request */
@@ -6650,9 +6650,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
                 /** @description Not Found */
@@ -6661,9 +6661,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
                 /** @description Internal Server Error */
@@ -6672,9 +6672,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
             };
@@ -8359,133 +8359,6 @@ export interface paths {
                 };
             };
         };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/products/embeddings/update/alls": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponse"];
-                        "application/json": components["schemas"]["BaseResponse"];
-                        "text/json": components["schemas"]["BaseResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/products/embeddings/update/{productId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    productId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponse"];
-                        "application/json": components["schemas"]["BaseResponse"];
-                        "text/json": components["schemas"]["BaseResponse"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/products/search/semantic": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    searchText?: string;
-                    Gender?: components["schemas"]["Gender"];
-                    CategoryId?: null | number;
-                    BrandId?: null | number;
-                    Volume?: null | number;
-                    FromPrice?: null | number;
-                    ToPrice?: null | number;
-                    IsAvailable?: boolean;
-                    PageNumber?: number;
-                    PageSize?: number;
-                    SortBy?: string;
-                    SortOrder?: string;
-                    IsDescending?: boolean;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItemWithVariants"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItemWithVariants"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItemWithVariants"];
-                    };
-                };
-            };
-        };
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -12200,17 +12073,15 @@ export interface components {
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
             /** Format: decimal */
+            maxDiscountAmount?: null | number;
+            /** Format: decimal */
             minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
             /** Format: int32 */
             remainingQuantity?: null | number;
-        };
-        BaseResponse: {
-            success?: boolean;
-            message?: string;
-            errors?: null | string[];
-            errorType?: null | components["schemas"]["ResponseErrorType"];
+            /** Format: int32 */
+            maxUsagePerUser?: null | number;
         };
         BaseResponseOfAddressLevel4Response: {
             payload?: null | components["schemas"]["AddressLevel4Response"];
@@ -12298,6 +12169,13 @@ export interface components {
         };
         BaseResponseOfCreateImportTicketRequest: {
             payload?: null | components["schemas"]["CreateImportTicketRequest"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfCreatePaymentResponseDto: {
+            payload?: null | components["schemas"]["CreatePaymentResponseDto"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -12653,13 +12531,6 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
-        BaseResponseOfPagedResultOfProductListItemWithVariants: {
-            payload?: null | components["schemas"]["PagedResultOfProductListItemWithVariants"];
-            success?: boolean;
-            message?: string;
-            errors?: null | string[];
-            errorType?: null | components["schemas"]["ResponseErrorType"];
-        };
         BaseResponseOfPagedResultOfReviewListItem: {
             payload?: null | components["schemas"]["PagedResultOfReviewListItem"];
             success?: boolean;
@@ -12979,6 +12850,9 @@ export interface components {
             batchId?: null | string;
             name: string;
             itemType?: components["schemas"]["PromotionType"];
+            discountType?: components["schemas"]["DiscountType"];
+            /** Format: decimal */
+            discountValue?: number;
             /** Format: date-time */
             startDate?: null | string;
             /** Format: date-time */
@@ -13088,6 +12962,9 @@ export interface components {
             /** Format: uuid */
             batchId?: null | string;
             promotionType?: components["schemas"]["PromotionType"];
+            discountType?: components["schemas"]["DiscountType"];
+            /** Format: decimal */
+            discountValue?: number;
             /** Format: int32 */
             maxUsage?: null | number;
         };
@@ -13109,6 +12986,14 @@ export interface components {
             targetItemType?: components["schemas"]["PromotionType"];
             discountType?: components["schemas"]["DiscountType"];
             applyType?: components["schemas"]["VoucherType"];
+            /** Format: decimal */
+            maxDiscountAmount?: null | number;
+            /** Format: decimal */
+            minOrderValue: number;
+            /** Format: int32 */
+            totalQuantity?: null | number;
+            /** Format: int32 */
+            maxUsagePerUser?: null | number;
         };
         CreateCartItemRequest: {
             /** Format: uuid */
@@ -13162,6 +13047,13 @@ export interface components {
             savedAddressId?: null | string;
             recipient?: null | components["schemas"]["ContactAddressInformation"];
             payment: components["schemas"]["PaymentInformation"];
+        };
+        CreatePaymentResponseDto: {
+            /** Format: uuid */
+            paymentId?: null | string;
+            paymentUrl?: null | string;
+            /** Format: uuid */
+            orderId?: null | string;
         };
         CreateProductRequest: {
             name: string;
@@ -13261,11 +13153,15 @@ export interface components {
             /** Format: int32 */
             requiredPoints?: number;
             /** Format: decimal */
+            maxDiscountAmount?: null | number;
+            /** Format: decimal */
             minOrderValue?: number;
             /** Format: date-time */
             expiryDate?: string;
             /** Format: int32 */
             totalQuantity?: number;
+            /** Format: int32 */
+            maxUsagePerUser?: null | number;
             isPublic?: boolean;
         };
         CustomerAttributePreferenceResponse: {
@@ -13854,19 +13750,6 @@ export interface components {
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
-        PagedResultOfProductListItemWithVariants: {
-            items: components["schemas"]["ProductListItemWithVariants"][];
-            /** Format: int32 */
-            pageNumber: number;
-            /** Format: int32 */
-            pageSize: number;
-            /** Format: int32 */
-            totalCount: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasPreviousPage?: boolean;
-            hasNextPage?: boolean;
-        };
         PagedResultOfReviewListItem: {
             items: components["schemas"]["ReviewListItem"][];
             /** Format: int32 */
@@ -14193,24 +14076,6 @@ export interface components {
             tags?: null | string[];
             primaryImage?: null | components["schemas"]["MediaResponse"];
         };
-        ProductListItemWithVariants: {
-            variants: components["schemas"]["VariantSummaryItem"][];
-            /** Format: uuid */
-            id?: string;
-            name?: null | string;
-            /** Format: int32 */
-            brandId?: number;
-            brandName: string;
-            /** Format: int32 */
-            categoryId?: number;
-            categoryName: string;
-            description?: null | string;
-            /** Format: int32 */
-            numberOfVariants?: number;
-            variantPrices: number[];
-            tags?: null | string[];
-            primaryImage?: null | components["schemas"]["MediaResponse"];
-        };
         ProductLookupItem: {
             /** Format: uuid */
             id?: string;
@@ -14391,12 +14256,16 @@ export interface components {
             /** Format: int32 */
             requiredPoints?: null | number;
             /** Format: decimal */
+            maxDiscountAmount?: null | number;
+            /** Format: decimal */
             minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
             isExpired?: boolean;
             /** Format: int32 */
             remainingQuantity?: null | number;
+            /** Format: int32 */
+            maxUsagePerUser?: null | number;
             /** Format: date-time */
             createdAt?: string;
         };
@@ -14440,7 +14309,7 @@ export interface components {
             quantity?: number;
         };
         /** @enum {string} */
-        ReturnOrderReason: "DamagedProduct" | "WrongItemReceived" | "ItemNotAsDescribed" | "ChangedMind" | "AllergicReaction";
+        ReturnOrderReason: "DamagedProduct" | "WrongItemReceived" | "ItemNotAsDescribed" | "ChangedMind" | "AllergicReaction" | "InsufficientStock" | "ReturnPeriodExpired" | "ProductUsedOrUnsealed" | "CustomerDamage" | "InsufficientEvidence" | "MissingAccessories" | "NonReturnableItem" | "SuspectedFraud" | "Other";
         /** @enum {string} */
         ReturnRequestStatus: "Pending" | "ApprovedForReturn" | "Inspecting" | "ReadyForRefund" | "Completed" | "Rejected" | "RequestMoreInfo";
         ReturnShippingInfoResponse: {
@@ -14812,6 +14681,9 @@ export interface components {
             /** Format: uuid */
             batchId?: null | string;
             promotionType?: components["schemas"]["PromotionType"];
+            discountType?: components["schemas"]["DiscountType"];
+            /** Format: decimal */
+            discountValue?: number;
             /** Format: int32 */
             maxUsage?: null | number;
         };
@@ -14838,6 +14710,14 @@ export interface components {
             targetItemType?: components["schemas"]["PromotionType"];
             discountType?: components["schemas"]["DiscountType"];
             applyType?: components["schemas"]["VoucherType"];
+            /** Format: decimal */
+            maxDiscountAmount?: null | number;
+            /** Format: decimal */
+            minOrderValue: number;
+            /** Format: int32 */
+            totalQuantity?: null | number;
+            /** Format: int32 */
+            maxUsagePerUser?: null | number;
         };
         UpdateCartItemRequest: {
             /** Format: int32 */
@@ -14962,6 +14842,8 @@ export interface components {
             /** Format: int32 */
             requiredPoints?: number;
             /** Format: decimal */
+            maxDiscountAmount?: null | number;
+            /** Format: decimal */
             minOrderValue?: number;
             /** Format: date-time */
             expiryDate?: string;
@@ -14969,6 +14851,8 @@ export interface components {
             totalQuantity?: number;
             /** Format: int32 */
             remainingQuantity?: number;
+            /** Format: int32 */
+            maxUsagePerUser?: null | number;
             isPublic?: boolean;
         };
         UsageStatus: number;
@@ -15100,12 +14984,6 @@ export interface components {
         };
         /** @enum {string} */
         VariantStatus: "Active" | "Inactive" | "Discontinued";
-        VariantSummaryItem: {
-            /** Format: uuid */
-            id?: string;
-            displayName: string;
-            concentrationName: string;
-        };
         /** @enum {string} */
         VariantType: "Standard" | "FullBox" | "Tester" | "Mini";
         VerifyImportDetailRequest: {
@@ -15143,6 +15021,8 @@ export interface components {
             /** Format: int32 */
             requiredPoints?: null | number;
             /** Format: decimal */
+            maxDiscountAmount?: null | number;
+            /** Format: decimal */
             minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
@@ -15151,6 +15031,8 @@ export interface components {
             totalQuantity?: null | number;
             /** Format: int32 */
             remainingQuantity?: null | number;
+            /** Format: int32 */
+            maxUsagePerUser?: null | number;
             isPublic?: boolean;
             /** Format: date-time */
             createdAt?: string;

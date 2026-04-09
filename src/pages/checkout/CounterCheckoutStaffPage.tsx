@@ -169,6 +169,8 @@ type CartDisplaySyncPayload = {
   discount: number;
   totalPrice: number;
   paymentUrl?: string | null;
+  checkoutStatus?: string | null;
+  checkoutOrderId?: string | null;
 };
 
 type FailedPaymentAction = {
@@ -284,9 +286,6 @@ export const CounterCheckoutStaffPage = () => {
   const [isLoadingWards, setIsLoadingWards] = useState(false);
   const [isSubmittingCheckout, setIsSubmittingCheckout] = useState(false);
   const [isCheckoutConfirmOpen, setIsCheckoutConfirmOpen] = useState(false);
-  const [checkoutSuccessRef, setCheckoutSuccessRef] = useState<string | null>(
-    null,
-  );
   const [paymentQrUrl, setPaymentQrUrl] = useState<string | null>(null);
   const paymentQrUrlRef = useRef<string | null>(null);
   const handledPaymentEventRef = useRef<string>("");
@@ -384,8 +383,15 @@ export const CounterCheckoutStaffPage = () => {
 
   const openSuccessDialog = useCallback(
     async (orderId: string) => {
+      console.log("[POS][SuccessDialog] open requested", {
+        orderId,
+        isSuccessDialogOpen,
+        successOrderId,
+      });
+
       // Tránh mở dialog nhiều lần cho cùng orderId
       if (isSuccessDialogOpen && successOrderId === orderId) {
+        console.log("[POS][SuccessDialog] skipped duplicate", { orderId });
         return;
       }
 
@@ -396,6 +402,7 @@ export const CounterCheckoutStaffPage = () => {
       // Auto print sau 500ms
       setTimeout(() => {
         if (receiptRef.current) {
+          console.log("[POS][SuccessDialog] auto print", { orderId });
           handlePrint();
         }
       }, 500);
@@ -403,8 +410,10 @@ export const CounterCheckoutStaffPage = () => {
     [handlePrint, loadOrderInvoice, isSuccessDialogOpen, successOrderId],
   );
 
-  const closeSuccessDialog = useCallback(() => {
-    // CHỈ KHI đóng dialog "Đón khách mới" mới clear cart và customer display
+  const handleStartNewCustomer = useCallback(() => {
+    console.log("[POS][SuccessDialog] start new customer -> clear carts");
+
+    // CHỈ KHI bấm "Đóng & Đón khách mới" mới clear cart và customer display
     setCartItems([]);
     setSearchResults([]);
     setSearchKeyword("");
@@ -439,8 +448,95 @@ export const CounterCheckoutStaffPage = () => {
       discount: 0,
       totalPrice: 0,
       paymentUrl: null,
+      checkoutStatus: null,
+      checkoutOrderId: null,
     } satisfies CartDisplaySyncPayload);
   }, []);
+
+  const buildSuccessCartSyncPayload = useCallback(
+    (orderId: string): CartDisplaySyncPayload => {
+      if (previewData) {
+        const mappedItems = cartItems.map((cartItem) => {
+          const matchedPreviewItem = previewData.items?.find(
+            (previewItem) =>
+              previewItem.batchCode === cartItem.batchCode &&
+              (previewItem.variantId === cartItem.variantId ||
+                previewItem.variantName === cartItem.variantName),
+          );
+
+          const unitPrice = toSafeNumber(
+            matchedPreviewItem?.unitPrice ?? cartItem.unitPrice,
+          );
+          const subTotal = toSafeNumber(
+            matchedPreviewItem?.subTotal ?? unitPrice * cartItem.quantity,
+          );
+          const discount = toSafeNumber(matchedPreviewItem?.discount ?? 0);
+          const finalTotal = toSafeNumber(
+            matchedPreviewItem?.finalTotal ?? subTotal - discount,
+          );
+
+          return {
+            variantId: toGuidOrEmpty(cartItem.variantId),
+            batchId: toGuidOrEmpty(cartItem.batchId),
+            variantName: cartItem.variantName,
+            batchCode: cartItem.batchCode,
+            imageUrl: cartItem.imageUrl || "",
+            quantity: Math.max(0, Number(cartItem.quantity || 0)),
+            unitPrice,
+            subTotal,
+            discount,
+            finalTotal,
+          };
+        });
+
+        return {
+          items: mappedItems,
+          subTotal: toSafeNumber(previewData.subTotal),
+          discount: toSafeNumber(previewData.discount),
+          totalPrice: toSafeNumber(previewData.totalPrice),
+          paymentUrl: null,
+          checkoutStatus: "Success",
+          checkoutOrderId: orderId,
+        };
+      }
+
+      const mappedItems = cartItems.map((item) => {
+        const subTotal = toSafeNumber(item.unitPrice * item.quantity);
+        return {
+          variantId: toGuidOrEmpty(item.variantId),
+          batchId: toGuidOrEmpty(item.batchId),
+          variantName: item.variantName,
+          batchCode: item.batchCode,
+          imageUrl: item.imageUrl || "",
+          quantity: Math.max(0, Number(item.quantity || 0)),
+          unitPrice: toSafeNumber(item.unitPrice),
+          subTotal,
+          discount: 0,
+          finalTotal: subTotal,
+        };
+      });
+
+      const fallbackSubTotal = mappedItems.reduce(
+        (sum, item) => sum + item.subTotal,
+        0,
+      );
+      const fallbackTotal = mappedItems.reduce(
+        (sum, item) => sum + item.finalTotal,
+        0,
+      );
+
+      return {
+        items: mappedItems,
+        subTotal: toSafeNumber(fallbackSubTotal),
+        discount: 0,
+        totalPrice: toSafeNumber(fallbackTotal),
+        paymentUrl: null,
+        checkoutStatus: "Success",
+        checkoutOrderId: orderId,
+      };
+    },
+    [cartItems, previewData],
+  );
 
   const handleCashPaymentConfirm = useCallback(async () => {
     if (!pendingCheckoutPayload) return;
@@ -466,12 +562,24 @@ export const CounterCheckoutStaffPage = () => {
 
         const retryCallId = createDebugCallId("pos-retry");
 
+        console.log("[POS][CashRetry] request", {
+          retryCallId,
+          paymentId: failedPaymentAction.paymentId,
+          method: "CashInStore",
+          posSessionId: POS_SESSION_ID,
+        });
+
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
           "CashInStore",
           POS_SESSION_ID,
           retryCallId,
         );
+
+        console.log("[POS][CashRetry] response", {
+          retryCallId,
+          result,
+        });
 
         const paymentIdFromRetryResponse = (result.paymentId || "").trim();
         const paymentIdFromRetryUrl = extractPaymentIdFromRetryUrl(result.url);
@@ -487,15 +595,38 @@ export const CounterCheckoutStaffPage = () => {
           `${retryCallId}-confirm`,
         );
 
+        console.log("[POS][CashRetry] confirmPayment", {
+          retryCallId,
+          paymentIdForRetry,
+          isPaid: true,
+        });
+
         // Clear payment failed states
         paymentQrUrlRef.current = null;
         setPaymentQrUrl(null);
         lastPaidOrderIdRef.current = failedPaymentAction.orderId;
         setFailedPaymentAction(null);
 
-        // Mở success dialog - KHÔNG clear cart, để closeSuccessDialog xử lý
+        // Mở success dialog - KHÔNG clear cart, để handleStartNewCustomer xử lý
         showToast("Đã xác nhận thanh toán tiền mặt", "success");
         void openSuccessDialog(failedPaymentAction.orderId);
+
+        void syncCartToCustomerRef.current(
+          buildSuccessCartSyncPayload(failedPaymentAction.orderId),
+        );
+
+        console.log("[POS][CashRetry] notifyPaymentSuccess invoke", {
+          orderId: failedPaymentAction.orderId,
+          paymentId: paymentIdForRetry,
+        });
+        void notifyPaymentSuccess({
+          orderId: failedPaymentAction.orderId,
+          paymentId: paymentIdForRetry,
+          status: "Success",
+          message: "Thanh toán thành công",
+        }).catch((error) => {
+          console.error("[POS][CashRetry] notifyPaymentSuccess failed", error);
+        });
 
         setCashReceived("");
         setPendingCheckoutPayload(null);
@@ -506,13 +637,19 @@ export const CounterCheckoutStaffPage = () => {
       // Mode checkout: Tạo order mới
       const result = await orderService.checkoutInStore(pendingCheckoutPayload);
 
-      // Lấy paymentId hoặc orderId từ response
-      const responsePaymentId = (
+      console.log("[POS][CashCheckout] checkoutInStore response", {
+        result,
+      });
+
+      // Lấy paymentId để confirm payment và orderId để in hóa đơn
+      const paymentIdForConfirm = (
         result.paymentId ||
         result.orderId ||
         ""
       ).trim();
-      if (!responsePaymentId) {
+      const orderIdForInvoice = (result.orderId || "").trim();
+
+      if (!paymentIdForConfirm) {
         showToast(
           "Checkout thành công nhưng thiếu payment/order ID",
           "warning",
@@ -520,11 +657,36 @@ export const CounterCheckoutStaffPage = () => {
         return;
       }
 
-      await orderService.confirmPayment(responsePaymentId, true);
+      if (!orderIdForInvoice) {
+        showToast(
+          "Checkout thành công nhưng thiếu orderId để in hóa đơn",
+          "warning",
+        );
+        return;
+      }
 
-      // Mở success dialog trực tiếp sau khi confirm thành công
+      await orderService.confirmPayment(paymentIdForConfirm, true);
+
+      // Mở success dialog với orderId để in hóa đơn
       showToast("Thanh toán tiền mặt thành công!", "success");
-      void openSuccessDialog(responsePaymentId);
+      void openSuccessDialog(orderIdForInvoice);
+
+      void syncCartToCustomerRef.current(
+        buildSuccessCartSyncPayload(orderIdForInvoice),
+      );
+
+      console.log("[POS][CashCheckout] notifyPaymentSuccess invoke", {
+        orderId: orderIdForInvoice,
+        paymentId: paymentIdForConfirm,
+      });
+      void notifyPaymentSuccess({
+        orderId: orderIdForInvoice,
+        paymentId: paymentIdForConfirm,
+        status: "Success",
+        message: "Thanh toán thành công",
+      }).catch((error) => {
+        console.error("[POS][CashCheckout] notifyPaymentSuccess failed", error);
+      });
 
       // Reset cash payment states
       setCashReceived("");
@@ -542,6 +704,8 @@ export const CounterCheckoutStaffPage = () => {
     cashReceived,
     cashDialogMode,
     failedPaymentAction,
+    buildSuccessCartSyncPayload,
+    notifyPaymentSuccess,
     showToast,
     openSuccessDialog,
   ]);
@@ -553,18 +717,6 @@ export const CounterCheckoutStaffPage = () => {
   }, [paymentMethod, selectablePaymentMethods]);
 
   useEffect(() => {
-    if (!checkoutSuccessRef) return;
-
-    const timerId = window.setTimeout(() => {
-      setCheckoutSuccessRef(null);
-    }, 3200);
-
-    return () => {
-      window.clearTimeout(timerId);
-    };
-  }, [checkoutSuccessRef]);
-
-  useEffect(() => {
     paymentQrUrlRef.current = paymentQrUrl;
   }, [paymentQrUrl]);
 
@@ -574,6 +726,8 @@ export const CounterCheckoutStaffPage = () => {
 
   useEffect(() => {
     if (!paymentCompletedData) return;
+
+    console.log("[POS][SignalR][PaymentCompleted] raw", paymentCompletedData);
 
     // Hỗ trợ cả camelCase lẫn PascalCase từ backend C#
     const rawStatus =
@@ -599,13 +753,57 @@ export const CounterCheckoutStaffPage = () => {
     );
 
     if (handledPaymentEventRef.current === eventKey) {
+      console.log(
+        "[POS][SignalR][PaymentCompleted] skipped: duplicated event",
+        {
+          eventKey,
+        },
+      );
       return;
     }
     handledPaymentEventRef.current = eventKey;
 
     if (status !== "success" && status !== "paid" && status !== "completed") {
+      console.log(
+        "[POS][SignalR][PaymentCompleted] skipped: non-success status",
+        {
+          status,
+          rawStatus,
+        },
+      );
       return;
     }
+
+    const activeRetryOrderId =
+      latestRetryOrderIdRef.current || failedPaymentAction?.orderId || "";
+    const activeRetryPaymentId =
+      latestRetryPaymentIdRef.current || failedPaymentAction?.paymentId || "";
+
+    if (
+      rawOrderId &&
+      activeRetryOrderId &&
+      rawOrderId === activeRetryOrderId &&
+      rawPaymentId &&
+      activeRetryPaymentId &&
+      rawPaymentId !== activeRetryPaymentId
+    ) {
+      console.log(
+        "[POS][SignalR][PaymentCompleted] skipped: stale retry payment",
+        {
+          rawOrderId,
+          rawPaymentId,
+          activeRetryOrderId,
+          activeRetryPaymentId,
+        },
+      );
+      return;
+    }
+
+    console.log("[POS][SignalR][PaymentCompleted] accepted", {
+      rawOrderId,
+      rawPaymentId,
+      status,
+    });
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
@@ -656,12 +854,51 @@ export const CounterCheckoutStaffPage = () => {
         totalPrice: toSafeNumber(previewData.totalPrice),
         paymentUrl: null, // Clear QR
       });
+    } else {
+      const mappedItems = cartItems.map((item) => {
+        const subTotal = toSafeNumber(item.unitPrice * item.quantity);
+        return {
+          variantId: toGuidOrEmpty(item.variantId),
+          batchId: toGuidOrEmpty(item.batchId),
+          variantName: item.variantName,
+          batchCode: item.batchCode,
+          imageUrl: item.imageUrl || "",
+          quantity: Math.max(0, Number(item.quantity || 0)),
+          unitPrice: toSafeNumber(item.unitPrice),
+          subTotal,
+          discount: 0,
+          finalTotal: subTotal,
+        };
+      });
+
+      const fallbackSubTotal = mappedItems.reduce(
+        (sum, item) => sum + item.subTotal,
+        0,
+      );
+      const fallbackTotal = mappedItems.reduce(
+        (sum, item) => sum + item.finalTotal,
+        0,
+      );
+
+      void syncCartToCustomerRef.current({
+        items: mappedItems,
+        subTotal: toSafeNumber(fallbackSubTotal),
+        discount: 0,
+        totalPrice: toSafeNumber(fallbackTotal),
+        paymentUrl: null,
+      });
     }
 
     // Mở Success Dialog thay vì clear cart ngay
     void openSuccessDialog(rawOrderId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paymentCompletedData, openSuccessDialog]);
+  }, [
+    cartItems,
+    failedPaymentAction?.orderId,
+    failedPaymentAction?.paymentId,
+    openSuccessDialog,
+    paymentCompletedData,
+    previewData,
+  ]);
 
   const openStaffCancelDialog = () => {
     if (!failedPaymentAction?.orderId) {
@@ -1218,52 +1455,6 @@ export const CounterCheckoutStaffPage = () => {
       };
     }, [cartItems, localSubtotal]);
 
-  const finalizeRetryAsPaid = useCallback(
-    (orderId: string, paymentId: string) => {
-      paymentQrUrlRef.current = null;
-      setPaymentQrUrl(null);
-      setCheckoutSuccessRef(orderId);
-      lastPaidOrderIdRef.current = orderId;
-      setFailedPaymentAction(null);
-
-      // Đồng bộ state local như luồng thanh toán thành công thông thường.
-      setCartItems([]);
-      setSearchResults([]);
-      setSearchKeyword("");
-      setVoucherInput("");
-      setAppliedVoucherCode("");
-      setCustomerLookupKeyword("");
-      setCustomerLookupResults([]);
-      setRecipientName("");
-      setRecipientPhone("");
-      setStreetAddress("");
-      setSelectedProvince(null);
-      setSelectedDistrict(null);
-      setSelectedWard(null);
-      setDistricts([]);
-      setWards([]);
-      handleClearSelectedCustomer();
-
-      void syncCartToCustomerRef.current({
-        items: [],
-        subTotal: 0,
-        discount: 0,
-        totalPrice: 0,
-        paymentUrl: null,
-      } satisfies CartDisplaySyncPayload);
-
-      void notifyPaymentSuccess({
-        orderId,
-        paymentId,
-        status: "Success",
-        message: "Thanh toán thành công",
-      }).catch(() => {
-        // Ignore notification errors
-      });
-    },
-    [notifyPaymentSuccess],
-  );
-
   const executeRetryFailedPayment = useCallback(
     async (requiresCashConfirm: boolean) => {
       if (!failedPaymentAction?.paymentId) {
@@ -1279,12 +1470,25 @@ export const CounterCheckoutStaffPage = () => {
 
         const retryCallId = createDebugCallId("pos-retry");
 
+        console.log("[POS][RetryPayment] request", {
+          retryCallId,
+          requiresCashConfirm,
+          paymentId: failedPaymentAction.paymentId,
+          method: paymentMethod,
+          posSessionId: POS_SESSION_ID,
+        });
+
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
           paymentMethod,
           POS_SESSION_ID,
           retryCallId,
         );
+
+        console.log("[POS][RetryPayment] response", {
+          retryCallId,
+          result,
+        });
 
         const paymentIdFromRetryResponse = (result.paymentId || "").trim();
         const paymentIdFromRetryUrl = extractPaymentIdFromRetryUrl(result.url);
@@ -1506,6 +1710,11 @@ export const CounterCheckoutStaffPage = () => {
   useEffect(() => {
     if (!paymentLinkUpdatedData) return;
 
+    console.log(
+      "[POS][SignalR][PaymentLinkUpdated] raw",
+      paymentLinkUpdatedData,
+    );
+
     const rawOrderId =
       paymentLinkUpdatedData.orderId ||
       (paymentLinkUpdatedData as { OrderId?: string }).OrderId ||
@@ -1520,12 +1729,33 @@ export const CounterCheckoutStaffPage = () => {
       "";
 
     if (!rawOrderId || !rawPaymentId || !rawPaymentUrl) {
+      console.log(
+        "[POS][SignalR][PaymentLinkUpdated] skipped: missing required fields",
+        {
+          rawOrderId,
+          rawPaymentId,
+          hasPaymentUrl: Boolean(rawPaymentUrl),
+        },
+      );
       return;
     }
 
     if (rawOrderId === lastPaidOrderIdRef.current) {
+      console.log(
+        "[POS][SignalR][PaymentLinkUpdated] skipped: already paid order",
+        {
+          rawOrderId,
+          lastPaidOrderId: lastPaidOrderIdRef.current,
+        },
+      );
       return;
     }
+
+    console.log("[POS][SignalR][PaymentLinkUpdated] accepted", {
+      rawOrderId,
+      rawPaymentId,
+      rawPaymentUrl,
+    });
 
     latestRetryOrderIdRef.current = rawOrderId;
     latestRetryPaymentIdRef.current = rawPaymentId;
@@ -1815,6 +2045,11 @@ export const CounterCheckoutStaffPage = () => {
       setIsSubmittingCheckout(true);
       const result = await orderService.checkoutInStore(payload);
 
+      console.log("[POS][Checkout] checkoutInStore response", {
+        paymentMethod: paymentMethodAtCheckout,
+        result,
+      });
+
       // 1. NẾU LÀ VNPAY/MOMO (CÓ LINK QR)
       if (result.url) {
         paymentQrUrlRef.current = result.url;
@@ -1852,26 +2087,44 @@ export const CounterCheckoutStaffPage = () => {
         return;
       }
 
-      // 2. Các payment method khác clear cart như cũ
+      // 2. Payment thành công không có QR: giữ cart, báo success 2 màn
       paymentQrUrlRef.current = null;
       setPaymentQrUrl(null);
-      setCheckoutSuccessRef(result.orderId ?? "");
-      setCartItems([]);
-      setSearchResults([]);
-      setSearchKeyword("");
-      setVoucherInput("");
-      setAppliedVoucherCode("");
-      setCustomerLookupKeyword("");
-      setCustomerLookupResults([]);
-      setSelectedCustomer(null);
-      setRecipientName("");
-      setRecipientPhone("");
-      setStreetAddress("");
-      setSelectedProvince(null);
-      setSelectedDistrict(null);
-      setSelectedWard(null);
-      setDistricts([]);
-      setWards([]);
+
+      const orderIdForSuccess = (result.orderId || "").trim();
+      const paymentIdForSuccess = (
+        result.paymentId ||
+        result.orderId ||
+        ""
+      ).trim();
+
+      if (!orderIdForSuccess || !paymentIdForSuccess) {
+        showToast(
+          "Checkout thành công nhưng thiếu order/payment ID",
+          "warning",
+        );
+        return;
+      }
+
+      showToast("Thanh toán thành công!", "success");
+      void openSuccessDialog(orderIdForSuccess);
+
+      void syncCartToCustomerRef.current(
+        buildSuccessCartSyncPayload(orderIdForSuccess),
+      );
+
+      console.log("[POS][Checkout] notifyPaymentSuccess invoke", {
+        orderId: orderIdForSuccess,
+        paymentId: paymentIdForSuccess,
+      });
+      void notifyPaymentSuccess({
+        orderId: orderIdForSuccess,
+        paymentId: paymentIdForSuccess,
+        status: "Success",
+        message: "Thanh toán thành công",
+      }).catch((error) => {
+        console.error("[POS][Checkout] notifyPaymentSuccess failed", error);
+      });
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Checkout thất bại",
@@ -2770,90 +3023,6 @@ export const CounterCheckoutStaffPage = () => {
           </DialogActions>
         </Dialog>
 
-        {checkoutSuccessRef && (
-          <Box
-            sx={{
-              position: "fixed",
-              inset: 0,
-              zIndex: (theme) => theme.zIndex.modal + 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              bgcolor: "rgba(2, 6, 23, 0.45)",
-              backdropFilter: "blur(2px)",
-            }}
-          >
-            <Box
-              sx={{
-                width: "min(92vw, 440px)",
-                borderRadius: 3,
-                bgcolor: "background.paper",
-                textAlign: "center",
-                px: 4,
-                py: 4.5,
-                boxShadow: "0 24px 60px rgba(2, 6, 23, 0.28)",
-                "@keyframes checkoutSuccessCard": {
-                  "0%": {
-                    transform: "translateY(10px) scale(0.94)",
-                    opacity: 0,
-                  },
-                  "100%": { transform: "translateY(0) scale(1)", opacity: 1 },
-                },
-                animation: "checkoutSuccessCard 260ms ease-out",
-              }}
-            >
-              <Box
-                sx={{
-                  position: "relative",
-                  width: 104,
-                  height: 104,
-                  mx: "auto",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  "@keyframes checkoutSuccessPop": {
-                    "0%": { transform: "scale(0.7)", opacity: 0 },
-                    "60%": { transform: "scale(1.08)", opacity: 1 },
-                    "100%": { transform: "scale(1)", opacity: 1 },
-                  },
-                  "@keyframes checkoutSuccessRipple": {
-                    "0%": { transform: "scale(0.6)", opacity: 0.55 },
-                    "100%": { transform: "scale(1.45)", opacity: 0 },
-                  },
-                  "&::before, &::after": {
-                    content: '""',
-                    position: "absolute",
-                    inset: 8,
-                    borderRadius: "50%",
-                    border: "2px solid",
-                    borderColor: "success.light",
-                    animation: "checkoutSuccessRipple 1.25s ease-out infinite",
-                  },
-                  "&::after": {
-                    animationDelay: "0.45s",
-                  },
-                }}
-              >
-                <CheckCircleRounded
-                  sx={{
-                    fontSize: 84,
-                    color: "success.main",
-                    animation: "checkoutSuccessPop 520ms ease-out",
-                  }}
-                />
-              </Box>
-              <Typography variant="h5" fontWeight={800} mt={1.5}>
-                Thanh toán thành công
-              </Typography>
-              {checkoutSuccessRef && (
-                <Typography variant="body2" color="text.secondary" mt={0.75}>
-                  Mã tham chiếu: {checkoutSuccessRef}
-                </Typography>
-              )}
-            </Box>
-          </Box>
-        )}
-
         <Dialog
           open={isStaffCancelDialogOpen}
           onClose={() => setIsStaffCancelDialogOpen(false)}
@@ -3129,7 +3298,7 @@ export const CounterCheckoutStaffPage = () => {
             <Button
               variant="contained"
               color="success"
-              onClick={closeSuccessDialog}
+              onClick={handleStartNewCustomer}
             >
               Đóng &amp; Đón khách mới
             </Button>

@@ -1421,6 +1421,13 @@ class OrderService {
     request: CreateInStoreOrderRequest,
   ): Promise<CheckoutResponse> {
     try {
+      console.log("[OrderService][checkoutInStore] request", {
+        paymentMethod: request.payment?.method,
+        expectedTotalPrice: request.expectedTotalPrice,
+        posSessionId: request.posSessionId,
+        scannedItemsCount: request.scannedItems?.length || 0,
+      });
+
       const response = await apiInstance.POST("/api/orders/checkout-in-store", {
         body: request,
       });
@@ -1431,28 +1438,67 @@ class OrderService {
 
       const payload = response.data.payload as
         | string
-        | { url?: string; orderId?: string }
+        | {
+            url?: string;
+            orderId?: string;
+            paymentId?: string;
+            paymentUrl?: string;
+            Url?: string;
+            OrderId?: string;
+            PaymentId?: string;
+            PaymentUrl?: string;
+          }
         | null
         | undefined;
 
       if (typeof payload === "string") {
         const isRedirectUrl = /^https?:\/\//i.test(payload);
-        return {
+        const parsed = {
           url: isRedirectUrl ? payload : undefined,
           orderId: isRedirectUrl ? undefined : payload,
+          paymentId: undefined,
         };
+
+        console.log("[OrderService][checkoutInStore] response", {
+          rawPayload: payload,
+          parsed,
+        });
+
+        return parsed;
       }
 
       if (payload && typeof payload === "object") {
-        return {
-          url: payload.url,
-          orderId: payload.orderId,
+        const parsed = {
+          url:
+            payload.url ||
+            payload.paymentUrl ||
+            payload.Url ||
+            payload.PaymentUrl,
+          orderId: payload.orderId || payload.OrderId,
+          paymentId: payload.paymentId || payload.PaymentId,
         };
+
+        console.log("[OrderService][checkoutInStore] response", {
+          rawPayload: payload,
+          parsed,
+        });
+
+        return parsed;
       }
+
+      console.log("[OrderService][checkoutInStore] response", {
+        rawPayload: payload,
+        parsed: {
+          orderId: undefined,
+          url: undefined,
+          paymentId: undefined,
+        },
+      });
 
       return {
         orderId: undefined,
         url: undefined,
+        paymentId: undefined,
       };
     } catch (error: any) {
       console.error("Error during in-store checkout:", error);
