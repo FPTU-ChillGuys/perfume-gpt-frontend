@@ -1886,6 +1886,14 @@ export const MyOrderDetailPage = () => {
                       >
                         {orderStatusLabels[order.status!]}
                       </Typography>
+                      {isPickupInStoreOrder && (
+                        <Chip
+                          label="Nhận tại cửa hàng"
+                          size="small"
+                          color="info"
+                          variant="outlined"
+                        />
+                      )}
                     </Box>
                   </Box>
 

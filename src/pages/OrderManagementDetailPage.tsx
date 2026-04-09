@@ -1100,6 +1100,14 @@ export const OrderManagementDetailPage = () => {
                       variant="outlined"
                     />
                   )}
+                  {isPickupInStoreOrder && (
+                    <Chip
+                      label="Nhận tại cửa hàng"
+                      color="info"
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
                   {order.status && (
                     <Chip
                       label={orderStatusLabels[order.status]}
