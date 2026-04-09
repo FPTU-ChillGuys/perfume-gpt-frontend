@@ -853,14 +853,7 @@ export const OrderManagementDetailPage = () => {
       setIsCompletingInStorePickup(true);
 
       if (isCashInStoreOrderPayment) {
-        if (!paymentId) {
-          throw new Error("Không tìm thấy giao dịch để xác nhận đã thu tiền");
-        }
-
-        await Promise.all([
-          orderService.confirmPayment(paymentId, true),
-          orderService.deliverInStoreOrder(order.id),
-        ]);
+        await orderService.deliverInStoreOrder(order.id);
         showToast(
           "Đã xác nhận thu tiền tại quầy và hoàn tất đơn hàng",
           "success",
@@ -1831,7 +1824,7 @@ export const OrderManagementDetailPage = () => {
                             >
                               {isFulfilling
                                 ? "Đang đóng gói..."
-                                : "Đóng gói & bàn giao vận chuyển"}
+                                : "Đóng gói và chờ bàn giao"}
                             </Button>
                           </Stack>
                         )}
