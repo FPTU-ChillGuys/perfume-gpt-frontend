@@ -6,7 +6,7 @@ import type {
 } from "@/types/chatbot";
 
 class ChatbotService {
-    private readonly CHAT_ENDPOINT = "/conversation/chat/v9";
+    private readonly CHAT_ENDPOINT = "/conversation/chat/v10";
 
     async sendMessage(
         conversationId: string,
