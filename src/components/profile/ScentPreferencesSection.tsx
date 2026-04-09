@@ -596,9 +596,9 @@ export const ScentPreferencesSection = ({
   ];
 
   const handleBudgetSliderChange = (_: unknown, value: number | number[]) => {
-    const [lo, hi] = value as number[];
-    setMinBudget(lo.toString());
-    setMaxBudget(hi.toString());
+    const arr = value as number[];
+    setMinBudget((arr[0] ?? BUDGET_MIN).toString());
+    setMaxBudget((arr[1] ?? BUDGET_MAX).toString());
   };
 
   const toggleFamily = (id: number) => {
