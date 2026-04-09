@@ -105,17 +105,6 @@ const ProfileInfo = ({
 
   return (
     <>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={onClearError}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={onClearSuccess}>
-          {success}
-        </Alert>
-      )}
-
       {/* Header */}
       <Box
         display="flex"
@@ -131,11 +120,6 @@ const ProfileInfo = ({
             Quản lý thông tin hồ sơ để bảo mật tài khoản
           </Typography>
         </Box>
-        <Chip
-          label="Người dùng"
-          size="small"
-          sx={{ bgcolor: "error.main", color: "#fff", fontWeight: 600 }}
-        />
       </Box>
 
       <Divider sx={{ mb: 3 }} />
