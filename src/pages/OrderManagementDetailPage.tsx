@@ -572,8 +572,7 @@ export const OrderManagementDetailPage = () => {
   const paymentId = latestPaymentTransaction?.id ?? null;
   const isPickupInStoreOrder = Boolean(
     order &&
-      (order.type === "Offline" ||
-        (!order.recipientInfo && !order.shippingInfo)),
+    (order.type === "Offline" || (!order.recipientInfo && !order.shippingInfo)),
   );
   const canCompleteInStoreOrder =
     order?.status === "ReadyToPick" && isPickupInStoreOrder;
@@ -858,8 +857,14 @@ export const OrderManagementDetailPage = () => {
           throw new Error("Không tìm thấy giao dịch để xác nhận đã thu tiền");
         }
 
-        await orderService.confirmPayment(paymentId, true);
-        showToast("Đã xác nhận thu tiền tại quầy và hoàn tất đơn hàng", "success");
+        await Promise.all([
+          orderService.confirmPayment(paymentId, true),
+          orderService.deliverInStoreOrder(order.id),
+        ]);
+        showToast(
+          "Đã xác nhận thu tiền tại quầy và hoàn tất đơn hàng",
+          "success",
+        );
       } else {
         await orderService.deliverInStoreOrder(order.id);
         showToast("Đã xác nhận khách nhận hàng tại cửa hàng", "success");
@@ -1575,7 +1580,9 @@ export const OrderManagementDetailPage = () => {
                             <Button
                               variant="contained"
                               color={
-                                isCashInStoreOrderPayment ? "warning" : "success"
+                                isCashInStoreOrderPayment
+                                  ? "warning"
+                                  : "success"
                               }
                               onClick={handleCompleteInStoreAction}
                               disabled={
@@ -1942,10 +1949,8 @@ export const OrderManagementDetailPage = () => {
         <DialogTitle>Xác nhận đã thu tiền tại quầy</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Bạn xác nhận đã thu đủ số tiền <b>{fmt(total)}</b> cho đơn hàng <b>
-              {(order?.code || order?.id || orderId || "-").toUpperCase()}
-            </b>
-            ?
+            Bạn xác nhận đã thu đủ số tiền <b>{fmt(total)}</b> cho đơn hàng{" "}
+            <b>{(order?.code || order?.id || orderId || "-").toUpperCase()}</b>?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -1961,7 +1966,9 @@ export const OrderManagementDetailPage = () => {
             onClick={handleConfirmCashInStoreCompletion}
             disabled={isCompletingInStorePickup}
           >
-            {isCompletingInStorePickup ? "Đang xác nhận..." : "Xác nhận thu tiền"}
+            {isCompletingInStorePickup
+              ? "Đang xác nhận..."
+              : "Xác nhận thu tiền"}
           </Button>
         </DialogActions>
       </Dialog>
