@@ -153,6 +153,9 @@ const returnReasonLabel = (reason?: string | null) => {
   return reason;
 };
 
+const returnOptionLabel = (isRefundOnly?: boolean | null) =>
+  isRefundOnly ? "Hoàn trả (Không trả hàng)" : "Trả hàng/Hoàn trả";
+
 const formatDate = (value?: string | null) => formatDateTimeVN(value);
 
 const formatCurrency = (value?: number | null) =>
@@ -1060,6 +1063,14 @@ export const OrderReturnRequestDetailPage = () => {
                       gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr 1fr" }}
                       gap={2}
                     >
+                      <Box>
+                        <Typography variant="caption" color="text.secondary">
+                          Phương án khách chọn
+                        </Typography>
+                        <Typography>
+                          {returnOptionLabel(request.isRefundOnly === true)}
+                        </Typography>
+                      </Box>
                       <Box>
                         <Typography variant="caption" color="text.secondary">
                           Lý do trả hàng
