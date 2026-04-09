@@ -66,7 +66,6 @@ import codIcon from "@/assets/cod.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
 import transferIcon from "@/assets/transfer.png";
-import payOsIcon from "@/assets/payos.png";
 
 const formatCurrency = (value?: number) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))}đ`;
@@ -109,7 +108,7 @@ const PAYMENT_METHOD_ICON: Partial<Record<PaymentMethod, string>> = {
   VnPay: vnpayIcon,
   Momo: momoIcon,
   ExternalBankTransfer: transferIcon,
-  PayOs: payOsIcon,
+  PayOs: transferIcon,
 };
 
 interface PosCartItem {

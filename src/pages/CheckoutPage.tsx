@@ -47,7 +47,6 @@ import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
-import payOsIcon from "@/assets/payos.png";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -86,7 +85,7 @@ const PAYMENT_METHODS: {
     value: "PayOs",
     label: "PayOS",
     description: "Thanh toán qua PayOS",
-    icon: payOsIcon,
+    icon: momoIcon,
   },
 ];
 
