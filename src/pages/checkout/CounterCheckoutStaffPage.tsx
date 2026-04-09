@@ -384,6 +384,11 @@ export const CounterCheckoutStaffPage = () => {
 
   const openSuccessDialog = useCallback(
     async (orderId: string) => {
+      // Tránh mở dialog nhiều lần cho cùng orderId
+      if (isSuccessDialogOpen && successOrderId === orderId) {
+        return;
+      }
+
       setSuccessOrderId(orderId);
       setIsSuccessDialogOpen(true);
       await loadOrderInvoice(orderId);
@@ -395,11 +400,11 @@ export const CounterCheckoutStaffPage = () => {
         }
       }, 500);
     },
-    [handlePrint, loadOrderInvoice],
+    [handlePrint, loadOrderInvoice, isSuccessDialogOpen, successOrderId],
   );
 
   const closeSuccessDialog = useCallback(() => {
-    // CHỈ KHI đóng dialog mới clear cart
+    // CHỈ KHI đóng dialog "Đón khách mới" mới clear cart và customer display
     setCartItems([]);
     setSearchResults([]);
     setSearchKeyword("");
@@ -422,7 +427,12 @@ export const CounterCheckoutStaffPage = () => {
     setSuccessOrderId(null);
     setOrderInvoice(null);
 
-    // Clear customer display
+    // Clear payment states
+    paymentQrUrlRef.current = null;
+    setPaymentQrUrl(null);
+    setFailedPaymentAction(null);
+
+    // Clear customer display ONLY when closing dialog
     void syncCartToCustomerRef.current({
       items: [],
       subTotal: 0,
@@ -477,24 +487,24 @@ export const CounterCheckoutStaffPage = () => {
           `${retryCallId}-confirm`,
         );
 
-        finalizeRetryAsPaid(failedPaymentAction.orderId, paymentIdForRetry);
+        // Clear payment failed states
+        paymentQrUrlRef.current = null;
+        setPaymentQrUrl(null);
+        lastPaidOrderIdRef.current = failedPaymentAction.orderId;
+        setFailedPaymentAction(null);
 
-        // Mở success dialog trực tiếp sau khi confirm thành công
+        // Mở success dialog - KHÔNG clear cart, để closeSuccessDialog xử lý
         showToast("Đã xác nhận thanh toán tiền mặt", "success");
         void openSuccessDialog(failedPaymentAction.orderId);
 
         setCashReceived("");
         setPendingCheckoutPayload(null);
+        setIsCashPaymentDialogOpen(false);
         return;
       }
 
       // Mode checkout: Tạo order mới
       const result = await orderService.checkoutInStore(pendingCheckoutPayload);
-
-      console.log("[Checkout Response]", result);
-      console.log("[Checkout Response] Keys:", Object.keys(result));
-      console.log("[Checkout Response] paymentId:", result.paymentId);
-      console.log("[Checkout Response] orderId:", result.orderId);
 
       // Lấy paymentId hoặc orderId từ response
       const responsePaymentId = (
@@ -527,7 +537,6 @@ export const CounterCheckoutStaffPage = () => {
     } finally {
       setIsSubmittingCheckout(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- finalizeRetryAsPaid defined later
   }, [
     pendingCheckoutPayload,
     cashReceived,
@@ -604,8 +613,54 @@ export const CounterCheckoutStaffPage = () => {
 
     setFailedPaymentAction(null);
 
+    // Clear QR khỏi customer display - giữ cart nhưng xóa QR
+    // Inline sync để tránh dependency issue
+    if (previewData) {
+      const mappedItems = cartItems.map((cartItem) => {
+        const matchedPreviewItem = previewData.items?.find(
+          (previewItem) =>
+            previewItem.batchCode === cartItem.batchCode &&
+            (previewItem.variantId === cartItem.variantId ||
+              previewItem.variantName === cartItem.variantName),
+        );
+
+        const unitPrice = toSafeNumber(
+          matchedPreviewItem?.unitPrice ?? cartItem.unitPrice,
+        );
+        const subTotal = toSafeNumber(
+          matchedPreviewItem?.subTotal ?? unitPrice * cartItem.quantity,
+        );
+        const discount = toSafeNumber(matchedPreviewItem?.discount ?? 0);
+        const finalTotal = toSafeNumber(
+          matchedPreviewItem?.finalTotal ?? subTotal - discount,
+        );
+
+        return {
+          variantId: toGuidOrEmpty(cartItem.variantId),
+          batchId: toGuidOrEmpty(cartItem.batchId),
+          variantName: cartItem.variantName,
+          batchCode: cartItem.batchCode,
+          imageUrl: cartItem.imageUrl || "",
+          quantity: Math.max(0, Number(cartItem.quantity || 0)),
+          unitPrice,
+          subTotal,
+          discount,
+          finalTotal,
+        };
+      });
+
+      void syncCartToCustomerRef.current({
+        items: mappedItems,
+        subTotal: toSafeNumber(previewData.subTotal),
+        discount: toSafeNumber(previewData.discount),
+        totalPrice: toSafeNumber(previewData.totalPrice),
+        paymentUrl: null, // Clear QR
+      });
+    }
+
     // Mở Success Dialog thay vì clear cart ngay
     void openSuccessDialog(rawOrderId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paymentCompletedData, openSuccessDialog]);
 
   const openStaffCancelDialog = () => {
@@ -1262,15 +1317,27 @@ export const CounterCheckoutStaffPage = () => {
             `${retryCallId}-confirm`,
           );
 
-          finalizeRetryAsPaid(failedPaymentAction.orderId, paymentIdForRetry);
+          // Clear payment failed states - để SignalR event tự động mở success dialog
+          paymentQrUrlRef.current = null;
+          setPaymentQrUrl(null);
+          lastPaidOrderIdRef.current = failedPaymentAction.orderId;
+          setFailedPaymentAction(null);
+
           showToast("Đã xác nhận thanh toán tiền mặt", "success");
+          // SignalR event sẽ tự động trigger openSuccessDialog
           return;
         }
 
-        // Nếu chọn thanh toán tiền mặt nhưng không require confirm, vẫn cần finalize
+        // Nếu chọn thanh toán tiền mặt nhưng không require confirm
         if (paymentMethod === "CashInStore") {
-          finalizeRetryAsPaid(failedPaymentAction.orderId, paymentIdForRetry);
+          // Clear payment failed states
+          paymentQrUrlRef.current = null;
+          setPaymentQrUrl(null);
+          lastPaidOrderIdRef.current = failedPaymentAction.orderId;
+          setFailedPaymentAction(null);
+
           showToast("Đã chuyển sang thanh toán tiền mặt", "success");
+          // SignalR event sẽ tự động trigger openSuccessDialog
           return;
         }
 
@@ -1330,7 +1397,6 @@ export const CounterCheckoutStaffPage = () => {
     [
       cartItems,
       failedPaymentAction,
-      finalizeRetryAsPaid,
       localSubtotal,
       paymentMethod,
       previewData,
