@@ -370,14 +370,6 @@ export const CounterCheckoutStaffPage = () => {
       ":",
     );
 
-    console.log("[POS][PAYMENT_COMPLETED_EVENT]", {
-      orderId: rawOrderId,
-      paymentId: rawPaymentId || null,
-      status: rawStatus,
-      message: rawMessage,
-      eventKey,
-    });
-
     if (handledPaymentEventRef.current === eventKey) return;
     handledPaymentEventRef.current = eventKey;
 
@@ -998,34 +990,14 @@ export const CounterCheckoutStaffPage = () => {
         paymentUrl: null,
       } satisfies CartDisplaySyncPayload);
 
-      console.log("[POS][NOTIFY_SUCCESS] Start", {
-        orderId,
-        paymentId,
-        posSessionId: POS_SESSION_ID,
-      });
-
       void notifyPaymentSuccess({
         orderId,
         paymentId,
         status: "Success",
         message: "Thanh toán thành công",
-      })
-        .then(() => {
-          console.log("[POS][NOTIFY_SUCCESS] Success", {
-            orderId,
-            paymentId,
-          });
-        })
-        .catch((error) => {
-          console.warn("[POS][NOTIFY_SUCCESS] Failed", {
-            orderId,
-            paymentId,
-            error:
-              error instanceof Error
-                ? error.message
-                : "Unknown notifyPaymentSuccess error",
-          });
-        });
+      }).catch(() => {
+        // Ignore notification errors
+      });
     },
     [notifyPaymentSuccess],
   );
@@ -1044,14 +1016,6 @@ export const CounterCheckoutStaffPage = () => {
         handledPaymentEventRef.current = "";
 
         const retryCallId = createDebugCallId("pos-retry");
-        console.log("[POS][RETRY] Start", {
-          retryCallId,
-          orderId: failedPaymentAction.orderId,
-          previousPaymentId: failedPaymentAction.paymentId,
-          method: paymentMethod,
-          requiresCashConfirm,
-          posSessionId: POS_SESSION_ID,
-        });
 
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
@@ -1059,11 +1023,6 @@ export const CounterCheckoutStaffPage = () => {
           POS_SESSION_ID,
           retryCallId,
         );
-
-        console.log("[POS][RETRY] Response", {
-          retryCallId,
-          result,
-        });
 
         const paymentIdFromRetryResponse = (result.paymentId || "").trim();
         const paymentIdFromRetryUrl = extractPaymentIdFromRetryUrl(result.url);
@@ -1074,14 +1033,6 @@ export const CounterCheckoutStaffPage = () => {
 
         latestRetryOrderIdRef.current = failedPaymentAction.orderId;
         latestRetryPaymentIdRef.current = paymentIdForRetry;
-
-        console.log("[POS][RETRY] PaymentId resolution", {
-          retryCallId,
-          previousPaymentId: failedPaymentAction.paymentId,
-          paymentIdFromRetryResult: paymentIdFromRetryResponse || null,
-          paymentIdFromRetryUrl: paymentIdFromRetryUrl || null,
-          paymentIdUsedForNextStep: paymentIdForRetry,
-        });
 
         if (paymentIdForRetry !== failedPaymentAction.paymentId) {
           setFailedPaymentAction((prev) => {
@@ -1097,32 +1048,22 @@ export const CounterCheckoutStaffPage = () => {
         }
 
         if (requiresCashConfirm) {
-          const confirmCallId = `${retryCallId}-confirm`;
-          console.log("[POS][CONFIRM] Start", {
-            confirmCallId,
-            fromRetryCallId: retryCallId,
-            orderId: failedPaymentAction.orderId,
-            paymentIdUsedForConfirm: paymentIdForRetry,
-            payload: {
-              isSuccess: true,
-              failureReason: undefined,
-            },
-          });
-
           await orderService.confirmPayment(
             paymentIdForRetry,
             true,
             undefined,
-            confirmCallId,
+            `${retryCallId}-confirm`,
           );
-
-          console.log("[POS][CONFIRM] Success", {
-            confirmCallId,
-            paymentIdUsedForConfirm: paymentIdForRetry,
-          });
 
           finalizeRetryAsPaid(failedPaymentAction.orderId, paymentIdForRetry);
           showToast("Đã xác nhận thanh toán tiền mặt", "success");
+          return;
+        }
+
+        // Nếu chọn thanh toán tiền mặt nhưng không require confirm, vẫn cần finalize
+        if (paymentMethod === "CashInStore") {
+          finalizeRetryAsPaid(failedPaymentAction.orderId, paymentIdForRetry);
+          showToast("Đã chuyển sang thanh toán tiền mặt", "success");
           return;
         }
 
@@ -1222,14 +1163,6 @@ export const CounterCheckoutStaffPage = () => {
       return;
     }
 
-    console.log("[POS][PAYMENT_FAILED_EVENT]", {
-      orderId: rawOrderId,
-      paymentId: rawPaymentId || null,
-      status,
-      message: rawMessage,
-      failedEventKey,
-    });
-
     const activeRetryOrderId =
       latestRetryOrderIdRef.current || failedPaymentAction?.orderId || "";
     const activeRetryPaymentId =
@@ -1243,28 +1176,11 @@ export const CounterCheckoutStaffPage = () => {
       activeRetryPaymentId &&
       rawPaymentId !== activeRetryPaymentId
     ) {
-      console.log(
-        "[POS][PAYMENT_FAILED_EVENT] Ignored stale fail for previous paymentId",
-        {
-          orderId: rawOrderId,
-          stalePaymentId: rawPaymentId,
-          activePaymentId: activeRetryPaymentId,
-          activeRetryOrderId,
-        },
-      );
       handledPaymentFailedEventRef.current = failedEventKey;
       return;
     }
 
     if (rawOrderId && rawOrderId === lastPaidOrderIdRef.current) {
-      console.log(
-        "[POS][PAYMENT_FAILED_EVENT] Ignored stale fail after success",
-        {
-          orderId: rawOrderId,
-          paymentId: rawPaymentId || null,
-          lastPaidOrderId: lastPaidOrderIdRef.current,
-        },
-      );
       handledPaymentFailedEventRef.current = failedEventKey;
       return;
     }
@@ -1274,7 +1190,13 @@ export const CounterCheckoutStaffPage = () => {
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
 
-    showToast(rawMessage, "error");
+    const vietnameseMessage = rawMessage.includes("cancelled") || rawMessage.includes("canceled")
+      ? "Giao dịch đã bị hủy"
+      : rawMessage.includes("failed") || rawMessage.includes("error")
+      ? "Thanh toán thất bại"
+      : rawMessage || "Giao dịch thất bại hoặc bị hủy";
+    
+    showToast(vietnameseMessage, "error");
 
     if (status === "failed" || status === "error" || status === "cancelled") {
       if (rawOrderId) {
@@ -1328,19 +1250,8 @@ export const CounterCheckoutStaffPage = () => {
     }
 
     if (rawOrderId === lastPaidOrderIdRef.current) {
-      console.log("[POS][PAYMENT_LINK_UPDATED_EVENT] Ignored after success", {
-        orderId: rawOrderId,
-        paymentId: rawPaymentId,
-        lastPaidOrderId: lastPaidOrderIdRef.current,
-      });
       return;
     }
-
-    console.log("[POS][PAYMENT_LINK_UPDATED_EVENT]", {
-      orderId: rawOrderId,
-      paymentId: rawPaymentId,
-      paymentUrl: rawPaymentUrl,
-    });
 
     latestRetryOrderIdRef.current = rawOrderId;
     latestRetryPaymentIdRef.current = rawPaymentId;
@@ -1627,8 +1538,34 @@ export const CounterCheckoutStaffPage = () => {
             }
             setCartItems([]);
             setSearchResults([]);
+
+            console.log("[POS][CASH_CHECKOUT] confirmPayment start", {
+              paymentId,
+            });
+
             await orderService.confirmPayment(paymentId, true);
-          } catch {
+
+            console.log("[POS][CASH_CHECKOUT] confirmPayment success");
+
+            // Đồng bộ cart rỗng lên màn hình customer
+            void syncCartToCustomerRef.current({
+              items: [],
+              subTotal: 0,
+              discount: 0,
+              totalPrice: 0,
+              paymentUrl: null,
+            } satisfies CartDisplaySyncPayload);
+
+            // Gửi thông báo thanh toán thành công qua SignalR
+            void notifyPaymentSuccess({
+              orderId: paymentId,
+              paymentId: paymentId,
+              status: "Success",
+              message: "Thanh toán tiền mặt thành công",
+            }).catch(() => {
+              // Ignore notification errors
+            });
+          } catch (error) {
             showToast(
               "Đơn đã tạo nhưng xác nhận thanh toán tiền mặt tự động thất bại",
               "warning",

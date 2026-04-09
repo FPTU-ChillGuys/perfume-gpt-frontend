@@ -52,6 +52,7 @@ export const CustomerDisplayScreen = () => {
     requireAuth: false,
   });
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
   const hadPaymentFlowRef = useRef(false);
   const lastFailedOrderIdRef = useRef("");
@@ -199,6 +200,7 @@ export const CustomerDisplayScreen = () => {
 
     const timerId = window.setTimeout(() => {
       setShowCheckoutSuccess(false);
+      setSuccessOrderId(null);
     }, 3200);
 
     return () => {
@@ -236,6 +238,7 @@ export const CustomerDisplayScreen = () => {
 
     const frameId = window.requestAnimationFrame(() => {
       setActivePaymentUrl("");
+      setSuccessOrderId(rawOrderId || null);
       setShowCheckoutSuccess(true); // Nhảy tick xanh cho khách xem
     });
 
@@ -344,6 +347,7 @@ export const CustomerDisplayScreen = () => {
     if (displayPaymentUrl) return;
 
     const frameId = window.requestAnimationFrame(() => {
+      setSuccessOrderId(lastSuccessfulOrderIdRef.current || null);
       setShowCheckoutSuccess(true);
       hadPaymentFlowRef.current = false;
     });
@@ -386,9 +390,15 @@ export const CustomerDisplayScreen = () => {
       )}
 
       {showCheckoutSuccess && (
-        <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]">
+        <div
+          className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
+          style={{
+            backgroundColor: "rgba(2, 6, 23, 0.45)",
+            backdropFilter: "blur(2px)",
+          }}
+        >
           <div
-            className="mx-4 w-full max-w-md rounded-3xl bg-white px-8 py-9 text-center text-slate-900"
+            className="mx-4 rounded-3xl bg-white px-8 py-9 text-center"
             style={{
               width: "min(92vw, 440px)",
               boxShadow: "0 24px 60px rgba(2, 6, 23, 0.28)",
@@ -419,12 +429,14 @@ export const CustomerDisplayScreen = () => {
                 />
               </div>
             </div>
-            <p className="text-[30px] font-extrabold text-emerald-700">
+            <p className="mt-1.5 text-2xl font-extrabold text-slate-900">
               Thanh toán thành công
             </p>
-            <p className="mt-2 text-base text-slate-600">
-              Cảm ơn quý khách. Đơn hàng đã được xử lý.
-            </p>
+            {successOrderId && (
+              <p className="mt-2 text-sm text-slate-500">
+                Mã tham chiếu: {successOrderId}
+              </p>
+            )}
           </div>
         </div>
       )}
