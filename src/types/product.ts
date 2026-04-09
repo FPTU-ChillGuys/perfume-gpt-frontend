@@ -47,10 +47,19 @@ export interface ProductImageUploadPayload {
 export type ProductInformation = components["schemas"]["ProductInforResponse"];
 export type ProductFastLook = components["schemas"]["ProductFastLookResponse"];
 export type VariantFastLook = components["schemas"]["VariantFastLookResponse"];
-export type ProductListItemWithVariants =
-  components["schemas"]["ProductListItemWithVariants"];
-export type PagedProductListWithVariants =
-  components["schemas"]["PagedResultOfProductListItemWithVariants"];
+export type ProductListItemWithVariants = ProductListItem & {
+  variants?: Array<{ id?: string; [key: string]: unknown }>;
+};
+
+export interface PagedProductListWithVariants {
+  items: ProductListItemWithVariants[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages?: number;
+  hasPreviousPage?: boolean;
+  hasNextPage?: boolean;
+}
 export type ProductLookupItem = components["schemas"]["ProductLookupItem"];
 export type CreateVariantRequest =
   components["schemas"]["CreateVariantRequest"];
