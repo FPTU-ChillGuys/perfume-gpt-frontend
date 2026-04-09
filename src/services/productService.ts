@@ -157,16 +157,19 @@ class ProductService {
     query: SemanticProductSearchQuery,
   ): Promise<PagedProductListWithVariants> {
     try {
-      const response = await apiInstance.GET("/api/products/search/semantic", {
-        params: { query },
-      });
+      // Endpoint not in generated OpenAPI spec — bypass strict path typing
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = await (apiInstance as any).GET(
+        "/api/products/search/semantic",
+        { params: { query } },
+      );
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to search products");
       }
 
       return (
-        response.data.payload ||
+        (response.data.payload as PagedProductListWithVariants) ||
         this.createEmptyPagedResult<ProductListItemWithVariants>(query)
       );
     } catch (error: any) {

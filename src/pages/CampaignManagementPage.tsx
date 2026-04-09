@@ -818,6 +818,7 @@ export const CampaignManagementPage = () => {
         discountType: voucher.discountType,
         applyType: voucher.applyType,
         targetItemType,
+        minOrderValue: 0,
       });
     }
 
