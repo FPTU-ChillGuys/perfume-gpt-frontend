@@ -1,4 +1,11 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -24,6 +31,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
@@ -42,6 +50,7 @@ import {
   Person,
   Phone,
   Receipt,
+  LocalPrintshopOutlined,
   Remove,
   Search,
   SwapHoriz,
@@ -49,8 +58,10 @@ import {
   Sync,
   LocationOn,
 } from "@mui/icons-material";
+import { useReactToPrint } from "react-to-print";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
+  type OrderInvoice,
   orderService,
   type OrderCancelRequest,
   type PickListBatchInfo,
@@ -58,6 +69,7 @@ import {
   type PickListResponse,
 } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
+import { OrderInvoicePrint } from "@/components/order/OrderInvoicePrint";
 import type { PaymentMethod } from "@/types/checkout";
 import type { CarrierName, OrderResponse, OrderStatus } from "@/types/order";
 import {
@@ -404,6 +416,11 @@ export const OrderManagementDetailPage = () => {
     useState(false);
   const [isCompletingInStorePickup, setIsCompletingInStorePickup] =
     useState(false);
+  const [invoiceData, setInvoiceData] = useState<OrderInvoice | null>(null);
+  const [isPreparingInvoicePrint, setIsPreparingInvoicePrint] = useState(false);
+  const [shouldTriggerInvoicePrint, setShouldTriggerInvoicePrint] =
+    useState(false);
+  const invoicePrintRef = useRef<HTMLDivElement | null>(null);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -618,6 +635,20 @@ export const OrderManagementDetailPage = () => {
   const canCompleteInStoreOrder =
     order?.status === "ReadyToPick" && isPickupInStoreOrder;
   const isCashInStoreOrderPayment = currentPaymentMethod === "CashInStore";
+  const canPrintInvoice =
+    order?.status === "Delivered" && order?.paymentStatus === "Paid";
+
+  const triggerInvoicePrint = useReactToPrint({
+    contentRef: invoicePrintRef,
+    documentTitle: `hoa-don-${order?.code || order?.id || "order"}`,
+    onAfterPrint: () => {
+      setIsPreparingInvoicePrint(false);
+    },
+    onPrintError: () => {
+      setIsPreparingInvoicePrint(false);
+      showToast("Không thể in hóa đơn. Vui lòng thử lại.", "error");
+    },
+  });
 
   const autoFulfillItems = useMemo<AutoFulfillItem[]>(() => {
     if (order?.status !== "Preparing") {
@@ -943,6 +974,38 @@ export const OrderManagementDetailPage = () => {
     void completeInStorePickup();
   };
 
+  const handlePrintInvoice = async () => {
+    if (!order?.id || !canPrintInvoice) {
+      showToast(
+        "Chỉ có thể in hóa đơn khi đơn hàng đã giao hàng và đã thanh toán",
+        "warning",
+      );
+      return;
+    }
+
+    try {
+      setIsPreparingInvoicePrint(true);
+      const invoice = await orderService.getOrderInvoice(order.id);
+      setInvoiceData(invoice);
+      setShouldTriggerInvoicePrint(true);
+    } catch (err) {
+      setIsPreparingInvoicePrint(false);
+      showToast(
+        err instanceof Error ? err.message : "Không thể tải dữ liệu hóa đơn",
+        "error",
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!shouldTriggerInvoicePrint || !invoiceData) {
+      return;
+    }
+
+    setShouldTriggerInvoicePrint(false);
+    triggerInvoicePrint();
+  }, [invoiceData, shouldTriggerInvoicePrint, triggerInvoicePrint]);
+
   const toggleBatchDetails = (detailId?: string) => {
     if (!detailId) return;
     setExpandedBatches((prev) => ({
@@ -1102,6 +1165,22 @@ export const OrderManagementDetailPage = () => {
                   alignItems="center"
                   flexWrap="wrap"
                 >
+                  {canPrintInvoice && (
+                    <Tooltip title="In hóa đơn">
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            void handlePrintInvoice();
+                          }}
+                          disabled={isPreparingInvoicePrint || isLoading}
+                          aria-label="In hóa đơn"
+                        >
+                          <LocalPrintshopOutlined />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  )}
                   <IconButton
                     size="small"
                     onClick={handleSyncShippingStatus}
@@ -1985,6 +2064,8 @@ export const OrderManagementDetailPage = () => {
           )}
         </Paper>
       </Box>
+
+      <OrderInvoicePrint ref={invoicePrintRef} invoice={invoiceData} />
 
       <Dialog
         open={isInStoreCompletionDialogOpen}

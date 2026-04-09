@@ -116,6 +116,8 @@ export type SwapDamagedStockRequest =
   components["schemas"]["SwapDamagedStockRequest"];
 export type SwapDamagedStockResponse =
   components["schemas"]["SwapDamagedStockResponse"];
+export type OrderInvoiceItem = components["schemas"]["ReceiptItemDto"];
+export type OrderInvoice = components["schemas"]["ReceiptResponse"];
 export type ReturnRefundMethod = Extract<
   PaymentMethod,
   "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer"
@@ -1988,6 +1990,57 @@ class OrderService {
         error.response?.data?.message ||
           error.message ||
           "Failed to confirm in-store pickup",
+      );
+    }
+  }
+
+  async getOrderInvoice(orderId: string): Promise<OrderInvoice> {
+    try {
+      const response = await apiInstance.GET("/api/orders/{orderId}/invoice", {
+        params: {
+          path: { orderId },
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(response.data?.message || "Không thể tải hóa đơn");
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error getting order invoice:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể tải hóa đơn",
+      );
+    }
+  }
+
+  async getMyOrderInvoice(orderId: string): Promise<OrderInvoice> {
+    try {
+      const response = await apiInstance.GET(
+        "/api/orders/my-orders/{orderId}/invoice",
+        {
+          params: {
+            path: { orderId },
+          },
+        },
+      );
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          response.data?.message || "Không thể tải hóa đơn đơn hàng của bạn",
+        );
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error getting my order invoice:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể tải hóa đơn đơn hàng của bạn",
       );
     }
   }
