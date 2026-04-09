@@ -348,6 +348,22 @@ function App() {
                         }
                       />
                       <Route
+                        path="/profile/scent-preferences"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <ProfilePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/profile/quiz-history"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <ProfilePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/my-orders"
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>

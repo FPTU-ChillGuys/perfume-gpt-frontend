@@ -22,6 +22,8 @@ import {
   ExpandMore,
   AssignmentReturn as ReturnIcon,
   Stars as LoyaltyIcon,
+  Spa as SpaIcon,
+  Quiz as QuizIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -87,6 +89,16 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
       label: "Điểm Thưởng",
       icon: <LoyaltyIcon fontSize="small" />,
       path: "/profile/loyalty",
+    },
+    {
+      label: "Sở Thích Hương",
+      icon: <SpaIcon fontSize="small" />,
+      path: "/profile/scent-preferences",
+    },
+    {
+      label: "Lịch Sử Khảo Sát",
+      icon: <QuizIcon fontSize="small" />,
+      path: "/profile/quiz-history",
     },
   ];
 

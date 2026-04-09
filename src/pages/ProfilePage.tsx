@@ -22,6 +22,8 @@ import AddressList from "../components/profile/AddressList";
 import { UserProfileSidebar } from "../components/profile/UserProfileSidebar";
 import { LoyaltyHistorySection } from "../components/profile/LoyaltyHistorySection";
 import { VoucherSection } from "../components/profile/VoucherSection";
+import { ScentPreferencesSection } from "../components/profile/ScentPreferencesSection";
+import { QuizHistorySection } from "../components/profile/QuizHistorySection";
 
 const ProfilePage = () => {
   const { user } = useAuth();
@@ -45,8 +47,12 @@ const ProfilePage = () => {
   const [success, setSuccess] = useState("");
 
   const [formData, setFormData] = useState<UpdateProfileRequest>({
-    minBudget: undefined,
-    maxBudget: undefined,
+    dateOfBirth: null,
+    minBudget: null,
+    maxBudget: null,
+    notePreferenceIds: null,
+    familyPreferenceIds: null,
+    attributePreferenceIds: null,
   });
 
   const Layout =
@@ -58,6 +64,8 @@ const ProfilePage = () => {
     if (pathname === "/profile/change-password") return "change-password";
     if (pathname === "/profile/vouchers") return "vouchers";
     if (pathname === "/profile/loyalty") return "loyalty";
+    if (pathname === "/profile/scent-preferences") return "scent-preferences";
+    if (pathname === "/profile/quiz-history") return "quiz-history";
     return "profile";
   };
   const activeSection = getActiveSection();
@@ -91,8 +99,18 @@ const ProfilePage = () => {
       const data = await profileService.getMyProfile();
       setProfile(data);
       setFormData({
-        minBudget: data.minBudget || undefined,
-        maxBudget: data.maxBudget || undefined,
+        dateOfBirth: data.dateOfBirth ?? null,
+        minBudget: data.minBudget ?? null,
+        maxBudget: data.maxBudget ?? null,
+        notePreferenceIds:
+          data.notePreferences?.map((n) => ({
+            noteId: n.noteId!,
+            noteType: n.noteType as "Top" | "Heart" | "Base",
+          })) ?? null,
+        familyPreferenceIds:
+          data.familyPreferences?.map((f) => f.familyId!) ?? null,
+        attributePreferenceIds:
+          data.attributePreferences?.map((a) => a.attributeValueId!) ?? null,
       });
     } catch (err: any) {
       setError(err.message || "Không thể tải thông tin profile");
@@ -135,8 +153,18 @@ const ProfilePage = () => {
     setIsEditing(false);
     if (profile) {
       setFormData({
-        minBudget: profile.minBudget || undefined,
-        maxBudget: profile.maxBudget || undefined,
+        dateOfBirth: profile.dateOfBirth ?? null,
+        minBudget: profile.minBudget ?? null,
+        maxBudget: profile.maxBudget ?? null,
+        notePreferenceIds:
+          profile.notePreferences?.map((n) => ({
+            noteId: n.noteId!,
+            noteType: n.noteType as "Top" | "Heart" | "Base",
+          })) ?? null,
+        familyPreferenceIds:
+          profile.familyPreferences?.map((f) => f.familyId!) ?? null,
+        attributePreferenceIds:
+          profile.attributePreferences?.map((a) => a.attributeValueId!) ?? null,
       });
     }
     setError("");
@@ -254,6 +282,15 @@ const ProfilePage = () => {
         return <VoucherSection />;
       case "loyalty":
         return <LoyaltyHistorySection />;
+      case "scent-preferences":
+        return (
+          <ScentPreferencesSection
+            profile={profile}
+            onProfileUpdated={loadProfile}
+          />
+        );
+      case "quiz-history":
+        return <QuizHistorySection />;
       case "change-password":
         return (
           <Box py={4} textAlign="center">

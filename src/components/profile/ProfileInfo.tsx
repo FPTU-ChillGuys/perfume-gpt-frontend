@@ -12,6 +12,10 @@ import {
 import PersonIcon from "@mui/icons-material/Person";
 import EmailIcon from "@mui/icons-material/Email";
 import PhoneIcon from "@mui/icons-material/Phone";
+import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import SpaIcon from "@mui/icons-material/Spa";
+import LocalFloristIcon from "@mui/icons-material/LocalFlorist";
+import StyleIcon from "@mui/icons-material/Style";
 import type { UserProfile } from "@/types/profile";
 import type { UpdateProfileRequest } from "@/types/profile";
 import type { UserAvatar, UserCredentials } from "@/services/userService";
@@ -87,6 +91,7 @@ const InfoRow = ({
 );
 
 const ProfileInfo = ({
+  profile,
   userInfo,
   error,
   success,
@@ -102,6 +107,27 @@ const ProfileInfo = ({
     .trim()
     .charAt(0)
     .toUpperCase();
+
+  const formatCurrency = (value?: number | null) => {
+    if (value == null) return null;
+    return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
+  };
+
+  const budgetText = (() => {
+    const min = formatCurrency(profile?.minBudget);
+    const max = formatCurrency(profile?.maxBudget);
+    if (min && max) return `${min} – ${max}`;
+    if (min) return `Từ ${min}`;
+    if (max) return `Đến ${max}`;
+    return "";
+  })();
+
+  const noteTypeLabel = (type?: string) => {
+    if (type === "Top") return "Hương đầu";
+    if (type === "Heart") return "Hương giữa";
+    if (type === "Base") return "Hương cuối";
+    return type || "";
+  };
 
   return (
     <>
@@ -192,7 +218,90 @@ const ProfileInfo = ({
           label="Số điện thoại"
           value={userInfo?.phoneNumber || ""}
         />
+        <InfoRow
+          icon={<AccountBalanceWalletIcon fontSize="small" />}
+          label="Ngân sách nước hoa"
+          value={budgetText}
+        />
       </Box>
+
+      {/* Scent Preferences */}
+      {(profile?.notePreferences?.length ||
+        profile?.familyPreferences?.length ||
+        profile?.attributePreferences?.length) ? (
+        <>
+          <Divider sx={{ my: 3 }} />
+          <Typography variant="subtitle1" fontWeight={600} mb={2}>
+            Sở thích hương
+          </Typography>
+
+          {profile.familyPreferences.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                <LocalFloristIcon fontSize="small" color="secondary" />
+                <Typography variant="body2" color="text.secondary">
+                  Nhóm hương yêu thích
+                </Typography>
+              </Stack>
+              <Stack direction="row" flexWrap="wrap" gap={0.75}>
+                {profile.familyPreferences.map((f) => (
+                  <Chip
+                    key={f.familyId}
+                    label={f.familyName}
+                    size="small"
+                    color="secondary"
+                    variant="outlined"
+                  />
+                ))}
+              </Stack>
+            </Box>
+          )}
+
+          {profile.notePreferences.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                <SpaIcon fontSize="small" color="primary" />
+                <Typography variant="body2" color="text.secondary">
+                  Nốt hương ưa thích
+                </Typography>
+              </Stack>
+              <Stack direction="row" flexWrap="wrap" gap={0.75}>
+                {profile.notePreferences.map((n) => (
+                  <Chip
+                    key={`${n.noteId}-${n.noteType}`}
+                    label={`${n.noteName} (${noteTypeLabel(n.noteType)})`}
+                    size="small"
+                    color="primary"
+                    variant="outlined"
+                  />
+                ))}
+              </Stack>
+            </Box>
+          )}
+
+          {profile.attributePreferences.length > 0 && (
+            <Box sx={{ mb: 2 }}>
+              <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+                <StyleIcon fontSize="small" color="info" />
+                <Typography variant="body2" color="text.secondary">
+                  Thuộc tính yêu thích
+                </Typography>
+              </Stack>
+              <Stack direction="row" flexWrap="wrap" gap={0.75}>
+                {profile.attributePreferences.map((a) => (
+                  <Chip
+                    key={a.attributeValueId}
+                    label={a.attributeValueName}
+                    size="small"
+                    color="info"
+                    variant="outlined"
+                  />
+                ))}
+              </Stack>
+            </Box>
+          )}
+        </>
+      ) : null}
     </>
   );
 };
