@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Link as RouterLink,
   useParams,
@@ -702,6 +702,7 @@ export const MyOrderDetailPage = () => {
   const [returnFormError, setReturnFormError] = useState("");
   const [isSubmittingReturnRequest, setIsSubmittingReturnRequest] =
     useState(false);
+  const hasHandledRequestReturnRef = useRef(false);
 
   useEffect(() => {
     void userService.getUserMe().then(setUserInfo).catch(console.error);
@@ -739,11 +740,16 @@ export const MyOrderDetailPage = () => {
           const latestRequest = matchedRequest ?? null;
           setOrderReturnRequest(latestRequest);
 
-          if (locationState.requestReturn) {
+          if (
+            locationState.requestReturn &&
+            !hasHandledRequestReturnRef.current
+          ) {
             const latestStatus = latestRequest?.status;
             const hasBlockingRequest = Boolean(
               latestStatus && RETURN_REQUEST_BLOCKED_STATUSES.has(latestStatus),
             );
+
+            hasHandledRequestReturnRef.current = true;
 
             if (hasBlockingRequest) {
               showToast(
@@ -758,7 +764,11 @@ export const MyOrderDetailPage = () => {
         } catch {
           setOrderReturnRequest(null);
 
-          if (locationState.requestReturn) {
+          if (
+            locationState.requestReturn &&
+            !hasHandledRequestReturnRef.current
+          ) {
+            hasHandledRequestReturnRef.current = true;
             setIsReturnDialogOpen(true);
             setReturnFormError("");
           }
@@ -795,7 +805,9 @@ export const MyOrderDetailPage = () => {
       }
     };
     void load();
-  }, [locationState.requestReturn, orderId, showToast]);
+    // `showToast` identity can change between renders; keep load stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationState.requestReturn, orderId]);
 
   const reviewsIndex = useMemo(() => {
     const map: Record<string, ReviewResponse> = {};
@@ -1749,8 +1761,26 @@ export const MyOrderDetailPage = () => {
 
       if (orderId) {
         try {
-          const refreshed = await orderService.getMyOrderById(orderId);
+          const [refreshed, myReturnRequests] = await Promise.all([
+            orderService.getMyOrderById(orderId),
+            orderService.getMyReturnRequests({
+              PageNumber: 1,
+              PageSize: 100,
+              SortBy: "CreatedAt",
+              SortOrder: "desc",
+            }),
+          ]);
           setOrder(refreshed);
+
+          const latestReturnRequest = myReturnRequests.items
+            .filter((item) => item.orderId === refreshed.id)
+            .sort(
+              (a, b) =>
+                new Date(b.createdAt || 0).getTime() -
+                new Date(a.createdAt || 0).getTime(),
+            )[0];
+
+          setOrderReturnRequest(latestReturnRequest ?? null);
         } catch {
           // Keep the dialog closed even if refresh fails.
         }

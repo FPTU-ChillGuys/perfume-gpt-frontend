@@ -77,6 +77,9 @@ const returnReasonLabel = (reason?: string | null) => {
   return reason;
 };
 
+const returnOptionLabel = (isRefundOnly?: boolean | null) =>
+  isRefundOnly ? "Hoàn trả (Không trả hàng)" : "Trả hàng/Hoàn trả";
+
 const statusColor = (
   status?: string,
 ): "default" | "warning" | "info" | "success" | "error" => {
@@ -808,6 +811,17 @@ export const MyReturnRequestDetailPage = () => {
                           gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr" }}
                           gap={2}
                         >
+                          <Box>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              Phương án khách chọn
+                            </Typography>
+                            <Typography>
+                              {returnOptionLabel(request.isRefundOnly === true)}
+                            </Typography>
+                          </Box>
                           <Box>
                             <Typography
                               variant="caption"
