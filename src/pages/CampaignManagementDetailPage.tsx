@@ -43,6 +43,7 @@ import ImageIcon from "@mui/icons-material/Image";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import CancelIcon from "@mui/icons-material/Cancel";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
   campaignService,
@@ -306,6 +307,8 @@ export const CampaignManagementDetailPage = () => {
   const [confirmDeleteVoucherId, setConfirmDeleteVoucherId] = useState<
     string | null
   >(null);
+  const [confirmCancelCampaign, setConfirmCancelCampaign] = useState(false);
+  const [isCancellingCampaign, setIsCancellingCampaign] = useState(false);
 
   // ─── Load Data ────────────────────────────────────────────────
   const loadDetail = useCallback(async () => {
@@ -922,6 +925,24 @@ export const CampaignManagementDetailPage = () => {
     }
   };
 
+  const handleCancelCampaign = async () => {
+    if (!campaignId) return;
+    setIsCancellingCampaign(true);
+    try {
+      await campaignService.updateCampaignStatus(campaignId, "Cancelled");
+      showToast("Hủy chiến dịch thành công", "success");
+      setConfirmCancelCampaign(false);
+      void loadDetail();
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Hủy chiến dịch thất bại",
+        "error",
+      );
+    } finally {
+      setIsCancellingCampaign(false);
+    }
+  };
+
   // ─── Render ───────────────────────────────────────────────────
   return (
     <AdminLayout>
@@ -975,6 +996,14 @@ export const CampaignManagementDetailPage = () => {
                   alignItems="center"
                   flexWrap="wrap"
                 >
+                  <IconButton
+                    size="small"
+                    onClick={() => void loadDetail()}
+                    disabled={isLoading}
+                    aria-label="Tải lại"
+                  >
+                    <Sync />
+                  </IconButton>
                   <Tooltip
                     title={status !== "Paused" ? "Chỉ sửa khi Tạm dừng" : ""}
                   >
@@ -990,14 +1019,28 @@ export const CampaignManagementDetailPage = () => {
                       </Button>
                     </span>
                   </Tooltip>
-                  <IconButton
-                    size="small"
-                    onClick={() => void loadDetail()}
-                    disabled={isLoading}
-                    aria-label="Tải lại"
+                  <Tooltip
+                    title={
+                      status === "Cancelled" || status === "Completed"
+                        ? "Không thể hủy chiến dịch này"
+                        : ""
+                    }
                   >
-                    <Sync />
-                  </IconButton>
+                    <span>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        startIcon={<CancelIcon />}
+                        onClick={() => setConfirmCancelCampaign(true)}
+                        disabled={
+                          status === "Cancelled" || status === "Completed"
+                        }
+                      >
+                        Hủy chiến dịch
+                      </Button>
+                    </span>
+                  </Tooltip>
                 </Stack>
               </Box>
 
@@ -2453,6 +2496,40 @@ export const CampaignManagementDetailPage = () => {
             }
           >
             Xóa
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ── Confirm Cancel Campaign ── */}
+      <Dialog
+        open={confirmCancelCampaign}
+        onClose={() => !isCancellingCampaign && setConfirmCancelCampaign(false)}
+      >
+        <DialogTitle>Xác nhận hủy chiến dịch</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc chắn muốn hủy chiến dịch này? Hành động này không thể
+            hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmCancelCampaign(false)}
+            disabled={isCancellingCampaign}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => void handleCancelCampaign()}
+            disabled={isCancellingCampaign}
+          >
+            {isCancellingCampaign ? (
+              <CircularProgress size={20} />
+            ) : (
+              "Xác nhận hủy"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
