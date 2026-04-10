@@ -1,6 +1,15 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -36,7 +45,6 @@ import {
   Clear as ClearIcon,
   Search as SearchIcon,
   Delete as DeleteIcon,
-  Edit as EditIcon,
   SwapHoriz as StatusIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
@@ -58,6 +66,7 @@ import {
   type BatchDetailResponse,
   type StockResponse,
 } from "@/services/inventoryService";
+import { productService } from "@/services/productService";
 
 type CampaignStatusTab = "all" | CampaignStatus;
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
@@ -70,15 +79,22 @@ type CampaignCategoryTab =
   | "niche"
   | "giftset";
 
+type PageViewMode = "list" | "create";
+
 type SelectedCampaignItem = {
   key: string;
   productVariantId: string;
   batchId: string | null;
   productName: string;
   variantSku: string;
+  variantImageUrl: string | null | undefined;
   batchCode: string | null;
   availableQuantity: number;
+  basePrice: number | null;
+  retailPrice: number | null;
   promotionType: PromotionType;
+  discountType: DiscountType;
+  discountValueInput: string;
   maxUsageInput: string;
 };
 
@@ -89,6 +105,10 @@ type CampaignVoucherDraft = {
   discountType: DiscountType;
   applyType: VoucherType;
   targetItemType: PromotionType | "";
+  maxDiscountAmountInput: string;
+  minOrderValueInput: string;
+  totalQuantityInput: string;
+  maxUsagePerUserInput: string;
 };
 
 type CachedBatchState = {
@@ -129,15 +149,15 @@ const CAMPAIGN_TYPE_LABEL: Record<CampaignType, string> = {
 };
 
 const PROMOTION_TYPE_OPTIONS: Array<{ value: PromotionType; label: string }> = [
-  { value: "Clearance", label: "Clearance" },
-  { value: "NewArrival", label: "New Arrival" },
-  { value: "Regular", label: "Regular" },
+  { value: "Clearance", label: "Xả kho" },
+  { value: "NewArrival", label: "Hàng mới về" },
+  { value: "Regular", label: "Thông thường" },
 ];
 
 const PROMOTION_TYPE_LABEL: Record<PromotionType, string> = {
-  Clearance: "Clearance",
-  NewArrival: "New Arrival",
-  Regular: "Regular",
+  Clearance: "Xả kho",
+  NewArrival: "Hàng mới về",
+  Regular: "Thông thường",
 };
 
 const DISCOUNT_TYPE_OPTIONS: Array<{ value: DiscountType; label: string }> = [
@@ -158,6 +178,10 @@ const createEmptyVoucherDraft = (): CampaignVoucherDraft => ({
   discountType: "Percentage",
   applyType: "Product",
   targetItemType: "Regular",
+  maxDiscountAmountInput: "",
+  minOrderValueInput: "0",
+  totalQuantityInput: "",
+  maxUsagePerUserInput: "1",
 });
 
 const INVENTORY_CATEGORY_TAB_ITEMS: Array<{
@@ -196,7 +220,10 @@ const formatDateTime = (value?: string | null) => {
     return "N/A";
   }
 
-  return new Date(value).toLocaleString("vi-VN");
+  // Backend stores in UTC, add 7 hours to display in Vietnam time (UTC+7)
+  const date = new Date(value);
+  date.setHours(date.getHours() + 7);
+  return date.toLocaleString("vi-VN");
 };
 
 const formatDate = (value?: string | null) => {
@@ -204,7 +231,10 @@ const formatDate = (value?: string | null) => {
     return "N/A";
   }
 
-  return new Date(value).toLocaleDateString("vi-VN");
+  // Backend stores in UTC, add 7 hours to display in Vietnam time (UTC+7)
+  const date = new Date(value);
+  date.setHours(date.getHours() + 7);
+  return date.toLocaleDateString("vi-VN");
 };
 
 const DEFAULT_END_TIME = "23:59";
@@ -218,7 +248,18 @@ const toLocalDateTime = (
     return "";
   }
 
-  return `${dateValue}T${timeValue}:00${withFraction ? ".00" : ""}`;
+  // Create a Date object from the local date/time inputs
+  const localDate = new Date(`${dateValue}T${timeValue}:00`);
+  // Subtract 7 hours to convert from Vietnam time (UTC+7) to UTC for backend storage
+  localDate.setHours(localDate.getHours() - 7);
+
+  const year = localDate.getFullYear();
+  const month = String(localDate.getMonth() + 1).padStart(2, "0");
+  const day = String(localDate.getDate()).padStart(2, "0");
+  const hours = String(localDate.getHours()).padStart(2, "0");
+  const minutes = String(localDate.getMinutes()).padStart(2, "0");
+
+  return `${year}-${month}-${day}T${hours}:${minutes}:00${withFraction ? ".00" : ""}`;
 };
 
 const resolveCategoryIdByTab = (tab: CampaignCategoryTab) => {
@@ -243,26 +284,32 @@ const getStockStatusDisplay = (stock: StockResponse) => {
 
 export const CampaignManagementPage = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [statusTab, setStatusTab] = useState<CampaignStatusTab>("all");
+  const backState = location.state as
+    | {
+        statusTab?: CampaignStatusTab;
+        page?: number;
+        rowsPerPage?: number;
+      }
+    | undefined;
+
+  const [pageView, setPageView] = useState<PageViewMode>("list");
+  const [statusTab, setStatusTab] = useState<CampaignStatusTab>(
+    backState?.statusTab ?? "all",
+  );
   const [campaigns, setCampaigns] = useState<CampaignResponse[]>([]);
   const [campaignLoading, setCampaignLoading] = useState(true);
   const [campaignError, setCampaignError] = useState<string | null>(null);
-  const [campaignPage, setCampaignPage] = useState(0);
-  const [campaignRowsPerPage, setCampaignRowsPerPage] = useState(10);
+  const [campaignPage, setCampaignPage] = useState(backState?.page ?? 0);
+  const [campaignRowsPerPage, setCampaignRowsPerPage] = useState(
+    backState?.rowsPerPage ?? 10,
+  );
   const [campaignTotalCount, setCampaignTotalCount] = useState(0);
   const [campaignSearchInput, setCampaignSearchInput] = useState("");
   const [campaignSearchValue, setCampaignSearchValue] = useState("");
-  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [selectedCampaignDetail, setSelectedCampaignDetail] =
-    useState<CampaignResponse | null>(null);
-  const [selectedCampaignItems, setSelectedCampaignItems] = useState<
-    CampaignPromotionItemResponse[]
-  >([]);
 
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
 
   const [deleteConfirmCampaign, setDeleteConfirmCampaign] =
@@ -302,6 +349,11 @@ export const CampaignManagementPage = () => {
   const [batchByVariantId, setBatchByVariantId] = useState<
     Record<string, CachedBatchState>
   >({});
+
+  const [variantPricesCache, setVariantPricesCache] = useState<
+    Record<string, { basePrice: number | null; retailPrice: number | null }>
+  >({});
+  const loadedPriceVariantIds = useRef<Set<string>>(new Set());
 
   const [selectedItems, setSelectedItems] = useState<SelectedCampaignItem[]>(
     [],
@@ -348,8 +400,10 @@ export const CampaignManagementPage = () => {
     void loadCampaigns();
   }, [loadCampaigns]);
 
+  const isCreateView = pageView === "create";
+
   const loadStocks = useCallback(async () => {
-    if (!createDialogOpen) {
+    if (!isCreateView) {
       return;
     }
 
@@ -424,7 +478,7 @@ export const CampaignManagementPage = () => {
       setStockLoading(false);
     }
   }, [
-    createDialogOpen,
+    isCreateView,
     expiryDaysFilter,
     selectedCategoryTab,
     showToast,
@@ -435,12 +489,57 @@ export const CampaignManagementPage = () => {
   ]);
 
   useEffect(() => {
-    if (!createDialogOpen) {
+    if (!isCreateView) {
       return;
     }
 
     void loadStocks();
-  }, [createDialogOpen, loadStocks]);
+  }, [isCreateView, loadStocks]);
+
+  // Load variant prices when stock list changes
+  useEffect(() => {
+    if (stockList.length === 0) return;
+
+    const variantIds = stockList
+      .map((s) => s.variantId)
+      .filter((id): id is string => Boolean(id))
+      .filter((id) => !loadedPriceVariantIds.current.has(id));
+
+    if (variantIds.length === 0) return;
+
+    // Mark as loading to prevent duplicate requests
+    variantIds.forEach((id) => loadedPriceVariantIds.current.add(id));
+
+    const loadPrices = async () => {
+      const results = await Promise.all(
+        variantIds.map(async (variantId) => {
+          try {
+            const variant = await productService.getVariantById(variantId);
+            return {
+              variantId,
+              basePrice: variant.basePrice ?? null,
+              retailPrice: variant.retailPrice ?? null,
+            };
+          } catch {
+            return { variantId, basePrice: null, retailPrice: null };
+          }
+        }),
+      );
+
+      setVariantPricesCache((prev) => {
+        const newCache = { ...prev };
+        results.forEach((r) => {
+          newCache[r.variantId] = {
+            basePrice: r.basePrice,
+            retailPrice: r.retailPrice,
+          };
+        });
+        return newCache;
+      });
+    };
+
+    void loadPrices();
+  }, [stockList]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -487,7 +586,7 @@ export const CampaignManagementPage = () => {
     setSelectedCategoryTab("all");
     setBatchByVariantId({});
     setCampaignVouchers([createEmptyVoucherDraft()]);
-    setCreateDialogOpen(true);
+    setPageView("create");
   };
 
   const addCampaignVoucher = () => {
@@ -568,7 +667,7 @@ export const CampaignManagementPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!createDialogOpen || stockLoading) {
+    if (!isCreateView || stockLoading) {
       return;
     }
 
@@ -583,13 +682,13 @@ export const CampaignManagementPage = () => {
     });
   }, [
     batchByVariantId,
-    createDialogOpen,
+    isCreateView,
     loadBatchesByVariantId,
     stockList,
     stockLoading,
   ]);
 
-  const addVariantItem = (stock: StockResponse) => {
+  const addVariantItem = async (stock: StockResponse) => {
     const variantId = stock.variantId;
     if (!variantId) {
       showToast("Variant không hợp lệ", "warning");
@@ -597,9 +696,32 @@ export const CampaignManagementPage = () => {
     }
 
     const itemKey = `${variantId}-all`;
+
+    // Check if already added
+    if (selectedItems.some((item) => item.key === itemKey)) {
+      showToast("Sản phẩm đã được thêm", "warning");
+      return;
+    }
+
+    // Use cached price or fetch if not available
+    let basePrice: number | null = null;
+    let retailPrice: number | null = null;
+    const cachedPrice = variantPricesCache[variantId];
+    if (cachedPrice) {
+      basePrice = cachedPrice.basePrice;
+      retailPrice = cachedPrice.retailPrice;
+    } else {
+      try {
+        const variant = await productService.getVariantById(variantId);
+        basePrice = variant.basePrice ?? null;
+        retailPrice = variant.retailPrice ?? null;
+      } catch {
+        // Continue without price if fetch fails
+      }
+    }
+
     setSelectedItems((current) => {
       if (current.some((item) => item.key === itemKey)) {
-        showToast("Sản phẩm đã được thêm", "warning");
         return current;
       }
 
@@ -611,16 +733,24 @@ export const CampaignManagementPage = () => {
           batchId: null,
           productName: stock.productName || "N/A",
           variantSku: stock.variantSku || "N/A",
+          variantImageUrl: stock.variantImageUrl,
           batchCode: null,
           availableQuantity: stock.availableQuantity ?? 0,
+          basePrice,
+          retailPrice,
           promotionType: "Clearance",
+          discountType: "Percentage",
+          discountValueInput: "",
           maxUsageInput: "1",
         },
       ];
     });
   };
 
-  const addBatchItem = (stock: StockResponse, batch: BatchDetailResponse) => {
+  const addBatchItem = async (
+    stock: StockResponse,
+    batch: BatchDetailResponse,
+  ) => {
     const variantId = stock.variantId;
     const batchId = batch.id;
 
@@ -631,9 +761,31 @@ export const CampaignManagementPage = () => {
 
     const itemKey = `${variantId}-${batchId}`;
 
+    // Check if already added
+    if (selectedItems.some((item) => item.key === itemKey)) {
+      showToast("Lô đã được thêm", "warning");
+      return;
+    }
+
+    // Use cached price or fetch if not available
+    let basePrice: number | null = null;
+    let retailPrice: number | null = null;
+    const cachedPrice = variantPricesCache[variantId];
+    if (cachedPrice) {
+      basePrice = cachedPrice.basePrice;
+      retailPrice = cachedPrice.retailPrice;
+    } else {
+      try {
+        const variant = await productService.getVariantById(variantId);
+        basePrice = variant.basePrice ?? null;
+        retailPrice = variant.retailPrice ?? null;
+      } catch {
+        // Continue without price if fetch fails
+      }
+    }
+
     setSelectedItems((current) => {
       if (current.some((item) => item.key === itemKey)) {
-        showToast("Lô đã được thêm", "warning");
         return current;
       }
 
@@ -645,9 +797,14 @@ export const CampaignManagementPage = () => {
           batchId,
           productName: stock.productName || batch.productName || "N/A",
           variantSku: stock.variantSku || batch.variantSku || "N/A",
+          variantImageUrl: stock.variantImageUrl,
           batchCode: batch.batchCode || "N/A",
           availableQuantity: batch.remainingQuantity ?? 0,
+          basePrice,
+          retailPrice,
           promotionType: "Clearance",
+          discountType: "Percentage",
+          discountValueInput: "",
           maxUsageInput: "",
         },
       ];
@@ -677,6 +834,29 @@ export const CampaignManagementPage = () => {
     setSelectedItems((current) =>
       current.map((item) =>
         item.key === key ? { ...item, promotionType } : item,
+      ),
+    );
+  };
+
+  const handleSelectedDiscountTypeChange = (
+    key: string,
+    discountType: DiscountType,
+  ) => {
+    setSelectedItems((current) =>
+      current.map((item) =>
+        item.key === key ? { ...item, discountType } : item,
+      ),
+    );
+  };
+
+  const handleSelectedDiscountValueChange = (key: string, value: string) => {
+    if (!/^\d*([.,]\d{0,2})?$/.test(value)) {
+      return;
+    }
+
+    setSelectedItems((current) =>
+      current.map((item) =>
+        item.key === key ? { ...item, discountValueInput: value } : item,
       ),
     );
   };
@@ -724,6 +904,19 @@ export const CampaignManagementPage = () => {
       return;
     }
 
+    // Check start time must be >= current time
+    const now = new Date();
+    const startDateTimeObj = new Date(startDateTime);
+    // Add 7 hours back because toLocalDateTime subtracted 7
+    startDateTimeObj.setHours(startDateTimeObj.getHours() + 7);
+    if (startDateTimeObj.getTime() < now.getTime()) {
+      showToast(
+        "Thời gian bắt đầu không được nhỏ hơn thời gian hiện tại",
+        "warning",
+      );
+      return;
+    }
+
     if (new Date(endDateTime).getTime() <= new Date(startDateTime).getTime()) {
       showToast("Thời gian kết thúc phải lớn hơn thời gian bắt đầu", "warning");
       return;
@@ -735,15 +928,46 @@ export const CampaignManagementPage = () => {
     }
 
     const invalidItem = selectedItems.find((item) => {
-      if (item.batchId) {
-        return false;
+      // Validate maxUsage for non-batch items
+      if (!item.batchId) {
+        const parsed = Number(item.maxUsageInput);
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+          return true;
+        }
       }
 
-      const parsed = Number(item.maxUsageInput);
-      return !Number.isInteger(parsed) || parsed <= 0;
+      // Validate discountValue
+      const discountValue = Number(item.discountValueInput.replace(",", "."));
+      if (!Number.isFinite(discountValue) || discountValue <= 0) {
+        return true;
+      }
+
+      // Validate percentage not exceeding 100
+      if (item.discountType === "Percentage" && discountValue > 100) {
+        return true;
+      }
+
+      return false;
     });
 
     if (invalidItem) {
+      const discountValue = Number(
+        invalidItem.discountValueInput.replace(",", "."),
+      );
+      if (!Number.isFinite(discountValue) || discountValue <= 0) {
+        showToast(
+          `Item SKU ${invalidItem.variantSku}: Giá trị giảm phải lớn hơn 0`,
+          "warning",
+        );
+        return;
+      }
+      if (invalidItem.discountType === "Percentage" && discountValue > 100) {
+        showToast(
+          `Item SKU ${invalidItem.variantSku}: Giảm phần trăm không được vượt quá 100`,
+          "warning",
+        );
+        return;
+      }
       showToast(
         `Max Usage bắt buộc > 0 cho item SKU ${invalidItem.variantSku} (không chọn lô)`,
         "warning",
@@ -760,10 +984,22 @@ export const CampaignManagementPage = () => {
       const discountValue = Number(
         voucher.discountValueInput.replace(",", "."),
       );
+      const minOrderValue = Number(
+        voucher.minOrderValueInput.replace(",", "."),
+      );
+      const maxDiscountAmount = voucher.maxDiscountAmountInput.trim()
+        ? Number(voucher.maxDiscountAmountInput.replace(",", "."))
+        : null;
+      const totalQuantity = voucher.totalQuantityInput.trim()
+        ? Number(voucher.totalQuantityInput)
+        : null;
+      const maxUsagePerUser = voucher.maxUsagePerUserInput.trim()
+        ? Number(voucher.maxUsagePerUserInput)
+        : null;
 
+      // Skip voucher with empty code (voucher is optional)
       if (!code) {
-        showToast(`Voucher #${rowNumber}: vui lòng nhập mã voucher`, "warning");
-        return;
+        continue;
       }
 
       if (normalizedVoucherCodes.has(code)) {
@@ -782,6 +1018,47 @@ export const CampaignManagementPage = () => {
       if (voucher.discountType === "Percentage" && discountValue > 100) {
         showToast(
           `Voucher #${rowNumber}: giảm phần trăm không được vượt quá 100`,
+          "warning",
+        );
+        return;
+      }
+
+      if (!Number.isFinite(minOrderValue) || minOrderValue < 0) {
+        showToast(
+          `Voucher #${rowNumber}: giá trị đơn tối thiểu không hợp lệ`,
+          "warning",
+        );
+        return;
+      }
+
+      if (
+        maxDiscountAmount !== null &&
+        (!Number.isFinite(maxDiscountAmount) || maxDiscountAmount <= 0)
+      ) {
+        showToast(
+          `Voucher #${rowNumber}: mức giảm tối đa không hợp lệ`,
+          "warning",
+        );
+        return;
+      }
+
+      if (
+        totalQuantity !== null &&
+        (!Number.isInteger(totalQuantity) || totalQuantity < 1)
+      ) {
+        showToast(
+          `Voucher #${rowNumber}: số lượng mã phát hành không hợp lệ`,
+          "warning",
+        );
+        return;
+      }
+
+      if (
+        maxUsagePerUser !== null &&
+        (!Number.isInteger(maxUsagePerUser) || maxUsagePerUser < 1)
+      ) {
+        showToast(
+          `Voucher #${rowNumber}: số lần sử dụng/khách không hợp lệ`,
           "warning",
         );
         return;
@@ -818,7 +1095,10 @@ export const CampaignManagementPage = () => {
         discountType: voucher.discountType,
         applyType: voucher.applyType,
         targetItemType,
-        minOrderValue: 0,
+        minOrderValue,
+        maxDiscountAmount,
+        totalQuantity,
+        maxUsagePerUser,
       });
     }
 
@@ -832,6 +1112,8 @@ export const CampaignManagementPage = () => {
         productVariantId: item.productVariantId,
         batchId: item.batchId,
         promotionType: item.promotionType,
+        discountType: item.discountType,
+        discountValue: Number(item.discountValueInput.replace(",", ".")),
         maxUsage: item.batchId ? null : Number(item.maxUsageInput),
       })),
       vouchers: parsedVouchers,
@@ -841,7 +1123,7 @@ export const CampaignManagementPage = () => {
       setCreateSubmitting(true);
       await campaignService.createCampaign(payload);
       showToast("Tạo chiến lược khuyến mãi thành công", "success");
-      setCreateDialogOpen(false);
+      setPageView("list");
       void loadCampaigns();
     } catch (error) {
       const message =
@@ -852,42 +1134,18 @@ export const CampaignManagementPage = () => {
     }
   };
 
-  const handleOpenCampaignDetail = async (campaignId?: string) => {
+  const handleOpenCampaignDetail = (campaignId?: string) => {
     if (!campaignId) {
       return;
     }
 
-    try {
-      setDetailDialogOpen(true);
-      setDetailLoading(true);
-      setDetailError(null);
-
-      const [detail, items] = await Promise.all([
-        campaignService.getCampaignById(campaignId),
-        campaignService.getCampaignItems(campaignId),
-      ]);
-
-      setSelectedCampaignDetail(detail);
-      setSelectedCampaignItems(items);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể tải chi tiết chiến lược";
-      setDetailError(message);
-      setSelectedCampaignDetail(null);
-      setSelectedCampaignItems([]);
-      showToast(message, "error");
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  const handleCloseCampaignDetail = () => {
-    setDetailDialogOpen(false);
-    setSelectedCampaignDetail(null);
-    setSelectedCampaignItems([]);
-    setDetailError(null);
+    navigate(`/admin/campaigns/${campaignId}`, {
+      state: {
+        statusTab,
+        page: campaignPage,
+        rowsPerPage: campaignRowsPerPage,
+      },
+    });
   };
 
   const handleDeleteCampaign = async () => {
@@ -934,452 +1192,319 @@ export const CampaignManagementPage = () => {
   return (
     <AdminLayout>
       <Box>
-        <Paper sx={{ mb: 3 }}>
-          <Tabs
-            value={statusTab}
-            onChange={(_, nextValue: CampaignStatusTab) => {
-              setStatusTab(nextValue);
-              setCampaignPage(0);
-            }}
-            variant="scrollable"
-            scrollButtons="auto"
-            allowScrollButtonsMobile
-          >
-            {CAMPAIGN_STATUS_TABS.map((tab) => (
-              <Tab key={tab.value} value={tab.value} label={tab.label} />
-            ))}
-          </Tabs>
-        </Paper>
+        {!isCreateView && (
+          <>
+            <Paper sx={{ mb: 3 }}>
+              <Tabs
+                value={statusTab}
+                onChange={(_, nextValue: CampaignStatusTab) => {
+                  setStatusTab(nextValue);
+                  setCampaignPage(0);
+                }}
+                variant="scrollable"
+                scrollButtons="auto"
+                allowScrollButtonsMobile
+              >
+                {CAMPAIGN_STATUS_TABS.map((tab) => (
+                  <Tab key={tab.value} value={tab.value} label={tab.label} />
+                ))}
+              </Tabs>
+            </Paper>
 
-        <Paper sx={{ p: 3, mb: 3 }}>
-          <Box
-            sx={{
-              display: "grid",
-              gap: 2,
-              gridTemplateColumns: {
-                xs: "1fr",
-                md: "1fr auto",
-              },
-              alignItems: "center",
-            }}
-          >
-            <TextField
-              fullWidth
-              label="Tìm theo tên chiến lược"
-              value={campaignSearchInput}
-              onChange={(event) => setCampaignSearchInput(event.target.value)}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <SearchIcon color="action" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreateDialog}
-              sx={{ height: 56 }}
-            >
-              Tạo chiến lược
-            </Button>
-          </Box>
-        </Paper>
+            <Paper sx={{ p: 3, mb: 3 }}>
+              <Box
+                sx={{
+                  display: "grid",
+                  gap: 2,
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "1fr auto",
+                  },
+                  alignItems: "center",
+                }}
+              >
+                <TextField
+                  fullWidth
+                  label="Tìm theo tên chiến lược"
+                  value={campaignSearchInput}
+                  onChange={(event) =>
+                    setCampaignSearchInput(event.target.value)
+                  }
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <SearchIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenCreateDialog}
+                  sx={{ height: 56 }}
+                >
+                  Tạo chiến lược
+                </Button>
+              </Box>
+            </Paper>
 
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell>Tên chiến lược</TableCell>
-                <TableCell>Loại</TableCell>
-                <TableCell>Thời gian</TableCell>
-                <TableCell>Trạng thái</TableCell>
-                <TableCell>Mô tả</TableCell>
-                <TableCell align="center" width={110}>
-                  Thao tác
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {campaignLoading ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : campaignError ? (
-                <TableRow>
-                  <TableCell colSpan={5}>
-                    <Alert severity="error">{campaignError}</Alert>
-                  </TableCell>
-                </TableRow>
-              ) : campaigns.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Không có chiến lược phù hợp.
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                campaigns.map((campaign) => {
-                  const status = campaign.status || "Upcoming";
-                  const type = campaign.type || "FlashSale";
-
-                  return (
-                    <TableRow
-                      key={
-                        campaign.id || `${campaign.name}-${campaign.startDate}`
-                      }
-                      hover
-                      onClick={() => handleOpenCampaignDetail(campaign.id)}
-                      sx={{ cursor: "pointer" }}
-                    >
-                      <TableCell sx={{ minWidth: 220 }}>
-                        <Typography fontWeight={600}>
-                          {campaign.name || "N/A"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{CAMPAIGN_TYPE_LABEL[type]}</TableCell>
-                      <TableCell sx={{ minWidth: 250 }}>
-                        <Typography variant="body2">
-                          Bắt đầu: {formatDateTime(campaign.startDate)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Kết thúc: {formatDateTime(campaign.endDate)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          color={CAMPAIGN_STATUS_COLOR[status]}
-                          label={CAMPAIGN_STATUS_LABEL[status]}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" color="text.secondary">
-                          {campaign.description || "-"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <Tooltip title="Đổi trạng thái">
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            onClick={() => {
-                              setStatusDialogCampaign(campaign);
-                              setStatusChangeValue(
-                                campaign.status || "Upcoming",
-                              );
-                            }}
-                          >
-                            <StatusIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Xóa chiến lược">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => setDeleteConfirmCampaign(campaign)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: "grey.50" }}>
+                    <TableCell>Tên chiến lược</TableCell>
+                    <TableCell>Loại</TableCell>
+                    <TableCell>Thời gian</TableCell>
+                    <TableCell>Trạng thái</TableCell>
+                    <TableCell>Mô tả</TableCell>
+                    <TableCell align="center" width={110}>
+                      Thao tác
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {campaignLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                        <CircularProgress />
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                  ) : campaignError ? (
+                    <TableRow>
+                      <TableCell colSpan={5}>
+                        <Alert severity="error">{campaignError}</Alert>
+                      </TableCell>
+                    </TableRow>
+                  ) : campaigns.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Không có chiến lược phù hợp.
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    campaigns.map((campaign) => {
+                      const status = campaign.status || "Upcoming";
+                      const type = campaign.type || "FlashSale";
 
-          <TablePagination
-            component="div"
-            count={campaignTotalCount}
-            page={campaignPage}
-            onPageChange={(_, nextPage) => setCampaignPage(nextPage)}
-            rowsPerPage={campaignRowsPerPage}
-            onRowsPerPageChange={(event) => {
-              setCampaignRowsPerPage(Number(event.target.value));
-              setCampaignPage(0);
-            }}
-            rowsPerPageOptions={[10, 20, 50]}
-            labelRowsPerPage="Dòng mỗi trang:"
-            labelDisplayedRows={({ from, to, count }) =>
-              `${from}-${to} của ${count}`
-            }
-          />
-        </TableContainer>
-
-        <Dialog
-          open={detailDialogOpen}
-          onClose={handleCloseCampaignDetail}
-          fullWidth
-          maxWidth="lg"
-        >
-          <DialogTitle>Chi tiết chiến lược</DialogTitle>
-          <DialogContent>
-            {detailLoading ? (
-              <Box sx={{ py: 4, textAlign: "center" }}>
-                <CircularProgress />
-              </Box>
-            ) : detailError ? (
-              <Alert severity="error" sx={{ mt: 1 }}>
-                {detailError}
-              </Alert>
-            ) : !selectedCampaignDetail ? (
-              <Typography sx={{ mt: 1 }} color="text.secondary">
-                Không có dữ liệu chiến lược.
-              </Typography>
-            ) : (
-              <Stack spacing={2} sx={{ mt: 1 }}>
-                <Box
-                  sx={{
-                    display: "grid",
-                    gap: 2,
-                    gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                  }}
-                >
-                  <Typography variant="body2">
-                    <strong>Tên:</strong> {selectedCampaignDetail.name || "N/A"}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Loại:</strong>{" "}
-                    {
-                      CAMPAIGN_TYPE_LABEL[
-                        selectedCampaignDetail.type || "FlashSale"
-                      ]
-                    }
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Bắt đầu:</strong>{" "}
-                    {formatDateTime(selectedCampaignDetail.startDate)}
-                  </Typography>
-                  <Typography variant="body2">
-                    <strong>Kết thúc:</strong>{" "}
-                    {formatDateTime(selectedCampaignDetail.endDate)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ gridColumn: { md: "1 / -1" } }}
-                  >
-                    <strong>Mô tả:</strong>{" "}
-                    {selectedCampaignDetail.description || "-"}
-                  </Typography>
-                </Box>
-
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Tên item</TableCell>
-                        <TableCell>Variant ID</TableCell>
-                        <TableCell>Batch ID</TableCell>
-                        <TableCell align="center">Promotion Type</TableCell>
-                        <TableCell align="center">Max Usage</TableCell>
-                        <TableCell align="center">Current Usage</TableCell>
-                        <TableCell align="center">
-                          Tự dừng khi hết batch
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedCampaignItems.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              Chiến lược chưa có item.
+                      return (
+                        <TableRow
+                          key={
+                            campaign.id ||
+                            `${campaign.name}-${campaign.startDate}`
+                          }
+                          hover
+                          onClick={() => handleOpenCampaignDetail(campaign.id)}
+                          sx={{ cursor: "pointer" }}
+                        >
+                          <TableCell sx={{ minWidth: 220 }}>
+                            <Typography fontWeight={600}>
+                              {campaign.name || "N/A"}
                             </Typography>
                           </TableCell>
-                        </TableRow>
-                      ) : (
-                        selectedCampaignItems.map((item) => (
-                          <TableRow
-                            key={
-                              item.id ||
-                              `${item.productVariantId}-${item.batchId}`
-                            }
+                          <TableCell>{CAMPAIGN_TYPE_LABEL[type]}</TableCell>
+                          <TableCell sx={{ minWidth: 250 }}>
+                            <Typography variant="body2">
+                              Bắt đầu: {formatDateTime(campaign.startDate)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Kết thúc: {formatDateTime(campaign.endDate)}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              size="small"
+                              color={CAMPAIGN_STATUS_COLOR[status]}
+                              label={CAMPAIGN_STATUS_LABEL[status]}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="text.secondary">
+                              {campaign.description || "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell
+                            align="center"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <TableCell>{item.name || "N/A"}</TableCell>
-                            <TableCell>
-                              {item.productVariantId || "N/A"}
-                            </TableCell>
-                            <TableCell>{item.batchId || "-"}</TableCell>
-                            <TableCell align="center">
-                              {
-                                PROMOTION_TYPE_LABEL[
-                                  item.itemType || "Clearance"
-                                ]
-                              }
-                            </TableCell>
-                            <TableCell align="center">
-                              {item.maxUsage ?? "-"}
-                            </TableCell>
-                            <TableCell align="center">
-                              {item.currentUsage ?? 0}
-                            </TableCell>
-                            <TableCell align="center">
-                              <Chip
+                            <Tooltip title="Đổi trạng thái">
+                              <IconButton
                                 size="small"
-                                color={
-                                  (
-                                    item as CampaignPromotionItemResponse & {
-                                      autoStopWhenBatchEmpty?: boolean;
-                                    }
-                                  ).autoStopWhenBatchEmpty
-                                    ? "success"
-                                    : "default"
+                                color="primary"
+                                onClick={() => {
+                                  setStatusDialogCampaign(campaign);
+                                  setStatusChangeValue(
+                                    campaign.status || "Upcoming",
+                                  );
+                                }}
+                              >
+                                <StatusIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Xóa chiến lược">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() =>
+                                  setDeleteConfirmCampaign(campaign)
                                 }
-                                label={
-                                  (
-                                    item as CampaignPromotionItemResponse & {
-                                      autoStopWhenBatchEmpty?: boolean;
-                                    }
-                                  ).autoStopWhenBatchEmpty
-                                    ? "Có"
-                                    : "Không"
-                                }
-                              />
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Stack>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseCampaignDetail}>Đóng</Button>
-          </DialogActions>
-        </Dialog>
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
 
-        {/* Delete Confirm Dialog */}
-        <Dialog
-          open={Boolean(deleteConfirmCampaign)}
-          onClose={() => setDeleteConfirmCampaign(null)}
-          maxWidth="xs"
-          fullWidth
-        >
-          <DialogTitle>Xác nhận xóa</DialogTitle>
-          <DialogContent>
-            <Typography>
-              Bạn có chắc muốn xóa chiến lược{" "}
-              <strong>&ldquo;{deleteConfirmCampaign?.name}&rdquo;</strong>?
-            </Typography>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setDeleteConfirmCampaign(null)}
-              disabled={isDeleting}
-            >
-              Hủy
-            </Button>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleDeleteCampaign}
-              disabled={isDeleting}
-              startIcon={
-                isDeleting ? <CircularProgress size={16} /> : <DeleteIcon />
-              }
-            >
-              Xóa
-            </Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Status Change Dialog */}
-        <Dialog
-          open={Boolean(statusDialogCampaign)}
-          onClose={() => setStatusDialogCampaign(null)}
-          maxWidth="xs"
-          fullWidth
-        >
-          <DialogTitle>Đổi trạng thái chiến lược</DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              Chiến lược: <strong>{statusDialogCampaign?.name}</strong>
-            </Typography>
-            <FormControl fullWidth>
-              <InputLabel>Trạng thái mới</InputLabel>
-              <Select
-                value={statusChangeValue}
-                label="Trạng thái mới"
-                onChange={(e) =>
-                  setStatusChangeValue(e.target.value as CampaignStatus)
+              <TablePagination
+                component="div"
+                count={campaignTotalCount}
+                page={campaignPage}
+                onPageChange={(_, nextPage) => setCampaignPage(nextPage)}
+                rowsPerPage={campaignRowsPerPage}
+                onRowsPerPageChange={(event) => {
+                  setCampaignRowsPerPage(Number(event.target.value));
+                  setCampaignPage(0);
+                }}
+                rowsPerPageOptions={[10, 20, 50]}
+                labelRowsPerPage="Dòng mỗi trang:"
+                labelDisplayedRows={({ from, to, count }) =>
+                  `${from}-${to} của ${count}`
                 }
-              >
-                {(Object.keys(CAMPAIGN_STATUS_LABEL) as CampaignStatus[]).map(
-                  (s) => (
-                    <MenuItem key={s} value={s}>
-                      {CAMPAIGN_STATUS_LABEL[s]}
-                    </MenuItem>
-                  ),
-                )}
-              </Select>
-            </FormControl>
-          </DialogContent>
-          <DialogActions>
-            <Button
-              onClick={() => setStatusDialogCampaign(null)}
-              disabled={isUpdatingStatus}
-            >
-              Hủy
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleUpdateStatus}
-              disabled={isUpdatingStatus}
-              startIcon={
-                isUpdatingStatus ? (
-                  <CircularProgress size={16} />
-                ) : (
-                  <StatusIcon />
-                )
-              }
-            >
-              Cập nhật
-            </Button>
-          </DialogActions>
-        </Dialog>
+              />
+            </TableContainer>
 
-        <Dialog
-          open={createDialogOpen}
-          onClose={() => setCreateDialogOpen(false)}
-          fullWidth
-          maxWidth="xl"
-          PaperProps={{
-            sx: {
-              height: { xs: "92vh", lg: "88vh" },
-              maxHeight: { xs: "92vh", lg: "88vh" },
-            },
-          }}
-        >
-          <DialogContent
+            {/* Delete Confirm Dialog */}
+            <Dialog
+              open={Boolean(deleteConfirmCampaign)}
+              onClose={() => setDeleteConfirmCampaign(null)}
+              maxWidth="xs"
+              fullWidth
+            >
+              <DialogTitle>Xác nhận xóa</DialogTitle>
+              <DialogContent>
+                <Typography>
+                  Bạn có chắc muốn xóa chiến lược{" "}
+                  <strong>&ldquo;{deleteConfirmCampaign?.name}&rdquo;</strong>?
+                </Typography>
+              </DialogContent>
+              <DialogActions>
+                <Button
+                  onClick={() => setDeleteConfirmCampaign(null)}
+                  disabled={isDeleting}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={handleDeleteCampaign}
+                  disabled={isDeleting}
+                  startIcon={
+                    isDeleting ? <CircularProgress size={16} /> : <DeleteIcon />
+                  }
+                >
+                  Xóa
+                </Button>
+              </DialogActions>
+            </Dialog>
+
+            {/* Status Change Dialog */}
+            <Dialog
+              open={Boolean(statusDialogCampaign)}
+              onClose={() => setStatusDialogCampaign(null)}
+              maxWidth="xs"
+              fullWidth
+            >
+              <DialogTitle>Đổi trạng thái chiến lược</DialogTitle>
+              <DialogContent>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                  Chiến lược: <strong>{statusDialogCampaign?.name}</strong>
+                </Typography>
+                <FormControl fullWidth>
+                  <InputLabel>Trạng thái mới</InputLabel>
+                  <Select
+                    value={statusChangeValue}
+                    label="Trạng thái mới"
+                    onChange={(e) =>
+                      setStatusChangeValue(e.target.value as CampaignStatus)
+                    }
+                  >
+                    {(
+                      Object.keys(CAMPAIGN_STATUS_LABEL) as CampaignStatus[]
+                    ).map((s) => (
+                      <MenuItem key={s} value={s}>
+                        {CAMPAIGN_STATUS_LABEL[s]}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </DialogContent>
+              <DialogActions>
+                <Button
+                  onClick={() => setStatusDialogCampaign(null)}
+                  disabled={isUpdatingStatus}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleUpdateStatus}
+                  disabled={isUpdatingStatus}
+                  startIcon={
+                    isUpdatingStatus ? (
+                      <CircularProgress size={16} />
+                    ) : (
+                      <StatusIcon />
+                    )
+                  }
+                >
+                  Cập nhật
+                </Button>
+              </DialogActions>
+            </Dialog>
+          </>
+        )}
+
+        {isCreateView && (
+          <Box
             sx={{
-              overflow: "hidden",
-              display: "flex",
+              height: "calc(100vh - 180px)",
               minHeight: 0,
             }}
           >
             <Box
               sx={{
-                mt: 1,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Typography variant="h5" fontWeight={700}>
+                Tạo chiến dịch khuyến mãi
+              </Typography>
+              <Button variant="outlined" onClick={() => setPageView("list")}>
+                Quay lại danh sách
+              </Button>
+            </Box>
+            <Box
+              sx={{
                 display: "grid",
                 gap: 2,
                 gridTemplateColumns: {
                   xs: "1fr",
-                  lg: "minmax(0, 1.15fr) minmax(0, 1fr)",
+                  lg: "minmax(0, 0.85fr) minmax(0, 1.15fr)",
                 },
                 alignItems: "start",
                 minHeight: 0,
-                height: "100%",
+                height: "calc(100% - 64px)",
               }}
             >
               <Paper
@@ -1524,12 +1649,22 @@ export const CampaignManagementPage = () => {
                     <Table size="small" stickyHeader>
                       <TableHead>
                         <TableRow sx={{ bgcolor: "grey.50" }}>
-                          <TableCell>Sản phẩm</TableCell>
-                          <TableCell>SKU</TableCell>
-                          <TableCell align="right">Khả dụng</TableCell>
-                          <TableCell align="center">Trạng thái</TableCell>
-                          <TableCell align="right" sx={{ width: 120 }}>
-                            Thao tác
+                          <TableCell sx={{ width: 56, minWidth: 56 }}>
+                            Ảnh
+                          </TableCell>
+                          <TableCell sx={{ minWidth: 160 }}>Sản phẩm</TableCell>
+                          <TableCell sx={{ minWidth: 120 }}>SKU</TableCell>
+                          <TableCell align="right" sx={{ minWidth: 100 }}>
+                            Giá
+                          </TableCell>
+                          <TableCell align="right" sx={{ minWidth: 70 }}>
+                            Khả dụng
+                          </TableCell>
+                          <TableCell align="center" sx={{ minWidth: 90 }}>
+                            Trạng thái
+                          </TableCell>
+                          <TableCell align="center" sx={{ width: 56 }}>
+                            Thêm
                           </TableCell>
                         </TableRow>
                       </TableHead>
@@ -1537,7 +1672,7 @@ export const CampaignManagementPage = () => {
                         {stockLoading ? (
                           <TableRow>
                             <TableCell
-                              colSpan={5}
+                              colSpan={7}
                               align="center"
                               sx={{ py: 4 }}
                             >
@@ -1546,14 +1681,14 @@ export const CampaignManagementPage = () => {
                           </TableRow>
                         ) : stockError ? (
                           <TableRow>
-                            <TableCell colSpan={5}>
+                            <TableCell colSpan={7}>
                               <Alert severity="error">{stockError}</Alert>
                             </TableCell>
                           </TableRow>
                         ) : stockList.length === 0 ? (
                           <TableRow>
                             <TableCell
-                              colSpan={5}
+                              colSpan={7}
                               align="center"
                               sx={{ py: 4 }}
                             >
@@ -1576,22 +1711,67 @@ export const CampaignManagementPage = () => {
                             return (
                               <Fragment key={stock.id || variantId}>
                                 <TableRow hover>
+                                  <TableCell sx={{ py: 1 }}>
+                                    <Avatar
+                                      src={stock.variantImageUrl}
+                                      alt={stock.productName || "Product"}
+                                      variant="rounded"
+                                      sx={{ width: 40, height: 40 }}
+                                    />
+                                  </TableCell>
                                   <TableCell>
-                                    <Typography fontWeight={600}>
+                                    <Typography
+                                      fontWeight={600}
+                                      sx={{
+                                        fontSize: "0.875rem",
+                                        lineHeight: 1.3,
+                                      }}
+                                    >
                                       {stock.productName || "N/A"}
                                     </Typography>
                                     <Typography
                                       variant="caption"
                                       color="text.secondary"
+                                      sx={{ display: "block" }}
                                     >
-                                      Variant: {variantId || "N/A"}
+                                      {stock.volumeMl
+                                        ? `${stock.volumeMl}ml`
+                                        : ""}
+                                      {stock.volumeMl && stock.concentrationName
+                                        ? " • "
+                                        : ""}
+                                      {stock.concentrationName || ""}
                                     </Typography>
                                   </TableCell>
                                   <TableCell>
-                                    {stock.variantSku || "N/A"}
+                                    <Typography variant="body2">
+                                      {stock.variantSku || "N/A"}
+                                    </Typography>
                                   </TableCell>
                                   <TableCell align="right">
-                                    {stock.availableQuantity ?? 0}
+                                    <Typography
+                                      variant="body2"
+                                      color="error.main"
+                                      fontWeight={600}
+                                      sx={{ whiteSpace: "nowrap" }}
+                                    >
+                                      {(() => {
+                                        const cached =
+                                          variantPricesCache[
+                                            stock.variantId || ""
+                                          ];
+                                        if (!cached) return "−";
+                                        const price = cached.basePrice;
+                                        return price != null
+                                          ? `${price.toLocaleString("vi-VN")} ₫`
+                                          : "−";
+                                      })()}
+                                    </Typography>
+                                  </TableCell>
+                                  <TableCell align="right">
+                                    <Typography variant="body2">
+                                      {stock.availableQuantity ?? 0}
+                                    </Typography>
                                   </TableCell>
                                   <TableCell align="center">
                                     <Chip
@@ -1600,35 +1780,29 @@ export const CampaignManagementPage = () => {
                                       label={stockStatus.label}
                                     />
                                   </TableCell>
-                                  <TableCell align="right">
-                                    <Stack
-                                      direction="row"
-                                      spacing={0.5}
-                                      justifyContent="flex-end"
-                                    >
-                                      <Tooltip title="Thêm item theo sản phẩm">
-                                        <IconButton
-                                          size="small"
-                                          onClick={() => addVariantItem(stock)}
-                                          sx={{
-                                            bgcolor: "primary.main",
-                                            color: "primary.contrastText",
-                                            borderRadius: 1.5,
-                                            "&:hover": {
-                                              bgcolor: "primary.dark",
-                                            },
-                                          }}
-                                        >
-                                          <AddIcon fontSize="small" />
-                                        </IconButton>
-                                      </Tooltip>
-                                    </Stack>
+                                  <TableCell align="center">
+                                    <Tooltip title="Thêm item theo sản phẩm">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() => addVariantItem(stock)}
+                                        sx={{
+                                          bgcolor: "primary.main",
+                                          color: "primary.contrastText",
+                                          borderRadius: 1.5,
+                                          "&:hover": {
+                                            bgcolor: "primary.dark",
+                                          },
+                                        }}
+                                      >
+                                        <AddIcon fontSize="small" />
+                                      </IconButton>
+                                    </Tooltip>
                                   </TableCell>
                                 </TableRow>
 
                                 <TableRow>
                                   <TableCell
-                                    colSpan={5}
+                                    colSpan={7}
                                     sx={{ bgcolor: "grey.50", py: 1.5 }}
                                   >
                                     <Typography
@@ -1955,11 +2129,11 @@ export const CampaignManagementPage = () => {
                       >
                         <Box>
                           <Typography variant="subtitle1" fontWeight={700}>
-                            Voucher theo campaign
+                            Voucher theo chiến lược (tùy chọn)
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
-                            Có thể tạo nhiều voucher cho từng loại item trong
-                            cùng đợt sale.
+                            Voucher là tính năng bổ sung. Để trống mã voucher
+                            nếu không cần.
                           </Typography>
                         </Box>
                         <Button
@@ -1972,172 +2146,252 @@ export const CampaignManagementPage = () => {
                         </Button>
                       </Stack>
 
-                      <TableContainer component={Paper} variant="outlined">
-                        <Table size="small">
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>Mã voucher</TableCell>
-                              <TableCell align="right">Giá trị giảm</TableCell>
-                              <TableCell>Kiểu giảm</TableCell>
-                              <TableCell>Áp dụng</TableCell>
-                              <TableCell>Loại item</TableCell>
-                              <TableCell align="center" sx={{ width: 64 }}>
-                                Xóa
-                              </TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {campaignVouchers.map((voucher) => {
-                              const isProductVoucher =
-                                voucher.applyType === "Product";
+                      <Stack spacing={2}>
+                        {campaignVouchers.map((voucher, index) => {
+                          const isProductVoucher =
+                            voucher.applyType === "Product";
+                          const isPercentage =
+                            voucher.discountType === "Percentage";
 
-                              return (
-                                <TableRow key={voucher.key} hover>
-                                  <TableCell sx={{ minWidth: 180 }}>
-                                    <TextField
-                                      size="small"
-                                      placeholder="VD: FLASH30"
-                                      value={voucher.code}
-                                      onChange={(event) =>
-                                        handleVoucherFieldChange(
-                                          voucher.key,
-                                          "code",
-                                          event.target.value,
-                                        )
-                                      }
-                                      fullWidth
-                                    />
-                                  </TableCell>
-                                  <TableCell
-                                    align="right"
-                                    sx={{ minWidth: 150 }}
-                                  >
-                                    <TextField
-                                      size="small"
-                                      value={voucher.discountValueInput}
-                                      onChange={(event) => {
-                                        const nextValue = event.target.value;
-                                        if (
-                                          !/^\d*([.,]\d{0,2})?$/.test(nextValue)
-                                        ) {
-                                          return;
-                                        }
+                          return (
+                            <Paper
+                              key={voucher.key}
+                              variant="outlined"
+                              sx={{ p: 2, position: "relative" }}
+                            >
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() =>
+                                  removeCampaignVoucher(voucher.key)
+                                }
+                                sx={{
+                                  position: "absolute",
+                                  top: 8,
+                                  right: 8,
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
 
-                                        handleVoucherFieldChange(
-                                          voucher.key,
-                                          "discountValueInput",
-                                          nextValue,
-                                        );
-                                      }}
-                                      placeholder={
-                                        voucher.discountType === "Percentage"
-                                          ? "VD: 20"
-                                          : "VD: 100000"
-                                      }
-                                      InputProps={{
-                                        endAdornment: (
-                                          <InputAdornment position="end">
-                                            {voucher.discountType ===
-                                            "Percentage"
-                                              ? "%"
-                                              : "VND"}
-                                          </InputAdornment>
-                                        ),
-                                      }}
-                                      fullWidth
-                                    />
-                                  </TableCell>
-                                  <TableCell sx={{ minWidth: 170 }}>
-                                    <FormControl size="small" fullWidth>
-                                      <Select
-                                        value={voucher.discountType}
-                                        onChange={(event) =>
-                                          handleVoucherFieldChange(
-                                            voucher.key,
-                                            "discountType",
-                                            event.target.value as DiscountType,
-                                          )
-                                        }
-                                      >
-                                        {DISCOUNT_TYPE_OPTIONS.map((option) => (
-                                          <MenuItem
-                                            key={option.value}
-                                            value={option.value}
+                              <Typography
+                                variant="subtitle2"
+                                color="text.secondary"
+                                sx={{ mb: 2 }}
+                              >
+                                Voucher #{index + 1}
+                              </Typography>
+
+                              <Box
+                                sx={{
+                                  display: "grid",
+                                  gridTemplateColumns: {
+                                    xs: "1fr",
+                                    sm: "1fr 1fr",
+                                    md: "1fr 1fr 1fr 1fr",
+                                  },
+                                  gap: 2,
+                                }}
+                              >
+                                <TextField
+                                  label="Mã voucher"
+                                  size="small"
+                                  placeholder="VD: FLASH30"
+                                  value={voucher.code}
+                                  onChange={(event) =>
+                                    handleVoucherFieldChange(
+                                      voucher.key,
+                                      "code",
+                                      event.target.value,
+                                    )
+                                  }
+                                  fullWidth
+                                />
+
+                                <TextField
+                                  label="Giá trị giảm"
+                                  size="small"
+                                  value={voucher.discountValueInput}
+                                  onChange={(event) => {
+                                    const nextValue = event.target.value;
+                                    if (
+                                      !/^\d*([.,]\d{0,2})?$/.test(nextValue)
+                                    ) {
+                                      return;
+                                    }
+                                    handleVoucherFieldChange(
+                                      voucher.key,
+                                      "discountValueInput",
+                                      nextValue,
+                                    );
+                                  }}
+                                  placeholder={isPercentage ? "%" : "VND"}
+                                  InputProps={{
+                                    endAdornment: (
+                                      <InputAdornment position="end">
+                                        <FormControl
+                                          size="small"
+                                          sx={{ minWidth: 50 }}
+                                        >
+                                          <Select
+                                            value={voucher.discountType}
+                                            variant="standard"
+                                            sx={{ fontSize: "0.875rem" }}
+                                            onChange={(event) =>
+                                              handleVoucherFieldChange(
+                                                voucher.key,
+                                                "discountType",
+                                                event.target
+                                                  .value as DiscountType,
+                                              )
+                                            }
                                           >
-                                            {option.label}
-                                          </MenuItem>
-                                        ))}
-                                      </Select>
-                                    </FormControl>
-                                  </TableCell>
-                                  <TableCell sx={{ minWidth: 150 }}>
-                                    <FormControl size="small" fullWidth>
-                                      <Select
-                                        value={voucher.applyType}
-                                        onChange={(event) =>
-                                          handleVoucherFieldChange(
-                                            voucher.key,
-                                            "applyType",
-                                            event.target.value as VoucherType,
-                                          )
-                                        }
-                                      >
-                                        {VOUCHER_APPLY_TYPE_OPTIONS.map(
-                                          (option) => (
-                                            <MenuItem
-                                              key={option.value}
-                                              value={option.value}
-                                            >
-                                              {option.label}
+                                            <MenuItem value="Percentage">
+                                              %
                                             </MenuItem>
-                                          ),
-                                        )}
-                                      </Select>
-                                    </FormControl>
-                                  </TableCell>
-                                  <TableCell sx={{ minWidth: 160 }}>
-                                    <FormControl size="small" fullWidth>
-                                      <Select
-                                        value={voucher.targetItemType}
-                                        disabled={!isProductVoucher}
-                                        onChange={(event) =>
-                                          handleVoucherFieldChange(
-                                            voucher.key,
-                                            "targetItemType",
-                                            event.target.value as PromotionType,
-                                          )
-                                        }
-                                      >
-                                        {PROMOTION_TYPE_OPTIONS.map(
-                                          (option) => (
-                                            <MenuItem
-                                              key={option.value}
-                                              value={option.value}
-                                            >
-                                              {option.label}
+                                            <MenuItem value="FixedAmount">
+                                              đ
                                             </MenuItem>
-                                          ),
-                                        )}
-                                      </Select>
-                                    </FormControl>
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <IconButton
-                                      size="small"
-                                      color="error"
-                                      onClick={() =>
-                                        removeCampaignVoucher(voucher.key)
-                                      }
-                                    >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })}
-                          </TableBody>
-                        </Table>
-                      </TableContainer>
+                                          </Select>
+                                        </FormControl>
+                                      </InputAdornment>
+                                    ),
+                                  }}
+                                  fullWidth
+                                />
+
+                                <TextField
+                                  label="Giảm tối đa (VND)"
+                                  size="small"
+                                  value={voucher.maxDiscountAmountInput}
+                                  onChange={(event) => {
+                                    const nextValue = event.target.value;
+                                    if (!/^\d*$/.test(nextValue)) {
+                                      return;
+                                    }
+                                    handleVoucherFieldChange(
+                                      voucher.key,
+                                      "maxDiscountAmountInput",
+                                      nextValue,
+                                    );
+                                  }}
+                                  placeholder="VD: 100000"
+                                  disabled={!isPercentage}
+                                  fullWidth
+                                />
+
+                                <TextField
+                                  label="Đơn tối thiểu (VND)"
+                                  size="small"
+                                  value={voucher.minOrderValueInput}
+                                  onChange={(event) => {
+                                    const nextValue = event.target.value;
+                                    if (!/^\d*$/.test(nextValue)) {
+                                      return;
+                                    }
+                                    handleVoucherFieldChange(
+                                      voucher.key,
+                                      "minOrderValueInput",
+                                      nextValue,
+                                    );
+                                  }}
+                                  placeholder="VD: 500000"
+                                  fullWidth
+                                />
+
+                                <TextField
+                                  label="Số lượng mã"
+                                  size="small"
+                                  value={voucher.totalQuantityInput}
+                                  onChange={(event) => {
+                                    const nextValue = event.target.value;
+                                    if (!/^\d*$/.test(nextValue)) {
+                                      return;
+                                    }
+                                    handleVoucherFieldChange(
+                                      voucher.key,
+                                      "totalQuantityInput",
+                                      nextValue,
+                                    );
+                                  }}
+                                  placeholder="VD: 500"
+                                  fullWidth
+                                />
+
+                                <TextField
+                                  label="Lượt/khách"
+                                  size="small"
+                                  value={voucher.maxUsagePerUserInput}
+                                  onChange={(event) => {
+                                    const nextValue = event.target.value;
+                                    if (!/^\d*$/.test(nextValue)) {
+                                      return;
+                                    }
+                                    handleVoucherFieldChange(
+                                      voucher.key,
+                                      "maxUsagePerUserInput",
+                                      nextValue,
+                                    );
+                                  }}
+                                  placeholder="VD: 1"
+                                  fullWidth
+                                />
+
+                                <FormControl size="small" fullWidth>
+                                  <InputLabel>Áp dụng</InputLabel>
+                                  <Select
+                                    label="Áp dụng"
+                                    value={voucher.applyType}
+                                    onChange={(event) =>
+                                      handleVoucherFieldChange(
+                                        voucher.key,
+                                        "applyType",
+                                        event.target.value as VoucherType,
+                                      )
+                                    }
+                                  >
+                                    {VOUCHER_APPLY_TYPE_OPTIONS.map(
+                                      (option) => (
+                                        <MenuItem
+                                          key={option.value}
+                                          value={option.value}
+                                        >
+                                          {option.label}
+                                        </MenuItem>
+                                      ),
+                                    )}
+                                  </Select>
+                                </FormControl>
+
+                                <FormControl size="small" fullWidth>
+                                  <InputLabel>Loại item</InputLabel>
+                                  <Select
+                                    label="Loại item"
+                                    value={voucher.targetItemType}
+                                    disabled={!isProductVoucher}
+                                    onChange={(event) =>
+                                      handleVoucherFieldChange(
+                                        voucher.key,
+                                        "targetItemType",
+                                        event.target.value as PromotionType,
+                                      )
+                                    }
+                                  >
+                                    {PROMOTION_TYPE_OPTIONS.map((option) => (
+                                      <MenuItem
+                                        key={option.value}
+                                        value={option.value}
+                                      >
+                                        {option.label}
+                                      </MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              </Box>
+                            </Paper>
+                          );
+                        })}
+                      </Stack>
                     </Stack>
                   </Paper>
 
@@ -2150,7 +2404,7 @@ export const CampaignManagementPage = () => {
                       sx={{ mb: 1 }}
                     >
                       <Typography variant="subtitle1" fontWeight={700}>
-                        Item đã chọn ({selectedSummary.total})
+                        Sản phẩm đã chọn ({selectedSummary.total})
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         Theo lô: {selectedSummary.batchCount} | Theo SP:{" "}
@@ -2158,140 +2412,212 @@ export const CampaignManagementPage = () => {
                       </Typography>
                     </Stack>
 
-                    <TableContainer component={Paper} variant="outlined">
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>Item</TableCell>
-                            <TableCell>Promotion Type</TableCell>
-                            <TableCell>Kiểu</TableCell>
-                            <TableCell align="right">Max Usage</TableCell>
-                            <TableCell align="center">Xóa</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {selectedItems.length === 0 ? (
-                            <TableRow>
-                              <TableCell
-                                colSpan={5}
-                                align="center"
-                                sx={{ py: 3 }}
-                              >
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  Chưa có item nào được chọn.
-                                </Typography>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            selectedItems.map((item) => {
-                              const isBatchItem = Boolean(item.batchId);
+                    <Stack spacing={2}>
+                      {selectedItems.length === 0 ? (
+                        <Paper variant="outlined" sx={{ p: 3 }}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            align="center"
+                          >
+                            Chưa có item nào được chọn.
+                          </Typography>
+                        </Paper>
+                      ) : (
+                        selectedItems.map((item, index) => {
+                          const isBatchItem = Boolean(item.batchId);
 
-                              return (
-                                <TableRow key={item.key} hover>
-                                  <TableCell sx={{ minWidth: 220 }}>
+                          return (
+                            <Paper
+                              key={item.key}
+                              variant="outlined"
+                              sx={{ p: 2, position: "relative" }}
+                            >
+                              <IconButton
+                                color="error"
+                                size="small"
+                                onClick={() => removeSelectedItem(item.key)}
+                                sx={{
+                                  position: "absolute",
+                                  top: 8,
+                                  right: 8,
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+
+                              <Stack spacing={2}>
+                                <Stack direction="row" spacing={2}>
+                                  <Avatar
+                                    src={item.variantImageUrl || undefined}
+                                    alt={item.productName}
+                                    variant="rounded"
+                                    sx={{ width: 56, height: 56 }}
+                                  />
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography
+                                      variant="subtitle2"
+                                      color="text.secondary"
+                                    >
+                                      #{index + 1}
+                                    </Typography>
                                     <Typography fontWeight={600}>
                                       {item.productName}
                                     </Typography>
                                     <Typography
                                       variant="caption"
                                       color="text.secondary"
+                                      component="div"
                                     >
                                       SKU: {item.variantSku}
                                       {item.batchCode
                                         ? ` | Batch: ${item.batchCode}`
                                         : " | Toàn bộ tồn kho"}
                                     </Typography>
-                                  </TableCell>
-                                  <TableCell sx={{ minWidth: 180 }}>
-                                    <FormControl fullWidth size="small">
-                                      <Select
-                                        value={item.promotionType}
-                                        onChange={(event) =>
-                                          handleSelectedPromotionTypeChange(
-                                            item.key,
-                                            event.target.value as PromotionType,
-                                          )
-                                        }
-                                      >
-                                        {PROMOTION_TYPE_OPTIONS.map(
-                                          (option) => (
-                                            <MenuItem
-                                              key={option.value}
-                                              value={option.value}
-                                            >
-                                              {option.label}
-                                            </MenuItem>
-                                          ),
-                                        )}
-                                      </Select>
-                                    </FormControl>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Chip
-                                      size="small"
-                                      color={isBatchItem ? "info" : "success"}
-                                      label={`${PROMOTION_TYPE_LABEL[item.promotionType]} • ${
-                                        isBatchItem
-                                          ? "Theo lô"
-                                          : "Theo sản phẩm"
-                                      }`}
-                                    />
-                                  </TableCell>
-                                  <TableCell align="right">
-                                    <TextField
-                                      size="small"
-                                      required={!isBatchItem}
-                                      value={item.maxUsageInput}
+                                    <Typography
+                                      variant="body2"
+                                      color="error.main"
+                                      fontWeight={600}
+                                    >
+                                      {item.basePrice != null
+                                        ? `${item.basePrice.toLocaleString("vi-VN")} ₫`
+                                        : "Chưa có giá"}
+                                    </Typography>
+                                  </Box>
+                                </Stack>
+
+                                <Box
+                                  sx={{
+                                    display: "grid",
+                                    gridTemplateColumns: {
+                                      xs: "1fr",
+                                      sm: "1fr 1fr",
+                                      md: "1fr 1fr 1fr 1fr",
+                                    },
+                                    gap: 2,
+                                  }}
+                                >
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel>Loại khuyến mãi</InputLabel>
+                                    <Select
+                                      label="Loại khuyến mãi"
+                                      value={item.promotionType}
                                       onChange={(event) =>
-                                        handleSelectedMaxUsageChange(
+                                        handleSelectedPromotionTypeChange(
                                           item.key,
-                                          event.target.value,
+                                          event.target.value as PromotionType,
                                         )
                                       }
-                                      disabled={isBatchItem}
-                                      placeholder={
-                                        isBatchItem ? "null" : "Bắt buộc > 0"
-                                      }
-                                      sx={{ width: 140 }}
-                                    />
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <IconButton
-                                      color="error"
-                                      size="small"
-                                      onClick={() =>
-                                        removeSelectedItem(item.key)
+                                    >
+                                      {PROMOTION_TYPE_OPTIONS.map((option) => (
+                                        <MenuItem
+                                          key={option.value}
+                                          value={option.value}
+                                        >
+                                          {option.label}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel>Kiểu giảm</InputLabel>
+                                    <Select
+                                      label="Kiểu giảm"
+                                      value={item.discountType}
+                                      onChange={(event) =>
+                                        handleSelectedDiscountTypeChange(
+                                          item.key,
+                                          event.target.value as DiscountType,
+                                        )
                                       }
                                     >
-                                      <DeleteIcon fontSize="small" />
-                                    </IconButton>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })
-                          )}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
+                                      {DISCOUNT_TYPE_OPTIONS.map((option) => (
+                                        <MenuItem
+                                          key={option.value}
+                                          value={option.value}
+                                        >
+                                          {option.label}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+
+                                  <TextField
+                                    label="Giá trị giảm"
+                                    size="small"
+                                    required
+                                    value={item.discountValueInput}
+                                    onChange={(event) =>
+                                      handleSelectedDiscountValueChange(
+                                        item.key,
+                                        event.target.value,
+                                      )
+                                    }
+                                    placeholder={
+                                      item.discountType === "Percentage"
+                                        ? "VD: 20"
+                                        : "VD: 50000"
+                                    }
+                                    InputProps={{
+                                      endAdornment: (
+                                        <InputAdornment position="end">
+                                          {item.discountType === "Percentage"
+                                            ? "%"
+                                            : "VND"}
+                                        </InputAdornment>
+                                      ),
+                                    }}
+                                    fullWidth
+                                  />
+
+                                  <TextField
+                                    label="SL tối đa"
+                                    size="small"
+                                    required={!isBatchItem}
+                                    value={item.maxUsageInput}
+                                    onChange={(event) =>
+                                      handleSelectedMaxUsageChange(
+                                        item.key,
+                                        event.target.value,
+                                      )
+                                    }
+                                    disabled={isBatchItem}
+                                    placeholder={
+                                      isBatchItem ? "null" : "Bắt buộc > 0"
+                                    }
+                                    fullWidth
+                                  />
+                                </Box>
+                              </Stack>
+                            </Paper>
+                          );
+                        })
+                      )}
+                    </Stack>
                   </Box>
                 </Stack>
               </Paper>
             </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setCreateDialogOpen(false)}>Hủy</Button>
-            <Button
-              variant="contained"
-              onClick={handleCreateCampaign}
-              disabled={createSubmitting}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 2,
+                mt: 2,
+              }}
             >
-              {createSubmitting ? "Đang tạo..." : "Tạo chiến lược"}
-            </Button>
-          </DialogActions>
-        </Dialog>
+              <Button onClick={() => setPageView("list")}>Hủy</Button>
+              <Button
+                variant="contained"
+                onClick={handleCreateCampaign}
+                disabled={createSubmitting}
+              >
+                {createSubmitting ? "Đang tạo..." : "Tạo chiến lược"}
+              </Button>
+            </Box>
+          </Box>
+        )}
       </Box>
     </AdminLayout>
   );

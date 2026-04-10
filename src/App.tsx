@@ -155,6 +155,11 @@ const CampaignManagementPage = lazy(() =>
     default: m.CampaignManagementPage,
   })),
 );
+const CampaignManagementDetailPage = lazy(() =>
+  import("./pages/CampaignManagementDetailPage").then((m) => ({
+    default: m.CampaignManagementDetailPage,
+  })),
+);
 const VerifyEmailPage = lazy(() =>
   import("./pages/VerifyEmailPage").then((m) => ({
     default: m.VerifyEmailPage,
@@ -534,6 +539,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <CampaignManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/campaigns/:campaignId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <CampaignManagementDetailPage />
                           </RoleBasedRoute>
                         }
                       />

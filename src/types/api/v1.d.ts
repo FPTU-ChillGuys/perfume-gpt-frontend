@@ -2868,7 +2868,52 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                    };
+                };
+            };
+        };
         put?: never;
         post: {
             parameters: {
@@ -12419,6 +12464,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfListOfVoucherResponse: {
+            payload?: null | components["schemas"]["VoucherResponse"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfListOfWardResponse: {
             payload?: null | components["schemas"]["WardResponse"][];
             success?: boolean;
@@ -13266,6 +13318,10 @@ export interface components {
             /** Format: int32 */
             quantity?: number;
             isAvailable?: boolean;
+            /** Format: decimal */
+            discount?: number;
+            /** Format: decimal */
+            finalTotal?: number;
             /** Format: decimal */
             subTotal?: number;
         };
