@@ -39,7 +39,7 @@ import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import {
   voucherService,
-  type UserVoucherResponse,
+  type AvailableVoucherResponse,
 } from "@/services/voucherService";
 
 const formatCurrency = (value?: number) =>
@@ -72,7 +72,7 @@ export const CartPage = () => {
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
-  const [myVoucherList, setMyVoucherList] = useState<UserVoucherResponse[]>([]);
+  const [myVoucherList, setMyVoucherList] = useState<AvailableVoucherResponse[]>([]);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   const roundCheckboxSx = {
@@ -780,10 +780,10 @@ export const CartPage = () => {
                         setVoucherPickerOpen(true);
                         setLoadingMyVouchers(true);
                         try {
-                          const data = await voucherService.getMyVouchers({
+                          const data = await voucherService.getAvailable({
                             PageSize: 50,
                           });
-                          setMyVoucherList(data.filter((v) => !v.isUsed && !v.isExpired));
+                          setMyVoucherList(data.items);
                         } catch {
                           setMyVoucherList([]);
                         } finally {

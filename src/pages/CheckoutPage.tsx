@@ -44,7 +44,7 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import {
   voucherService,
-  type UserVoucherResponse,
+  type AvailableVoucherResponse,
 } from "@/services/voucherService";
 import type {
   AddressResponse,
@@ -183,7 +183,7 @@ export const CheckoutPage = () => {
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
-  const [myVoucherList, setMyVoucherList] = useState<UserVoucherResponse[]>([]);
+  const [myVoucherList, setMyVoucherList] = useState<AvailableVoucherResponse[]>([]);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   useEffect(() => {
@@ -1181,10 +1181,10 @@ export const CheckoutPage = () => {
                       setVoucherPickerOpen(true);
                       setLoadingMyVouchers(true);
                       try {
-                        const data = await voucherService.getMyVouchers({
+                        const data = await voucherService.getAvailable({
                           PageSize: 50,
                         });
-                        setMyVoucherList(data.filter((v) => !v.isUsed && !v.isExpired));
+                        setMyVoucherList(data.items);
                       } catch {
                         setMyVoucherList([]);
                       } finally {
@@ -1326,7 +1326,7 @@ export const CheckoutPage = () => {
             <Stack spacing={1.5}>
               {myVoucherList.map((v) => {
                 const discountLabel =
-                  v.discountType === "Percentage" || v.discountType === "2"
+                  v.discountType === "Percentage"
                     ? `${v.discountValue}%`
                     : formatCurrency(v.discountValue);
                 return (
