@@ -292,6 +292,8 @@ export const CounterCheckoutStaffPage = () => {
   const lastPaidOrderIdRef = useRef<string>("");
   const latestRetryOrderIdRef = useRef<string>("");
   const latestRetryPaymentIdRef = useRef<string>("");
+  // Flag to prevent processing failed events during retry operation
+  const isRetryInProgressRef = useRef(false);
   const syncCartToCustomerRef = useRef(syncCartToCustomer);
   const [failedPaymentAction, setFailedPaymentAction] =
     useState<FailedPaymentAction | null>(null);
@@ -465,6 +467,7 @@ export const CounterCheckoutStaffPage = () => {
     latestRetryOrderIdRef.current = "";
     latestRetryPaymentIdRef.current = "";
     lastPaidOrderIdRef.current = "";
+    isRetryInProgressRef.current = false;
     clearPaymentSignalREvents();
 
     // Clear customer display ONLY when closing dialog
@@ -663,12 +666,6 @@ export const CounterCheckoutStaffPage = () => {
     }
 
     handledPaymentEventsRef.current.add(eventKey);
-
-    console.log("[POS][SignalR][PaymentCompleted] accepted", {
-      rawOrderId,
-      rawPaymentId,
-      status,
-    });
 
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
@@ -1340,6 +1337,8 @@ export const CounterCheckoutStaffPage = () => {
 
       try {
         setIsRetryingPayment(true);
+        // Set flag to prevent processing failed events during retry
+        isRetryInProgressRef.current = true;
         // Allow re-processing the same fail/success DTO after a new retry attempt.
         handledPaymentFailedEventRef.current = "";
 
@@ -1458,6 +1457,10 @@ export const CounterCheckoutStaffPage = () => {
         );
       } finally {
         setIsRetryingPayment(false);
+        // Delay clearing the flag to allow SignalR events to settle
+        setTimeout(() => {
+          isRetryInProgressRef.current = false;
+        }, 1000);
       }
     },
     [
@@ -1499,6 +1502,12 @@ export const CounterCheckoutStaffPage = () => {
     ].join(":");
 
     if (handledPaymentFailedEventRef.current === failedEventKey) {
+      return;
+    }
+
+    // Skip processing failed events while retry is in progress
+    // This prevents showing error toast when user clicks retry button
+    if (isRetryInProgressRef.current) {
       return;
     }
 
@@ -1594,12 +1603,6 @@ export const CounterCheckoutStaffPage = () => {
     if (rawOrderId === lastPaidOrderIdRef.current) {
       return;
     }
-
-    console.log("[POS][SignalR][PaymentLinkUpdated] accepted", {
-      rawOrderId,
-      rawPaymentId,
-      rawPaymentUrl,
-    });
 
     latestRetryOrderIdRef.current = rawOrderId;
     latestRetryPaymentIdRef.current = rawPaymentId;
