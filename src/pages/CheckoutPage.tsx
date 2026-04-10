@@ -1038,7 +1038,18 @@ export const CheckoutPage = () => {
               {/* Items */}
               <Box mb={2}>
                 {items.map((item) => {
-                  const hasDiscount = !!(item.discount && item.discount > 0);
+                  // Strict check: only true if discount exists AND is greater than 0
+                  const hasDiscount = !!(
+                    item.discount &&
+                    Number(item.discount) > 0 &&
+                    item.subTotal &&
+                    Number(item.subTotal) > 0
+                  );
+                  const percentage = hasDiscount
+                    ? Math.round(
+                        (Number(item.discount) / Number(item.subTotal)) * 100,
+                      )
+                    : 0;
                   const displayPrice = item.finalTotal
                     ? Number(item.finalTotal)
                     : item.subTotal
@@ -1073,10 +1084,10 @@ export const CheckoutPage = () => {
                           >
                             {item.variantName}
                           </Typography>
-                          {hasDiscount && item.subTotal && (
+                          {hasDiscount && (
                             <Chip
                               icon={<LocalOffer fontSize="small" />}
-                              label={`-${Math.round((Number(item.discount) / Number(item.subTotal)) * 100)}%`}
+                              label={`-${percentage}%`}
                               color="error"
                               size="small"
                               sx={{ height: 20, fontSize: "0.7rem", mt: 0.25 }}

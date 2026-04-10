@@ -715,8 +715,24 @@ const ProductDetailPage = () => {
       await cartService.addItem(selectedVariant.id, 1);
       await refreshCart();
       showToast("Đã thêm sản phẩm vào giỏ hàng", "success");
+
       if (redirectToCheckout) {
-        navigate("/checkout");
+        // Get updated cart to find the newly added item
+        const cartItems = await cartService.getItems();
+        const addedItem = cartItems.find(
+          (item) => item.variantId === selectedVariant.id,
+        );
+
+        if (addedItem?.cartItemId) {
+          // Navigate with only the newly added item selected
+          navigate("/checkout", {
+            state: {
+              selectedCartItemIds: [addedItem.cartItemId],
+            },
+          });
+        } else {
+          navigate("/checkout");
+        }
       }
     } catch (err: any) {
       showToast(err?.message || "Không thể thêm sản phẩm vào giỏ", "error");

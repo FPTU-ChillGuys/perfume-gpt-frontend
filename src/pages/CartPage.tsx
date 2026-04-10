@@ -480,14 +480,9 @@ export const CartPage = () => {
                       selectedCartItemIds.length ===
                         getSelectableItemIds().length
                     }
-                    indeterminate={
-                      selectedCartItemIds.length > 0 &&
-                      selectedCartItemIds.length < getSelectableItemIds().length
-                    }
                     onChange={(e) => handleToggleSelectAll(e.target.checked)}
                     icon={<RadioButtonUnchecked fontSize="small" />}
                     checkedIcon={<CheckCircle fontSize="small" />}
-                    indeterminateIcon={<CheckCircle fontSize="small" />}
                     sx={roundCheckboxSx}
                   />
                   <Typography variant="body2" fontWeight={500}>
@@ -505,7 +500,18 @@ export const CartPage = () => {
                   const itemKey =
                     item.cartItemId ?? `${item.variantId}-${index}`;
                   const quantity = Math.max(1, item.quantity ?? 1);
-                  const hasDiscount = item.discount && item.discount > 0;
+                  // Strict check: only true if discount exists AND is greater than 0
+                  const hasDiscount = !!(
+                    item.discount &&
+                    Number(item.discount) > 0 &&
+                    item.subTotal &&
+                    Number(item.subTotal) > 0
+                  );
+                  const percentage = hasDiscount
+                    ? Math.round(
+                        (Number(item.discount) / Number(item.subTotal)) * 100,
+                      )
+                    : 0;
                   const lineTotal = item.finalTotal
                     ? Number(item.finalTotal)
                     : item.subTotal
@@ -590,7 +596,7 @@ export const CartPage = () => {
                                 {hasDiscount && (
                                   <Chip
                                     icon={<LocalOffer fontSize="small" />}
-                                    label={`-${Math.round((Number(item.discount) / Number(item.subTotal)) * 100)}%`}
+                                    label={`-${percentage}%`}
                                     color="error"
                                     size="small"
                                     sx={{ fontWeight: 600 }}
