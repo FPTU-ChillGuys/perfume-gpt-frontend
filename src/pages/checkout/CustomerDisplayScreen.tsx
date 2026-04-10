@@ -58,6 +58,9 @@ export const CustomerDisplayScreen = () => {
   const lastSuccessfulOrderIdRef = useRef("");
   const latestPaymentOrderIdRef = useRef("");
   const latestPaymentIdRef = useRef("");
+  // Refs to avoid re-triggering SignalR effects when state changes
+  const itemsCountRef = useRef(0);
+  const displayPaymentUrlRef = useRef("");
 
   const items = useMemo<DisplayItem[]>(() => {
     const rawItems = readProp<unknown[]>(customerDisplayData, "items", "Items");
@@ -180,6 +183,15 @@ export const CustomerDisplayScreen = () => {
 
   const displayPaymentUrl = activePaymentUrl || paymentUrl;
 
+  // Keep refs in sync with derived values
+  useEffect(() => {
+    itemsCountRef.current = items.length;
+  }, [items.length]);
+
+  useEffect(() => {
+    displayPaymentUrlRef.current = displayPaymentUrl;
+  }, [displayPaymentUrl]);
+
   useEffect(() => {
     if (!displayPaymentUrl) return;
 
@@ -226,9 +238,10 @@ export const CustomerDisplayScreen = () => {
       return;
     }
 
+    // Use refs to check state without causing effect re-runs
     // Ignore delayed success event when a checkout is no longer active
     // (e.g., after staff clicked "Đón khách mới" and carts were cleared).
-    if (!displayPaymentUrl && items.length === 0) {
+    if (!displayPaymentUrlRef.current && itemsCountRef.current === 0) {
       return;
     }
 
@@ -248,7 +261,7 @@ export const CustomerDisplayScreen = () => {
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, [displayPaymentUrl, items.length, paymentCompletedData]);
+  }, [paymentCompletedData]);
 
   useEffect(() => {
     if (!paymentFailedData) return;

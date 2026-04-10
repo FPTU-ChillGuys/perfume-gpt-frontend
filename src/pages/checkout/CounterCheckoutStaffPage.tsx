@@ -340,6 +340,27 @@ export const CounterCheckoutStaffPage = () => {
       // initialized in effect below
     },
   );
+  // Refs for cart sync callbacks to avoid re-triggering SignalR effects
+  const toCartDisplaySyncPayloadRef = useRef<
+    (data: PosPreviewResponse) => CartDisplaySyncPayload
+  >(() => ({
+    items: [],
+    subTotal: 0,
+    discount: 0,
+    totalPrice: 0,
+    paymentUrl: null,
+  }));
+  const toFallbackCartDisplaySyncPayloadRef = useRef<
+    () => CartDisplaySyncPayload
+  >(() => ({
+    items: [],
+    subTotal: 0,
+    discount: 0,
+    totalPrice: 0,
+    paymentUrl: null,
+  }));
+  // Ref for failedPaymentAction to avoid dependency in SignalR effects
+  const failedPaymentActionRef = useRef<FailedPaymentAction | null>(null);
 
   const totalQuantityInCart = useMemo(
     () => cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
@@ -1295,6 +1316,21 @@ export const CounterCheckoutStaffPage = () => {
       };
     }, [cartItems, localSubtotal]);
 
+  // Keep callback refs in sync - placed after callbacks are defined
+  useEffect(() => {
+    toCartDisplaySyncPayloadRef.current = toCartDisplaySyncPayload;
+  }, [toCartDisplaySyncPayload]);
+
+  useEffect(() => {
+    toFallbackCartDisplaySyncPayloadRef.current =
+      toFallbackCartDisplaySyncPayload;
+  }, [toFallbackCartDisplaySyncPayload]);
+
+  // Keep failedPaymentAction ref in sync
+  useEffect(() => {
+    failedPaymentActionRef.current = failedPaymentAction;
+  }, [failedPaymentAction]);
+
   const executeRetryFailedPayment = useCallback(
     async (requiresCashConfirm: boolean) => {
       if (!failedPaymentAction?.paymentId) {
@@ -1466,10 +1502,15 @@ export const CounterCheckoutStaffPage = () => {
       return;
     }
 
+    // Use refs to avoid dependencies on state that changes with cart
     const activeRetryOrderId =
-      latestRetryOrderIdRef.current || failedPaymentAction?.orderId || "";
+      latestRetryOrderIdRef.current ||
+      failedPaymentActionRef.current?.orderId ||
+      "";
     const activeRetryPaymentId =
-      latestRetryPaymentIdRef.current || failedPaymentAction?.paymentId || "";
+      latestRetryPaymentIdRef.current ||
+      failedPaymentActionRef.current?.paymentId ||
+      "";
 
     if (
       rawOrderId &&
@@ -1515,23 +1556,20 @@ export const CounterCheckoutStaffPage = () => {
       }
     }
 
-    if (previewData) {
-      void syncCartToCustomerRef.current(toCartDisplaySyncPayload(previewData));
+    // Use refs to access current preview data and callbacks
+    // This prevents effect re-runs when cart changes
+    const currentPreview = previewDataRef.current;
+    if (currentPreview) {
+      void syncCartToCustomerRef.current(
+        toCartDisplaySyncPayloadRef.current(currentPreview),
+      );
     } else {
       void syncCartToCustomerRef.current({
-        ...toFallbackCartDisplaySyncPayload(),
+        ...toFallbackCartDisplaySyncPayloadRef.current(),
         paymentUrl: null,
       });
     }
-  }, [
-    failedPaymentAction?.orderId,
-    failedPaymentAction?.paymentId,
-    paymentFailedData,
-    previewData,
-    showToast,
-    toCartDisplaySyncPayload,
-    toFallbackCartDisplaySyncPayload,
-  ]);
+  }, [paymentFailedData, showToast]);
 
   useEffect(() => {
     if (!paymentLinkUpdatedData) return;
@@ -1581,20 +1619,18 @@ export const CounterCheckoutStaffPage = () => {
       };
     });
 
-    const currentPayload = previewData
-      ? toCartDisplaySyncPayload(previewData)
-      : toFallbackCartDisplaySyncPayload();
+    // Use refs to access current preview data and callbacks
+    // This prevents effect re-runs when cart changes
+    const currentPreview = previewDataRef.current;
+    const currentPayload = currentPreview
+      ? toCartDisplaySyncPayloadRef.current(currentPreview)
+      : toFallbackCartDisplaySyncPayloadRef.current();
 
     void syncCartToCustomerRef.current({
       ...currentPayload,
       paymentUrl: rawPaymentUrl,
     });
-  }, [
-    paymentLinkUpdatedData,
-    previewData,
-    toCartDisplaySyncPayload,
-    toFallbackCartDisplaySyncPayload,
-  ]);
+  }, [paymentLinkUpdatedData]);
 
   useEffect(() => {
     if (debouncedPreviewPayload.scannedItems.length === 0) {
