@@ -14,6 +14,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  Chip,
   CircularProgress,
   Container,
   Dialog,
@@ -37,9 +38,9 @@ import {
 } from "@mui/material";
 import { QRCodeSVG } from "qrcode.react";
 import { BatchSelectionModal } from "@/components/checkout/BatchSelectionModal";
-import { PosBarcodeScanner } from "@/components/checkout/PosBarcodeScanner";
 import { ReceiptTemplate } from "@/components/checkout/ReceiptTemplate";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useGlobalBarcodeScanner } from "@/hooks/useGlobalBarcodeScanner";
 import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 import { useToast } from "@/hooks/useToast";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -51,6 +52,7 @@ import {
   type PosPreviewResponse,
   type PosProductVariant,
 } from "@/services/posService";
+
 import { orderService, type OrderInvoice } from "@/services/orderService";
 import { addressService } from "@/services/addressService";
 import type {
@@ -845,59 +847,47 @@ export const CounterCheckoutStaffPage = () => {
     );
   };
 
-  const handleSearch = async () => {
-    const value = searchKeyword.trim();
-    if (!value) {
-      showToast("Vui lòng nhập SKU hoặc tên sản phẩm", "warning");
-      return;
-    }
-
-    try {
-      setIsSearching(true);
-      const found = await posService.searchVariantsForPos(value);
-
-      if (found.length === 0) {
-        setSearchResults([]);
-        showToast("Không tìm thấy sản phẩm phù hợp", "info");
+  const handleSearch = useCallback(
+    async (keyword?: string) => {
+      const value = (keyword ?? searchKeyword).trim();
+      if (!value) {
+        showToast("Vui lòng nhập từ khoá tìm kiếm", "warning");
         return;
       }
 
-      setSearchResults(found);
-    } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Không thể tìm sản phẩm",
-        "error",
-      );
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const handleBarcodeDetected = useCallback(
-    async (barcode: string) => {
       try {
         setIsSearching(true);
-        const variant = await posService.getVariantByBarcode(barcode);
+        const found = await posService.searchVariantsForPos(value);
 
-        if (!variant) {
+        if (!found) {
           setSearchResults([]);
-          showToast(`Không tìm thấy sản phẩm cho mã ${barcode}`, "warning");
+          showToast("Không tìm thấy sản phẩm phù hợp", "info");
           return;
         }
 
-        setSearchResults([variant]);
-        setSearchKeyword(barcode);
+        setSearchResults([found]);
       } catch (error) {
         showToast(
-          error instanceof Error ? error.message : "Không thể xử lý mã quét",
+          error instanceof Error ? error.message : "Không thể tìm sản phẩm",
           "error",
         );
       } finally {
         setIsSearching(false);
       }
     },
-    [showToast],
+    [searchKeyword, showToast],
   );
+
+  // Global USB barcode scanner listener — works without focusing the search input
+  const handleBarcodeDetected = useCallback(
+    (barcode: string) => {
+      setSearchKeyword(barcode);
+      handleSearch(barcode);
+    },
+    [handleSearch],
+  );
+
+  useGlobalBarcodeScanner({ onDetected: handleBarcodeDetected });
 
   const handleOpenBatchModal = async (variant: PosProductVariant) => {
     if (!variant.id) {
@@ -1207,6 +1197,27 @@ export const CounterCheckoutStaffPage = () => {
 
     return Array.from(map.values());
   }, [cartItems]);
+
+  const variantDiscountMap = useMemo(() => {
+    const map = new Map<string, { discount: number; finalTotal: number }>();
+    if (!previewData?.items) return map;
+
+    previewData.items.forEach((item) => {
+      const key = item.variantId || "";
+      const existing = map.get(key);
+      const discount = Number(item.discount ?? 0);
+      const finalTotal = Number(item.finalTotal ?? 0);
+
+      if (!existing) {
+        map.set(key, { discount, finalTotal });
+      } else {
+        existing.discount += discount;
+        existing.finalTotal += finalTotal;
+      }
+    });
+
+    return map;
+  }, [previewData]);
 
   const previewPayload = useMemo<PosPreviewRequest>(
     () => ({
@@ -1975,14 +1986,15 @@ export const CounterCheckoutStaffPage = () => {
         <Stack
           direction={{ xs: "column", lg: "row" }}
           spacing={2.5}
-          alignItems={{ xs: "stretch", lg: "flex-start" }}
+          alignItems={{ xs: "stretch", lg: "stretch" }}
         >
-          <Box flex={1} width="100%">
+          <Box flex={1} width="100%" display="flex" flexDirection="column">
             <Paper
               sx={{
                 ...panelSx,
                 display: "flex",
                 flexDirection: "column",
+                flex: 1,
               }}
             >
               <Stack
@@ -2007,9 +2019,9 @@ export const CounterCheckoutStaffPage = () => {
                   px: 2,
                   py: 1.5,
                   bgcolor: "grey.50",
-                  maxHeight: { xs: 380, lg: 320 },
-                  overflow: "auto",
+                  flex: 1,
                   minHeight: 180,
+                  overflow: "auto",
                 }}
               >
                 {cartItems.length === 0 ? (
@@ -2092,11 +2104,49 @@ export const CounterCheckoutStaffPage = () => {
                             }
                           />
 
-                          <Typography fontWeight={800} color="text.primary">
-                            {formatCurrency(
-                              group.unitPrice * group.totalQuantity,
-                            )}
-                          </Typography>
+                          {(() => {
+                            const discountInfo = variantDiscountMap.get(
+                              group.variantId,
+                            );
+                            const hasDiscount =
+                              discountInfo && discountInfo.discount > 0;
+
+                            return hasDiscount ? (
+                              <Stack alignItems="flex-end" spacing={0.25}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    textDecoration: "line-through",
+                                    color: "text.disabled",
+                                  }}
+                                >
+                                  {formatCurrency(
+                                    group.unitPrice * group.totalQuantity,
+                                  )}
+                                </Typography>
+                                <Typography fontWeight={800} color="error.main">
+                                  {formatCurrency(discountInfo.finalTotal)}
+                                </Typography>
+                                <Chip
+                                  label={`-${formatCurrency(discountInfo.discount)}`}
+                                  size="small"
+                                  color="error"
+                                  variant="outlined"
+                                  sx={{
+                                    height: 20,
+                                    fontSize: "0.7rem",
+                                    fontWeight: 700,
+                                  }}
+                                />
+                              </Stack>
+                            ) : (
+                              <Typography fontWeight={800} color="text.primary">
+                                {formatCurrency(
+                                  group.unitPrice * group.totalQuantity,
+                                )}
+                              </Typography>
+                            );
+                          })()}
                         </ListItem>
 
                         <Stack spacing={1} sx={{ mb: 1.25, ml: 7 }}>
@@ -2216,7 +2266,11 @@ export const CounterCheckoutStaffPage = () => {
                 <Stack spacing={1}>
                   <Stack direction="row" justifyContent="space-between">
                     <Typography color="text.secondary">Tạm tính</Typography>
-                    <Typography>{formatCurrency(localSubtotal)}</Typography>
+                    <Typography>
+                      {formatCurrency(
+                        Number(previewData?.subTotal ?? localSubtotal),
+                      )}
+                    </Typography>
                   </Stack>
                   <Stack direction="row" justifyContent="space-between">
                     <Typography color="text.secondary">Giảm giá</Typography>
@@ -2252,10 +2306,160 @@ export const CounterCheckoutStaffPage = () => {
                   )}
                 </Stack>
               </Box>
+            </Paper>
+          </Box>
+
+          <Box flex={1} width="100%">
+            <Paper
+              sx={{
+                ...panelSx,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Typography variant="h6" fontWeight={700} mb={2}>
+                Tìm kiếm sản phẩm
+              </Typography>
+
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1.25}
+                mb={2}
+              >
+                <TextField
+                  label="Quét mã vạch / Nhập SKU, barcode hoặc tên"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSearch();
+                    }
+                  }}
+                  fullWidth
+                />
+                <Button
+                  variant="contained"
+                  aria-label="Tìm kiếm sản phẩm"
+                  startIcon={
+                    isSearching ? (
+                      <CircularProgress color="inherit" size={16} />
+                    ) : (
+                      <Search />
+                    )
+                  }
+                  onClick={() => handleSearch()}
+                  disabled={isSearching}
+                  sx={{ minWidth: 52, px: 1.5 }}
+                ></Button>
+              </Stack>
 
               <Box
                 sx={{
-                  mt: 2,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  p: 2,
+                  mb: 2,
+                  minHeight: 120,
+                  bgcolor: "grey.50",
+                }}
+              >
+                <Typography variant="subtitle1" fontWeight={700} mb={1}>
+                  Kết quả sản phẩm
+                </Typography>
+
+                {searchResults.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">
+                    Chưa có kết quả. Hãy nhập từ khoá hoặc quét mã vạch để tìm.
+                  </Typography>
+                ) : (
+                  <List disablePadding>
+                    {searchResults.map((variant) => (
+                      <ListItem
+                        key={getVariantKey(variant)}
+                        disableGutters
+                        secondaryAction={
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => handleOpenBatchModal(variant)}
+                          >
+                            Add
+                          </Button>
+                        }
+                        sx={{ pr: 10 }}
+                      >
+                        <ListItemAvatar sx={{ minWidth: 56 }}>
+                          {variant.primaryImageUrl ? (
+                            <Box
+                              component="img"
+                              src={variant.primaryImageUrl}
+                              alt={variant.displayName || variant.name}
+                              sx={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 1.5,
+                                objectFit: "cover",
+                                border: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            />
+                          ) : (
+                            <Box
+                              sx={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 1.5,
+                                bgcolor: "grey.100",
+                                border: "1px solid",
+                                borderColor: "divider",
+                              }}
+                            />
+                          )}
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={
+                            <Typography fontWeight={700}>
+                              {variant.displayName || variant.name}
+                            </Typography>
+                          }
+                          secondaryTypographyProps={{ component: "div" }}
+                          secondary={
+                            <>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                SKU: {variant.sku}
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Giá:{" "}
+                                {formatCurrency(Number(variant.basePrice ?? 0))}
+                              </Typography>
+                            </>
+                          }
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                )}
+              </Box>
+            </Paper>
+
+            <Paper
+              sx={{
+                ...panelSx,
+                mt: 2.5,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Box
+                sx={{
                   border: "1px solid",
                   borderColor: "divider",
                   borderRadius: 2,
@@ -2610,150 +2814,6 @@ export const CounterCheckoutStaffPage = () => {
                   </Box>
                 )}
               </Box>
-            </Paper>
-          </Box>
-
-          <Box flex={1} width="100%">
-            <Paper
-              sx={{
-                ...panelSx,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Typography variant="h6" fontWeight={700} mb={2}>
-                Tìm kiếm và quét mã
-              </Typography>
-
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={1.25}
-                mb={2}
-              >
-                <TextField
-                  label="Nhập SKU hoặc tên sản phẩm"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSearch();
-                    }
-                  }}
-                  fullWidth
-                />
-                <Button
-                  variant="contained"
-                  aria-label="Tìm kiếm theo SKU hoặc tên sản phẩm"
-                  startIcon={
-                    isSearching ? (
-                      <CircularProgress color="inherit" size={16} />
-                    ) : (
-                      <Search />
-                    )
-                  }
-                  onClick={handleSearch}
-                  disabled={isSearching}
-                  sx={{ minWidth: 52, px: 1.5 }}
-                ></Button>
-              </Stack>
-
-              <Box
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                  mb: 2,
-                  minHeight: 120,
-                  bgcolor: "grey.50",
-                }}
-              >
-                <Typography variant="subtitle1" fontWeight={700} mb={1}>
-                  Kết quả sản phẩm
-                </Typography>
-
-                {searchResults.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    Chưa có kết quả. Hãy nhập từ khoá hoặc quét mã vạch để tìm.
-                  </Typography>
-                ) : (
-                  <List disablePadding>
-                    {searchResults.map((variant) => (
-                      <ListItem
-                        key={getVariantKey(variant)}
-                        disableGutters
-                        secondaryAction={
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleOpenBatchModal(variant)}
-                          >
-                            Add
-                          </Button>
-                        }
-                        sx={{ pr: 10 }}
-                      >
-                        <ListItemAvatar sx={{ minWidth: 56 }}>
-                          {variant.primaryImageUrl ? (
-                            <Box
-                              component="img"
-                              src={variant.primaryImageUrl}
-                              alt={variant.displayName || variant.name}
-                              sx={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 1.5,
-                                objectFit: "cover",
-                                border: "1px solid",
-                                borderColor: "divider",
-                              }}
-                            />
-                          ) : (
-                            <Box
-                              sx={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 1.5,
-                                bgcolor: "grey.100",
-                                border: "1px solid",
-                                borderColor: "divider",
-                              }}
-                            />
-                          )}
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Typography fontWeight={700}>
-                              {variant.displayName || variant.name}
-                            </Typography>
-                          }
-                          secondaryTypographyProps={{ component: "div" }}
-                          secondary={
-                            <>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                SKU: {variant.sku}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                Giá:{" "}
-                                {formatCurrency(Number(variant.basePrice ?? 0))}
-                              </Typography>
-                            </>
-                          }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </Box>
-
-              <PosBarcodeScanner onDetected={handleBarcodeDetected} />
             </Paper>
           </Box>
         </Stack>

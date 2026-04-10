@@ -9039,9 +9039,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    Barcode?: string;
-                    Sku?: string;
-                    Name?: string;
+                    keyword?: string;
                 };
                 header?: never;
                 path?: never;

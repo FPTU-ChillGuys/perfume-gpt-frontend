@@ -38,59 +38,25 @@ class PosService {
     );
   }
 
-  private async fetchSingleVariantForPos(query: {
-    Barcode?: string;
-    Sku?: string;
-    Name?: string;
-  }): Promise<PosProductVariant | null> {
-    const response = await apiInstance.GET("/api/productvariants/for-pos", {
-      params: { query },
-    });
-
-    if (!response.data?.success) {
-      return null;
-    }
-
-    return response.data.payload || null;
-  }
-
-  async searchVariantsForPos(keyword: string): Promise<PosProductVariant[]> {
+  async searchVariantsForPos(
+    keyword: string,
+  ): Promise<PosProductVariant | null> {
     const term = keyword.trim();
-    if (!term) return [];
+    if (!term) return null;
 
     try {
-      const candidates = await Promise.all([
-        this.fetchSingleVariantForPos({ Sku: term }),
-        this.fetchSingleVariantForPos({ Name: term }),
-      ]);
-
-      const seen = new Set<string>();
-      const deduped = candidates.filter((item): item is PosProductVariant => {
-        const id = item?.id;
-        if (!item || !id || seen.has(id)) return false;
-        seen.add(id);
-        return true;
+      const response = await apiInstance.GET("/api/productvariants/for-pos", {
+        params: { query: { keyword: term } },
       });
 
-      return deduped;
+      if (!response.data?.success) {
+        return null;
+      }
+
+      return response.data.payload || null;
     } catch (error) {
       throw new Error(
         this.extractApiErrorMessage(error, "Không thể tìm sản phẩm tại quầy"),
-      );
-    }
-  }
-
-  async getVariantByBarcode(
-    barcode: string,
-  ): Promise<PosProductVariant | null> {
-    const value = barcode.trim();
-    if (!value) return null;
-
-    try {
-      return await this.fetchSingleVariantForPos({ Barcode: value });
-    } catch (error) {
-      throw new Error(
-        this.extractApiErrorMessage(error, "Không thể quét mã sản phẩm"),
       );
     }
   }

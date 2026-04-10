@@ -19,6 +19,7 @@ type DisplayItem = {
   imageUrl?: string;
   quantity: number;
   unitPrice: number;
+  discount: number;
   finalTotal: number;
 };
 
@@ -82,6 +83,7 @@ export const CustomerDisplayScreen = () => {
         imageUrl: readProp<string>(item, "imageUrl", "ImageUrl"),
         quantity,
         unitPrice,
+        discount: Number(readProp<number>(item, "discount", "Discount") ?? 0),
         finalTotal: Number(
           readProp<number>(item, "finalTotal", "FinalTotal") ??
             unitPrice * quantity,
@@ -101,6 +103,7 @@ export const CustomerDisplayScreen = () => {
       }
 
       existing.quantity += item.quantity;
+      existing.discount += item.discount;
       existing.finalTotal += item.finalTotal;
 
       if (!existing.imageUrl && item.imageUrl) {
@@ -513,9 +516,15 @@ export const CustomerDisplayScreen = () => {
                                 <p className="text-[11px] text-slate-500">
                                   Đơn giá
                                 </p>
-                                <p className="font-semibold text-slate-800">
-                                  {formatCurrency(item.unitPrice)}
-                                </p>
+                                {item.discount > 0 ? (
+                                  <p className="font-semibold text-slate-400 line-through">
+                                    {formatCurrency(item.unitPrice)}
+                                  </p>
+                                ) : (
+                                  <p className="font-semibold text-slate-800">
+                                    {formatCurrency(item.unitPrice)}
+                                  </p>
+                                )}
                               </div>
                               <div className="rounded-lg bg-rose-50 px-2 py-1.5 text-right">
                                 <p className="text-[11px] text-rose-500">
@@ -526,6 +535,11 @@ export const CustomerDisplayScreen = () => {
                                 </p>
                               </div>
                             </div>
+                            {item.discount > 0 && (
+                              <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-600">
+                                🏷️ Giảm {formatCurrency(item.discount)}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </li>
