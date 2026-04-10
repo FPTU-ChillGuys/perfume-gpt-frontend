@@ -1386,7 +1386,16 @@ class OrderService {
 
       const payload = response.data.payload as
         | string
-        | { url?: string; orderId?: string }
+        | {
+            url?: string;
+            orderId?: string;
+            paymentId?: string;
+            paymentUrl?: string;
+            Url?: string;
+            OrderId?: string;
+            PaymentId?: string;
+            PaymentUrl?: string;
+          }
         | null
         | undefined;
 
@@ -1400,8 +1409,13 @@ class OrderService {
 
       if (payload && typeof payload === "object") {
         return {
-          url: payload.url,
-          orderId: payload.orderId,
+          url:
+            payload.url ||
+            payload.paymentUrl ||
+            payload.Url ||
+            payload.PaymentUrl,
+          orderId: payload.orderId || payload.OrderId,
+          paymentId: payload.paymentId || payload.PaymentId,
         };
       }
 
