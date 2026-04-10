@@ -46,6 +46,8 @@ import {
   Search as SearchIcon,
   Delete as DeleteIcon,
   SwapHoriz as StatusIcon,
+  PlayArrow as PlayArrowIcon,
+  Pause as PauseIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { useToast } from "@/hooks/useToast";
@@ -280,6 +282,21 @@ const getStockStatusDisplay = (stock: StockResponse) => {
   }
 
   return { label: "Bình thường", color: "success" as const };
+};
+
+// Helper functions for Vietnamese number formatting
+const formatNumberVN = (value: string): string => {
+  // Remove all non-digit characters
+  const digitsOnly = value.replace(/\D/g, "");
+  if (!digitsOnly) return "";
+
+  // Format with thousand separators (dots)
+  return Number(digitsOnly).toLocaleString("vi-VN");
+};
+
+const parseNumberVN = (value: string): string => {
+  // Remove all dots (thousand separators) to get raw digits
+  return value.replace(/\./g, "");
 };
 
 export const CampaignManagementPage = () => {
@@ -849,9 +866,24 @@ export const CampaignManagementPage = () => {
     );
   };
 
-  const handleSelectedDiscountValueChange = (key: string, value: string) => {
-    if (!/^\d*([.,]\d{0,2})?$/.test(value)) {
-      return;
+  const handleSelectedDiscountValueChange = (
+    key: string,
+    value: string,
+    discountType: DiscountType,
+  ) => {
+    // For percentage, allow decimal; for fixed amount, digits only
+    if (discountType === "Percentage") {
+      if (!/^\d*([.,]\d{0,2})?$/.test(value)) {
+        return;
+      }
+    } else {
+      // For FixedAmount, remove formatting first then validate
+      const parsed = parseNumberVN(value);
+      if (!/^\d*$/.test(parsed)) {
+        return;
+      }
+      // Store the raw digits
+      value = parsed;
     }
 
     setSelectedItems((current) =>
@@ -1166,6 +1198,32 @@ export const CampaignManagementPage = () => {
     }
   };
 
+  const handleTogglePausePlay = async (campaign: CampaignResponse) => {
+    if (!campaign.id) return;
+    const newStatus: CampaignStatus =
+      campaign.status === "Active" ? "Paused" : "Active";
+    setIsUpdatingStatus(true);
+    try {
+      await campaignService.updateCampaignStatus(campaign.id, newStatus);
+      showToast(
+        newStatus === "Paused"
+          ? "Đã tạm dừng chiến dịch"
+          : "Đã tiếp tục chiến dịch",
+        "success",
+      );
+      void loadCampaigns();
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật trạng thái",
+        "error",
+      );
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const handleUpdateStatus = async () => {
     if (!statusDialogCampaign?.id) return;
     setIsUpdatingStatus(true);
@@ -1329,20 +1387,48 @@ export const CampaignManagementPage = () => {
                             align="center"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Tooltip title="Đổi trạng thái">
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => {
-                                  setStatusDialogCampaign(campaign);
-                                  setStatusChangeValue(
-                                    campaign.status || "Upcoming",
-                                  );
-                                }}
-                              >
-                                <StatusIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
+                            {campaign.status === "Active" ? (
+                              <Tooltip title="Tạm dừng">
+                                <IconButton
+                                  size="small"
+                                  color="warning"
+                                  onClick={() =>
+                                    void handleTogglePausePlay(campaign)
+                                  }
+                                  disabled={isUpdatingStatus}
+                                >
+                                  <PauseIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            ) : campaign.status === "Paused" ? (
+                              <Tooltip title="Tiếp tục">
+                                <IconButton
+                                  size="small"
+                                  color="success"
+                                  onClick={() =>
+                                    void handleTogglePausePlay(campaign)
+                                  }
+                                  disabled={isUpdatingStatus}
+                                >
+                                  <PlayArrowIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip title="Đổi trạng thái">
+                                <IconButton
+                                  size="small"
+                                  color="primary"
+                                  onClick={() => {
+                                    setStatusDialogCampaign(campaign);
+                                    setStatusChangeValue(
+                                      campaign.status || "Upcoming",
+                                    );
+                                  }}
+                                >
+                                  <StatusIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                             <Tooltip title="Xóa chiến lược">
                               <IconButton
                                 size="small"
@@ -2211,21 +2297,44 @@ export const CampaignManagementPage = () => {
                                 <TextField
                                   label="Giá trị giảm"
                                   size="small"
-                                  value={voucher.discountValueInput}
+                                  value={
+                                    isPercentage
+                                      ? voucher.discountValueInput
+                                      : formatNumberVN(
+                                          voucher.discountValueInput,
+                                        )
+                                  }
                                   onChange={(event) => {
                                     const nextValue = event.target.value;
-                                    if (
-                                      !/^\d*([.,]\d{0,2})?$/.test(nextValue)
-                                    ) {
-                                      return;
+
+                                    if (isPercentage) {
+                                      // For percentage, allow decimal input
+                                      if (
+                                        !/^\d*([.,]\d{0,2})?$/.test(nextValue)
+                                      ) {
+                                        return;
+                                      }
+                                      handleVoucherFieldChange(
+                                        voucher.key,
+                                        "discountValueInput",
+                                        nextValue,
+                                      );
+                                    } else {
+                                      // For fixed amount, only allow digits
+                                      const parsed = parseNumberVN(nextValue);
+                                      if (!/^\d*$/.test(parsed)) {
+                                        return;
+                                      }
+                                      handleVoucherFieldChange(
+                                        voucher.key,
+                                        "discountValueInput",
+                                        parsed,
+                                      );
                                     }
-                                    handleVoucherFieldChange(
-                                      voucher.key,
-                                      "discountValueInput",
-                                      nextValue,
-                                    );
                                   }}
-                                  placeholder={isPercentage ? "%" : "VND"}
+                                  placeholder={
+                                    isPercentage ? "%" : "VD: 500.000"
+                                  }
                                   InputProps={{
                                     endAdornment: (
                                       <InputAdornment position="end">
@@ -2263,19 +2372,23 @@ export const CampaignManagementPage = () => {
                                 <TextField
                                   label="Giảm tối đa (VND)"
                                   size="small"
-                                  value={voucher.maxDiscountAmountInput}
+                                  value={formatNumberVN(
+                                    voucher.maxDiscountAmountInput,
+                                  )}
                                   onChange={(event) => {
-                                    const nextValue = event.target.value;
-                                    if (!/^\d*$/.test(nextValue)) {
+                                    const parsed = parseNumberVN(
+                                      event.target.value,
+                                    );
+                                    if (!/^\d*$/.test(parsed)) {
                                       return;
                                     }
                                     handleVoucherFieldChange(
                                       voucher.key,
                                       "maxDiscountAmountInput",
-                                      nextValue,
+                                      parsed,
                                     );
                                   }}
-                                  placeholder="VD: 100000"
+                                  placeholder="VD: 100.000"
                                   disabled={!isPercentage}
                                   fullWidth
                                 />
@@ -2283,19 +2396,23 @@ export const CampaignManagementPage = () => {
                                 <TextField
                                   label="Đơn tối thiểu (VND)"
                                   size="small"
-                                  value={voucher.minOrderValueInput}
+                                  value={formatNumberVN(
+                                    voucher.minOrderValueInput,
+                                  )}
                                   onChange={(event) => {
-                                    const nextValue = event.target.value;
-                                    if (!/^\d*$/.test(nextValue)) {
+                                    const parsed = parseNumberVN(
+                                      event.target.value,
+                                    );
+                                    if (!/^\d*$/.test(parsed)) {
                                       return;
                                     }
                                     handleVoucherFieldChange(
                                       voucher.key,
                                       "minOrderValueInput",
-                                      nextValue,
+                                      parsed,
                                     );
                                   }}
-                                  placeholder="VD: 500000"
+                                  placeholder="VD: 500.000"
                                   fullWidth
                                 />
 
@@ -2547,17 +2664,24 @@ export const CampaignManagementPage = () => {
                                     label="Giá trị giảm"
                                     size="small"
                                     required
-                                    value={item.discountValueInput}
+                                    value={
+                                      item.discountType === "Percentage"
+                                        ? item.discountValueInput
+                                        : formatNumberVN(
+                                            item.discountValueInput,
+                                          )
+                                    }
                                     onChange={(event) =>
                                       handleSelectedDiscountValueChange(
                                         item.key,
                                         event.target.value,
+                                        item.discountType,
                                       )
                                     }
                                     placeholder={
                                       item.discountType === "Percentage"
                                         ? "VD: 20"
-                                        : "VD: 50000"
+                                        : "VD: 50.000"
                                     }
                                     InputProps={{
                                       endAdornment: (
