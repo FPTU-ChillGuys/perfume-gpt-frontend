@@ -21,7 +21,12 @@ import {
   Autocomplete,
   Stack,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
 } from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
 import {
   LocalShipping,
   Store,
@@ -37,6 +42,10 @@ import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
+import {
+  voucherService,
+  type UserVoucherResponse,
+} from "@/services/voucherService";
 import type {
   AddressResponse,
   ProvinceResponse,
@@ -173,6 +182,9 @@ export const CheckoutPage = () => {
   const [isLoadingWards, setIsLoadingWards] = useState(false);
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
+  const [myVoucherList, setMyVoucherList] = useState<UserVoucherResponse[]>([]);
+  const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -1159,6 +1171,32 @@ export const CheckoutPage = () => {
                     </Button>
                   )}
                 </Box>
+                {!appliedVoucher && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    startIcon={<LocalOffer />}
+                    onClick={async () => {
+                      setVoucherPickerOpen(true);
+                      setLoadingMyVouchers(true);
+                      try {
+                        const data = await voucherService.getMyVouchers({
+                          PageSize: 50,
+                        });
+                        setMyVoucherList(data.filter((v) => !v.isUsed && !v.isExpired));
+                      } catch {
+                        setMyVoucherList([]);
+                      } finally {
+                        setLoadingMyVouchers(false);
+                      }
+                    }}
+                    disabled={isApplyingVoucher}
+                    sx={{ mt: 1 }}
+                  >
+                    Chọn voucher
+                  </Button>
+                )}
                 {voucherError && (
                   <Typography
                     variant="caption"
@@ -1256,6 +1294,112 @@ export const CheckoutPage = () => {
           </Box>
         </Box>
       </Container>
+
+      {/* Voucher Picker Dialog */}
+      <Dialog
+        open={voucherPickerOpen}
+        onClose={() => setVoucherPickerOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <LocalOffer color="primary" />
+            Chọn voucher
+          </Box>
+          <IconButton size="small" onClick={() => setVoucherPickerOpen(false)}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingMyVouchers ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : myVoucherList.length === 0 ? (
+            <Box py={4} textAlign="center">
+              <Typography color="text.secondary">
+                Bạn chưa có voucher nào khả dụng.
+              </Typography>
+            </Box>
+          ) : (
+            <Stack spacing={1.5}>
+              {myVoucherList.map((v) => {
+                const discountLabel =
+                  v.discountType === "Percentage" || v.discountType === "2"
+                    ? `${v.discountValue}%`
+                    : formatCurrency(v.discountValue);
+                return (
+                  <Paper
+                    key={v.id}
+                    variant="outlined"
+                    sx={{
+                      p: 2,
+                      cursor: "pointer",
+                      borderColor: "primary.main",
+                      borderWidth: 1,
+                      borderRadius: 2,
+                      transition: "all 0.15s",
+                      "&:hover": {
+                        bgcolor: "primary.50",
+                        borderWidth: 2,
+                        boxShadow: 1,
+                      },
+                    }}
+                    onClick={async () => {
+                      setVoucherPickerOpen(false);
+                      const code = v.code.trim().toUpperCase();
+                      setVoucherCode(code);
+                      setVoucherError(null);
+                      setIsApplyingVoucher(true);
+                      try {
+                        const updatedTotals = await updateTotalsWithAddress(code);
+                        if (!updatedTotals) {
+                          setVoucherError("Voucher không hợp lệ cho đơn hàng này");
+                          return;
+                        }
+                        setAppliedVoucher({
+                          voucherCode: code,
+                          discountAmount: updatedTotals.discount ?? 0,
+                          finalAmount: updatedTotals.totalPrice ?? 0,
+                          message: "Áp dụng voucher thành công",
+                        });
+                        sessionStorage.setItem("appliedVoucherCode", code);
+                      } catch (err: any) {
+                        setVoucherError(
+                          err?.message || "Voucher không hợp lệ cho đơn hàng này",
+                        );
+                      } finally {
+                        setIsApplyingVoucher(false);
+                      }
+                    }}
+                  >
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography variant="subtitle2" fontWeight={700} fontFamily="monospace">
+                          {v.code}
+                        </Typography>
+                        <Typography variant="body2" color="primary.main" fontWeight={600}>
+                          Giảm {discountLabel}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {v.minOrderValue
+                            ? `Đơn tối thiểu: ${formatCurrency(v.minOrderValue)}`
+                            : "Không giới hạn đơn tối thiểu"}
+                          {" · "}HSD: {v.expiryDate ? new Date(v.expiryDate).toLocaleDateString("vi-VN") : "—"}
+                        </Typography>
+                      </Box>
+                      <Button variant="text" size="small" color="primary">
+                        Dùng
+                      </Button>
+                    </Box>
+                  </Paper>
+                );
+              })}
+            </Stack>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

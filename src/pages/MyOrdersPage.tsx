@@ -36,7 +36,11 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import ImageNotSupportedOutlinedIcon from "@mui/icons-material/ImageNotSupportedOutlined";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
-import type { ReturnRequestStatus } from "@/services/orderService";
+import type {
+  ReturnRequestStatus,
+  OrderReturnRequest,
+  OrderCancelRequest,
+} from "@/services/orderService";
 import { productReviewService } from "@/services/reviewService";
 import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
@@ -279,7 +283,7 @@ export const MyOrdersPage = () => {
             SortBy: "CreatedAt",
             SortOrder: "desc",
           })
-          .catch(() => ({ items: [] })),
+          .catch(() => ({ items: [] as OrderReturnRequest[] })),
         orderService
           .getMyCancelRequests({
             PageNumber: 1,
@@ -287,7 +291,7 @@ export const MyOrdersPage = () => {
             SortBy: "CreatedAt",
             SortOrder: "desc",
           })
-          .catch(() => ({ items: [] })),
+          .catch(() => ({ items: [] as OrderCancelRequest[] })),
       ]);
 
       const latestStatusByOrderId: Record<string, ReturnRequestStatus> = {};
