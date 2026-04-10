@@ -14,6 +14,8 @@ import {
   CardContent,
   Checkbox,
   Alert,
+  Chip,
+  TextField,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -23,10 +25,11 @@ import {
   ShoppingCart,
   CheckCircle,
   RadioButtonUnchecked,
+  LocalOffer,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { cartService } from "@/services/cartService";
-import type { CartItem, CartTotals } from "@/types/cart";
+import type { CartItem, CartTotals, ApplyVoucherResponse } from "@/types/cart";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 
@@ -54,6 +57,11 @@ export const CartPage = () => {
   const [totalsWarningMessage, setTotalsWarningMessage] = useState<
     string | null
   >(null);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [appliedVoucher, setAppliedVoucher] =
+    useState<ApplyVoucherResponse | null>(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
 
   const roundCheckboxSx = {
     p: 0.5,
@@ -77,7 +85,7 @@ export const CartPage = () => {
   );
 
   const loadTotals = useCallback(
-    async (selectedIds: string[]) => {
+    async (selectedIds: string[], voucherCodeOverride?: string | null) => {
       try {
         const allIds = getSelectableItemIds();
         if (!allIds.length || selectedIds.length === 0) {
@@ -88,22 +96,28 @@ export const CartPage = () => {
             totalPrice: 0,
           });
           setTotalsWarningMessage(null);
-          return;
+          return null;
         }
 
+        const activeVoucher =
+          voucherCodeOverride !== undefined
+            ? voucherCodeOverride || undefined
+            : appliedVoucher?.voucherCode || undefined;
+
         const totalsData = shouldQuerySelectedItems(selectedIds)
-          ? await cartService.getTotals(undefined, selectedIds)
-          : await cartService.getTotals();
+          ? await cartService.getTotals(activeVoucher, selectedIds)
+          : await cartService.getTotals(activeVoucher);
 
         setTotals(totalsData);
         setTotalsWarningMessage(totalsData.warningMessage || null);
+        return totalsData;
       } catch (error) {
         console.error("Error loading cart totals:", error);
         setTotalsWarningMessage(null);
-        showToast("Không thể tính tổng tiền giỏ hàng", "error");
+        return null;
       }
     },
-    [getSelectableItemIds, shouldQuerySelectedItems, showToast],
+    [getSelectableItemIds, shouldQuerySelectedItems, appliedVoucher],
   );
 
   const loadCart = useCallback(
@@ -158,8 +172,40 @@ export const CartPage = () => {
   // Initial load - chỉ chạy một lần khi component mount
   useEffect(() => {
     void loadCart(true);
+    // Load voucher from sessionStorage if exists
+    const savedVoucher = sessionStorage.getItem("appliedVoucherCode");
+    if (savedVoucher) {
+      setVoucherCode(savedVoucher);
+    }
+
+    // Cleanup: Remove voucher when leaving cart (unless going to checkout)
+    return () => {
+      // Small delay to check where we're navigating
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        // Only keep voucher if navigating to checkout
+        if (!currentPath.includes("/checkout")) {
+          sessionStorage.removeItem("appliedVoucherCode");
+        }
+      }, 100);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-apply voucher after items loaded
+  useEffect(() => {
+    if (!hasInitializedSelection || !voucherCode || appliedVoucher) {
+      return;
+    }
+    const savedVoucher = sessionStorage.getItem("appliedVoucherCode");
+    if (savedVoucher && savedVoucher === voucherCode && items.length > 0) {
+      // Auto apply voucher from session
+      setTimeout(() => {
+        void applyVoucher();
+      }, 500);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasInitializedSelection, items.length]);
 
   useEffect(() => {
     if (!hasInitializedSelection) {
@@ -167,6 +213,77 @@ export const CartPage = () => {
     }
     void loadTotals(selectedCartItemIds);
   }, [hasInitializedSelection, loadTotals, selectedCartItemIds]);
+
+  const applyVoucher = async () => {
+    const normalizedVoucher = voucherCode.trim();
+
+    if (!normalizedVoucher) {
+      return;
+    }
+
+    if (
+      appliedVoucher &&
+      appliedVoucher.voucherCode.toLowerCase() ===
+        normalizedVoucher.toLowerCase()
+    ) {
+      return;
+    }
+
+    setVoucherError(null);
+    setIsApplyingVoucher(true);
+    try {
+      const updatedTotals = await loadTotals(
+        selectedCartItemIds,
+        normalizedVoucher,
+      );
+
+      if (!updatedTotals) {
+        setAppliedVoucher(null);
+        setVoucherError(
+          "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại.",
+        );
+        return;
+      }
+
+      setAppliedVoucher({
+        voucherCode: normalizedVoucher,
+        discountAmount: updatedTotals?.discount ?? 0,
+        finalAmount: updatedTotals?.totalPrice ?? 0,
+        message: "Đã áp dụng mã giảm giá",
+      });
+      setVoucherCode(normalizedVoucher);
+      // Save to sessionStorage for sync with checkout
+      sessionStorage.setItem("appliedVoucherCode", normalizedVoucher);
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "Mã giảm giá không hợp lệ";
+      setVoucherError(
+        msg.toLowerCase().includes("not found") ||
+          msg.toLowerCase().includes("404") ||
+          msg.toLowerCase().includes("failed to apply")
+          ? "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại."
+          : msg,
+      );
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const removeVoucher = async () => {
+    setIsApplyingVoucher(true);
+    try {
+      setAppliedVoucher(null);
+      setVoucherCode("");
+      setVoucherError(null);
+      // Remove from sessionStorage when user manually removes voucher
+      sessionStorage.removeItem("appliedVoucherCode");
+      await loadTotals(selectedCartItemIds, null);
+    } catch (error) {
+      // Silent error
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
 
   const handleToggleItem = (cartItemId?: string) => {
     if (!cartItemId) {
@@ -209,7 +326,6 @@ export const CartPage = () => {
       await cartService.updateCartItem(cartItemId, nextQuantity);
       await loadCart();
       await refreshCart();
-      showToast("Đã cập nhật số lượng", "success");
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Không thể cập nhật số lượng",
@@ -235,7 +351,6 @@ export const CartPage = () => {
       await cartService.removeCartItem(cartItemId);
       await loadCart();
       await refreshCart();
-      showToast("Đã xóa sản phẩm khỏi giỏ hàng", "success");
     } catch (error) {
       showToast(
         error instanceof Error
@@ -262,7 +377,11 @@ export const CartPage = () => {
       setSelectedCartItemIds([]);
       setHasInitializedSelection(false);
       await refreshCart();
-      showToast("Đã xóa toàn bộ giỏ hàng", "success");
+      setAppliedVoucher(null);
+      setVoucherCode("");
+      setVoucherError(null);
+      // Remove from sessionStorage when clearing cart
+      sessionStorage.removeItem("appliedVoucherCode");
     } catch (error) {
       showToast(
         error instanceof Error
@@ -386,9 +505,12 @@ export const CartPage = () => {
                   const itemKey =
                     item.cartItemId ?? `${item.variantId}-${index}`;
                   const quantity = Math.max(1, item.quantity ?? 1);
-                  const lineTotal = item.subTotal
-                    ? Number(item.subTotal)
-                    : Number(item.variantPrice ?? 0) * quantity;
+                  const hasDiscount = item.discount && item.discount > 0;
+                  const lineTotal = item.finalTotal
+                    ? Number(item.finalTotal)
+                    : item.subTotal
+                      ? Number(item.subTotal)
+                      : Number(item.variantPrice ?? 0) * quantity;
 
                   return (
                     <Box
@@ -452,13 +574,29 @@ export const CartPage = () => {
                               )}
                             </Box>
                             <Box flex={1}>
-                              <Typography
-                                variant="h6"
-                                fontWeight={600}
-                                gutterBottom
+                              <Box
+                                display="flex"
+                                alignItems="flex-start"
+                                gap={1}
+                                mb={1}
                               >
-                                {item.variantName ?? "Sản phẩm chưa đặt tên"}
-                              </Typography>
+                                <Typography
+                                  variant="h6"
+                                  fontWeight={600}
+                                  flex={1}
+                                >
+                                  {item.variantName ?? "Sản phẩm chưa đặt tên"}
+                                </Typography>
+                                {hasDiscount && (
+                                  <Chip
+                                    icon={<LocalOffer fontSize="small" />}
+                                    label={`-${Math.round((Number(item.discount) / Number(item.subTotal)) * 100)}%`}
+                                    color="error"
+                                    size="small"
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                )}
+                              </Box>
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
@@ -526,13 +664,29 @@ export const CartPage = () => {
                                     <AddIcon fontSize="small" />
                                   </IconButton>
                                 </Box>
-                                <Typography
-                                  variant="h6"
-                                  color="error"
-                                  fontWeight={600}
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  alignItems="flex-end"
+                                  gap={0.5}
                                 >
-                                  {formatCurrency(lineTotal)}
-                                </Typography>
+                                  {hasDiscount && item.subTotal && (
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                      sx={{ textDecoration: "line-through" }}
+                                    >
+                                      {formatCurrency(item.subTotal)}
+                                    </Typography>
+                                  )}
+                                  <Typography
+                                    variant="h6"
+                                    color="error"
+                                    fontWeight={600}
+                                  >
+                                    {formatCurrency(lineTotal)}
+                                  </Typography>
+                                </Box>
                                 <Button
                                   size="small"
                                   color="error"
@@ -566,6 +720,88 @@ export const CartPage = () => {
                     {totalsWarningMessage}
                   </Alert>
                 )}
+
+                {/* Voucher */}
+                <Box mb={2}>
+                  <Box display="flex" gap={1} alignItems="stretch">
+                    <TextField
+                      size="small"
+                      placeholder="Mã giảm giá"
+                      value={voucherCode}
+                      onChange={(e) => {
+                        setVoucherCode(e.target.value);
+                        if (voucherError) setVoucherError(null);
+                      }}
+                      disabled={!!appliedVoucher || isApplyingVoucher}
+                      error={!!voucherError}
+                      fullWidth
+                    />
+                    {!appliedVoucher && (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={applyVoucher}
+                        disabled={isApplyingVoucher || !voucherCode.trim()}
+                        sx={{
+                          minWidth: 110,
+                          whiteSpace: "nowrap",
+                          px: 2,
+                        }}
+                      >
+                        {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
+                      </Button>
+                    )}
+                  </Box>
+                  {voucherError && (
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5, display: "block" }}
+                    >
+                      {voucherError}
+                    </Typography>
+                  )}
+                  {appliedVoucher && (
+                    <Box
+                      sx={{
+                        mt: 1,
+                        p: 1.5,
+                        bgcolor: "success.lighter",
+                        borderRadius: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography
+                          variant="body2"
+                          color="success.main"
+                          fontWeight={600}
+                        >
+                          ✓ {appliedVoucher.voucherCode}
+                        </Typography>
+                        {totals.discount > 0 && (
+                          <Typography variant="caption" color="success.main">
+                            -{formatCurrency(totals.discount)}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={removeVoucher}
+                        disabled={isApplyingVoucher}
+                        sx={{ minWidth: 50, fontSize: "0.75rem" }}
+                      >
+                        Xóa
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2" color="text.secondary">
                     Tạm tính
@@ -603,11 +839,21 @@ export const CartPage = () => {
                   variant="contained"
                   color="error"
                   size="large"
-                  onClick={() =>
+                  onClick={() => {
+                    // Ensure voucher is saved before navigation
+                    if (appliedVoucher?.voucherCode) {
+                      sessionStorage.setItem(
+                        "appliedVoucherCode",
+                        appliedVoucher.voucherCode,
+                      );
+                    }
                     navigate("/checkout", {
-                      state: { selectedCartItemIds },
-                    })
-                  }
+                      state: {
+                        selectedCartItemIds,
+                        voucherCode: appliedVoucher?.voucherCode,
+                      },
+                    });
+                  }}
                   disabled={selectedCartItemIds.length === 0}
                   sx={{ py: 1.5, mt: 2 }}
                 >

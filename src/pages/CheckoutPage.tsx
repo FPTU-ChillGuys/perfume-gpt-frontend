@@ -20,12 +20,14 @@ import {
   CardContent,
   Autocomplete,
   Stack,
+  Chip,
 } from "@mui/material";
 import {
   LocalShipping,
   Store,
   CheckCircle,
   ArrowBack,
+  LocalOffer,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
@@ -102,9 +104,18 @@ export const CheckoutPage = () => {
       location.state as
         | {
             selectedCartItemIds?: string[];
+            voucherCode?: string;
           }
         | undefined
     )?.selectedCartItemIds || [];
+
+  const voucherCodeFromCart = (
+    location.state as
+      | {
+          voucherCode?: string;
+        }
+      | undefined
+  )?.voucherCode;
 
   // State
   const [isPickupInStore, setIsPickupInStore] = useState(false);
@@ -166,6 +177,25 @@ export const CheckoutPage = () => {
   useEffect(() => {
     loadData();
     loadProvinces();
+    // Load voucher from navigation state or sessionStorage
+    const sessionVoucher = sessionStorage.getItem("appliedVoucherCode");
+    if (voucherCodeFromCart) {
+      setVoucherCode(voucherCodeFromCart);
+    } else if (sessionVoucher) {
+      setVoucherCode(sessionVoucher);
+    }
+
+    // Cleanup: Remove voucher when leaving checkout (unless going back to cart)
+    return () => {
+      // Small delay to check where we're navigating
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        // Only keep voucher if navigating to cart
+        if (!currentPath.includes("/cart")) {
+          sessionStorage.removeItem("appliedVoucherCode");
+        }
+      }, 100);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -185,6 +215,26 @@ export const CheckoutPage = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isPickupInStore, selectedCartItemIds]);
+
+  // Auto-apply voucher from cart or sessionStorage
+  useEffect(() => {
+    if (
+      !isLoading &&
+      items.length > 0 &&
+      !appliedVoucher &&
+      voucherCode.trim()
+    ) {
+      // Check if voucher is from cart or session
+      const hasVoucherToApply =
+        voucherCodeFromCart || sessionStorage.getItem("appliedVoucherCode");
+      if (hasVoucherToApply) {
+        setTimeout(() => {
+          void applyVoucher();
+        }, 300);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, voucherCode, items.length]);
 
   const shouldQuerySelectedItems = (
     allItemIds: string[],
@@ -395,7 +445,6 @@ export const CheckoutPage = () => {
     const normalizedVoucher = voucherCode.trim();
 
     if (!normalizedVoucher) {
-      showToast("Vui lòng nhập mã giảm giá", "warning");
       return;
     }
 
@@ -404,7 +453,6 @@ export const CheckoutPage = () => {
       appliedVoucher.voucherCode.toLowerCase() ===
         normalizedVoucher.toLowerCase()
     ) {
-      showToast("Mã giảm giá đã được áp dụng", "info");
       return;
     }
 
@@ -428,8 +476,8 @@ export const CheckoutPage = () => {
         message: "Đã áp dụng mã giảm giá",
       });
       setVoucherCode(normalizedVoucher);
-
-      showToast("Đã áp dụng mã giảm giá", "success");
+      // Save to sessionStorage for sync with cart
+      sessionStorage.setItem("appliedVoucherCode", normalizedVoucher);
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : "Mã giảm giá không hợp lệ";
@@ -452,16 +500,13 @@ export const CheckoutPage = () => {
       setAppliedVoucher(null);
       setVoucherCode("");
       setVoucherError(null);
+      // Remove from sessionStorage when user manually removes voucher
+      sessionStorage.removeItem("appliedVoucherCode");
 
       // Update totals - truyền null để tránh stale closure
       await updateTotalsWithAddress(null);
-
-      showToast("Đã bỏ mã giảm giá", "info");
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Không thể bỏ mã giảm giá",
-        "error",
-      );
+      // Silent error
     } finally {
       setIsApplyingVoucher(false);
     }
@@ -561,6 +606,9 @@ export const CheckoutPage = () => {
 
       // Clear cart
       await refreshCart();
+
+      // Clear applied voucher from sessionStorage
+      sessionStorage.removeItem("appliedVoucherCode");
 
       // Handle payment redirect
       if (
@@ -989,32 +1037,82 @@ export const CheckoutPage = () => {
 
               {/* Items */}
               <Box mb={2}>
-                {items.map((item) => (
-                  <Box key={item.cartItemId} display="flex" gap={2} mb={2}>
-                    <Box
-                      component="img"
-                      src={item.imageUrl || ""}
-                      alt={item.variantName}
-                      sx={{
-                        width: 60,
-                        height: 60,
-                        objectFit: "cover",
-                        borderRadius: 1,
-                      }}
-                    />
-                    <Box flex={1}>
-                      <Typography variant="body2" fontWeight={500}>
-                        {item.variantName}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        x{item.quantity}
-                      </Typography>
-                      <Typography variant="body2" color="error">
-                        {formatCurrency(item.subTotal)}
-                      </Typography>
+                {items.map((item) => {
+                  const hasDiscount = !!(item.discount && item.discount > 0);
+                  const displayPrice = item.finalTotal
+                    ? Number(item.finalTotal)
+                    : item.subTotal
+                      ? Number(item.subTotal)
+                      : Number(item.variantPrice ?? 0) * (item.quantity ?? 1);
+
+                  return (
+                    <Box key={item.cartItemId} display="flex" gap={2} mb={2}>
+                      <Box
+                        component="img"
+                        src={item.imageUrl || ""}
+                        alt={item.variantName}
+                        sx={{
+                          width: 60,
+                          height: 60,
+                          objectFit: "cover",
+                          borderRadius: 1,
+                        }}
+                      />
+                      <Box flex={1}>
+                        <Box
+                          display="flex"
+                          alignItems="flex-start"
+                          gap={1}
+                          mb={0.5}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight={500}
+                            flex={1}
+                            sx={{ lineHeight: 1.4 }}
+                          >
+                            {item.variantName}
+                          </Typography>
+                          {hasDiscount && item.subTotal && (
+                            <Chip
+                              icon={<LocalOffer fontSize="small" />}
+                              label={`-${Math.round((Number(item.discount) / Number(item.subTotal)) * 100)}%`}
+                              color="error"
+                              size="small"
+                              sx={{ height: 20, fontSize: "0.7rem", mt: 0.25 }}
+                            />
+                          )}
+                        </Box>
+                        <Typography variant="caption" color="text.secondary">
+                          x{item.quantity}
+                        </Typography>
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          gap={1}
+                          mt={0.5}
+                        >
+                          {hasDiscount && item.subTotal && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ textDecoration: "line-through" }}
+                            >
+                              {formatCurrency(item.subTotal)}
+                            </Typography>
+                          )}
+                          <Typography
+                            variant="body2"
+                            color="error"
+                            fontWeight={600}
+                          >
+                            {formatCurrency(displayPrice)}
+                          </Typography>
+                        </Box>
+                      </Box>
                     </Box>
-                  </Box>
-                ))}
+                  );
+                })}
               </Box>
 
               <Divider sx={{ my: 2 }} />
