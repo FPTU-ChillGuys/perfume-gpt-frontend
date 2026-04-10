@@ -16,6 +16,10 @@ import {
   Alert,
   Chip,
   TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Stack,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -26,12 +30,17 @@ import {
   CheckCircle,
   RadioButtonUnchecked,
   LocalOffer,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { cartService } from "@/services/cartService";
 import type { CartItem, CartTotals, ApplyVoucherResponse } from "@/types/cart";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import {
+  voucherService,
+  type AvailableVoucherResponse,
+} from "@/services/voucherService";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -62,6 +71,9 @@ export const CartPage = () => {
     useState<ApplyVoucherResponse | null>(null);
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
+  const [myVoucherList, setMyVoucherList] = useState<AvailableVoucherResponse[]>([]);
+  const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   const roundCheckboxSx = {
     p: 0.5,
@@ -758,6 +770,32 @@ export const CartPage = () => {
                       </Button>
                     )}
                   </Box>
+                  {!appliedVoucher && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      startIcon={<LocalOffer />}
+                      onClick={async () => {
+                        setVoucherPickerOpen(true);
+                        setLoadingMyVouchers(true);
+                        try {
+                          const data = await voucherService.getAvailable({
+                            PageSize: 50,
+                          });
+                          setMyVoucherList(data.items);
+                        } catch {
+                          setMyVoucherList([]);
+                        } finally {
+                          setLoadingMyVouchers(false);
+                        }
+                      }}
+                      disabled={isApplyingVoucher}
+                      sx={{ mt: 1 }}
+                    >
+                      Chọn voucher
+                    </Button>
+                  )}
                   {voucherError && (
                     <Typography
                       variant="caption"
@@ -901,6 +939,90 @@ export const CartPage = () => {
         onConfirm={() => void doClearCart()}
         onClose={() => setConfirmClearOpen(false)}
       />
+
+      {/* Voucher picker dialog */}
+      <Dialog
+        open={voucherPickerOpen}
+        onClose={() => setVoucherPickerOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          Chọn voucher
+          <IconButton onClick={() => setVoucherPickerOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingMyVouchers ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : myVoucherList.length === 0 ? (
+            <Typography color="text.secondary" textAlign="center" py={4}>
+              Bạn chưa có voucher nào.
+            </Typography>
+          ) : (
+            <Stack spacing={1.5}>
+              {myVoucherList.map((v) => (
+                <Paper
+                  key={v.id}
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "action.hover" },
+                  }}
+                  onClick={async () => {
+                    const code = v.code ?? "";
+                    if (!code) return;
+                    setVoucherPickerOpen(false);
+                    setVoucherCode(code);
+                    setIsApplyingVoucher(true);
+                    setVoucherError(null);
+                    try {
+                      const updatedTotals = await loadTotals(selectedCartItemIds, code);
+                      if (!updatedTotals) {
+                        setAppliedVoucher(null);
+                        setVoucherError("Không thể áp dụng voucher này.");
+                        return;
+                      }
+                      setAppliedVoucher({
+                        voucherCode: code,
+                        discountAmount: updatedTotals.discount ?? 0,
+                        finalAmount: updatedTotals.totalPrice ?? 0,
+                        message: "Đã áp dụng mã giảm giá",
+                      });
+                      sessionStorage.setItem("appliedVoucherCode", code);
+                    } catch {
+                      setVoucherError("Không thể áp dụng voucher này.");
+                      setAppliedVoucher(null);
+                      sessionStorage.removeItem("appliedVoucherCode");
+                    } finally {
+                      setIsApplyingVoucher(false);
+                    }
+                  }}
+                >
+                  <Typography fontWeight={600}>
+                    <LocalOffer fontSize="small" sx={{ mr: 0.5, verticalAlign: "middle" }} />
+                    {v.code}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {v.discountType === "Percentage"
+                      ? `Giảm ${v.discountValue}%`
+                      : `Giảm ${formatCurrency(v.discountValue)}`}
+                  </Typography>
+                  {v.minOrderValue ? (
+                    <Typography variant="caption" color="text.secondary">
+                      Đơn tối thiểu: {formatCurrency(v.minOrderValue)}
+                    </Typography>
+                  ) : null}
+                </Paper>
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

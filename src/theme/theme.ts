@@ -1,9 +1,8 @@
-import { createTheme, type PaletteMode } from "@mui/material/styles";
+import { createTheme } from "@mui/material/styles";
 
-export const createAppTheme = (mode: PaletteMode = "light") =>
-  createTheme({
+export const theme = createTheme({
     palette: {
-      mode,
+      mode: "light",
       primary: {
         main: "#dc2626", // red-600
         light: "#ef4444",
@@ -14,27 +13,14 @@ export const createAppTheme = (mode: PaletteMode = "light") =>
         light: "#374151",
         dark: "#111827",
       },
-      ...(mode === "light"
-        ? {
-            background: {
-              default: "#ffffff",
-              paper: "#f9fafb",
-            },
-            text: {
-              primary: "#1f2937",
-              secondary: "#6b7280",
-            },
-          }
-        : {
-            background: {
-              default: "#0f172a",
-              paper: "#1e293b",
-            },
-            text: {
-              primary: "#f1f5f9",
-              secondary: "#94a3b8",
-            },
-          }),
+      background: {
+        default: "#ffffff",
+        paper: "#f9fafb",
+      },
+      text: {
+        primary: "#1f2937",
+        secondary: "#6b7280",
+      },
     },
     typography: {
       fontFamily: [
@@ -75,7 +61,4 @@ export const createAppTheme = (mode: PaletteMode = "light") =>
       },
     },
   });
-
-// Preserve backward-compatible export for any direct import of `theme`
-export const theme = createAppTheme("light");
 

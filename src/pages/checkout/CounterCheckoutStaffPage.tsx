@@ -509,8 +509,6 @@ export const CounterCheckoutStaffPage = () => {
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
           "CashInStore",
-          POS_SESSION_ID,
-          retryCallId,
         );
 
         const paymentIdFromRetryResponse = (result.paymentId || "").trim();
@@ -524,7 +522,6 @@ export const CounterCheckoutStaffPage = () => {
           paymentIdForRetry,
           true,
           undefined,
-          `${retryCallId}-confirm`,
         );
 
         // Clear payment failed states
@@ -1358,8 +1355,6 @@ export const CounterCheckoutStaffPage = () => {
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
           paymentMethod,
-          POS_SESSION_ID,
-          retryCallId,
         );
 
         const paymentIdFromRetryResponse = (result.paymentId || "").trim();
@@ -1390,7 +1385,6 @@ export const CounterCheckoutStaffPage = () => {
             paymentIdForRetry,
             true,
             undefined,
-            `${retryCallId}-confirm`,
           );
 
           // Clear payment failed states - để SignalR event tự động mở success dialog
