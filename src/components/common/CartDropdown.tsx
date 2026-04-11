@@ -115,13 +115,40 @@ export const CartDropdown = ({
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              py: 4,
+              py: 3,
+              px: 2,
               gap: 1,
             }}
           >
-            <ShoppingCartOutlined sx={{ fontSize: 40, color: "text.disabled" }} />
-            <Typography variant="body2" color="text.secondary">
+            <Box
+              sx={{
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                bgcolor: "grey.100",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ShoppingCartOutlined
+                sx={{ fontSize: 32, color: "text.secondary" }}
+              />
+            </Box>
+            <Typography
+              variant="body1"
+              fontWeight={600}
+              color="text.primary"
+              textAlign="center"
+            >
               Giỏ hàng trống
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              textAlign="center"
+            >
+              Chưa có sản phẩm nào
             </Typography>
           </Box>
         ) : (
