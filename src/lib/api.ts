@@ -132,6 +132,8 @@ const middleware: Middleware = {
   },
 };
 
+export const getApiBaseUrl = resolveApiBaseUrl;
+
 export const apiInstance = createFetchClient<paths>({
   baseUrl: resolveApiBaseUrl(),
 });

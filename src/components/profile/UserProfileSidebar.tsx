@@ -31,9 +31,10 @@ import type { UserCredentials } from "@/services/userService";
 
 interface UserProfileSidebarProps {
   userInfo: UserCredentials | null;
+  avatarUrl?: string | null;
 }
 
-export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
+export const UserProfileSidebar = ({ userInfo, avatarUrl }: UserProfileSidebarProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [accountOpen, setAccountOpen] = useState(true);
@@ -132,10 +133,11 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
         }}
       >
         <Avatar
+          src={avatarUrl || undefined}
           sx={{
             width: 48,
             height: 48,
-            bgcolor: "error.main",
+            bgcolor: avatarUrl ? undefined : "error.main",
             fontSize: "1.2rem",
           }}
         >
@@ -156,9 +158,7 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
               alignItems: "center",
               gap: 0.5,
               color: "text.secondary",
-              cursor: "pointer",
               "&:hover": { color: "primary.main" },
-              textDecoration: "none",
             }}
           >
             <EditIcon sx={{ fontSize: 12 }} />

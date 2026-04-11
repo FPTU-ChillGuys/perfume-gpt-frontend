@@ -1,10 +1,11 @@
-import { apiInstance } from "@/lib/api";
+import { apiInstance, getApiBaseUrl } from "@/lib/api";
 import type { StaffLookupResponse } from "../types/staff-user";
 import type { components } from "@/types/api/v1";
 import { getStoredAccessToken } from "@/utils/authStorage";
 
 export type UserCredentials = components["schemas"]["UserCredentialsResponse"];
 export type UserAvatar = components["schemas"]["MediaResponse"];
+export type UpdateUserBasicInfoRequest = components["schemas"]["UpdateUserBasicInfoRequest"];
 
 class UserService {
   async getUserMe(): Promise<UserCredentials> {
@@ -71,7 +72,8 @@ class UserService {
     formData.append("Avatar", file);
     formData.append("AltText", altText || "");
 
-    const response = await fetch(`/api/users/avatar`, {
+    const baseUrl = getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/api/users/avatar`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -96,6 +98,18 @@ class UserService {
     }
 
     return response.data.message || "Xóa ảnh đại diện thành công";
+  }
+
+  async updateUserMe(body: UpdateUserBasicInfoRequest): Promise<string> {
+    const response = await apiInstance.PUT("/api/users/me", { body });
+    if ((response as any).error) {
+      const err = (response as any).error;
+      throw new Error(err?.message || "Cập nhật thông tin thất bại");
+    }
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Cập nhật thông tin thất bại");
+    }
+    return response.data.message || "Cập nhật thông tin thành công";
   }
 }
 

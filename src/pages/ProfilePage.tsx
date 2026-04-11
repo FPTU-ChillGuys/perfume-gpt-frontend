@@ -26,7 +26,7 @@ import { ScentPreferencesSection } from "../components/profile/ScentPreferencesS
 import { QuizHistorySection } from "../components/profile/QuizHistorySection";
 
 const ProfilePage = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const { showToast } = useToast();
   const { pathname } = useLocation();
 
@@ -119,15 +119,17 @@ const ProfilePage = () => {
     }
   };
 
-  const loadAvatar = async () => {
+  const loadAvatar = async (): Promise<UserAvatar | null> => {
     try {
       const data = await userService.getMyAvatar();
       setAvatar(data);
+      return data;
     } catch (err: any) {
       // Avatar can be empty for new users; only surface unexpected errors.
       if (err?.message) {
         console.error("Failed to load avatar:", err);
       }
+      return null;
     }
   };
 
@@ -171,17 +173,17 @@ const ProfilePage = () => {
     setSuccess("");
   };
 
-  const handleSave = async () => {
+  const handleSave = async (fullName: string, phoneNumber: string) => {
     setIsSaving(true);
     setError("");
     setSuccess("");
     try {
-      const message = await profileService.updateProfile(formData);
+      const message = await userService.updateUserMe({ fullName, phoneNumber });
       setSuccess(message);
       setIsEditing(false);
-      await loadProfile();
+      await loadUserInfo();
     } catch (err: any) {
-      setError(err.message || "Không thể cập nhật profile");
+      setError(err.message || "Không thể cập nhật thông tin");
     } finally {
       setIsSaving(false);
     }
@@ -219,7 +221,8 @@ const ProfilePage = () => {
     try {
       const message = await userService.uploadAvatar(file, file.name);
       showToast(message, "success");
-      await Promise.all([loadAvatar(), loadUserInfo()]);
+      const [newAvatar] = await Promise.all([loadAvatar(), loadUserInfo()]);
+      updateUser({ avatarUrl: newAvatar?.url || undefined });
     } catch (err: any) {
       showToast(err?.message || "Không thể tải ảnh đại diện", "error");
     } finally {
@@ -235,6 +238,8 @@ const ProfilePage = () => {
       const message = await userService.deleteMyAvatar();
       showToast(message, "success");
       await Promise.all([loadAvatar(), loadUserInfo()]);
+      setAvatar(null);
+      updateUser({ avatarUrl: undefined });
     } catch (err: any) {
       showToast(err?.message || "Không thể xóa ảnh đại diện", "error");
     } finally {
@@ -343,7 +348,7 @@ const ProfilePage = () => {
               minHeight: 600,
             }}
           >
-            <UserProfileSidebar userInfo={userInfo} />
+            <UserProfileSidebar userInfo={userInfo} avatarUrl={avatar?.url || user?.avatarUrl} />
             <Box sx={{ flex: 1, p: 4, bgcolor: "background.paper", minWidth: 0 }}>
               {renderContent()}
             </Box>
