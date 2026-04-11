@@ -363,7 +363,7 @@ export default function EditProductDialog({
         scentLookup,
       ] = await Promise.all([
         attributeService.getAttributes(),
-        productService.getProductDetail(productId),
+        productService.getProductDetailForAdmin(productId),
         productService.getProductImages(productId),
         brandService.getBrandsLookup(),
         categoryService.getCategoriesLookup(),

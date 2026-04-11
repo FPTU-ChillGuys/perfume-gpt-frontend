@@ -4,6 +4,7 @@ import type {
   ProductVariant,
   ProductListItem,
   ProductDetail,
+  PublicProductDetail,
   ProductListItemWithVariants,
   PagedProductList,
   PagedProductListWithVariants,
@@ -158,7 +159,6 @@ class ProductService {
   ): Promise<PagedProductListWithVariants> {
     try {
       // Endpoint not in generated OpenAPI spec — bypass strict path typing
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const response = await (apiInstance as any).GET(
         "/api/products/search/semantic",
         { params: { query } },
@@ -201,7 +201,7 @@ class ProductService {
     }
   }
 
-  async getProductDetail(productId: string): Promise<ProductDetail | null> {
+  async getProductDetail(productId: string): Promise<PublicProductDetail | null> {
     try {
       const response = await apiInstance.GET("/api/products/{productId}", {
         params: { path: { productId } },
@@ -218,6 +218,34 @@ class ProductService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch product detail",
+      );
+    }
+  }
+
+  async getProductDetailForAdmin(
+    productId: string,
+  ): Promise<ProductDetail | null> {
+    try {
+      const response = await (apiInstance as any).GET(
+        "/api/admin/products/{productId}",
+        {
+          params: { path: { productId } },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to fetch product for admin",
+        );
+      }
+
+      return response.data.payload || null;
+    } catch (error: any) {
+      console.error("Error fetching product detail for admin:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch product detail for admin",
       );
     }
   }
