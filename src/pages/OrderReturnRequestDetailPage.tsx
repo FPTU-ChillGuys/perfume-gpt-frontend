@@ -40,6 +40,7 @@ import {
   type ReturnRefundMethod,
 } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import type { OrderResponse } from "@/types/order";
 import { formatDateTimeVN } from "@/utils/dateTime";
 
@@ -240,6 +241,8 @@ const MediaPreviewDialog = ({
 );
 
 export const OrderReturnRequestDetailPage = () => {
+  const { user } = useAuth();
+  const isStaff = user?.role === "staff";
   const { showToast } = useToast();
   const showToastRef = useRef(showToast);
   const navigate = useNavigate();
@@ -1484,21 +1487,33 @@ export const OrderReturnRequestDetailPage = () => {
                     cầu.
                   </Typography>
                   <Stack direction="row" justifyContent="flex-end">
-                    <Button
-                      variant="contained"
-                      color="success"
-                      onClick={() => {
-                        setManualTransactionReference("");
-                        setCopiedRefundInfo(false);
-                        setSelectedRefundMethod(
-                          originalOnlineRefundMethod ?? "ExternalBankTransfer",
-                        );
-                        setRefundConfirmOpen(true);
-                      }}
-                      disabled={isSaving}
+                    <Tooltip
+                      title={
+                        isStaff
+                          ? "Chỉ Admin mới có quyền thực hiện hoàn tiền. Vui lòng liên hệ Admin để xử lý."
+                          : ""
+                      }
+                      arrow
                     >
-                      Hoàn tiền
-                    </Button>
+                      <span>
+                        <Button
+                          variant="contained"
+                          color="success"
+                          onClick={() => {
+                            setManualTransactionReference("");
+                            setCopiedRefundInfo(false);
+                            setSelectedRefundMethod(
+                              originalOnlineRefundMethod ??
+                                "ExternalBankTransfer",
+                            );
+                            setRefundConfirmOpen(true);
+                          }}
+                          disabled={isSaving || isStaff}
+                        >
+                          Hoàn tiền
+                        </Button>
+                      </span>
+                    </Tooltip>
                   </Stack>
                 </Paper>
               )}

@@ -32,7 +32,9 @@ const formatDate = (value?: string | null) => {
   return new Date(value).toLocaleDateString("vi-VN");
 };
 
-const formatDiscount = (item: UserVoucherResponse | RedeemableVoucherResponse) => {
+const formatDiscount = (
+  item: UserVoucherResponse | RedeemableVoucherResponse,
+) => {
   const val = Number(item.discountValue ?? 0);
   const type = (item as any).discountType;
   if (type === "Percentage" || type === 2) return `${val}%`;
@@ -72,23 +74,46 @@ const VoucherCard = ({ voucher }: VoucherCardProps) => {
       }}
     >
       <Box sx={{ pl: 1 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 1,
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <LocalOffer fontSize="small" color={inactive ? "disabled" : "primary"} />
-            <Typography variant="subtitle2" fontWeight={700} fontFamily="monospace">
+            <LocalOffer
+              fontSize="small"
+              color={inactive ? "disabled" : "primary"}
+            />
+            <Typography
+              variant="subtitle2"
+              fontWeight={700}
+              fontFamily="monospace"
+            >
               {voucher.code}
             </Typography>
           </Box>
           {isUsed ? (
             <Chip label="Đã dùng" size="small" color="default" />
           ) : isExpired ? (
-            <Chip label="Hết hạn" size="small" color="error" variant="outlined" />
+            <Chip
+              label="Hết hạn"
+              size="small"
+              color="error"
+              variant="outlined"
+            />
           ) : (
             <Chip label="Có thể dùng" size="small" color="success" />
           )}
         </Box>
 
-        <Typography variant="h6" fontWeight={700} color={inactive ? "text.disabled" : "primary.main"}>
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          color={inactive ? "text.disabled" : "primary.main"}
+        >
           Giảm {formatDiscount(voucher)}
         </Typography>
 
@@ -121,9 +146,17 @@ interface RedeemableCardProps {
   balance: number;
 }
 
-const RedeemableCard = ({ voucher, onRedeem, redeeming, balance }: RedeemableCardProps) => {
+const RedeemableCard = ({
+  voucher,
+  onRedeem,
+  redeeming,
+  balance,
+}: RedeemableCardProps) => {
   const required = voucher.requiredPoints ?? 0;
-  const canRedeem = balance >= required && (voucher.remainingQuantity ?? 1) > 0 && !voucher.isExpired;
+  const canRedeem =
+    balance >= required &&
+    (voucher.remainingQuantity ?? 1) > 0 &&
+    !voucher.isExpired;
 
   return (
     <Paper
@@ -148,15 +181,34 @@ const RedeemableCard = ({ voucher, onRedeem, redeeming, balance }: RedeemableCar
       }}
     >
       <Box sx={{ pl: 1 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 1,
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <LocalOffer fontSize="small" color={canRedeem ? "success" : "disabled"} />
-            <Typography variant="subtitle2" fontWeight={700} fontFamily="monospace">
+            <LocalOffer
+              fontSize="small"
+              color={canRedeem ? "success" : "disabled"}
+            />
+            <Typography
+              variant="subtitle2"
+              fontWeight={700}
+              fontFamily="monospace"
+            >
               {voucher.code}
             </Typography>
           </Box>
           {voucher.isExpired ? (
-            <Chip label="Hết hạn" size="small" color="error" variant="outlined" />
+            <Chip
+              label="Hết hạn"
+              size="small"
+              color="error"
+              variant="outlined"
+            />
           ) : (voucher.remainingQuantity ?? 1) <= 0 ? (
             <Chip label="Hết voucher" size="small" color="default" />
           ) : (
@@ -169,7 +221,11 @@ const RedeemableCard = ({ voucher, onRedeem, redeeming, balance }: RedeemableCar
           )}
         </Box>
 
-        <Typography variant="h6" fontWeight={700} color={canRedeem ? "success.dark" : "text.disabled"}>
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          color={canRedeem ? "success.dark" : "text.disabled"}
+        >
           Giảm {formatDiscount(voucher)}
         </Typography>
 
@@ -182,20 +238,41 @@ const RedeemableCard = ({ voucher, onRedeem, redeeming, balance }: RedeemableCar
 
         <Divider sx={{ my: 1 }} />
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <HourglassEmpty fontSize="small" sx={{ color: "warning.main", fontSize: 14 }} />
+            <HourglassEmpty
+              fontSize="small"
+              sx={{ color: "warning.main", fontSize: 14 }}
+            />
             <Typography variant="caption" fontWeight={600} color="warning.main">
               {required.toLocaleString("vi-VN")} điểm
             </Typography>
           </Box>
-          <Tooltip title={!canRedeem && balance < required ? `Chưa đủ điểm (cần ${required.toLocaleString("vi-VN")})` : ""}>
+          <Tooltip
+            title={
+              !canRedeem && balance < required
+                ? `Chưa đủ điểm (cần ${required.toLocaleString("vi-VN")})`
+                : ""
+            }
+          >
             <span>
               <Button
                 size="small"
                 variant="contained"
                 color="success"
-                startIcon={redeeming ? <CircularProgress size={14} color="inherit" /> : <Redeem />}
+                startIcon={
+                  redeeming ? (
+                    <CircularProgress size={14} color="inherit" />
+                  ) : (
+                    <Redeem />
+                  )
+                }
                 disabled={!canRedeem || redeeming}
                 onClick={() => voucher.id && onRedeem(voucher.id)}
               >
@@ -221,7 +298,11 @@ interface AvailableCardProps {
   redeeming: boolean;
 }
 
-const AvailableCard = ({ voucher, onRedeem, redeeming }: AvailableCardProps) => {
+const AvailableCard = ({
+  voucher,
+  onRedeem,
+  redeeming,
+}: AvailableCardProps) => {
   const hasStock = (voucher.remainingQuantity ?? 1) > 0;
 
   return (
@@ -247,10 +328,24 @@ const AvailableCard = ({ voucher, onRedeem, redeeming }: AvailableCardProps) => 
       }}
     >
       <Box sx={{ pl: 1 }}>
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 1,
+          }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <LocalOffer fontSize="small" color={hasStock ? "primary" : "disabled"} />
-            <Typography variant="subtitle2" fontWeight={700} fontFamily="monospace">
+            <LocalOffer
+              fontSize="small"
+              color={hasStock ? "primary" : "disabled"}
+            />
+            <Typography
+              variant="subtitle2"
+              fontWeight={700}
+              fontFamily="monospace"
+            >
               {voucher.code}
             </Typography>
           </Box>
@@ -261,15 +356,21 @@ const AvailableCard = ({ voucher, onRedeem, redeeming }: AvailableCardProps) => 
           )}
         </Box>
 
-        <Typography variant="h6" fontWeight={700} color={hasStock ? "primary.main" : "text.disabled"}>
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          color={hasStock ? "primary.main" : "text.disabled"}
+        >
           Giảm {formatAvailableDiscount(voucher)}
         </Typography>
 
-        {voucher.maxDiscountAmount != null && voucher.discountType === "Percentage" && (
-          <Typography variant="caption" color="text.secondary">
-            Tối đa: {Number(voucher.maxDiscountAmount).toLocaleString("vi-VN")}đ
-          </Typography>
-        )}
+        {voucher.maxDiscountAmount != null &&
+          voucher.discountType === "Percentage" && (
+            <Typography variant="caption" color="text.secondary">
+              Tối đa:{" "}
+              {Number(voucher.maxDiscountAmount).toLocaleString("vi-VN")}đ
+            </Typography>
+          )}
 
         <Typography variant="caption" color="text.secondary" display="block">
           Đơn tối thiểu:{" "}
@@ -280,14 +381,26 @@ const AvailableCard = ({ voucher, onRedeem, redeeming }: AvailableCardProps) => 
 
         <Divider sx={{ my: 1 }} />
 
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Typography variant="caption" color="text.secondary">
             HSD: {formatDate(voucher.expiryDate)}
           </Typography>
           <Button
             size="small"
             variant="contained"
-            startIcon={redeeming ? <CircularProgress size={14} color="inherit" /> : <Redeem />}
+            startIcon={
+              redeeming ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : (
+                <Redeem />
+              )
+            }
             disabled={!hasStock || redeeming}
             onClick={() => voucher.id && onRedeem(voucher.id)}
           >
@@ -303,8 +416,12 @@ export const VoucherSection = () => {
   const { showToast } = useToast();
   const [tab, setTab] = useState(0);
   const [myVouchers, setMyVouchers] = useState<UserVoucherResponse[]>([]);
-  const [redeemableVouchers, setRedeemableVouchers] = useState<RedeemableVoucherResponse[]>([]);
-  const [availableVouchers, setAvailableVouchers] = useState<AvailableVoucherResponse[]>([]);
+  const [redeemableVouchers, setRedeemableVouchers] = useState<
+    RedeemableVoucherResponse[]
+  >([]);
+  const [availableVouchers, setAvailableVouchers] = useState<
+    AvailableVoucherResponse[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
@@ -344,7 +461,10 @@ export const VoucherSection = () => {
 
   useEffect(() => {
     import("@/services/loyaltyService").then(({ loyaltyService }) => {
-      loyaltyService.getMyBalance().then((d) => setBalance(d.pointBalance ?? 0)).catch(() => {});
+      loyaltyService
+        .getMyBalance()
+        .then((d) => setBalance(d.pointBalance ?? 0))
+        .catch(() => {});
     });
   }, []);
 
@@ -361,7 +481,10 @@ export const VoucherSection = () => {
       showToast(msg, "success");
       // Refresh balance after redeem
       import("@/services/loyaltyService").then(({ loyaltyService }) => {
-        loyaltyService.getMyBalance().then((d) => setBalance(d.pointBalance ?? 0)).catch(() => {});
+        loyaltyService
+          .getMyBalance()
+          .then((d) => setBalance(d.pointBalance ?? 0))
+          .catch(() => {});
       });
       await loadRedeemable();
       await loadMyVouchers();
@@ -378,7 +501,6 @@ export const VoucherSection = () => {
   return (
     <Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-        <LocalOffer color="primary" />
         <Typography variant="h6" fontWeight={700}>
           Kho Voucher
         </Typography>
@@ -414,7 +536,12 @@ export const VoucherSection = () => {
         <>
           {available.length > 0 && (
             <Box mb={3}>
-              <Typography variant="subtitle2" color="success.main" fontWeight={600} mb={1.5}>
+              <Typography
+                variant="subtitle2"
+                color="success.main"
+                fontWeight={600}
+                mb={1.5}
+              >
                 Có thể sử dụng ({available.length})
               </Typography>
               <Grid container spacing={2}>
@@ -429,7 +556,12 @@ export const VoucherSection = () => {
 
           {used.length > 0 && (
             <Box>
-              <Typography variant="subtitle2" color="text.secondary" fontWeight={600} mb={1.5}>
+              <Typography
+                variant="subtitle2"
+                color="text.secondary"
+                fontWeight={600}
+                mb={1.5}
+              >
                 Đã dùng / Hết hạn ({used.length})
               </Typography>
               <Grid container spacing={2}>
@@ -444,9 +576,18 @@ export const VoucherSection = () => {
 
           {myVouchers.length === 0 && (
             <Box py={6} textAlign="center">
-              <LocalOffer sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
-              <Typography color="text.secondary">Bạn chưa có voucher nào.</Typography>
-              <Button variant="text" size="small" onClick={() => setTab(1)} sx={{ mt: 1 }}>
+              <LocalOffer
+                sx={{ fontSize: 48, color: "text.disabled", mb: 1 }}
+              />
+              <Typography color="text.secondary">
+                Bạn chưa có voucher nào.
+              </Typography>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => setTab(1)}
+                sx={{ mt: 1 }}
+              >
                 Đổi điểm lấy voucher
               </Button>
             </Box>
@@ -456,7 +597,12 @@ export const VoucherSection = () => {
         <>
           {availableVouchers.length > 0 && (
             <Box mb={3}>
-              <Typography variant="subtitle2" color="primary.main" fontWeight={600} mb={1.5}>
+              <Typography
+                variant="subtitle2"
+                color="primary.main"
+                fontWeight={600}
+                mb={1.5}
+              >
                 Voucher miễn phí ({availableVouchers.length})
               </Typography>
               <Grid container spacing={2}>
@@ -475,7 +621,12 @@ export const VoucherSection = () => {
 
           {redeemableVouchers.length > 0 && (
             <Box mb={3}>
-              <Typography variant="subtitle2" color="warning.main" fontWeight={600} mb={1.5}>
+              <Typography
+                variant="subtitle2"
+                color="warning.main"
+                fontWeight={600}
+                mb={1.5}
+              >
                 Đổi điểm ({redeemableVouchers.length})
               </Typography>
               <Grid container spacing={2}>
@@ -493,12 +644,15 @@ export const VoucherSection = () => {
             </Box>
           )}
 
-          {availableVouchers.length === 0 && redeemableVouchers.length === 0 && (
-            <Box py={6} textAlign="center">
-              <Redeem sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
-              <Typography color="text.secondary">Chưa có voucher nào để đổi.</Typography>
-            </Box>
-          )}
+          {availableVouchers.length === 0 &&
+            redeemableVouchers.length === 0 && (
+              <Box py={6} textAlign="center">
+                <Redeem sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
+                <Typography color="text.secondary">
+                  Chưa có voucher nào để đổi.
+                </Typography>
+              </Box>
+            )}
         </>
       )}
     </Box>
