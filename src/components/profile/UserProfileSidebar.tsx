@@ -151,8 +151,6 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
             {displayName}
           </Typography>
           <Box
-            component={RouterLink}
-            to="/profile"
             sx={{
               display: "flex",
               alignItems: "center",
@@ -161,9 +159,6 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
               cursor: "pointer",
               "&:hover": { color: "primary.main" },
               textDecoration: "none",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
             }}
           >
             <EditIcon sx={{ fontSize: 12 }} />

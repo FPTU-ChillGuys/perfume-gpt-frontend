@@ -12,14 +12,8 @@ import {
   ListItemIcon,
   Avatar,
   Badge,
-  Popover,
-  List,
-  ListItem,
-  ListItemText,
-  CircularProgress,
 } from "@mui/material";
 import {
-  NotificationsNone,
   ShoppingCartOutlined,
   PersonOutline,
   ArrowDropDown,
@@ -29,7 +23,6 @@ import {
   ShoppingBag as ShoppingBagIcon,
   PointOfSale as PointOfSaleIcon,
   Tv as TvIcon,
-  DoneAll as DoneAllIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
@@ -41,9 +34,9 @@ import {
   categoryService,
   type CategoryLookupItem,
 } from "../../services/categoryService";
-import { notificationService } from "../../services/notificationService";
 import { loyaltyService } from "../../services/loyaltyService";
-import { AdminNotificationBell } from "../common/AdminNotificationBell";
+import { NotificationBell } from "../common/NotificationBell";
+import { useNotificationSystem } from "../../hooks/useNotificationSystem";
 
 const MAX_VISIBLE_CATEGORIES = 5;
 
@@ -70,9 +63,12 @@ export const Header = () => {
   const [hoverTimerRef, setHoverTimerRef] = useState<number | null>(null);
   const [categories, setCategories] = useState<CategoryLookupItem[]>([]);
   const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
-  const [notifAnchorEl, setNotifAnchorEl] = useState<null | HTMLElement>(null);
-  const [markingAllRead, setMarkingAllRead] = useState(false);
   const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotificationSystem({
+      userRole: user?.role ?? "",
+      userId: user?.id,
+    });
 
   useEffect(() => {
     categoryService
@@ -213,23 +209,6 @@ export const Header = () => {
     handleMenuClose();
   };
 
-  const handleNotifOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setNotifAnchorEl(event.currentTarget);
-  };
-
-  const handleNotifClose = () => {
-    setNotifAnchorEl(null);
-  };
-
-  const handleMarkAllRead = async () => {
-    setMarkingAllRead(true);
-    try {
-      await notificationService.markAllRead();
-    } finally {
-      setMarkingAllRead(false);
-    }
-  };
-
   const handleNavClick = (href: string) => {
     if (href.startsWith("/")) {
       navigate(href);
@@ -286,62 +265,12 @@ export const Header = () => {
               flexShrink: 0,
             }}
           >
-            {isBackOfficeRole ? (
-              <AdminNotificationBell />
-            ) : (
-              <>
-                <IconButton
-                  color="default"
-                  aria-label="Thông báo"
-                  onClick={isAuthenticated ? handleNotifOpen : undefined}
-                >
-                  <NotificationsNone />
-                </IconButton>
-                <Popover
-                  open={Boolean(notifAnchorEl)}
-                  anchorEl={notifAnchorEl}
-                  onClose={handleNotifClose}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                  transformOrigin={{ vertical: "top", horizontal: "right" }}
-                  PaperProps={{ sx: { width: 340, mt: 1.5 } }}
-                >
-                  <Box
-                    sx={{
-                      px: 2,
-                      py: 1.5,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      borderBottom: 1,
-                      borderColor: "divider",
-                    }}
-                  >
-                    <Typography variant="subtitle1" fontWeight={600}>
-                      Thông báo
-                    </Typography>
-                    <Button
-                      size="small"
-                      startIcon={
-                        markingAllRead ? (
-                          <CircularProgress size={14} />
-                        ) : (
-                          <DoneAllIcon fontSize="small" />
-                        )
-                      }
-                      onClick={handleMarkAllRead}
-                      disabled={markingAllRead}
-                    >
-                      Đọc tất cả
-                    </Button>
-                  </Box>
-                  <Box sx={{ py: 4, textAlign: "center" }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Không có thông báo mới.
-                    </Typography>
-                  </Box>
-                </Popover>
-              </>
-            )}
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+            />
             {!isBackOfficeRole && (
               <>
                 <IconButton

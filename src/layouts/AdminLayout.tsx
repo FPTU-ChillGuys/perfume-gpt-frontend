@@ -50,7 +50,8 @@ import {
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { importStockService } from "../services/importStockService";
-import { AdminNotificationBell } from "../components/common/AdminNotificationBell";
+import { NotificationBell } from "../components/common/NotificationBell";
+import { useNotificationSystem } from "../hooks/useNotificationSystem";
 
 const drawerWidth = 280;
 const drawerCollapsedWidth = 70;
@@ -281,6 +282,11 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotificationSystem({
+      userRole: user?.role ?? "",
+      userId: user?.id,
+    });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -615,7 +621,12 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <MenuIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
-          <AdminNotificationBell />
+          <NotificationBell
+            notifications={notifications}
+            unreadCount={unreadCount}
+            onMarkAsRead={markAsRead}
+            onMarkAllAsRead={markAllAsRead}
+          />
           <IconButton onClick={handleMenuOpen} sx={{ p: 0.5, ml: 1 }}>
             <Avatar
               sx={{
