@@ -4,6 +4,7 @@ import {
   Add,
   CheckCircleRounded,
   Delete,
+  LocalOffer as VoucherIcon,
   OpenInNew,
   Remove,
   Search,
@@ -34,6 +35,7 @@ import {
   Paper,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { QRCodeSVG } from "qrcode.react";
@@ -50,6 +52,7 @@ import {
   type PosCustomerForLookup,
   type PosPreviewRequest,
   type PosPreviewResponse,
+  type PosPreviewResult,
   type PosProductVariant,
 } from "@/services/posService";
 
@@ -254,9 +257,12 @@ export const CounterCheckoutStaffPage = () => {
 
   const [voucherInput, setVoucherInput] = useState("");
   const [appliedVoucherCode, setAppliedVoucherCode] = useState("");
+  const [voucherErrorText, setVoucherErrorText] = useState("");
+  const [isValidatingVoucher, setIsValidatingVoucher] = useState(false);
   const [cartItems, setCartItems] = useState<PosCartItem[]>([]);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState("");
+  const [previewHoverMessage, setPreviewHoverMessage] = useState("");
   const [previewData, setPreviewData] = useState<PosPreviewResponse | null>(
     null,
   );
@@ -444,6 +450,8 @@ export const CounterCheckoutStaffPage = () => {
     setSearchKeyword("");
     setVoucherInput("");
     setAppliedVoucherCode("");
+    setVoucherErrorText("");
+    setPreviewHoverMessage("");
     setCustomerLookupKeyword("");
     setCustomerLookupResults([]);
     setSelectedCustomer(null);
@@ -518,11 +526,7 @@ export const CounterCheckoutStaffPage = () => {
           paymentIdFromRetryUrl ||
           failedPaymentAction.paymentId;
 
-        await orderService.confirmPayment(
-          paymentIdForRetry,
-          true,
-          undefined,
-        );
+        await orderService.confirmPayment(paymentIdForRetry, true, undefined);
 
         // Clear payment failed states
         paymentQrUrlRef.current = null;
@@ -1145,16 +1149,75 @@ export const CounterCheckoutStaffPage = () => {
     setCartItems((prev) => prev.filter((item) => item.key !== key));
   };
 
-  const handleApplyVoucher = () => {
+  const handleApplyVoucher = async () => {
     const nextCode = voucherInput.trim();
-    setAppliedVoucherCode(nextCode);
 
-    if (nextCode) {
-      showToast("Đã áp dụng mã giảm giá", "success");
+    if (!nextCode) {
+      setAppliedVoucherCode("");
+      setVoucherErrorText("");
+      showToast("Đã bỏ mã giảm giá", "info");
       return;
     }
 
-    showToast("Đã bỏ mã giảm giá", "info");
+    // Validate voucher qua API preview trước khi áp dụng
+    if (cartItems.length === 0) {
+      setVoucherErrorText("Thêm sản phẩm vào giỏ để áp dụng voucher");
+      showToast("Vui lòng thêm sản phẩm trước khi áp dụng voucher", "warning");
+      return;
+    }
+
+    try {
+      setIsValidatingVoucher(true);
+
+      const validationPayload: PosPreviewRequest = {
+        scannedItems: cartItems.map((item) => ({
+          barcode: item.barcode,
+          batchCode: item.batchCode,
+          quantity: item.quantity,
+        })),
+        voucherCode: nextCode,
+        customerId: selectedCustomer?.id || undefined,
+        sessionId: POS_SESSION_ID,
+      };
+
+      const result = await posService.previewOrder(validationPayload);
+
+      // Cập nhật preview data với payload
+      setPreviewData(result.payload);
+      setPreviewError("");
+      setPreviewHoverMessage(
+        result.message && result.message !== "Order previewed successfully."
+          ? result.message
+          : "",
+      );
+
+      // Kiểm tra errors array
+      if (result.errors && result.errors.length > 0) {
+        // Có lỗi voucher → không áp dụng và hiển thị lỗi dưới ô nhập
+        setVoucherErrorText(result.errors.join(". "));
+        setAppliedVoucherCode(""); // Đảm bảo không áp dụng voucher sai
+      } else {
+        // Không có lỗi → áp dụng voucher thành công
+        setAppliedVoucherCode(nextCode);
+        setVoucherErrorText("");
+        showToast("Đã áp dụng mã giảm giá", "success");
+      }
+    } catch (error) {
+      // Lỗi API hoàn toàn (500, network, etc.)
+      const errorMessage =
+        error instanceof Error ? error.message : "Mã giảm giá không hợp lệ";
+      setVoucherErrorText(errorMessage);
+      setAppliedVoucherCode("");
+    } finally {
+      setIsValidatingVoucher(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucherCode("");
+    setVoucherInput("");
+    setVoucherErrorText("");
+    showToast("Đã xóa mã giảm giá", "info");
   };
 
   const localSubtotal = useMemo(
@@ -1223,9 +1286,11 @@ export const CounterCheckoutStaffPage = () => {
         batchCode: item.batchCode,
         quantity: item.quantity,
       })),
-      voucherCode: appliedVoucherCode.trim() || null,
+      voucherCode: appliedVoucherCode.trim() || undefined,
+      customerId: selectedCustomer?.id || undefined,
+      sessionId: POS_SESSION_ID,
     }),
-    [appliedVoucherCode, cartItems],
+    [appliedVoucherCode, cartItems, selectedCustomer?.id],
   );
 
   const debouncedPreviewPayload = useDebounce(previewPayload, 500);
@@ -1381,11 +1446,7 @@ export const CounterCheckoutStaffPage = () => {
         }
 
         if (requiresCashConfirm) {
-          await orderService.confirmPayment(
-            paymentIdForRetry,
-            true,
-            undefined,
-          );
+          await orderService.confirmPayment(paymentIdForRetry, true, undefined);
 
           // Clear payment failed states - để SignalR event tự động mở success dialog
           paymentQrUrlRef.current = null;
@@ -1644,6 +1705,8 @@ export const CounterCheckoutStaffPage = () => {
     if (debouncedPreviewPayload.scannedItems.length === 0) {
       setPreviewData(null);
       setPreviewError("");
+      setPreviewHoverMessage("");
+      setVoucherErrorText("");
       setIsPreviewLoading(false);
       void syncCartToCustomerRef.current({
         items: [],
@@ -1663,15 +1726,26 @@ export const CounterCheckoutStaffPage = () => {
     const loadPreview = async () => {
       try {
         setIsPreviewLoading(true);
-        const data = await posService.previewOrder(debouncedPreviewPayload);
+        const result = await posService.previewOrder(debouncedPreviewPayload);
+
         if (!isCancelled) {
-          setPreviewData(data);
+          // Cập nhật preview data với payload
+          setPreviewData(result.payload);
           setPreviewError("");
-          void syncCartToCustomerRef.current(toCartDisplaySyncPayload(data));
+          setPreviewHoverMessage(
+            result.message && result.message !== "Order previewed successfully."
+              ? result.message
+              : "",
+          );
+          void syncCartToCustomerRef.current(
+            toCartDisplaySyncPayload(result.payload),
+          );
         }
       } catch (error) {
         if (!isCancelled) {
+          // Lỗi API hoàn toàn (500, network, etc.)
           setPreviewData(null);
+          setPreviewHoverMessage("");
           setPreviewError(
             error instanceof Error ? error.message : "Không thể tính tổng tiền",
           );
@@ -1785,8 +1859,8 @@ export const CounterCheckoutStaffPage = () => {
           batchCode: item.batchCode,
           quantity: item.quantity,
         })),
-        voucherCode: appliedVoucherCode.trim() || null,
-        customerId: selectedCustomer?.id || null,
+        voucherCode: appliedVoucherCode.trim() || undefined,
+        customerId: selectedCustomer?.id || undefined,
         isPickupInStore,
         payment: {
           method: paymentMethod,
@@ -1859,8 +1933,8 @@ export const CounterCheckoutStaffPage = () => {
         batchCode: item.batchCode,
         quantity: item.quantity,
       })),
-      voucherCode: appliedVoucherCode.trim() || null,
-      customerId: selectedCustomer?.id || null,
+      voucherCode: appliedVoucherCode.trim() || undefined,
+      customerId: selectedCustomer?.id || undefined,
       isPickupInStore,
       payment: {
         method: paymentMethod,
@@ -2030,118 +2104,130 @@ export const CounterCheckoutStaffPage = () => {
                   >
                     {groupedCartItems.map((group, groupIndex) => (
                       <Box key={group.groupKey}>
-                        <ListItem
-                          disableGutters
-                          sx={{ py: 1.25, alignItems: "flex-start" }}
+                        <Tooltip
+                          title={previewHoverMessage}
+                          arrow
+                          disableHoverListener={!previewHoverMessage}
                         >
-                          <ListItemAvatar sx={{ minWidth: 56 }}>
-                            {group.imageUrl ? (
-                              <Box
-                                component="img"
-                                src={group.imageUrl}
-                                alt={group.variantName}
-                                sx={{
-                                  width: 44,
-                                  height: 44,
-                                  borderRadius: 1.5,
-                                  objectFit: "cover",
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                }}
-                              />
-                            ) : (
-                              <Box
-                                sx={{
-                                  width: 44,
-                                  height: 44,
-                                  borderRadius: 1.5,
-                                  bgcolor: "grey.100",
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                }}
-                              />
-                            )}
-                          </ListItemAvatar>
-
-                          <ListItemText
-                            primary={
-                              <Typography fontWeight={700}>
-                                {group.variantName}
-                              </Typography>
-                            }
-                            secondaryTypographyProps={{ component: "div" }}
-                            secondary={
-                              <Stack
-                                direction="row"
-                                alignItems="center"
-                                spacing={1}
-                                flexWrap="wrap"
-                              >
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  SKU: {group.sku} | Tổng SL:{" "}
-                                  {group.totalQuantity}
-                                </Typography>
-                                <Button
-                                  size="small"
-                                  variant="outlined"
-                                  onClick={() =>
-                                    handleAddAnotherBatchInCart(group)
-                                  }
-                                  sx={{ py: 0, minHeight: 24 }}
-                                >
-                                  + Batch khác
-                                </Button>
-                              </Stack>
-                            }
-                          />
-
-                          {(() => {
-                            const discountInfo = variantDiscountMap.get(
-                              group.variantId,
-                            );
-                            const hasDiscount =
-                              discountInfo && discountInfo.discount > 0;
-
-                            return hasDiscount ? (
-                              <Stack alignItems="flex-end" spacing={0.25}>
-                                <Typography
-                                  variant="body2"
+                          <ListItem
+                            disableGutters
+                            sx={{ py: 1.25, alignItems: "flex-start" }}
+                          >
+                            <ListItemAvatar sx={{ minWidth: 56 }}>
+                              {group.imageUrl ? (
+                                <Box
+                                  component="img"
+                                  src={group.imageUrl}
+                                  alt={group.variantName}
                                   sx={{
-                                    textDecoration: "line-through",
-                                    color: "text.disabled",
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: 1.5,
+                                    objectFit: "cover",
+                                    border: "1px solid",
+                                    borderColor: "divider",
                                   }}
+                                />
+                              ) : (
+                                <Box
+                                  sx={{
+                                    width: 44,
+                                    height: 44,
+                                    borderRadius: 1.5,
+                                    bgcolor: "grey.100",
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                  }}
+                                />
+                              )}
+                            </ListItemAvatar>
+
+                            <ListItemText
+                              primary={
+                                <Typography fontWeight={700}>
+                                  {group.variantName}
+                                </Typography>
+                              }
+                              secondaryTypographyProps={{ component: "div" }}
+                              secondary={
+                                <Stack
+                                  direction="row"
+                                  alignItems="center"
+                                  spacing={1}
+                                  flexWrap="wrap"
+                                >
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
+                                    SKU: {group.sku} | Tổng SL:{" "}
+                                    {group.totalQuantity}
+                                  </Typography>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() =>
+                                      handleAddAnotherBatchInCart(group)
+                                    }
+                                    sx={{ py: 0, minHeight: 24 }}
+                                  >
+                                    + Batch khác
+                                  </Button>
+                                </Stack>
+                              }
+                            />
+
+                            {(() => {
+                              const discountInfo = variantDiscountMap.get(
+                                group.variantId,
+                              );
+                              const hasDiscount =
+                                discountInfo && discountInfo.discount > 0;
+
+                              return hasDiscount ? (
+                                <Stack alignItems="flex-end" spacing={0.25}>
+                                  <Typography
+                                    variant="body2"
+                                    sx={{
+                                      textDecoration: "line-through",
+                                      color: "text.disabled",
+                                    }}
+                                  >
+                                    {formatCurrency(
+                                      group.unitPrice * group.totalQuantity,
+                                    )}
+                                  </Typography>
+                                  <Typography
+                                    fontWeight={800}
+                                    color="error.main"
+                                  >
+                                    {formatCurrency(discountInfo.finalTotal)}
+                                  </Typography>
+                                  <Chip
+                                    label={`-${formatCurrency(discountInfo.discount)}`}
+                                    size="small"
+                                    color="error"
+                                    variant="outlined"
+                                    sx={{
+                                      height: 20,
+                                      fontSize: "0.7rem",
+                                      fontWeight: 700,
+                                    }}
+                                  />
+                                </Stack>
+                              ) : (
+                                <Typography
+                                  fontWeight={800}
+                                  color="text.primary"
                                 >
                                   {formatCurrency(
                                     group.unitPrice * group.totalQuantity,
                                   )}
                                 </Typography>
-                                <Typography fontWeight={800} color="error.main">
-                                  {formatCurrency(discountInfo.finalTotal)}
-                                </Typography>
-                                <Chip
-                                  label={`-${formatCurrency(discountInfo.discount)}`}
-                                  size="small"
-                                  color="error"
-                                  variant="outlined"
-                                  sx={{
-                                    height: 20,
-                                    fontSize: "0.7rem",
-                                    fontWeight: 700,
-                                  }}
-                                />
-                              </Stack>
-                            ) : (
-                              <Typography fontWeight={800} color="text.primary">
-                                {formatCurrency(
-                                  group.unitPrice * group.totalQuantity,
-                                )}
-                              </Typography>
-                            );
-                          })()}
-                        </ListItem>
+                              );
+                            })()}
+                          </ListItem>
+                        </Tooltip>
 
                         <Stack spacing={1} sx={{ mb: 1.25, ml: 7 }}>
                           {group.batchItems.map((item) => (
@@ -2230,22 +2316,112 @@ export const CounterCheckoutStaffPage = () => {
                 )}
               </Box>
 
-              <Stack direction="row" spacing={1.25} sx={{ mt: 2 }}>
-                <TextField
-                  placeholder="Mã giảm giá"
-                  value={voucherInput}
-                  onChange={(e) => setVoucherInput(e.target.value)}
-                  fullWidth
-                />
-                <Button
-                  variant="contained"
-                  onClick={handleApplyVoucher}
-                  disabled={voucherInput.trim() === appliedVoucherCode.trim()}
-                  sx={{ minWidth: 112 }}
-                >
-                  Áp dụng
-                </Button>
-              </Stack>
+              <Box sx={{ mt: 2 }}>
+                <Stack direction="row" spacing={1.25} alignItems="flex-start">
+                  <TextField
+                    size="small"
+                    placeholder="Mã giảm giá"
+                    value={voucherInput}
+                    onChange={(e) => {
+                      setVoucherInput(e.target.value);
+                      if (voucherErrorText) {
+                        setVoucherErrorText("");
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Enter" &&
+                        voucherInput.trim() !== appliedVoucherCode.trim() &&
+                        !isValidatingVoucher &&
+                        cartItems.length > 0
+                      ) {
+                        void handleApplyVoucher();
+                      }
+                    }}
+                    disabled={isValidatingVoucher || cartItems.length === 0}
+                    error={Boolean(voucherErrorText)}
+                    helperText={
+                      voucherErrorText ||
+                      (cartItems.length === 0
+                        ? "Thêm sản phẩm vào giỏ để áp dụng voucher"
+                        : "")
+                    }
+                    fullWidth
+                  />
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleApplyVoucher}
+                    disabled={
+                      cartItems.length === 0 ||
+                      voucherInput.trim() === appliedVoucherCode.trim() ||
+                      isValidatingVoucher
+                    }
+                    startIcon={
+                      isValidatingVoucher ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : undefined
+                    }
+                    sx={{ minWidth: 112, height: 40 }}
+                  >
+                    {isValidatingVoucher ? "Đang kiểm tra..." : "Áp dụng"}
+                  </Button>
+                </Stack>
+
+                {appliedVoucherCode && (
+                  <Box
+                    sx={{
+                      mt: 1.5,
+                      px: 1.5,
+                      py: 1,
+                      borderRadius: 2,
+                      border: "1.5px solid",
+                      borderColor: "success.light",
+                      bgcolor: "success.50",
+                      background:
+                        "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <VoucherIcon
+                        sx={{ fontSize: 18, color: "success.main" }}
+                      />
+                      <Box>
+                        <Typography
+                          variant="caption"
+                          color="success.dark"
+                          fontWeight={600}
+                          display="block"
+                          lineHeight={1.2}
+                        >
+                          Mã giảm giá đã áp dụng
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          fontWeight={800}
+                          color="success.dark"
+                          letterSpacing={1}
+                        >
+                          {appliedVoucherCode}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                    <IconButton
+                      size="small"
+                      onClick={handleRemoveVoucher}
+                      sx={{
+                        color: "success.main",
+                        "&:hover": { color: "error.main" },
+                      }}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Box>
+                )}
+              </Box>
 
               <Box
                 sx={{
@@ -3059,22 +3235,45 @@ export const CounterCheckoutStaffPage = () => {
                   "C",
                   "0",
                   "⌫",
-                ].map((key) => (
-                  <Button
-                    key={key}
-                    variant={key === "C" ? "outlined" : "contained"}
-                    color={key === "C" ? "error" : "primary"}
-                    size="large"
-                    onClick={() => handleNumpadClick(key)}
-                    sx={{
-                      height: 56,
-                      fontSize: "1.25rem",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {key}
-                  </Button>
-                ))}
+                ].map((key) => {
+                  const isC = key === "C";
+                  const isBackspace = key === "⌫";
+                  return (
+                    <Button
+                      key={key}
+                      variant={isC ? "outlined" : "contained"}
+                      size="large"
+                      onClick={() => handleNumpadClick(key)}
+                      sx={{
+                        height: 56,
+                        fontSize: "1.25rem",
+                        fontWeight: 700,
+                        ...(isC && {
+                          color: "error.main",
+                          borderColor: "error.light",
+                          "&:hover": {
+                            borderColor: "error.main",
+                            bgcolor: "error.50",
+                          },
+                        }),
+                        ...(isBackspace && {
+                          bgcolor: "grey.200",
+                          color: "text.primary",
+                          boxShadow: "none",
+                          "&:hover": { bgcolor: "grey.300" },
+                        }),
+                        ...(!isC && !isBackspace && {
+                          bgcolor: "grey.700",
+                          color: "#fff",
+                          boxShadow: "none",
+                          "&:hover": { bgcolor: "grey.800" },
+                        }),
+                      }}
+                    >
+                      {key}
+                    </Button>
+                  );
+                })}
               </Box>
 
               {/* Shortcuts cho số tiền tròn */}
@@ -3101,7 +3300,17 @@ export const CounterCheckoutStaffPage = () => {
                       const current = Number(cashReceived) || 0;
                       setCashReceived(String(current + shortcut.value));
                     }}
-                    sx={{ textTransform: "none" }}
+                    sx={{
+                      textTransform: "none",
+                      borderColor: "grey.400",
+                      color: "text.secondary",
+                      fontWeight: 600,
+                      "&:hover": {
+                        borderColor: "grey.600",
+                        bgcolor: "grey.100",
+                        color: "text.primary",
+                      },
+                    }}
                   >
                     {shortcut.label}
                   </Button>

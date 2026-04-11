@@ -10,6 +10,12 @@ export type PosPreviewResponse =
 export type PosCustomerForLookup =
   components["schemas"]["CustomerForPosResponse"];
 
+export type PosPreviewResult = {
+  payload: PosPreviewResponse;
+  message?: string;
+  errors?: string[];
+};
+
 type BatchesQuery = {
   VariantId: string;
   PageNumber?: number;
@@ -93,7 +99,7 @@ class PosService {
     }
   }
 
-  async previewOrder(payload: PosPreviewRequest): Promise<PosPreviewResponse> {
+  async previewOrder(payload: PosPreviewRequest): Promise<PosPreviewResult> {
     try {
       const response = await apiInstance.POST("/api/cart/pos-preview", {
         body: payload,
@@ -108,7 +114,11 @@ class PosService {
         );
       }
 
-      return response.data.payload;
+      return {
+        payload: response.data.payload,
+        message: response.data.message,
+        errors: response.data.errors || undefined,
+      };
     } catch (error) {
       throw new Error(
         this.extractApiErrorMessage(error, "Không thể tính tiền tại quầy"),
