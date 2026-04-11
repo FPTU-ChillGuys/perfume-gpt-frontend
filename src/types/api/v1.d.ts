@@ -2351,6 +2351,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/campaigns/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/campaigns/lookup/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/campaigns/{campaignId}": {
         parameters: {
             query?: never;
@@ -12716,8 +12812,22 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfListOfCampaignLookupItem: {
+            payload?: null | components["schemas"]["CampaignLookupItem"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfListOfCampaignPromotionItemResponse: {
             payload?: null | components["schemas"]["CampaignPromotionItemResponse"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfListOfCampaignResponse: {
+            payload?: null | components["schemas"]["CampaignResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -13310,6 +13420,11 @@ export interface components {
             /** Format: int32 */
             totalProcessed?: number;
             hasError?: boolean;
+        };
+        CampaignLookupItem: {
+            /** Format: uuid */
+            id?: string;
+            name: string;
         };
         CampaignPromotionItemResponse: {
             /** Format: uuid */

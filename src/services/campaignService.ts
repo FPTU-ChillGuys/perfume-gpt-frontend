@@ -27,6 +27,13 @@ export type CreateCampaignVoucherRequest =
   components["schemas"]["CreateCampaignVoucherRequest"];
 export type UpdateCampaignVoucherRequest =
   components["schemas"]["UpdateCampaignVoucherRequest"];
+
+// Lookup types for public endpoints
+export type CampaignLookupItem = {
+  id: string;
+  name: string;
+};
+
 type BaseResponseString = components["schemas"]["BaseResponseOfstring"];
 type BaseResponseCampaign =
   components["schemas"]["BaseResponseOfCampaignResponse"];
@@ -647,6 +654,96 @@ class CampaignService {
       throw new Error(
         this.extractErrorMessage(error, "Failed to delete campaign voucher"),
       );
+    }
+  }
+
+  /**
+   * Get products for a specific campaign
+   */
+  async getCampaignProducts(
+    campaignId: string,
+    query?: {
+      Gender?: components["schemas"]["Gender"];
+      CategoryId?: number | null;
+      BrandId?: number | null;
+      Volume?: number | null;
+      FromPrice?: number | null;
+      ToPrice?: number | null;
+      IsAvailable?: boolean;
+      PageNumber?: number;
+      PageSize?: number;
+      SortBy?: string;
+      SortOrder?: string;
+      IsDescending?: boolean;
+    },
+  ) {
+    try {
+      const response = await apiInstance.GET(
+        "/api/products/campaigns/{campaignId}",
+        {
+          params: {
+            path: { campaignId },
+            query,
+          },
+        },
+      );
+
+      if (response.error) {
+        const statusCode = response.response?.status;
+        const message = this.formatApiErrorMessage(
+          response.error as any,
+          statusCode,
+          "Failed to fetch campaign products",
+        );
+        throw new Error(message);
+      }
+
+      if (!response.data?.success) {
+        const message = this.formatApiErrorMessage(
+          response.data as any,
+          response.response?.status,
+          "Failed to fetch campaign products",
+        );
+        throw new Error(message);
+      }
+
+      return (
+        response.data.payload || {
+          items: [],
+          totalCount: 0,
+          pageNumber: 1,
+          pageSize: 10,
+          totalPages: 0,
+        }
+      );
+    } catch (error) {
+      console.error("Error fetching campaign products:", error);
+      throw new Error(
+        this.extractErrorMessage(error, "Failed to fetch campaign products"),
+      );
+    }
+  }
+
+  async getActiveCampaigns(): Promise<CampaignLookupItem[]> {
+    try {
+      const response = await apiInstance.GET("/api/campaigns/lookup/active");
+
+      if (response.error) {
+        throw new Error("Failed to fetch active campaigns");
+      }
+
+      const data = response.data as any;
+
+      if (data?.success !== undefined) {
+        return (data.payload as CampaignLookupItem[]) || [];
+      }
+      if (Array.isArray(data)) {
+        return data as CampaignLookupItem[];
+      }
+      return [];
+    } catch (error: any) {
+      console.error("Failed to fetch active campaigns:", error);
+      throw new Error(error.message || "Failed to fetch active campaigns");
     }
   }
 }
