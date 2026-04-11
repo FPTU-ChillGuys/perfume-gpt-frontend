@@ -50,6 +50,7 @@ import {
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { importStockService } from "../services/importStockService";
+import { AdminNotificationBell } from "../components/common/AdminNotificationBell";
 
 const drawerWidth = 280;
 const drawerCollapsedWidth = 70;
@@ -614,7 +615,8 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <MenuIcon />
           </IconButton>
           <Box sx={{ flexGrow: 1 }} />
-          <IconButton onClick={handleMenuOpen} sx={{ p: 0.5 }}>
+          <AdminNotificationBell />
+          <IconButton onClick={handleMenuOpen} sx={{ p: 0.5, ml: 1 }}>
             <Avatar
               sx={{
                 width: 32,

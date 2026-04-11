@@ -5101,6 +5101,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    UserId?: string;
+                    TargetRole?: string;
+                    IsRead?: boolean;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfNotificationListItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfNotificationListItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfNotificationListItemResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/notifications/{id}/read": {
         parameters: {
             query?: never;
@@ -12787,6 +12833,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfPagedResultOfNotificationListItemResponse: {
+            payload?: null | components["schemas"]["PagedResultOfNotificationListItemResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfPagedResultOfOrderCancelRequestResponse: {
             payload?: null | components["schemas"]["PagedResultOfOrderCancelRequestResponse"];
             success?: boolean;
@@ -13721,6 +13774,26 @@ export interface components {
         };
         /** @enum {string} */
         NoteType: "Top" | "Heart" | "Base";
+        NotificationListItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            userId?: null | string;
+            targetRole?: null | string;
+            title?: null | string;
+            message?: null | string;
+            type?: components["schemas"]["NotificationType"];
+            /** Format: uuid */
+            referenceId?: null | string;
+            referenceType?: null | components["schemas"]["NotifiReferecneType"];
+            metadataJson?: null | string;
+            isRead?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        /** @enum {string} */
+        NotificationType: "Info" | "Warning" | "Error" | "Success" | "Promotional";
+        NotifiReferecneType: number;
         OlfactoryFamilyResponse: {
             /** Format: int32 */
             id?: number;
@@ -13962,6 +14035,19 @@ export interface components {
         };
         PagedResultOfLoyaltyTransactionHistoryItemResponse: {
             items: components["schemas"]["LoyaltyTransactionHistoryItemResponse"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
+        PagedResultOfNotificationListItemResponse: {
+            items: components["schemas"]["NotificationListItemResponse"][];
             /** Format: int32 */
             pageNumber: number;
             /** Format: int32 */

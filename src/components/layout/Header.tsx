@@ -43,6 +43,7 @@ import {
 } from "../../services/categoryService";
 import { notificationService } from "../../services/notificationService";
 import { loyaltyService } from "../../services/loyaltyService";
+import { AdminNotificationBell } from "../common/AdminNotificationBell";
 
 const MAX_VISIBLE_CATEGORIES = 5;
 
@@ -285,56 +286,62 @@ export const Header = () => {
               flexShrink: 0,
             }}
           >
-            <IconButton
-              color="default"
-              aria-label="Thông báo"
-              onClick={isAuthenticated ? handleNotifOpen : undefined}
-            >
-              <NotificationsNone />
-            </IconButton>
-            <Popover
-              open={Boolean(notifAnchorEl)}
-              anchorEl={notifAnchorEl}
-              onClose={handleNotifClose}
-              anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-              transformOrigin={{ vertical: "top", horizontal: "right" }}
-              PaperProps={{ sx: { width: 340, mt: 1.5 } }}
-            >
-              <Box
-                sx={{
-                  px: 2,
-                  py: 1.5,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  borderBottom: 1,
-                  borderColor: "divider",
-                }}
-              >
-                <Typography variant="subtitle1" fontWeight={600}>
-                  Thông báo
-                </Typography>
-                <Button
-                  size="small"
-                  startIcon={
-                    markingAllRead ? (
-                      <CircularProgress size={14} />
-                    ) : (
-                      <DoneAllIcon fontSize="small" />
-                    )
-                  }
-                  onClick={handleMarkAllRead}
-                  disabled={markingAllRead}
+            {isBackOfficeRole ? (
+              <AdminNotificationBell />
+            ) : (
+              <>
+                <IconButton
+                  color="default"
+                  aria-label="Thông báo"
+                  onClick={isAuthenticated ? handleNotifOpen : undefined}
                 >
-                  Đọc tất cả
-                </Button>
-              </Box>
-              <Box sx={{ py: 4, textAlign: "center" }}>
-                <Typography variant="body2" color="text.secondary">
-                  Không có thông báo mới.
-                </Typography>
-              </Box>
-            </Popover>
+                  <NotificationsNone />
+                </IconButton>
+                <Popover
+                  open={Boolean(notifAnchorEl)}
+                  anchorEl={notifAnchorEl}
+                  onClose={handleNotifClose}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
+                  PaperProps={{ sx: { width: 340, mt: 1.5 } }}
+                >
+                  <Box
+                    sx={{
+                      px: 2,
+                      py: 1.5,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: 1,
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      Thông báo
+                    </Typography>
+                    <Button
+                      size="small"
+                      startIcon={
+                        markingAllRead ? (
+                          <CircularProgress size={14} />
+                        ) : (
+                          <DoneAllIcon fontSize="small" />
+                        )
+                      }
+                      onClick={handleMarkAllRead}
+                      disabled={markingAllRead}
+                    >
+                      Đọc tất cả
+                    </Button>
+                  </Box>
+                  <Box sx={{ py: 4, textAlign: "center" }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Không có thông báo mới.
+                    </Typography>
+                  </Box>
+                </Popover>
+              </>
+            )}
             {!isBackOfficeRole && (
               <>
                 <IconButton
