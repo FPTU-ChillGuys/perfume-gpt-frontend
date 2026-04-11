@@ -1,6 +1,5 @@
 import {
   Box,
-  Container,
   Typography,
   Paper,
   Stack,
@@ -251,7 +250,7 @@ const StaffDashboard = () => {
 
   return (
     <AdminLayout>
-      <Container maxWidth="xl">
+      <Box>
         <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
           Xin chào, {user?.name}!
         </Typography>
@@ -609,7 +608,7 @@ const StaffDashboard = () => {
             </Box>
           </Paper>
         </Stack>
-      </Container>
+      </Box>
     </AdminLayout>
   );
 };

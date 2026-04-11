@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Box,
-  Container,
   Typography,
   Paper,
   Stack,
@@ -789,7 +788,7 @@ const AdminDashboard = () => {
 
   return (
     <AdminLayout>
-      <Container maxWidth="xl">
+      <Box>
         <Box sx={{ mb: 3, pt: 0.5 }}>
           <Typography variant="body1" color="text.secondary">
             Xin chào, <strong>{user?.name}</strong>! Đây là tổng quan hệ thống
@@ -1177,7 +1176,7 @@ const AdminDashboard = () => {
             <AdminTrendSection />
           </Stack>
         )}
-      </Container>
+      </Box>
     </AdminLayout>
   );
 };
