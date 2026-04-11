@@ -3184,7 +3184,14 @@ export const CounterCheckoutStaffPage = () => {
                   )}
                 </Typography>
               </Stack>
-
+              {cashChangeAmount >= 0 && cashReceived && (
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography color="text.secondary">Tiền thừa:</Typography>
+                  <Typography fontWeight={700} fontSize="1.1rem" color="error">
+                    {formatCurrency(cashChangeAmount)}
+                  </Typography>
+                </Stack>
+              )}
               {/* Display số tiền khách đưa */}
               <Box>
                 <Typography variant="caption" color="text.secondary" mb={0.5}>
@@ -3262,12 +3269,13 @@ export const CounterCheckoutStaffPage = () => {
                           boxShadow: "none",
                           "&:hover": { bgcolor: "grey.300" },
                         }),
-                        ...(!isC && !isBackspace && {
-                          bgcolor: "grey.700",
-                          color: "#fff",
-                          boxShadow: "none",
-                          "&:hover": { bgcolor: "grey.800" },
-                        }),
+                        ...(!isC &&
+                          !isBackspace && {
+                            bgcolor: "grey.700",
+                            color: "#fff",
+                            boxShadow: "none",
+                            "&:hover": { bgcolor: "grey.800" },
+                          }),
                       }}
                     >
                       {key}
@@ -3316,15 +3324,6 @@ export const CounterCheckoutStaffPage = () => {
                   </Button>
                 ))}
               </Box>
-
-              {cashChangeAmount >= 0 && cashReceived && (
-                <Stack direction="row" justifyContent="space-between">
-                  <Typography color="text.secondary">Tiền thừa:</Typography>
-                  <Typography fontWeight={700} fontSize="1.1rem" color="error">
-                    {formatCurrency(cashChangeAmount)}
-                  </Typography>
-                </Stack>
-              )}
             </Stack>
           </DialogContent>
           <DialogActions>
