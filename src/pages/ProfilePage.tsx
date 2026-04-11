@@ -24,6 +24,7 @@ import { LoyaltyHistorySection } from "../components/profile/LoyaltyHistorySecti
 import { VoucherSection } from "../components/profile/VoucherSection";
 import { ScentPreferencesSection } from "../components/profile/ScentPreferencesSection";
 import { QuizHistorySection } from "../components/profile/QuizHistorySection";
+import { NotificationSection } from "../components/profile/NotificationSection";
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
@@ -265,16 +266,7 @@ const ProfilePage = () => {
   const renderContent = () => {
     switch (activeSection) {
       case "notifications":
-        return (
-          <Box py={4} textAlign="center">
-            <Typography variant="h6" color="text.secondary">
-              Thông báo
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mt={1}>
-              Tính năng đang được phát triển.
-            </Typography>
-          </Box>
-        );
+        return <NotificationSection />;
       case "address":
         return (
           <AddressList
@@ -348,8 +340,13 @@ const ProfilePage = () => {
               minHeight: 600,
             }}
           >
-            <UserProfileSidebar userInfo={userInfo} avatarUrl={avatar?.url || user?.avatarUrl} />
-            <Box sx={{ flex: 1, p: 4, bgcolor: "background.paper", minWidth: 0 }}>
+            <UserProfileSidebar
+              userInfo={userInfo}
+              avatarUrl={avatar?.url || user?.avatarUrl}
+            />
+            <Box
+              sx={{ flex: 1, p: 4, bgcolor: "background.paper", minWidth: 0 }}
+            >
               {renderContent()}
             </Box>
           </Paper>
