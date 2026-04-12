@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { importStockService } from "../../services/importStockService";
 import { productService } from "../../services/productService";
 import type { Supplier, VariantLookupItem } from "@/types/product";
@@ -22,6 +23,7 @@ interface ImportStockItem {
 const getTodayIsoDate = () => new Date().toISOString().split("T")[0];
 
 export const CreateImportStockTab: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<ImportStockItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -41,6 +43,8 @@ export const CreateImportStockTab: React.FC = () => {
   const [downloadingTemplate, setDownloadingTemplate] =
     useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [importDataParsed, setImportDataParsed] = useState<boolean>(false);
+  const cleanupDoneRef = useRef<boolean>(false);
 
   const showToast = (
     message: string,
@@ -93,6 +97,60 @@ export const CreateImportStockTab: React.FC = () => {
 
     loadVariants();
   }, [selectedSupplierId]);
+
+  // Parse query params on mount for import data
+  useEffect(() => {
+    if (importDataParsed) return; // Prevent double parsing
+
+    const importData = searchParams.get("importData");
+    const supplierId = searchParams.get("supplier");
+    const arrivalDate = searchParams.get("arrival");
+
+    if (importData) {
+      try {
+        // Decode base64 and parse JSON
+        const decodedData = decodeURIComponent(escape(atob(importData)));
+        const parsedItems = JSON.parse(decodedData) as Array<{
+          variantId: string;
+          quantity: number;
+          price: number;
+        }>;
+
+        if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+          setItems(parsedItems);
+          showToast(
+            `Đã tải ${parsedItems.length} sản phẩm từ gợi ý, bạn có thể chỉnh sửa trước khi tạo đơn.`,
+            "success",
+          );
+
+          // Set supplier ID if provided
+          if (supplierId && !isNaN(Number(supplierId))) {
+            setSelectedSupplierId(Number(supplierId));
+          }
+
+          // Set arrival date if provided
+          if (arrivalDate) {
+            setExpectedArrivalDate(arrivalDate);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to parse import data from URL:", error);
+        showToast(
+          "Không thể parse dữ liệu nhập từ URL. Vui lòng thử lại hoặc nhập thủ công.",
+          "warning",
+        );
+      }
+      setImportDataParsed(true);
+    }
+  }, []);
+
+  // Clear query params after initial data load to prevent duplication
+  useEffect(() => {
+    if (importDataParsed && !cleanupDoneRef.current) {
+      cleanupDoneRef.current = true;
+      setSearchParams({});
+    }
+  }, [importDataParsed, setSearchParams]);
 
   const triggerExcelPicker = () => {
     fileInputRef.current?.click();

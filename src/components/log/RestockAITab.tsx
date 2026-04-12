@@ -24,7 +24,7 @@ import {
 } from "@mui/icons-material";
 import { inventoryService } from "@/services/ai/inventoryService";
 import { useToast } from "@/hooks/useToast";
-import type { RestockLog, RestockAIVariant, RestockAIPredictionData } from "@/types/inventory";
+import type { RestockLog, RestockAIVariant, RestockAIPredictionData, RestockImportMetadata } from "@/types/inventory";
 import { RestockDetailDialog } from "@/components/log/RestockDetailDialog";
 import { AIRestockJobDialog } from "@/components/log/AIRestockJobDialog";
 
@@ -50,6 +50,7 @@ export const RestockAITab = () => {
 
     // Detail dialog
     const [selectedVariants, setSelectedVariants] = useState<RestockAIVariant[] | null>(null);
+    const [selectedMetadata, setSelectedMetadata] = useState<RestockImportMetadata | undefined>();
     const [detailDialogOpen, setDetailDialogOpen] = useState(false);
     const [dialogTitle, setDialogTitle] = useState("");
 
@@ -101,6 +102,7 @@ export const RestockAITab = () => {
             // Log.data contains JSON string
             const parsedData = JSON.parse(log.inventoryLog) as RestockAIPredictionData;
             setSelectedVariants(parsedData.variants || []);
+            setSelectedMetadata(parsedData.importTicketMetadata);
             setDialogTitle(`Chi tiết log nhập hàng: ${log.id?.substring(0, 8)}`);
             setDetailDialogOpen(true);
         } catch (error) {
@@ -111,6 +113,7 @@ export const RestockAITab = () => {
 
     const handleJobSuccess = (data: RestockAIPredictionData) => {
         setSelectedVariants(data.variants || []);
+        setSelectedMetadata(data.importTicketMetadata);
         setDialogTitle("Kết quả Dự đoán Nhập hàng mới nhất");
         // Open detail dialog to show results
         setDetailDialogOpen(true);
@@ -329,6 +332,7 @@ export const RestockAITab = () => {
                 open={detailDialogOpen}
                 onClose={() => setDetailDialogOpen(false)}
                 data={selectedVariants}
+                metadata={selectedMetadata}
                 title={dialogTitle}
             />
 

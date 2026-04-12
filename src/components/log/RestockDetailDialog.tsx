@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Dialog,
     DialogTitle,
@@ -16,12 +17,13 @@ import {
     Box,
     Chip,
 } from "@mui/material";
-import type { RestockAIVariant } from "@/types/inventory";
+import type { RestockAIVariant, RestockImportMetadata } from "@/types/inventory";
 
 interface RestockDetailDialogProps {
     open: boolean;
     onClose: () => void;
     data: RestockAIVariant[] | null;
+    metadata?: RestockImportMetadata;
     title?: string;
 }
 
@@ -29,8 +31,11 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
     open,
     onClose,
     data,
+    metadata,
     title = "Chi tiết dự đoán nhập hàng",
 }) => {
+    const navigate = useNavigate();
+
     // Helper function to format price
     const formatPrice = (price?: number) => {
         if (price === undefined) return "N/A";
@@ -38,6 +43,37 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
             style: "currency",
             currency: "VND",
         }).format(price);
+    };
+
+    const handleCreateImportOrder = () => {
+        if (!data || data.length === 0) return;
+
+        // Prepare import items from restock data
+        const importItems = data.map((variant) => ({
+            variantId: variant.id,
+            quantity: variant.suggestedRestockQuantity,
+            price: variant.basePrice,
+        }));
+
+        // Encode data as base64 JSON
+        const importDataJson = JSON.stringify(importItems);
+        const encodedData = btoa(unescape(encodeURIComponent(importDataJson)));
+
+        // Build query params
+        const queryParams = new URLSearchParams();
+        queryParams.set("importData", encodedData);
+
+        if (metadata?.supplierId) {
+            queryParams.set("supplier", metadata.supplierId.toString());
+        }
+
+        if (metadata?.expectedArrivalDate) {
+            queryParams.set("arrival", metadata.expectedArrivalDate);
+        }
+
+        // Navigate to import stock page with encoded data
+        navigate(`/admin/import-stock?${queryParams.toString()}`);
+        onClose();
     };
 
     return (
@@ -94,7 +130,10 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                     </TableContainer>
                 )}
             </DialogContent>
-            <DialogActions>
+            <DialogActions sx={{ gap: 1, p: 2 }}>
+                <Button onClick={handleCreateImportOrder} variant="contained" color="success">
+                    Tạo Đơn Nhập Hàng từ Đề xuất này
+                </Button>
                 <Button onClick={onClose} variant="contained" color="primary">
                     Đóng
                 </Button>

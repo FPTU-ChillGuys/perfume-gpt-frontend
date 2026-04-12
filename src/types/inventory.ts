@@ -53,8 +53,14 @@ export interface RestockAIVariant {
     suggestedRestockQuantity: number;
 }
 
+export interface RestockImportMetadata {
+    supplierId?: number | null;
+    expectedArrivalDate?: string;
+}
+
 export interface RestockAIPredictionData {
     variants: RestockAIVariant[];
+    importTicketMetadata?: RestockImportMetadata;
 }
 
 export interface RestockLog extends BaseEntity {
