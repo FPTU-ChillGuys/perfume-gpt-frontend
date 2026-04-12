@@ -566,7 +566,7 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
               flexShrink: 0,
             }}
           >
-            Survey AI
+            Khảo sát cùng AI
           </Button>
         </Box>
       </Container>
