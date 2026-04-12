@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+﻿import React, { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -20,6 +20,8 @@ import {
   Paper,
   Select,
   Stack,
+  Switch,
+  FormControlLabel,
   Tab,
   Tabs,
   Table,
@@ -202,6 +204,7 @@ type VoucherFormData = {
   minOrderValue: number;
   totalQuantity: number | null;
   maxUsagePerUser: number | null;
+  isMemberOnly: boolean;
 };
 
 const defaultVoucherForm: VoucherFormData = {
@@ -214,6 +217,7 @@ const defaultVoucherForm: VoucherFormData = {
   minOrderValue: 0,
   totalQuantity: null,
   maxUsagePerUser: null,
+  isMemberOnly: true,
 };
 
 type CampaignFormData = {
@@ -346,6 +350,7 @@ export const CampaignManagementDetailPage = () => {
 
   const status = campaign?.status || "Upcoming";
   const type = campaign?.type || "FlashSale";
+  const canEdit = status === "Paused" || status === "Upcoming";
 
   // ─── Campaign Edit Handlers ───────────────────────────────────
   const openEditCampaign = () => {
@@ -394,6 +399,7 @@ export const CampaignManagementDetailPage = () => {
           minOrderValue: v.minOrderValue ?? 0,
           totalQuantity: v.totalQuantity,
           maxUsagePerUser: v.maxUsagePerUser,
+          isMemberOnly: v.isMemberOnly,
         })),
       });
       showToast("Cập nhật chiến dịch thành công", "success");
@@ -853,6 +859,7 @@ export const CampaignManagementDetailPage = () => {
       minOrderValue: voucher.minOrderValue ?? 0,
       totalQuantity: voucher.totalQuantity ?? null,
       maxUsagePerUser: voucher.maxUsagePerUser ?? null,
+      isMemberOnly: voucher.isMemberOnly ?? false,
     });
     setVoucherDialogOpen(true);
   };
@@ -875,7 +882,10 @@ export const CampaignManagementDetailPage = () => {
           maxDiscountAmount: voucherForm.maxDiscountAmount,
           minOrderValue: voucherForm.minOrderValue,
           totalQuantity: voucherForm.totalQuantity,
-          maxUsagePerUser: voucherForm.maxUsagePerUser,
+          maxUsagePerUser: voucherForm.isMemberOnly
+            ? voucherForm.maxUsagePerUser
+            : null,
+          isMemberOnly: voucherForm.isMemberOnly,
         };
         await campaignService.updateCampaignVoucher(
           campaignId,
@@ -893,7 +903,10 @@ export const CampaignManagementDetailPage = () => {
           maxDiscountAmount: voucherForm.maxDiscountAmount,
           minOrderValue: voucherForm.minOrderValue,
           totalQuantity: voucherForm.totalQuantity,
-          maxUsagePerUser: voucherForm.maxUsagePerUser,
+          maxUsagePerUser: voucherForm.isMemberOnly
+            ? voucherForm.maxUsagePerUser
+            : null,
+          isMemberOnly: voucherForm.isMemberOnly,
         };
         await campaignService.createCampaignVoucher(campaignId, payload);
         showToast("Thêm voucher thành công", "success");
@@ -1005,7 +1018,7 @@ export const CampaignManagementDetailPage = () => {
                     <Sync />
                   </IconButton>
                   <Tooltip
-                    title={status !== "Paused" ? "Chỉ sửa khi Tạm dừng" : ""}
+                    title={!canEdit ? "Chỉ sửa khi Tạm dừng hoặc Sắp diễn ra" : ""}
                   >
                     <span>
                       <Button
@@ -1013,7 +1026,7 @@ export const CampaignManagementDetailPage = () => {
                         variant="outlined"
                         startIcon={<EditIcon />}
                         onClick={openEditCampaign}
-                        disabled={status !== "Paused"}
+                        disabled={!canEdit}
                       >
                         Chỉnh sửa
                       </Button>
@@ -1195,7 +1208,7 @@ export const CampaignManagementDetailPage = () => {
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={openCreateItem}
-                    disabled={status !== "Paused"}
+                    disabled={!canEdit}
                   >
                     Thêm sản phẩm
                   </Button>
@@ -1332,8 +1345,8 @@ export const CampaignManagementDetailPage = () => {
                               <TableCell align="center">
                                 <Tooltip
                                   title={
-                                    status !== "Paused"
-                                      ? "Chỉ sửa khi Tạm dừng"
+                                    !canEdit
+                                      ? "Chỉ sửa khi Tạm dừng hoặc Sắp diễn ra"
                                       : "Sửa"
                                   }
                                 >
@@ -1341,7 +1354,7 @@ export const CampaignManagementDetailPage = () => {
                                     <IconButton
                                       size="small"
                                       onClick={() => openEditItem(item)}
-                                      disabled={status !== "Paused"}
+                                      disabled={!canEdit}
                                     >
                                       <EditIcon fontSize="small" />
                                     </IconButton>
@@ -1349,8 +1362,8 @@ export const CampaignManagementDetailPage = () => {
                                 </Tooltip>
                                 <Tooltip
                                   title={
-                                    status !== "Paused"
-                                      ? "Chỉ xóa khi Tạm dừng"
+                                    !canEdit
+                                      ? "Chỉ xóa khi Tạm dừng hoặc Sắp diễn ra"
                                       : "Xóa"
                                   }
                                 >
@@ -1361,7 +1374,7 @@ export const CampaignManagementDetailPage = () => {
                                       onClick={() =>
                                         setConfirmDeleteItemId(item.id || null)
                                       }
-                                      disabled={status !== "Paused"}
+                                      disabled={!canEdit}
                                     >
                                       <DeleteIcon fontSize="small" />
                                     </IconButton>
@@ -1398,7 +1411,7 @@ export const CampaignManagementDetailPage = () => {
                     variant="contained"
                     startIcon={<AddIcon />}
                     onClick={openCreateVoucher}
-                    disabled={status !== "Paused"}
+                    disabled={!canEdit}
                   >
                     Thêm voucher
                   </Button>
@@ -1427,6 +1440,7 @@ export const CampaignManagementDetailPage = () => {
                           <TableCell align="right">Đơn tối thiểu</TableCell>
                           <TableCell align="center">SL</TableCell>
                           <TableCell align="center">Còn lại</TableCell>
+                          <TableCell align="center">Member</TableCell>
                           <TableCell align="center">Hết hạn</TableCell>
                           <TableCell align="center">Thao tác</TableCell>
                         </TableRow>
@@ -1489,6 +1503,16 @@ export const CampaignManagementDetailPage = () => {
                                 </Typography>
                               </TableCell>
                               <TableCell align="center">
+                                <Chip
+                                  size="small"
+                                  label={
+                                    v.isMemberOnly ? "Chỉ member" : "Tất cả"
+                                  }
+                                  color={v.isMemberOnly ? "primary" : "default"}
+                                  variant="outlined"
+                                />
+                              </TableCell>
+                              <TableCell align="center">
                                 {v.isExpired ? (
                                   <Chip
                                     label="Hết hạn"
@@ -1504,8 +1528,8 @@ export const CampaignManagementDetailPage = () => {
                               <TableCell align="center">
                                 <Tooltip
                                   title={
-                                    status !== "Paused"
-                                      ? "Chỉ sửa khi Tạm dừng"
+                                    !canEdit
+                                      ? "Chỉ sửa khi Tạm dừng hoặc Sắp diễn ra"
                                       : "Sửa"
                                   }
                                 >
@@ -1513,7 +1537,7 @@ export const CampaignManagementDetailPage = () => {
                                     <IconButton
                                       size="small"
                                       onClick={() => openEditVoucher(v)}
-                                      disabled={status !== "Paused"}
+                                      disabled={!canEdit}
                                     >
                                       <EditIcon fontSize="small" />
                                     </IconButton>
@@ -1521,8 +1545,8 @@ export const CampaignManagementDetailPage = () => {
                                 </Tooltip>
                                 <Tooltip
                                   title={
-                                    status !== "Paused"
-                                      ? "Chỉ xóa khi Tạm dừng"
+                                    !canEdit
+                                      ? "Chỉ xóa khi Tạm dừng hoặc Sắp diễn ra"
                                       : "Xóa"
                                   }
                                 >
@@ -1533,7 +1557,7 @@ export const CampaignManagementDetailPage = () => {
                                       onClick={() =>
                                         setConfirmDeleteVoucherId(v.id || null)
                                       }
-                                      disabled={status !== "Paused"}
+                                      disabled={!canEdit}
                                     >
                                       <DeleteIcon fontSize="small" />
                                     </IconButton>
@@ -1572,7 +1596,7 @@ export const CampaignManagementDetailPage = () => {
               onChange={(e) =>
                 setCampaignForm({ ...campaignForm, name: e.target.value })
               }
-              disabled={status !== "Paused"}
+              disabled={!canEdit}
             />
             <TextField
               label="Mô tả"
@@ -1587,9 +1611,9 @@ export const CampaignManagementDetailPage = () => {
                   description: e.target.value,
                 })
               }
-              disabled={status !== "Paused"}
+              disabled={!canEdit}
             />
-            <FormControl size="small" fullWidth disabled={status !== "Paused"}>
+            <FormControl size="small" fullWidth disabled={!canEdit}>
               <InputLabel>Loại chiến dịch</InputLabel>
               <Select
                 value={campaignForm.type}
@@ -1621,7 +1645,7 @@ export const CampaignManagementDetailPage = () => {
                 })
               }
               slotProps={{ inputLabel: { shrink: true } }}
-              disabled={status !== "Paused"}
+              disabled={!canEdit}
             />
             <TextField
               label="Kết thúc"
@@ -1633,7 +1657,7 @@ export const CampaignManagementDetailPage = () => {
                 setCampaignForm({ ...campaignForm, endDate: e.target.value })
               }
               slotProps={{ inputLabel: { shrink: true } }}
-              disabled={status !== "Paused"}
+              disabled={!canEdit}
             />
           </Stack>
         </DialogContent>
@@ -1642,7 +1666,7 @@ export const CampaignManagementDetailPage = () => {
           <Button
             variant="contained"
             onClick={() => void handleSaveCampaign()}
-            disabled={isSavingCampaign || status !== "Paused"}
+            disabled={isSavingCampaign || !canEdit}
           >
             {isSavingCampaign ? <CircularProgress size={20} /> : "Lưu"}
           </Button>
@@ -2458,7 +2482,26 @@ export const CampaignManagementDetailPage = () => {
                 })
               }
               placeholder="VD: 1"
-              helperText="Để trống = không giới hạn"
+              helperText={
+                voucherForm.isMemberOnly
+                  ? "Để trống = không giới hạn"
+                  : "Chỉ áp dụng khi bật Member Only"
+              }
+              disabled={!voucherForm.isMemberOnly}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={voucherForm.isMemberOnly}
+                  onChange={(e) =>
+                    setVoucherForm({
+                      ...voucherForm,
+                      isMemberOnly: e.target.checked,
+                    })
+                  }
+                />
+              }
+              label="Chỉ dành cho thành viên (Member Only)"
             />
           </Stack>
         </DialogContent>

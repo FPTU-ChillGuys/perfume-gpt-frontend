@@ -13581,6 +13581,7 @@ export interface components {
             totalQuantity?: null | number;
             /** Format: int32 */
             maxUsagePerUser?: null | number;
+            isMemberOnly?: boolean;
         };
         CreateCartItemRequest: {
             /** Format: uuid */
@@ -13750,6 +13751,7 @@ export interface components {
             /** Format: int32 */
             maxUsagePerUser?: null | number;
             isPublic?: boolean;
+            isMemberOnly?: boolean;
         };
         CustomerAttributePreferenceResponse: {
             /** Format: int32 */
@@ -15387,6 +15389,7 @@ export interface components {
             totalQuantity?: null | number;
             /** Format: int32 */
             maxUsagePerUser?: null | number;
+            isMemberOnly?: boolean;
         };
         UpdateCartItemRequest: {
             /** Format: int32 */
@@ -15527,6 +15530,7 @@ export interface components {
             /** Format: int32 */
             maxUsagePerUser?: null | number;
             isPublic?: boolean;
+            isMemberOnly?: boolean;
         };
         UsageStatus: number;
         UserCancelOrderRequest: {
@@ -15707,6 +15711,7 @@ export interface components {
             /** Format: int32 */
             maxUsagePerUser?: null | number;
             isPublic?: boolean;
+            isMemberOnly?: boolean;
             /** Format: date-time */
             createdAt?: string;
         };
