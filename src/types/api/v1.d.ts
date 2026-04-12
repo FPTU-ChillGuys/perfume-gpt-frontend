@@ -14045,7 +14045,8 @@ export interface components {
         };
         /** @enum {string} */
         NotificationType: "Info" | "Warning" | "Error" | "Success" | "Promotional";
-        NotifiReferecneType: number;
+        /** @enum {null|string} */
+        NotifiReferecneType: "Order" | "OrderCancelRequest" | "OrderReturnRequest" | "ImportTicket" | "Adjustment" | null;
         OlfactoryFamilyResponse: {
             /** Format: int32 */
             id?: number;
@@ -14481,8 +14482,8 @@ export interface components {
             method?: components["schemas"]["PaymentMethod"];
             posSessionId?: null | string;
         };
-        /** @enum {string} */
-        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer" | "PayOs";
+        /** @enum {null|string} */
+        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer" | "PayOs" | null;
         /** @enum {string} */
         PaymentStatus: "Unpaid" | "Paid" | "Partial_Refunded" | "Refunded";
         PaymentTransactionAdminItemResponse: {
@@ -14615,7 +14616,7 @@ export interface components {
         ProcessCancelRequest: {
             isApproved?: boolean;
             staffNote?: null | string;
-            refundMethod?: components["schemas"]["PaymentMethod"];
+            refundMethod?: null | components["schemas"]["PaymentMethod"];
             manualTransactionReference?: null | string;
         };
         ProcessInitialReturnDto: {
@@ -14962,7 +14963,8 @@ export interface components {
             email: string;
             token: string;
         };
-        ResponseErrorType: number;
+        /** @enum {null|string} */
+        ResponseErrorType: "BadRequest" | "Unauthorized" | "Forbidden" | "NotFound" | "Conflict" | "InternalError" | null;
         ReturnItemDto: {
             /** Format: uuid */
             orderDetailId?: string;
@@ -15532,7 +15534,8 @@ export interface components {
             isPublic?: boolean;
             isMemberOnly?: boolean;
         };
-        UsageStatus: number;
+        /** @enum {null|string} */
+        UsageStatus: "Available" | "Reserved" | "Used" | null;
         UserCancelOrderRequest: {
             reason?: components["schemas"]["CancelOrderReason"];
             refundBankName?: null | string;

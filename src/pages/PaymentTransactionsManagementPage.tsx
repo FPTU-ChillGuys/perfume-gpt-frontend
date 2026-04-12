@@ -36,7 +36,7 @@ import {
 } from "@/services/paymentManagementService";
 import { formatDateTimeVN } from "@/utils/dateTime";
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Tiền mặt tại quầy",
   VnPay: "VNPay",

@@ -88,20 +88,20 @@ const panelSx = {
   bgcolor: "background.paper",
 };
 
-const PICKUP_PAYMENT_METHODS: PaymentMethod[] = [
+const PICKUP_PAYMENT_METHODS: NonNullable<PaymentMethod>[] = [
   "CashInStore",
   "VnPay",
   "Momo",
   "PayOs",
 ];
-const DELIVERY_PAYMENT_METHODS: PaymentMethod[] = [
+const DELIVERY_PAYMENT_METHODS: NonNullable<PaymentMethod>[] = [
   "CashOnDelivery",
   "VnPay",
   "Momo",
   "PayOs",
 ];
 
-const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABEL: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   VnPay: "VNPay",
   Momo: "MoMo",
@@ -110,7 +110,7 @@ const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
   PayOs: "PayOS",
 };
 
-const PAYMENT_METHOD_ICON: Partial<Record<PaymentMethod, string>> = {
+const PAYMENT_METHOD_ICON: Partial<Record<NonNullable<PaymentMethod>, string>> = {
   CashInStore: storeIcon,
   CashOnDelivery: codIcon,
   VnPay: vnpayIcon,
@@ -269,7 +269,7 @@ export const CounterCheckoutStaffPage = () => {
 
   const [isPickupInStore, setIsPickupInStore] = useState(true);
   const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>("CashInStore");
+    useState<NonNullable<PaymentMethod>>("CashInStore");
   const [customerLookupKeyword, setCustomerLookupKeyword] = useState("");
   const [customerLookupResults, setCustomerLookupResults] = useState<
     PosCustomerForLookup[]
@@ -831,7 +831,7 @@ export const CounterCheckoutStaffPage = () => {
     return true;
   };
 
-  const renderPaymentMethodOption = (method: PaymentMethod) => {
+  const renderPaymentMethodOption = (method: NonNullable<PaymentMethod>) => {
     const icon = PAYMENT_METHOD_ICON[method];
 
     return (
@@ -2846,11 +2846,11 @@ export const CounterCheckoutStaffPage = () => {
                   label="Phương thức thanh toán"
                   value={paymentMethod}
                   onChange={(e) =>
-                    setPaymentMethod(e.target.value as PaymentMethod)
+                    setPaymentMethod(e.target.value as NonNullable<PaymentMethod>)
                   }
                   SelectProps={{
                     renderValue: (selected) =>
-                      renderPaymentMethodOption(selected as PaymentMethod),
+                      renderPaymentMethodOption(selected as NonNullable<PaymentMethod>),
                   }}
                   sx={{ mt: 1.5 }}
                 >

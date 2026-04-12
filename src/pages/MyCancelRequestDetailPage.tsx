@@ -49,7 +49,7 @@ const formatDate = (value?: string | null) => formatDateTimeVN(value);
 const formatCurrency = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Thanh toán tại quầy",
   VnPay: "Thanh toán qua VNPay",

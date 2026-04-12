@@ -71,7 +71,7 @@ const formatCurrency = (value?: number | null) => {
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
 };
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Thanh toán tại quầy",
   VnPay: "Thanh toán qua VNPay",
@@ -90,9 +90,9 @@ const cancelReasonLabel = (reason?: string | null) => {
   return matchedReason?.label || reason;
 };
 
-const ONLINE_REFUND_METHODS: PaymentMethod[] = ["VnPay", "Momo"];
+const ONLINE_REFUND_METHODS: NonNullable<PaymentMethod>[] = ["VnPay", "Momo"];
 const REFUND_METHOD_OPTIONS: {
-  value: PaymentMethod;
+  value: NonNullable<PaymentMethod>;
   label: string;
   iconSrc: string;
 }[] = [
@@ -286,8 +286,19 @@ export const OrderCancelRequestDetailPage = () => {
   };
 
   const handleApproveClick = () => {
+    // Không cần hoàn tiền → duyệt trực tiếp
+    if (!selected?.isRefundRequired) {
+      void submitProcessRequest({
+        isApproved: true,
+        staffNote: null,
+        refundMethod: null,
+        manualTransactionReference: null,
+      });
+      return;
+    }
+
     const paymentMethod = resolveOrderPaymentMethod(selectedOrder);
-    const fallbackMethod: PaymentMethod | null =
+    const fallbackMethod: NonNullable<PaymentMethod> =
       paymentMethod && ONLINE_REFUND_METHODS.includes(paymentMethod)
         ? paymentMethod
         : "ExternalBankTransfer";
@@ -340,15 +351,15 @@ export const OrderCancelRequestDetailPage = () => {
     selected?.refundAmount ?? selectedOrder?.totalAmount ?? 0,
   );
   const currentPaymentMethod = resolveOrderPaymentMethod(selectedOrder);
-  const refundMethodOptions: PaymentMethod[] = [
+  const refundMethodOptions: NonNullable<PaymentMethod>[] = [
     ...(currentPaymentMethod &&
     ONLINE_REFUND_METHODS.includes(currentPaymentMethod)
       ? [currentPaymentMethod]
       : []),
-    "ExternalBankTransfer",
+    "ExternalBankTransfer" as const,
   ].filter(
     (method, index, arr) => arr.indexOf(method) === index,
-  ) as PaymentMethod[];
+  ) as NonNullable<PaymentMethod>[];
   const isExternalTransferSelected =
     approveRefundMethod === "ExternalBankTransfer";
   const trimmedApproveManualTransactionReference =
