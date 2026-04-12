@@ -6,7 +6,7 @@ import {
   notificationService,
   type NotificationItem,
 } from "@/services/notificationService";
-import { useToast } from "@/hooks/useToast";
+
 
 const PAGE_SIZE = 20;
 
@@ -97,12 +97,6 @@ export const useNotificationSystem = ({
   userRole,
   userId,
 }: UseNotificationSystemOptions) => {
-  const { showToast } = useToast();
-  const showToastRef = useRef(showToast);
-  useEffect(() => {
-    showToastRef.current = showToast;
-  }, [showToast]);
-
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -193,12 +187,6 @@ export const useNotificationSystem = ({
 
         setNotifications((prev) => [payload, ...prev].slice(0, PAGE_SIZE));
         setUnreadCount((prev) => prev + 1);
-
-        // Show a toast popup
-        showToastRef.current(
-          payload.title || payload.message || "Bạn có thông báo mới",
-          "info",
-        );
       });
 
       connection.onclose(() => {

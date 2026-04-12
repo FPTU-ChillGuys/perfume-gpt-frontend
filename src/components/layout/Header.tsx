@@ -37,6 +37,7 @@ import {
 import { loyaltyService } from "../../services/loyaltyService";
 import { NotificationBell } from "../common/NotificationBell";
 import { useNotificationSystem } from "../../hooks/useNotificationSystem";
+import type { NotificationItem } from "@/services/notificationService";
 
 const MAX_VISIBLE_CATEGORIES = 5;
 
@@ -69,6 +70,21 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
       userRole: user?.role ?? "",
       userId: user?.id,
     });
+
+  const handleNotificationClick = (item: NotificationItem) => {
+    if (!item.referenceId) return;
+    switch (item.referenceType) {
+      case "Order":
+        navigate(`/my-orders/${item.referenceId}`);
+        break;
+      case "OrderCancelRequest":
+        navigate(`/my-cancel-requests/${item.referenceId}`);
+        break;
+      case "OrderReturnRequest":
+        navigate(`/my-return-requests/${item.referenceId}`);
+        break;
+    }
+  };
 
   useEffect(() => {
     categoryService
@@ -269,6 +285,7 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
               unreadCount={unreadCount}
               onMarkAsRead={markAsRead}
               onMarkAllAsRead={markAllAsRead}
+              onItemClick={handleNotificationClick}
             />
             {!isBackOfficeRole && (
               <>

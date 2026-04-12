@@ -62,8 +62,22 @@ const formatDateTimeForApi = (date: Date) => {
 
 const getTodayRange = () => {
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+  const start = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+  );
+  const end = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    23,
+    59,
+    59,
+  );
   return { from: formatDateTimeForApi(start), to: formatDateTimeForApi(end) };
 };
 
@@ -79,7 +93,10 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
   Returned: "Đã trả",
 };
 
-const ORDER_STATUS_COLOR: Record<string, "warning" | "info" | "primary" | "secondary" | "success" | "error" | "default"> = {
+const ORDER_STATUS_COLOR: Record<
+  string,
+  "warning" | "info" | "primary" | "secondary" | "success" | "error" | "default"
+> = {
   Pending: "warning",
   Preparing: "info",
   ReadyToPick: "primary",
@@ -110,7 +127,15 @@ interface StatCardProps {
   helper?: string;
 }
 
-const StatCard = ({ label, value, icon, color, bg, onClick, helper }: StatCardProps) => (
+const StatCard = ({
+  label,
+  value,
+  icon,
+  color,
+  bg,
+  onClick,
+  helper,
+}: StatCardProps) => (
   <Paper
     sx={{
       p: 2.5,
@@ -155,19 +180,30 @@ const StaffDashboard = () => {
   const [preparingCount, setPreparingCount] = useState<number | null>(null);
   const [readyToPickCount, setReadyToPickCount] = useState<number | null>(null);
   const [deliveringCount, setDeliveringCount] = useState<number | null>(null);
-  const [deliveredTodayCount, setDeliveredTodayCount] = useState<number | null>(null);
-  const [cancelledTodayCount, setCancelledTodayCount] = useState<number | null>(null);
+  const [deliveredTodayCount, setDeliveredTodayCount] = useState<number | null>(
+    null,
+  );
+  const [cancelledTodayCount, setCancelledTodayCount] = useState<number | null>(
+    null,
+  );
 
   // Cancel / Return request counts
-  const [pendingCancelCount, setPendingCancelCount] = useState<number | null>(null);
-  const [pendingReturnCount, setPendingReturnCount] = useState<number | null>(null);
+  const [pendingCancelCount, setPendingCancelCount] = useState<number | null>(
+    null,
+  );
+  const [pendingReturnCount, setPendingReturnCount] = useState<number | null>(
+    null,
+  );
 
   // Today order counts by status (for chart)
-  const [todayOrderStatusCounts, setTodayOrderStatusCounts] = useState<{ status: string; label: string; count: number; color: string }[]>([]);
+  const [todayOrderStatusCounts, setTodayOrderStatusCounts] = useState<
+    { status: string; label: string; count: number; color: string }[]
+  >([]);
   const [chartLoaded, setChartLoaded] = useState(false);
 
   // Inventory
-  const [inventorySummary, setInventorySummary] = useState<InventorySummaryResponse | null>(null);
+  const [inventorySummary, setInventorySummary] =
+    useState<InventorySummaryResponse | null>(null);
 
   // Recent orders
   const [recentOrders, setRecentOrders] = useState<OrderListItem[]>([]);
@@ -182,24 +218,38 @@ const StaffDashboard = () => {
       orderService.getAllOrders({ Status: "Preparing", PageSize: 1 }),
       orderService.getAllOrders({ Status: "ReadyToPick", PageSize: 1 }),
       orderService.getAllOrders({ Status: "Delivering", PageSize: 1 }),
-      orderService.getAllOrders({ Status: "Delivered", FromDate: from, ToDate: to, PageSize: 1 }),
-      orderService.getAllOrders({ Status: "Cancelled", FromDate: from, ToDate: to, PageSize: 1 }),
-    ]).then(([pending, preparing, ready, delivering, delivered, cancelled]) => {
-      setPendingCount(pending.totalCount);
-      setPreparingCount(preparing.totalCount);
-      setReadyToPickCount(ready.totalCount);
-      setDeliveringCount(delivering.totalCount);
-      setDeliveredTodayCount(delivered.totalCount);
-      setCancelledTodayCount(cancelled.totalCount);
-    }).catch(() => {
-      // Silently handle errors — cards stay in loading state
-    });
+      orderService.getAllOrders({
+        Status: "Delivered",
+        FromDate: from,
+        ToDate: to,
+        PageSize: 1,
+      }),
+      orderService.getAllOrders({
+        Status: "Cancelled",
+        FromDate: from,
+        ToDate: to,
+        PageSize: 1,
+      }),
+    ])
+      .then(([pending, preparing, ready, delivering, delivered, cancelled]) => {
+        setPendingCount(pending.totalCount);
+        setPreparingCount(preparing.totalCount);
+        setReadyToPickCount(ready.totalCount);
+        setDeliveringCount(delivering.totalCount);
+        setDeliveredTodayCount(delivered.totalCount);
+        setCancelledTodayCount(cancelled.totalCount);
+      })
+      .catch(() => {
+        // Silently handle errors — cards stay in loading state
+      });
 
     // Cancel / Return request counts
-    orderService.getAllCancelRequests({ Status: "Pending", PageSize: 1 })
+    orderService
+      .getAllCancelRequests({ Status: "Pending", PageSize: 1 })
       .then((res) => setPendingCancelCount(res.totalCount))
       .catch(() => {});
-    orderService.getAllReturnRequests({ Status: "Pending", PageSize: 1 })
+    orderService
+      .getAllReturnRequests({ Status: "Pending", PageSize: 1 })
       .then((res) => setPendingReturnCount(res.totalCount))
       .catch(() => {});
 
@@ -215,21 +265,28 @@ const StaffDashboard = () => {
     Promise.all(
       chartStatuses.map((s) =>
         orderService
-          .getAllOrders({ Status: s.status as OrderStatus, FromDate: from, ToDate: to, PageSize: 1 })
+          .getAllOrders({
+            Status: s.status as OrderStatus,
+            FromDate: from,
+            ToDate: to,
+            PageSize: 1,
+          })
           .then((res) => ({ ...s, count: res.totalCount ?? 0 }))
-          .catch(() => ({ ...s, count: 0 }))
-      )
+          .catch(() => ({ ...s, count: 0 })),
+      ),
     )
       .then(setTodayOrderStatusCounts)
       .finally(() => setChartLoaded(true));
 
     // Inventory summary
-    inventoryService.getSummary()
+    inventoryService
+      .getSummary()
       .then(setInventorySummary)
       .catch(() => {});
 
     // Recent orders (latest 5)
-    orderService.getAllOrders({ PageSize: 5, IsDescending: true })
+    orderService
+      .getAllOrders({ PageSize: 5, IsDescending: true })
       .then((res) => {
         setRecentOrders(res.items ?? []);
       })
@@ -238,32 +295,57 @@ const StaffDashboard = () => {
   }, []);
 
   const staffLinks = [
-    { label: "Quản lý đơn hàng", icon: <AssignmentIcon />, path: "/staff/orders" },
-    { label: "POS bán hàng", icon: <PointOfSaleIcon />, path: "/checkout/counter/staff" },
+    {
+      label: "Quản lý đơn hàng",
+      icon: <AssignmentIcon />,
+      path: "/staff/orders",
+    },
+    {
+      label: "POS bán hàng",
+      icon: <PointOfSaleIcon />,
+      path: "/checkout/counter/staff",
+    },
     { label: "Quản lý kho", icon: <InventoryIcon />, path: "/staff/inventory" },
-    { label: "Yêu cầu trả hàng", icon: <ReplayIcon />, path: "/staff/return-requests" },
-    { label: "Nhập hàng", icon: <ShoppingCartIcon />, path: "/staff/receive-import-stock" },
-    { label: "Giao dịch thu chi", icon: <PaymentIcon />, path: "/staff/payment-transactions" },
-    { label: "Hỗ trợ khách hàng", icon: <SupportAgentIcon />, path: "/admin/conversations" },
-    { label: "Quản lý sản phẩm", icon: <BarChartIcon />, path: "/staff/products" },
+    {
+      label: "Yêu cầu trả hàng",
+      icon: <ReplayIcon />,
+      path: "/staff/return-requests",
+    },
+    {
+      label: "Nhập hàng",
+      icon: <ShoppingCartIcon />,
+      path: "/staff/receive-import-stock",
+    },
+    {
+      label: "Giao dịch thu chi",
+      icon: <PaymentIcon />,
+      path: "/staff/payment-transactions",
+    },
+    {
+      label: "Hỗ trợ khách hàng",
+      icon: <SupportAgentIcon />,
+      path: "/admin/conversations",
+    },
+    {
+      label: "Quản lý sản phẩm",
+      icon: <BarChartIcon />,
+      path: "/staff/products",
+    },
   ];
 
   return (
     <AdminLayout>
       <Box>
-        <Typography variant="h5" fontWeight="bold" sx={{ mb: 0.5 }}>
-          Xin chào, {user?.name}!
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Tổng quan hoạt động hôm nay
-        </Typography>
+        <Box sx={{ mb: 3, pt: 0.5 }}>
+          <Typography variant="body1" color="text.secondary">
+            Xin chào, <strong>{user?.name}</strong>! Đây là tổng quan hệ thống
+            hôm nay.
+          </Typography>
+        </Box>
 
         <Stack spacing={3}>
           {/* ──── Order status cards ──── */}
           <Box>
-            <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 1.5 }}>
-              Tình trạng đơn hàng
-            </Typography>
             <Box
               sx={{
                 display: "grid",
@@ -282,7 +364,9 @@ const StaffDashboard = () => {
                 icon={<HourglassEmptyIcon />}
                 color="#ed6c02"
                 bg="#fff3e0"
-                onClick={() => navigate("/staff/orders", { state: { status: "Pending" } })}
+                onClick={() =>
+                  navigate("/staff/orders", { state: { status: "Pending" } })
+                }
               />
               <StatCard
                 label="Đang chuẩn bị"
@@ -290,7 +374,9 @@ const StaffDashboard = () => {
                 icon={<BuildCircleIcon />}
                 color="#0288d1"
                 bg="#e1f5fe"
-                onClick={() => navigate("/staff/orders", { state: { status: "Preparing" } })}
+                onClick={() =>
+                  navigate("/staff/orders", { state: { status: "Preparing" } })
+                }
               />
               <StatCard
                 label="Chờ lấy hàng"
@@ -298,7 +384,11 @@ const StaffDashboard = () => {
                 icon={<AssignmentIcon />}
                 color="#7b1fa2"
                 bg="#f3e5f5"
-                onClick={() => navigate("/staff/orders", { state: { status: "ReadyToPick" } })}
+                onClick={() =>
+                  navigate("/staff/orders", {
+                    state: { status: "ReadyToPick" },
+                  })
+                }
               />
               <StatCard
                 label="Đang giao"
@@ -306,7 +396,9 @@ const StaffDashboard = () => {
                 icon={<LocalShippingIcon />}
                 color="#1565c0"
                 bg="#e3f2fd"
-                onClick={() => navigate("/staff/orders", { state: { status: "Delivering" } })}
+                onClick={() =>
+                  navigate("/staff/orders", { state: { status: "Delivering" } })
+                }
               />
               <StatCard
                 label="Giao hôm nay"
@@ -314,7 +406,9 @@ const StaffDashboard = () => {
                 icon={<CheckCircleIcon />}
                 color="#2e7d32"
                 bg="#e8f5e9"
-                onClick={() => navigate("/staff/orders", { state: { status: "Delivered" } })}
+                onClick={() =>
+                  navigate("/staff/orders", { state: { status: "Delivered" } })
+                }
               />
               <StatCard
                 label="Hủy hôm nay"
@@ -322,7 +416,9 @@ const StaffDashboard = () => {
                 icon={<CancelIcon />}
                 color="#d32f2f"
                 bg="#ffebee"
-                onClick={() => navigate("/staff/orders", { state: { status: "Cancelled" } })}
+                onClick={() =>
+                  navigate("/staff/orders", { state: { status: "Cancelled" } })
+                }
               />
             </Box>
           </Box>
@@ -341,7 +437,9 @@ const StaffDashboard = () => {
               icon={<CancelIcon />}
               color="#ed6c02"
               bg="#fff3e0"
-              onClick={() => navigate("/staff/orders", { state: { tab: "cancel" } })}
+              onClick={() =>
+                navigate("/staff/orders", { state: { tab: "cancel" } })
+              }
             />
             <StatCard
               label="YC trả hàng chờ duyệt"
@@ -381,53 +479,76 @@ const StaffDashboard = () => {
               <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                 <CircularProgress />
               </Box>
-            ) : (() => {
-              const total = todayOrderStatusCounts.reduce((s, c) => s + c.count, 0);
-              const maxCount = Math.max(...todayOrderStatusCounts.map((c) => c.count), 1);
-              return total === 0 ? (
-                <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
-                  Chưa có đơn hàng nào hôm nay
-                </Typography>
-              ) : (
-                <Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    Tổng: <strong>{total}</strong> đơn hàng
+            ) : (
+              (() => {
+                const total = todayOrderStatusCounts.reduce(
+                  (s, c) => s + c.count,
+                  0,
+                );
+                const maxCount = Math.max(
+                  ...todayOrderStatusCounts.map((c) => c.count),
+                  1,
+                );
+                return total === 0 ? (
+                  <Typography
+                    color="text.secondary"
+                    sx={{ py: 4, textAlign: "center" }}
+                  >
+                    Chưa có đơn hàng nào hôm nay
                   </Typography>
-                  <Stack spacing={1.5}>
-                    {todayOrderStatusCounts.map((item) => (
-                      <Box key={item.status}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
-                          <Typography variant="body2">{item.label}</Typography>
-                          <Typography variant="body2" fontWeight={600}>
-                            {item.count}
-                          </Typography>
-                        </Box>
-                        <Box
-                          sx={{
-                            height: 20,
-                            borderRadius: 1,
-                            bgcolor: "grey.100",
-                            overflow: "hidden",
-                            position: "relative",
-                          }}
-                        >
+                ) : (
+                  <Box>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mb: 2 }}
+                    >
+                      Tổng: <strong>{total}</strong> đơn hàng
+                    </Typography>
+                    <Stack spacing={1.5}>
+                      {todayOrderStatusCounts.map((item) => (
+                        <Box key={item.status}>
                           <Box
                             sx={{
-                              height: "100%",
-                              width: `${(item.count / maxCount) * 100}%`,
-                              bgcolor: item.color,
-                              borderRadius: 1,
-                              transition: "width 0.6s ease",
-                              minWidth: item.count > 0 ? 8 : 0,
+                              display: "flex",
+                              justifyContent: "space-between",
+                              mb: 0.5,
                             }}
-                          />
+                          >
+                            <Typography variant="body2">
+                              {item.label}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {item.count}
+                            </Typography>
+                          </Box>
+                          <Box
+                            sx={{
+                              height: 20,
+                              borderRadius: 1,
+                              bgcolor: "grey.100",
+                              overflow: "hidden",
+                              position: "relative",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                height: "100%",
+                                width: `${(item.count / maxCount) * 100}%`,
+                                bgcolor: item.color,
+                                borderRadius: 1,
+                                transition: "width 0.6s ease",
+                                minWidth: item.count > 0 ? 8 : 0,
+                              }}
+                            />
+                          </Box>
                         </Box>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-              );
-            })()}
+                      ))}
+                    </Stack>
+                  </Box>
+                );
+              })()
+            )}
           </Paper>
 
           {/* ──── Inventory summary detail ──── */}
@@ -439,7 +560,10 @@ const StaffDashboard = () => {
               <Box
                 sx={{
                   display: "grid",
-                  gridTemplateColumns: { xs: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
+                  gridTemplateColumns: {
+                    xs: "repeat(2, 1fr)",
+                    md: "repeat(4, 1fr)",
+                  },
                   gap: 2,
                 }}
               >
@@ -456,7 +580,9 @@ const StaffDashboard = () => {
                     Tổng tồn kho
                   </Typography>
                   <Typography variant="h6" fontWeight="bold">
-                    {(inventorySummary.totalStockQuantity ?? 0).toLocaleString("vi-VN")}
+                    {(inventorySummary.totalStockQuantity ?? 0).toLocaleString(
+                      "vi-VN",
+                    )}
                   </Typography>
                 </Box>
                 <Box>
@@ -489,15 +615,18 @@ const StaffDashboard = () => {
 
           {/* ──── Recent orders table ──── */}
           <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
               <Typography variant="subtitle1" fontWeight="bold">
                 Đơn hàng gần đây
               </Typography>
-              <Button
-                size="small"
-                component={RouterLink}
-                to="/staff/orders"
-              >
+              <Button size="small" component={RouterLink} to="/staff/orders">
                 Xem tất cả
               </Button>
             </Box>
@@ -507,7 +636,10 @@ const StaffDashboard = () => {
                 <CircularProgress />
               </Box>
             ) : recentOrders.length === 0 ? (
-              <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+              <Typography
+                color="text.secondary"
+                sx={{ py: 4, textAlign: "center" }}
+              >
                 Chưa có đơn hàng nào
               </Typography>
             ) : (
@@ -533,13 +665,21 @@ const StaffDashboard = () => {
                         onClick={() => navigate(`/staff/orders/${order.id}`)}
                       >
                         <TableCell>
-                          <Typography variant="body2" fontWeight={600} color="primary">
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            color="primary"
+                          >
                             {order.code}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Tooltip title={order.customerName || "N/A"}>
-                            <Typography variant="body2" noWrap sx={{ maxWidth: 140 }}>
+                            <Typography
+                              variant="body2"
+                              noWrap
+                              sx={{ maxWidth: 140 }}
+                            >
                               {order.customerName || "Khách vãng lai"}
                             </Typography>
                           </Tooltip>
@@ -547,20 +687,29 @@ const StaffDashboard = () => {
                         <TableCell>
                           <Chip
                             size="small"
-                            label={order.type === "Online" ? "Online" : "Tại quầy"}
+                            label={
+                              order.type === "Online" ? "Online" : "Tại quầy"
+                            }
                             variant="outlined"
                           />
                         </TableCell>
                         <TableCell>
                           <Chip
                             size="small"
-                            color={ORDER_STATUS_COLOR[order.status ?? ""] ?? "default"}
-                            label={ORDER_STATUS_LABEL[order.status ?? ""] ?? order.status}
+                            color={
+                              ORDER_STATUS_COLOR[order.status ?? ""] ??
+                              "default"
+                            }
+                            label={
+                              ORDER_STATUS_LABEL[order.status ?? ""] ??
+                              order.status
+                            }
                           />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
-                            {PAYMENT_STATUS_LABEL[order.paymentStatus ?? ""] ?? order.paymentStatus}
+                            {PAYMENT_STATUS_LABEL[order.paymentStatus ?? ""] ??
+                              order.paymentStatus}
                           </Typography>
                         </TableCell>
                         <TableCell align="right">
@@ -571,12 +720,15 @@ const StaffDashboard = () => {
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
                             {order.createdAt
-                              ? new Date(order.createdAt).toLocaleString("vi-VN", {
-                                  day: "2-digit",
-                                  month: "2-digit",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
+                              ? new Date(order.createdAt).toLocaleString(
+                                  "vi-VN",
+                                  {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )
                               : "—"}
                           </Typography>
                         </TableCell>

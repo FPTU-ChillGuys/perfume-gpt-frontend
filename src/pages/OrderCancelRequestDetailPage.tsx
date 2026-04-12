@@ -577,7 +577,15 @@ export const OrderCancelRequestDetailPage = () => {
                       {formatDateTime(selected.createdAt)}
                     </Typography>
                   </Box>
-                  <Box>
+                  {selected.updatedAt && selected.status !== "Pending" && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Ngày xử lý
+                      </Typography>
+                      <Typography>{formatDate(selected.updatedAt)}</Typography>
+                    </Box>
+                  )}
+                  {/* <Box>
                     <Typography variant="caption" color="text.secondary">
                       Trạng thái
                     </Typography>
@@ -588,33 +596,45 @@ export const OrderCancelRequestDetailPage = () => {
                         size="small"
                       />
                     </Box>
-                  </Box>
-                </Box>
+                  </Box> */}
 
-                <Box mt={2}>
-                  <Typography variant="caption" color="text.secondary">
-                    Lý do hủy
-                  </Typography>
-                  <Typography>{cancelReasonLabel(selected.reason)}</Typography>
+                  <Box
+                    sx={
+                      selected.updatedAt && selected.status !== "Pending"
+                        ? { mt: 2 }
+                        : {}
+                    }
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Lý do hủy
+                    </Typography>
+                    <Typography>
+                      {cancelReasonLabel(selected.reason)}
+                    </Typography>
+                  </Box>
+
+                  {selected.isRefundRequired &&
+                    selected.refundAmount != null && (
+                      <Box mt={2}>
+                        <Typography variant="caption" color="text.secondary">
+                          Số tiền hoàn
+                        </Typography>
+                        <Typography fontWeight={700} sx={{ color: "#16a34a" }}>
+                          {formatCurrency(selected.refundAmount)}
+                        </Typography>
+                      </Box>
+                    )}
+
+                  {selected.staffNote && (
+                    <Box mt={2}>
+                      <Typography variant="caption" color="text.secondary">
+                        Ghi chú xử lý
+                      </Typography>
+                      <Typography>{selected.staffNote}</Typography>
+                    </Box>
+                  )}
                 </Box>
               </Box>
-
-              {selected.staffNote && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Ghi chú xử lý
-                  </Typography>
-                  <Typography>{selected.staffNote}</Typography>
-                </Box>
-              )}
-              {selected.updatedAt && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Ngày xử lý
-                  </Typography>
-                  <Typography>{formatDate(selected.updatedAt)}</Typography>
-                </Box>
-              )}
 
               <Divider />
 
@@ -1191,40 +1211,57 @@ export const OrderCancelRequestDetailPage = () => {
         </DialogActions>
       </Dialog>
 
-      {!isLoading && selected?.status === "Pending" && (
-        <Box
-          sx={{
-            position: "sticky",
-            bottom: 0,
-            mt: 2,
-            bgcolor: "background.paper",
-            borderTop: "1px solid",
-            borderColor: "divider",
-            px: 2,
-            py: 1.5,
-            zIndex: 2,
-          }}
-        >
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => setRejectDialogOpen(true)}
-              disabled={isSaving}
+      {!isLoading &&
+        selected?.status === "Pending" &&
+        (() => {
+          const isStaff = location.pathname.startsWith("/staff");
+          const staffCannotProcess = isStaff && selected?.isRefundRequired;
+          const staffTooltip =
+            "Yêu cầu này cần hoàn tiền, chỉ Admin mới có thể xử lý";
+
+          return (
+            <Box
+              sx={{
+                position: "sticky",
+                bottom: 0,
+                mt: 2,
+                bgcolor: "background.paper",
+                borderTop: "1px solid",
+                borderColor: "divider",
+                px: 2,
+                py: 1.5,
+                zIndex: 2,
+              }}
             >
-              Từ chối
-            </Button>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={handleApproveClick}
-              disabled={isSaving}
-            >
-              Chấp thuận
-            </Button>
-          </Stack>
-        </Box>
-      )}
+              <Stack direction="row" justifyContent="flex-end" spacing={1}>
+                <Tooltip title={staffCannotProcess ? staffTooltip : ""} arrow>
+                  <span>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      onClick={() => setRejectDialogOpen(true)}
+                      disabled={isSaving || !!staffCannotProcess}
+                    >
+                      Từ chối
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title={staffCannotProcess ? staffTooltip : ""} arrow>
+                  <span>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      onClick={handleApproveClick}
+                      disabled={isSaving || !!staffCannotProcess}
+                    >
+                      Chấp thuận
+                    </Button>
+                  </span>
+                </Tooltip>
+              </Stack>
+            </Box>
+          );
+        })()}
     </AdminLayout>
   );
 };
