@@ -109,7 +109,7 @@ const CARRIER_LABELS: Record<CarrierName, string> = {
   GHTK: "Giao Hàng Tiết Kiệm",
 };
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Thanh toán tiền mặt tại quầy",
   VnPay: "Thanh toán qua VNPay",
@@ -118,7 +118,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   PayOs: "Thanh toán qua PayOS",
 };
 
-const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_ICONS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: codIcon,
   CashInStore: storeIcon,
   VnPay: vnpayIcon,
@@ -127,7 +127,7 @@ const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
   PayOs: transericon,
 };
 
-const RETRY_PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
+const RETRY_PAYMENT_METHOD_OPTIONS: NonNullable<PaymentMethod>[] = [
   "CashOnDelivery",
   "CashInStore",
   "VnPay",
@@ -659,7 +659,7 @@ export const MyOrderDetailPage = () => {
     useState(false);
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
   const [selectedRetryPaymentMethod, setSelectedRetryPaymentMethod] =
-    useState<PaymentMethod>("CashOnDelivery");
+    useState<NonNullable<PaymentMethod>>("CashOnDelivery");
 
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [returnReason, setReturnReason] = useState<ReturnOrderReason | "">("");
@@ -2703,7 +2703,7 @@ export const MyOrderDetailPage = () => {
             <RadioGroup
               value={selectedRetryPaymentMethod}
               onChange={(e) =>
-                setSelectedRetryPaymentMethod(e.target.value as PaymentMethod)
+                setSelectedRetryPaymentMethod(e.target.value as NonNullable<PaymentMethod>)
               }
             >
               {allowedRetryPaymentMethods.map((method) => (

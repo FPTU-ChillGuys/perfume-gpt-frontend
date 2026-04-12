@@ -71,7 +71,7 @@ const formatCurrency = (value?: number | null) => {
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
 };
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Thanh toán tại quầy",
   VnPay: "Thanh toán qua VNPay",
@@ -90,9 +90,9 @@ const cancelReasonLabel = (reason?: string | null) => {
   return matchedReason?.label || reason;
 };
 
-const ONLINE_REFUND_METHODS: PaymentMethod[] = ["VnPay", "Momo"];
+const ONLINE_REFUND_METHODS: NonNullable<PaymentMethod>[] = ["VnPay", "Momo"];
 const REFUND_METHOD_OPTIONS: {
-  value: PaymentMethod;
+  value: NonNullable<PaymentMethod>;
   label: string;
   iconSrc: string;
 }[] = [
@@ -286,8 +286,19 @@ export const OrderCancelRequestDetailPage = () => {
   };
 
   const handleApproveClick = () => {
+    // Không cần hoàn tiền → duyệt trực tiếp
+    if (!selected?.isRefundRequired) {
+      void submitProcessRequest({
+        isApproved: true,
+        staffNote: null,
+        refundMethod: null,
+        manualTransactionReference: null,
+      });
+      return;
+    }
+
     const paymentMethod = resolveOrderPaymentMethod(selectedOrder);
-    const fallbackMethod: PaymentMethod | null =
+    const fallbackMethod: NonNullable<PaymentMethod> =
       paymentMethod && ONLINE_REFUND_METHODS.includes(paymentMethod)
         ? paymentMethod
         : "ExternalBankTransfer";
@@ -340,15 +351,15 @@ export const OrderCancelRequestDetailPage = () => {
     selected?.refundAmount ?? selectedOrder?.totalAmount ?? 0,
   );
   const currentPaymentMethod = resolveOrderPaymentMethod(selectedOrder);
-  const refundMethodOptions: PaymentMethod[] = [
+  const refundMethodOptions: NonNullable<PaymentMethod>[] = [
     ...(currentPaymentMethod &&
     ONLINE_REFUND_METHODS.includes(currentPaymentMethod)
       ? [currentPaymentMethod]
       : []),
-    "ExternalBankTransfer",
+    "ExternalBankTransfer" as const,
   ].filter(
     (method, index, arr) => arr.indexOf(method) === index,
-  ) as PaymentMethod[];
+  ) as NonNullable<PaymentMethod>[];
   const isExternalTransferSelected =
     approveRefundMethod === "ExternalBankTransfer";
   const trimmedApproveManualTransactionReference =
@@ -566,7 +577,15 @@ export const OrderCancelRequestDetailPage = () => {
                       {formatDateTime(selected.createdAt)}
                     </Typography>
                   </Box>
-                  <Box>
+                  {selected.updatedAt && selected.status !== "Pending" && (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary">
+                        Ngày xử lý
+                      </Typography>
+                      <Typography>{formatDate(selected.updatedAt)}</Typography>
+                    </Box>
+                  )}
+                  {/* <Box>
                     <Typography variant="caption" color="text.secondary">
                       Trạng thái
                     </Typography>
@@ -577,33 +596,45 @@ export const OrderCancelRequestDetailPage = () => {
                         size="small"
                       />
                     </Box>
-                  </Box>
-                </Box>
+                  </Box> */}
 
-                <Box mt={2}>
-                  <Typography variant="caption" color="text.secondary">
-                    Lý do hủy
-                  </Typography>
-                  <Typography>{cancelReasonLabel(selected.reason)}</Typography>
+                  <Box
+                    sx={
+                      selected.updatedAt && selected.status !== "Pending"
+                        ? { mt: 2 }
+                        : {}
+                    }
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      Lý do hủy
+                    </Typography>
+                    <Typography>
+                      {cancelReasonLabel(selected.reason)}
+                    </Typography>
+                  </Box>
+
+                  {selected.isRefundRequired &&
+                    selected.refundAmount != null && (
+                      <Box mt={2}>
+                        <Typography variant="caption" color="text.secondary">
+                          Số tiền hoàn
+                        </Typography>
+                        <Typography fontWeight={700} sx={{ color: "#16a34a" }}>
+                          {formatCurrency(selected.refundAmount)}
+                        </Typography>
+                      </Box>
+                    )}
+
+                  {selected.staffNote && (
+                    <Box mt={2}>
+                      <Typography variant="caption" color="text.secondary">
+                        Ghi chú xử lý
+                      </Typography>
+                      <Typography>{selected.staffNote}</Typography>
+                    </Box>
+                  )}
                 </Box>
               </Box>
-
-              {selected.staffNote && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Ghi chú xử lý
-                  </Typography>
-                  <Typography>{selected.staffNote}</Typography>
-                </Box>
-              )}
-              {selected.updatedAt && (
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Ngày xử lý
-                  </Typography>
-                  <Typography>{formatDate(selected.updatedAt)}</Typography>
-                </Box>
-              )}
 
               <Divider />
 
@@ -1180,40 +1211,57 @@ export const OrderCancelRequestDetailPage = () => {
         </DialogActions>
       </Dialog>
 
-      {!isLoading && selected?.status === "Pending" && (
-        <Box
-          sx={{
-            position: "sticky",
-            bottom: 0,
-            mt: 2,
-            bgcolor: "background.paper",
-            borderTop: "1px solid",
-            borderColor: "divider",
-            px: 2,
-            py: 1.5,
-            zIndex: 2,
-          }}
-        >
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => setRejectDialogOpen(true)}
-              disabled={isSaving}
+      {!isLoading &&
+        selected?.status === "Pending" &&
+        (() => {
+          const isStaff = location.pathname.startsWith("/staff");
+          const staffCannotProcess = isStaff && selected?.isRefundRequired;
+          const staffTooltip =
+            "Yêu cầu này cần hoàn tiền, chỉ Admin mới có thể xử lý";
+
+          return (
+            <Box
+              sx={{
+                position: "sticky",
+                bottom: 0,
+                mt: 2,
+                bgcolor: "background.paper",
+                borderTop: "1px solid",
+                borderColor: "divider",
+                px: 2,
+                py: 1.5,
+                zIndex: 2,
+              }}
             >
-              Từ chối
-            </Button>
-            <Button
-              variant="contained"
-              color="success"
-              onClick={handleApproveClick}
-              disabled={isSaving}
-            >
-              Chấp thuận
-            </Button>
-          </Stack>
-        </Box>
-      )}
+              <Stack direction="row" justifyContent="flex-end" spacing={1}>
+                <Tooltip title={staffCannotProcess ? staffTooltip : ""} arrow>
+                  <span>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      onClick={() => setRejectDialogOpen(true)}
+                      disabled={isSaving || !!staffCannotProcess}
+                    >
+                      Từ chối
+                    </Button>
+                  </span>
+                </Tooltip>
+                <Tooltip title={staffCannotProcess ? staffTooltip : ""} arrow>
+                  <span>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      onClick={handleApproveClick}
+                      disabled={isSaving || !!staffCannotProcess}
+                    >
+                      Chấp thuận
+                    </Button>
+                  </span>
+                </Tooltip>
+              </Stack>
+            </Box>
+          );
+        })()}
     </AdminLayout>
   );
 };

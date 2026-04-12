@@ -1,11 +1,4 @@
-import {
-  Fragment,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -42,82 +35,36 @@ import {
 import type { ChipProps } from "@mui/material";
 import {
   Add as AddIcon,
-  Clear as ClearIcon,
   Search as SearchIcon,
   Delete as DeleteIcon,
   SwapHoriz as StatusIcon,
   PlayArrow as PlayArrowIcon,
   Pause as PauseIcon,
+  Settings as SettingsIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { useToast } from "@/hooks/useToast";
 import {
   campaignService,
-  type CampaignPromotionItemResponse,
   type CampaignResponse,
   type CampaignStatus,
   type CampaignType,
   type CreateCampaignRequest,
   type DiscountType,
   type PromotionType,
-  type VoucherType,
-  type UpdateCampaignStatusRequest,
 } from "@/services/campaignService";
 import {
-  inventoryService,
-  type BatchDetailResponse,
-  type StockResponse,
-} from "@/services/inventoryService";
-import { productService } from "@/services/productService";
+  BulkConfigModal,
+  BulkItemSelector,
+  VoucherForm,
+  createEmptyVoucherDraft,
+  type BulkConfigValues,
+  type SelectedCampaignItem,
+  type CampaignVoucherDraft,
+} from "@/components/admin/campaign";
 
 type CampaignStatusTab = "all" | CampaignStatus;
-type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
-type ExpiryDaysFilter = "" | "30" | "60" | "90";
-type CampaignCategoryTab =
-  | "all"
-  | "men"
-  | "women"
-  | "unisex"
-  | "niche"
-  | "giftset";
-
 type PageViewMode = "list" | "create";
-
-type SelectedCampaignItem = {
-  key: string;
-  productVariantId: string;
-  batchId: string | null;
-  productName: string;
-  variantSku: string;
-  variantImageUrl: string | null | undefined;
-  batchCode: string | null;
-  availableQuantity: number;
-  basePrice: number | null;
-  retailPrice: number | null;
-  promotionType: PromotionType;
-  discountType: DiscountType;
-  discountValueInput: string;
-  maxUsageInput: string;
-};
-
-type CampaignVoucherDraft = {
-  key: string;
-  code: string;
-  discountValueInput: string;
-  discountType: DiscountType;
-  applyType: VoucherType;
-  targetItemType: PromotionType | "";
-  maxDiscountAmountInput: string;
-  minOrderValueInput: string;
-  totalQuantityInput: string;
-  maxUsagePerUserInput: string;
-};
-
-type CachedBatchState = {
-  items: BatchDetailResponse[];
-  loading: boolean;
-  error: string | null;
-};
 
 const CAMPAIGN_STATUS_TABS: Array<{ value: CampaignStatusTab; label: string }> =
   [
@@ -150,72 +97,22 @@ const CAMPAIGN_TYPE_LABEL: Record<CampaignType, string> = {
   Clearance: "Xả kho",
 };
 
-const PROMOTION_TYPE_OPTIONS: Array<{ value: PromotionType; label: string }> = [
-  { value: "Clearance", label: "Xả kho" },
-  { value: "NewArrival", label: "Hàng mới về" },
-  { value: "Regular", label: "Thông thường" },
-];
-
 const PROMOTION_TYPE_LABEL: Record<PromotionType, string> = {
   Clearance: "Xả kho",
   NewArrival: "Hàng mới về",
   Regular: "Thông thường",
 };
 
+const PROMOTION_TYPE_OPTIONS: Array<{ value: PromotionType; label: string }> = [
+  { value: "Clearance", label: "Xả kho" },
+  { value: "NewArrival", label: "Hàng mới về" },
+  { value: "Regular", label: "Thông thường" },
+];
+
 const DISCOUNT_TYPE_OPTIONS: Array<{ value: DiscountType; label: string }> = [
   { value: "Percentage", label: "Phần trăm (%)" },
   { value: "FixedAmount", label: "Số tiền cố định" },
 ];
-
-const VOUCHER_APPLY_TYPE_OPTIONS: Array<{ value: VoucherType; label: string }> =
-  [
-    { value: "Product", label: "Theo sản phẩm" },
-    { value: "Order", label: "Theo đơn hàng" },
-  ];
-
-const createEmptyVoucherDraft = (): CampaignVoucherDraft => ({
-  key: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  code: "",
-  discountValueInput: "",
-  discountType: "Percentage",
-  applyType: "Product",
-  targetItemType: "Regular",
-  maxDiscountAmountInput: "",
-  minOrderValueInput: "0",
-  totalQuantityInput: "",
-  maxUsagePerUserInput: "1",
-});
-
-const INVENTORY_CATEGORY_TAB_ITEMS: Array<{
-  key: CampaignCategoryTab;
-  label: string;
-}> = [
-  { key: "all", label: "Tất cả" },
-  { key: "men", label: "Nước hoa Nam" },
-  { key: "women", label: "Nước hoa Nữ" },
-  { key: "unisex", label: "Unisex" },
-  { key: "niche", label: "Niche" },
-  { key: "giftset", label: "Giftset" },
-];
-
-const INVENTORY_CATEGORY_ID_BY_TAB: Record<
-  Exclude<CampaignCategoryTab, "all">,
-  number
-> = {
-  women: 1,
-  men: 2,
-  unisex: 3,
-  niche: 4,
-  giftset: 5,
-};
-
-const EXPIRY_FILTER_OPTIONS: Array<{ value: ExpiryDaysFilter; label: string }> =
-  [
-    { value: "", label: "Tất cả hạn dùng" },
-    { value: "30", label: "Sắp hết hạn <= 30 ngày" },
-    { value: "60", label: "Sắp hết hạn <= 60 ngày" },
-    { value: "90", label: "Sắp hết hạn <= 90 ngày" },
-  ];
 
 const formatDateTime = (value?: string | null) => {
   if (!value) {
@@ -226,17 +123,6 @@ const formatDateTime = (value?: string | null) => {
   const date = new Date(value);
   date.setHours(date.getHours() + 7);
   return date.toLocaleString("vi-VN");
-};
-
-const formatDate = (value?: string | null) => {
-  if (!value) {
-    return "N/A";
-  }
-
-  // Backend stores in UTC, add 7 hours to display in Vietnam time (UTC+7)
-  const date = new Date(value);
-  date.setHours(date.getHours() + 7);
-  return date.toLocaleDateString("vi-VN");
 };
 
 const DEFAULT_END_TIME = "23:59";
@@ -262,41 +148,6 @@ const toLocalDateTime = (
   const minutes = String(localDate.getMinutes()).padStart(2, "0");
 
   return `${year}-${month}-${day}T${hours}:${minutes}:00${withFraction ? ".00" : ""}`;
-};
-
-const resolveCategoryIdByTab = (tab: CampaignCategoryTab) => {
-  if (tab === "all") {
-    return undefined;
-  }
-
-  return INVENTORY_CATEGORY_ID_BY_TAB[tab];
-};
-
-const getStockStatusDisplay = (stock: StockResponse) => {
-  if (stock.status === "OutOfStock") {
-    return { label: "Hết hàng", color: "error" as const };
-  }
-
-  if (stock.status === "LowStock") {
-    return { label: "Sắp hết", color: "warning" as const };
-  }
-
-  return { label: "Bình thường", color: "success" as const };
-};
-
-// Helper functions for Vietnamese number formatting
-const formatNumberVN = (value: string): string => {
-  // Remove all non-digit characters
-  const digitsOnly = value.replace(/\D/g, "");
-  if (!digitsOnly) return "";
-
-  // Format with thousand separators (dots)
-  return Number(digitsOnly).toLocaleString("vi-VN");
-};
-
-const parseNumberVN = (value: string): string => {
-  // Remove all dots (thousand separators) to get raw digits
-  return value.replace(/\./g, "");
 };
 
 export const CampaignManagementPage = () => {
@@ -347,30 +198,10 @@ export const CampaignManagementPage = () => {
     endTime: DEFAULT_END_TIME,
   });
   const [isEndTimeManuallyEdited, setIsEndTimeManuallyEdited] = useState(false);
-
-  const [stockList, setStockList] = useState<StockResponse[]>([]);
-  const [stockLoading, setStockLoading] = useState(false);
-  const [stockError, setStockError] = useState<string | null>(null);
-  const [stockPage, setStockPage] = useState(0);
-  const [stockRowsPerPage, setStockRowsPerPage] = useState(10);
-  const [stockTotalCount, setStockTotalCount] = useState(0);
-  const [stockSearchInput, setStockSearchInput] = useState("");
-  const [stockSearchValue, setStockSearchValue] = useState("");
-  const [stockStatusFilter, setStockStatusFilter] =
-    useState<StockStatusFilter>("");
-  const [expiryDaysFilter, setExpiryDaysFilter] =
-    useState<ExpiryDaysFilter>("");
-  const [selectedCategoryTab, setSelectedCategoryTab] =
-    useState<CampaignCategoryTab>("all");
-
-  const [batchByVariantId, setBatchByVariantId] = useState<
-    Record<string, CachedBatchState>
-  >({});
-
-  const [variantPricesCache, setVariantPricesCache] = useState<
-    Record<string, { basePrice: number | null; retailPrice: number | null }>
-  >({});
-  const loadedPriceVariantIds = useRef<Set<string>>(new Set());
+  const [selectedItemsTab, setSelectedItemsTab] = useState<
+    "all" | "product" | "batch"
+  >("all");
+  const [bulkEditModalOpen, setBulkEditModalOpen] = useState(false);
 
   const [selectedItems, setSelectedItems] = useState<SelectedCampaignItem[]>(
     [],
@@ -419,145 +250,6 @@ export const CampaignManagementPage = () => {
 
   const isCreateView = pageView === "create";
 
-  const loadStocks = useCallback(async () => {
-    if (!isCreateView) {
-      return;
-    }
-
-    const selectedCategoryId = resolveCategoryIdByTab(selectedCategoryTab);
-
-    try {
-      setStockLoading(true);
-      setStockError(null);
-
-      const baseQuery: {
-        CategoryId?: number;
-        StockStatus?: NonNullable<StockResponse["status"]>;
-        DaysUntilExpiry?: number;
-        PageNumber: number;
-        PageSize: number;
-        SortBy: string;
-        SortOrder: string;
-      } = {
-        PageNumber: stockPage + 1,
-        PageSize: stockRowsPerPage,
-        SortBy: "ProductName",
-        SortOrder: "asc",
-      };
-
-      if (stockStatusFilter) {
-        baseQuery.StockStatus = stockStatusFilter;
-      }
-
-      if (selectedCategoryId) {
-        baseQuery.CategoryId = selectedCategoryId;
-      }
-
-      if (expiryDaysFilter) {
-        baseQuery.DaysUntilExpiry = Number(expiryDaysFilter);
-      }
-
-      const normalizedSearch = stockSearchValue.trim();
-
-      if (!normalizedSearch) {
-        const response = await inventoryService.getStock(baseQuery);
-        setStockList(response.items || []);
-        setStockTotalCount(response.totalCount || 0);
-        return;
-      }
-
-      const bySku = await inventoryService.getStock({
-        ...baseQuery,
-        SKU: normalizedSearch,
-      });
-
-      if ((bySku.items || []).length > 0) {
-        setStockList(bySku.items || []);
-        setStockTotalCount(bySku.totalCount || 0);
-        return;
-      }
-
-      const byBatchCode = await inventoryService.getStock({
-        ...baseQuery,
-        BatchCode: normalizedSearch,
-      });
-
-      setStockList(byBatchCode.items || []);
-      setStockTotalCount(byBatchCode.totalCount || 0);
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể tải danh sách tồn kho";
-      setStockError(message);
-      showToast(message, "error");
-    } finally {
-      setStockLoading(false);
-    }
-  }, [
-    isCreateView,
-    expiryDaysFilter,
-    selectedCategoryTab,
-    showToast,
-    stockPage,
-    stockRowsPerPage,
-    stockSearchValue,
-    stockStatusFilter,
-  ]);
-
-  useEffect(() => {
-    if (!isCreateView) {
-      return;
-    }
-
-    void loadStocks();
-  }, [isCreateView, loadStocks]);
-
-  // Load variant prices when stock list changes
-  useEffect(() => {
-    if (stockList.length === 0) return;
-
-    const variantIds = stockList
-      .map((s) => s.variantId)
-      .filter((id): id is string => Boolean(id))
-      .filter((id) => !loadedPriceVariantIds.current.has(id));
-
-    if (variantIds.length === 0) return;
-
-    // Mark as loading to prevent duplicate requests
-    variantIds.forEach((id) => loadedPriceVariantIds.current.add(id));
-
-    const loadPrices = async () => {
-      const results = await Promise.all(
-        variantIds.map(async (variantId) => {
-          try {
-            const variant = await productService.getVariantById(variantId);
-            return {
-              variantId,
-              basePrice: variant.basePrice ?? null,
-              retailPrice: variant.retailPrice ?? null,
-            };
-          } catch {
-            return { variantId, basePrice: null, retailPrice: null };
-          }
-        }),
-      );
-
-      setVariantPricesCache((prev) => {
-        const newCache = { ...prev };
-        results.forEach((r) => {
-          newCache[r.variantId] = {
-            basePrice: r.basePrice,
-            retailPrice: r.retailPrice,
-          };
-        });
-        return newCache;
-      });
-    };
-
-    void loadPrices();
-  }, [stockList]);
-
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const normalizedValue = campaignSearchInput.trim();
@@ -569,18 +261,6 @@ export const CampaignManagementPage = () => {
 
     return () => window.clearTimeout(timer);
   }, [campaignSearchInput]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const normalizedValue = stockSearchInput.trim();
-      setStockSearchValue((currentValue) =>
-        currentValue === normalizedValue ? currentValue : normalizedValue,
-      );
-      setStockPage((currentPage) => (currentPage === 0 ? currentPage : 0));
-    }, 300);
-
-    return () => window.clearTimeout(timer);
-  }, [stockSearchInput]);
 
   const handleOpenCreateDialog = () => {
     setCreateForm({
@@ -594,301 +274,22 @@ export const CampaignManagementPage = () => {
     });
     setIsEndTimeManuallyEdited(false);
     setSelectedItems([]);
-    setStockPage(0);
-    setStockRowsPerPage(10);
-    setStockSearchInput("");
-    setStockSearchValue("");
-    setStockStatusFilter("");
-    setExpiryDaysFilter("");
-    setSelectedCategoryTab("all");
-    setBatchByVariantId({});
     setCampaignVouchers([createEmptyVoucherDraft()]);
     setPageView("create");
-  };
-
-  const addCampaignVoucher = () => {
-    setCampaignVouchers((current) => [...current, createEmptyVoucherDraft()]);
-  };
-
-  const removeCampaignVoucher = (key: string) => {
-    setCampaignVouchers((current) => {
-      const next = current.filter((voucher) => voucher.key !== key);
-      return next.length > 0 ? next : [createEmptyVoucherDraft()];
-    });
-  };
-
-  const handleVoucherFieldChange = <K extends keyof CampaignVoucherDraft>(
-    key: string,
-    field: K,
-    value: CampaignVoucherDraft[K],
-  ) => {
-    setCampaignVouchers((current) =>
-      current.map((voucher) => {
-        if (voucher.key !== key) {
-          return voucher;
-        }
-
-        if (field === "applyType") {
-          const nextApplyType = value as VoucherType;
-          return {
-            ...voucher,
-            applyType: nextApplyType,
-            targetItemType:
-              nextApplyType === "Product"
-                ? voucher.targetItemType || "Regular"
-                : "",
-          };
-        }
-
-        return {
-          ...voucher,
-          [field]: value,
-        };
-      }),
-    );
-  };
-
-  const loadBatchesByVariantId = useCallback(async (variantId: string) => {
-    setBatchByVariantId((current) => ({
-      ...current,
-      [variantId]: {
-        items: current[variantId]?.items || [],
-        loading: true,
-        error: null,
-      },
-    }));
-
-    try {
-      const response = await inventoryService.getBatchesByVariant(variantId);
-
-      setBatchByVariantId((current) => ({
-        ...current,
-        [variantId]: {
-          items: response,
-          loading: false,
-          error: null,
-        },
-      }));
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Không thể tải danh sách lô";
-      setBatchByVariantId((current) => ({
-        ...current,
-        [variantId]: {
-          items: [],
-          loading: false,
-          error: message,
-        },
-      }));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isCreateView || stockLoading) {
-      return;
-    }
-
-    const visibleVariantIds = stockList
-      .map((stock) => stock.variantId)
-      .filter((variantId): variantId is string => Boolean(variantId));
-
-    visibleVariantIds.forEach((variantId) => {
-      if (!batchByVariantId[variantId]) {
-        void loadBatchesByVariantId(variantId);
-      }
-    });
-  }, [
-    batchByVariantId,
-    isCreateView,
-    loadBatchesByVariantId,
-    stockList,
-    stockLoading,
-  ]);
-
-  const addVariantItem = async (stock: StockResponse) => {
-    const variantId = stock.variantId;
-    if (!variantId) {
-      showToast("Variant không hợp lệ", "warning");
-      return;
-    }
-
-    const itemKey = `${variantId}-all`;
-
-    // Check if already added
-    if (selectedItems.some((item) => item.key === itemKey)) {
-      showToast("Sản phẩm đã được thêm", "warning");
-      return;
-    }
-
-    // Use cached price or fetch if not available
-    let basePrice: number | null = null;
-    let retailPrice: number | null = null;
-    const cachedPrice = variantPricesCache[variantId];
-    if (cachedPrice) {
-      basePrice = cachedPrice.basePrice;
-      retailPrice = cachedPrice.retailPrice;
-    } else {
-      try {
-        const variant = await productService.getVariantById(variantId);
-        basePrice = variant.basePrice ?? null;
-        retailPrice = variant.retailPrice ?? null;
-      } catch {
-        // Continue without price if fetch fails
-      }
-    }
-
-    setSelectedItems((current) => {
-      if (current.some((item) => item.key === itemKey)) {
-        return current;
-      }
-
-      return [
-        ...current,
-        {
-          key: itemKey,
-          productVariantId: variantId,
-          batchId: null,
-          productName: stock.productName || "N/A",
-          variantSku: stock.variantSku || "N/A",
-          variantImageUrl: stock.variantImageUrl,
-          batchCode: null,
-          availableQuantity: stock.availableQuantity ?? 0,
-          basePrice,
-          retailPrice,
-          promotionType: "Clearance",
-          discountType: "Percentage",
-          discountValueInput: "",
-          maxUsageInput: "1",
-        },
-      ];
-    });
-  };
-
-  const addBatchItem = async (
-    stock: StockResponse,
-    batch: BatchDetailResponse,
-  ) => {
-    const variantId = stock.variantId;
-    const batchId = batch.id;
-
-    if (!variantId || !batchId) {
-      showToast("Batch hoặc Variant không hợp lệ", "warning");
-      return;
-    }
-
-    const itemKey = `${variantId}-${batchId}`;
-
-    // Check if already added
-    if (selectedItems.some((item) => item.key === itemKey)) {
-      showToast("Lô đã được thêm", "warning");
-      return;
-    }
-
-    // Use cached price or fetch if not available
-    let basePrice: number | null = null;
-    let retailPrice: number | null = null;
-    const cachedPrice = variantPricesCache[variantId];
-    if (cachedPrice) {
-      basePrice = cachedPrice.basePrice;
-      retailPrice = cachedPrice.retailPrice;
-    } else {
-      try {
-        const variant = await productService.getVariantById(variantId);
-        basePrice = variant.basePrice ?? null;
-        retailPrice = variant.retailPrice ?? null;
-      } catch {
-        // Continue without price if fetch fails
-      }
-    }
-
-    setSelectedItems((current) => {
-      if (current.some((item) => item.key === itemKey)) {
-        return current;
-      }
-
-      return [
-        ...current,
-        {
-          key: itemKey,
-          productVariantId: variantId,
-          batchId,
-          productName: stock.productName || batch.productName || "N/A",
-          variantSku: stock.variantSku || batch.variantSku || "N/A",
-          variantImageUrl: stock.variantImageUrl,
-          batchCode: batch.batchCode || "N/A",
-          availableQuantity: batch.remainingQuantity ?? 0,
-          basePrice,
-          retailPrice,
-          promotionType: "Clearance",
-          discountType: "Percentage",
-          discountValueInput: "",
-          maxUsageInput: "",
-        },
-      ];
-    });
   };
 
   const removeSelectedItem = (key: string) => {
     setSelectedItems((current) => current.filter((item) => item.key !== key));
   };
 
-  const handleSelectedMaxUsageChange = (key: string, value: string) => {
-    if (!/^\d*$/.test(value)) {
-      return;
-    }
-
-    setSelectedItems((current) =>
-      current.map((item) =>
-        item.key === key ? { ...item, maxUsageInput: value } : item,
-      ),
-    );
-  };
-
-  const handleSelectedPromotionTypeChange = (
+  const handleSelectedItemFieldChange = (
     key: string,
-    promotionType: PromotionType,
-  ) => {
-    setSelectedItems((current) =>
-      current.map((item) =>
-        item.key === key ? { ...item, promotionType } : item,
-      ),
-    );
-  };
-
-  const handleSelectedDiscountTypeChange = (
-    key: string,
-    discountType: DiscountType,
-  ) => {
-    setSelectedItems((current) =>
-      current.map((item) =>
-        item.key === key ? { ...item, discountType } : item,
-      ),
-    );
-  };
-
-  const handleSelectedDiscountValueChange = (
-    key: string,
+    field: keyof SelectedCampaignItem,
     value: string,
-    discountType: DiscountType,
   ) => {
-    // For percentage, allow decimal; for fixed amount, digits only
-    if (discountType === "Percentage") {
-      if (!/^\d*([.,]\d{0,2})?$/.test(value)) {
-        return;
-      }
-    } else {
-      // For FixedAmount, remove formatting first then validate
-      const parsed = parseNumberVN(value);
-      if (!/^\d*$/.test(parsed)) {
-        return;
-      }
-      // Store the raw digits
-      value = parsed;
-    }
-
     setSelectedItems((current) =>
       current.map((item) =>
-        item.key === key ? { ...item, discountValueInput: value } : item,
+        item.key === key ? { ...item, [field]: value } : item,
       ),
     );
   };
@@ -896,7 +297,6 @@ export const CampaignManagementPage = () => {
   const selectedSummary = useMemo(() => {
     const batchItems = selectedItems.filter((item) => item.batchId);
     const productItems = selectedItems.filter((item) => !item.batchId);
-
     return {
       total: selectedItems.length,
       batchCount: batchItems.length,
@@ -904,15 +304,36 @@ export const CampaignManagementPage = () => {
     };
   }, [selectedItems]);
 
+  const filteredSelectedItems = useMemo(() => {
+    if (selectedItemsTab === "product")
+      return selectedItems.filter((item) => !item.batchId);
+    if (selectedItemsTab === "batch")
+      return selectedItems.filter((item) => Boolean(item.batchId));
+    return selectedItems;
+  }, [selectedItems, selectedItemsTab]);
+
   const selectedPromotionTypes = useMemo(() => {
     const typeSet = new Set<PromotionType>();
-
-    selectedItems.forEach((item) => {
-      typeSet.add(item.promotionType);
-    });
-
+    selectedItems.forEach((item) => typeSet.add(item.promotionType));
     return Array.from(typeSet);
   }, [selectedItems]);
+
+  const handleBulkEditApply = (config: BulkConfigValues) => {
+    const targetKeys = new Set(filteredSelectedItems.map((item) => item.key));
+    setSelectedItems((current) =>
+      current.map((item) => {
+        if (!targetKeys.has(item.key)) return item;
+        return {
+          ...item,
+          promotionType: config.promotionType,
+          discountType: config.discountType,
+          discountValueInput: config.discountValue,
+          maxUsageInput: item.batchId ? item.maxUsageInput : config.maxUsage,
+        };
+      }),
+    );
+    setBulkEditModalOpen(false);
+  };
 
   const handleCreateCampaign = async () => {
     const name = createForm.name.trim();
@@ -1025,9 +446,10 @@ export const CampaignManagementPage = () => {
       const totalQuantity = voucher.totalQuantityInput.trim()
         ? Number(voucher.totalQuantityInput)
         : null;
-      const maxUsagePerUser = voucher.maxUsagePerUserInput.trim()
-        ? Number(voucher.maxUsagePerUserInput)
-        : null;
+      const maxUsagePerUser =
+        voucher.isMemberOnly && voucher.maxUsagePerUserInput.trim()
+          ? Number(voucher.maxUsagePerUserInput)
+          : null;
 
       // Skip voucher with empty code (voucher is optional)
       if (!code) {
@@ -1131,6 +553,7 @@ export const CampaignManagementPage = () => {
         maxDiscountAmount,
         totalQuantity,
         maxUsagePerUser,
+        isMemberOnly: voucher.isMemberOnly,
       });
     }
 
@@ -1593,6 +1016,7 @@ export const CampaignManagementPage = () => {
                 height: "calc(100% - 64px)",
               }}
             >
+              {/* Left panel: Stock selector with checkboxes */}
               <Paper
                 variant="outlined"
                 sx={{
@@ -1603,466 +1027,13 @@ export const CampaignManagementPage = () => {
                   height: "100%",
                 }}
               >
-                <Stack spacing={2} sx={{ minHeight: 0, flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight={700}>
-                    Chọn hàng / lô để thêm vào chiến lược khuyến mãi
-                  </Typography>
-
-                  <Paper variant="outlined">
-                    <Tabs
-                      value={selectedCategoryTab}
-                      onChange={(_, nextValue: CampaignCategoryTab) => {
-                        setSelectedCategoryTab(nextValue);
-                        setStockPage(0);
-                      }}
-                      variant="scrollable"
-                      scrollButtons="auto"
-                      allowScrollButtonsMobile
-                    >
-                      {INVENTORY_CATEGORY_TAB_ITEMS.map((tab) => (
-                        <Tab key={tab.key} value={tab.key} label={tab.label} />
-                      ))}
-                    </Tabs>
-                  </Paper>
-
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gap: 1.5,
-                      gridTemplateColumns: {
-                        xs: "1fr",
-                        md: "1.3fr 1fr 1fr auto",
-                      },
-                    }}
-                  >
-                    <TextField
-                      label="SKU / Batch code"
-                      value={stockSearchInput}
-                      onChange={(event) =>
-                        setStockSearchInput(event.target.value)
-                      }
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          setStockSearchValue(stockSearchInput.trim());
-                          setStockPage(0);
-                        }
-                      }}
-                      InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              edge="end"
-                              onClick={() => {
-                                setStockSearchValue(stockSearchInput.trim());
-                                setStockPage(0);
-                              }}
-                            >
-                              <SearchIcon />
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-
-                    <FormControl fullWidth>
-                      <InputLabel>Trạng thái</InputLabel>
-                      <Select
-                        value={stockStatusFilter}
-                        label="Trạng thái"
-                        onChange={(event) => {
-                          setStockStatusFilter(
-                            event.target.value as StockStatusFilter,
-                          );
-                          setStockPage(0);
-                        }}
-                      >
-                        <MenuItem value="">Tất cả</MenuItem>
-                        <MenuItem value="OutOfStock">Hết hàng</MenuItem>
-                        <MenuItem value="LowStock">Sắp hết</MenuItem>
-                        <MenuItem value="Normal">Bình thường</MenuItem>
-                      </Select>
-                    </FormControl>
-
-                    <FormControl fullWidth>
-                      <InputLabel>Hạn dùng</InputLabel>
-                      <Select
-                        value={expiryDaysFilter}
-                        label="Hạn dùng"
-                        onChange={(event) => {
-                          setExpiryDaysFilter(
-                            event.target.value as ExpiryDaysFilter,
-                          );
-                          setStockPage(0);
-                        }}
-                      >
-                        {EXPIRY_FILTER_OPTIONS.map((option) => (
-                          <MenuItem
-                            key={option.value || "all-expiry"}
-                            value={option.value}
-                          >
-                            {option.label}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-
-                    <Button
-                      variant="outlined"
-                      startIcon={<ClearIcon />}
-                      onClick={() => {
-                        setStockSearchInput("");
-                        setStockSearchValue("");
-                        setStockStatusFilter("");
-                        setExpiryDaysFilter("");
-                        setSelectedCategoryTab("all");
-                        setStockPage(0);
-                      }}
-                      sx={{ height: 56 }}
-                    >
-                      Xóa lọc
-                    </Button>
-                  </Box>
-
-                  <TableContainer
-                    component={Paper}
-                    variant="outlined"
-                    sx={{
-                      minHeight: 0,
-                      flex: 1,
-                      overflowY: "auto",
-                    }}
-                  >
-                    <Table size="small" stickyHeader>
-                      <TableHead>
-                        <TableRow sx={{ bgcolor: "grey.50" }}>
-                          <TableCell sx={{ width: 56, minWidth: 56 }}>
-                            Ảnh
-                          </TableCell>
-                          <TableCell sx={{ minWidth: 160 }}>Sản phẩm</TableCell>
-                          <TableCell sx={{ minWidth: 120 }}>SKU</TableCell>
-                          <TableCell align="right" sx={{ minWidth: 100 }}>
-                            Giá
-                          </TableCell>
-                          <TableCell align="right" sx={{ minWidth: 70 }}>
-                            Khả dụng
-                          </TableCell>
-                          <TableCell align="center" sx={{ minWidth: 90 }}>
-                            Trạng thái
-                          </TableCell>
-                          <TableCell align="center" sx={{ width: 56 }}>
-                            Thêm
-                          </TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {stockLoading ? (
-                          <TableRow>
-                            <TableCell
-                              colSpan={7}
-                              align="center"
-                              sx={{ py: 4 }}
-                            >
-                              <CircularProgress size={28} />
-                            </TableCell>
-                          </TableRow>
-                        ) : stockError ? (
-                          <TableRow>
-                            <TableCell colSpan={7}>
-                              <Alert severity="error">{stockError}</Alert>
-                            </TableCell>
-                          </TableRow>
-                        ) : stockList.length === 0 ? (
-                          <TableRow>
-                            <TableCell
-                              colSpan={7}
-                              align="center"
-                              sx={{ py: 4 }}
-                            >
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                Không có dữ liệu tồn kho phù hợp.
-                              </Typography>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          stockList.map((stock) => {
-                            const variantId = stock.variantId || "";
-                            const batchState = variantId
-                              ? batchByVariantId[variantId]
-                              : undefined;
-                            const stockStatus = getStockStatusDisplay(stock);
-
-                            return (
-                              <Fragment key={stock.id || variantId}>
-                                <TableRow hover>
-                                  <TableCell sx={{ py: 1 }}>
-                                    <Avatar
-                                      src={stock.variantImageUrl}
-                                      alt={stock.productName || "Product"}
-                                      variant="rounded"
-                                      sx={{ width: 40, height: 40 }}
-                                    />
-                                  </TableCell>
-                                  <TableCell>
-                                    <Typography
-                                      fontWeight={600}
-                                      sx={{
-                                        fontSize: "0.875rem",
-                                        lineHeight: 1.3,
-                                      }}
-                                    >
-                                      {stock.productName || "N/A"}
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      sx={{ display: "block" }}
-                                    >
-                                      {stock.volumeMl
-                                        ? `${stock.volumeMl}ml`
-                                        : ""}
-                                      {stock.volumeMl && stock.concentrationName
-                                        ? " • "
-                                        : ""}
-                                      {stock.concentrationName || ""}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Typography variant="body2">
-                                      {stock.variantSku || "N/A"}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell align="right">
-                                    <Typography
-                                      variant="body2"
-                                      color="error.main"
-                                      fontWeight={600}
-                                      sx={{ whiteSpace: "nowrap" }}
-                                    >
-                                      {(() => {
-                                        const cached =
-                                          variantPricesCache[
-                                            stock.variantId || ""
-                                          ];
-                                        if (!cached) return "−";
-                                        const price = cached.basePrice;
-                                        return price != null
-                                          ? `${price.toLocaleString("vi-VN")} ₫`
-                                          : "−";
-                                      })()}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell align="right">
-                                    <Typography variant="body2">
-                                      {stock.availableQuantity ?? 0}
-                                    </Typography>
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <Chip
-                                      size="small"
-                                      color={stockStatus.color}
-                                      label={stockStatus.label}
-                                    />
-                                  </TableCell>
-                                  <TableCell align="center">
-                                    <Tooltip title="Thêm item theo sản phẩm">
-                                      <IconButton
-                                        size="small"
-                                        onClick={() => addVariantItem(stock)}
-                                        sx={{
-                                          bgcolor: "primary.main",
-                                          color: "primary.contrastText",
-                                          borderRadius: 1.5,
-                                          "&:hover": {
-                                            bgcolor: "primary.dark",
-                                          },
-                                        }}
-                                      >
-                                        <AddIcon fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                  </TableCell>
-                                </TableRow>
-
-                                <TableRow>
-                                  <TableCell
-                                    colSpan={7}
-                                    sx={{ bgcolor: "grey.50", py: 1.5 }}
-                                  >
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      sx={{ display: "block", px: 1, mb: 1 }}
-                                    >
-                                      Danh sách lô của SKU{" "}
-                                      {stock.variantSku || "N/A"}
-                                    </Typography>
-                                    {batchState?.loading ? (
-                                      <Stack
-                                        direction="row"
-                                        alignItems="center"
-                                        spacing={1}
-                                        sx={{ px: 1 }}
-                                      >
-                                        <CircularProgress size={18} />
-                                        <Typography
-                                          variant="body2"
-                                          color="text.secondary"
-                                        >
-                                          Đang tải danh sách lô...
-                                        </Typography>
-                                      </Stack>
-                                    ) : batchState?.error ? (
-                                      <Alert severity="error">
-                                        {batchState.error}
-                                      </Alert>
-                                    ) : !batchState ||
-                                      batchState.items.length === 0 ? (
-                                      <Typography
-                                        variant="body2"
-                                        color="text.secondary"
-                                        sx={{ px: 1 }}
-                                      >
-                                        Không có lô nào cho variant này.
-                                      </Typography>
-                                    ) : (
-                                      <TableContainer>
-                                        <Table size="small">
-                                          <TableHead>
-                                            <TableRow>
-                                              <TableCell>Batch code</TableCell>
-                                              <TableCell>NSX - HSD</TableCell>
-                                              <TableCell align="right">
-                                                Còn lại
-                                              </TableCell>
-                                              <TableCell align="center">
-                                                Trạng thái
-                                              </TableCell>
-                                              <TableCell
-                                                align="right"
-                                                sx={{ width: 90 }}
-                                              >
-                                                Thêm
-                                              </TableCell>
-                                            </TableRow>
-                                          </TableHead>
-                                          <TableBody>
-                                            {batchState.items.map((batch) => (
-                                              <TableRow
-                                                key={
-                                                  batch.id ||
-                                                  `${variantId}-${batch.batchCode}`
-                                                }
-                                              >
-                                                <TableCell>
-                                                  {batch.batchCode || "N/A"}
-                                                </TableCell>
-                                                <TableCell>
-                                                  <Typography variant="body2">
-                                                    NSX:{" "}
-                                                    {formatDate(
-                                                      batch.manufactureDate,
-                                                    )}
-                                                  </Typography>
-                                                  <Typography
-                                                    variant="caption"
-                                                    color="text.secondary"
-                                                  >
-                                                    HSD:{" "}
-                                                    {formatDate(
-                                                      batch.expiryDate,
-                                                    )}
-                                                  </Typography>
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                  {batch.remainingQuantity ?? 0}
-                                                </TableCell>
-                                                <TableCell align="center">
-                                                  {batch.isExpired ? (
-                                                    <Chip
-                                                      size="small"
-                                                      color="error"
-                                                      label="Hết hạn"
-                                                    />
-                                                  ) : (batch.daysUntilExpiry ??
-                                                      9999) <= 60 ? (
-                                                    <Chip
-                                                      size="small"
-                                                      color="warning"
-                                                      variant="outlined"
-                                                      label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
-                                                    />
-                                                  ) : (
-                                                    <Chip
-                                                      size="small"
-                                                      color="success"
-                                                      variant="outlined"
-                                                      label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
-                                                    />
-                                                  )}
-                                                </TableCell>
-                                                <TableCell align="right">
-                                                  <Tooltip title="Thêm item theo lô">
-                                                    <IconButton
-                                                      size="small"
-                                                      onClick={() =>
-                                                        addBatchItem(
-                                                          stock,
-                                                          batch,
-                                                        )
-                                                      }
-                                                      sx={{
-                                                        bgcolor: "primary.main",
-                                                        color:
-                                                          "primary.contrastText",
-                                                        borderRadius: 1.5,
-                                                        "&:hover": {
-                                                          bgcolor:
-                                                            "primary.dark",
-                                                        },
-                                                      }}
-                                                    >
-                                                      <AddIcon fontSize="small" />
-                                                    </IconButton>
-                                                  </Tooltip>
-                                                </TableCell>
-                                              </TableRow>
-                                            ))}
-                                          </TableBody>
-                                        </Table>
-                                      </TableContainer>
-                                    )}
-                                  </TableCell>
-                                </TableRow>
-                              </Fragment>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-
-                  <TablePagination
-                    component="div"
-                    count={stockTotalCount}
-                    page={stockPage}
-                    onPageChange={(_, nextPage) => setStockPage(nextPage)}
-                    rowsPerPage={stockRowsPerPage}
-                    onRowsPerPageChange={(event) => {
-                      setStockRowsPerPage(Number(event.target.value));
-                      setStockPage(0);
-                    }}
-                    rowsPerPageOptions={[10, 20, 50]}
-                    labelRowsPerPage="Dòng mỗi trang:"
-                    labelDisplayedRows={({ from, to, count }) =>
-                      `${from}-${to} của ${count}`
-                    }
-                  />
-                </Stack>
+                <BulkItemSelector
+                  selectedItems={selectedItems}
+                  onSelectedItemsChange={setSelectedItems}
+                />
               </Paper>
 
+              {/* Right panel: Campaign info + selected items + vouchers */}
               <Paper
                 variant="outlined"
                 sx={{
@@ -2197,6 +1168,8 @@ export const CampaignManagementPage = () => {
                       fullWidth
                     />
                   </Box>
+
+                  {/* Selected items summary */}
                   <Box>
                     <Stack
                       direction={{ xs: "column", sm: "row" }}
@@ -2206,7 +1179,7 @@ export const CampaignManagementPage = () => {
                       sx={{ mb: 1 }}
                     >
                       <Typography variant="subtitle1" fontWeight={700}>
-                        Sản phẩm đã chọn ({selectedSummary.total})
+                        Sản phẩm đã chọn ({selectedSummary.total})
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         Theo lô: {selectedSummary.batchCount} | Theo SP:{" "}
@@ -2214,19 +1187,63 @@ export const CampaignManagementPage = () => {
                       </Typography>
                     </Stack>
 
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      sx={{ mb: 1 }}
+                    >
+                      <Tabs
+                        value={selectedItemsTab}
+                        onChange={(_, v: "all" | "product" | "batch") =>
+                          setSelectedItemsTab(v)
+                        }
+                        variant="scrollable"
+                        scrollButtons="auto"
+                      >
+                        <Tab
+                          value="all"
+                          label={`Tất cả (${selectedSummary.total})`}
+                        />
+                        <Tab
+                          value="product"
+                          label={`Theo sản phẩm (${selectedSummary.productCount})`}
+                        />
+                        <Tab
+                          value="batch"
+                          label={`Theo lô (${selectedSummary.batchCount})`}
+                        />
+                      </Tabs>
+                      {filteredSelectedItems.length > 0 && (
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<SettingsIcon />}
+                          onClick={() => setBulkEditModalOpen(true)}
+                          sx={{ whiteSpace: "nowrap", ml: 1 }}
+                        >
+                          Cấu hình chung ({filteredSelectedItems.length})
+                        </Button>
+                      )}
+                    </Stack>
+
                     <Stack spacing={2}>
-                      {selectedItems.length === 0 ? (
+                      {filteredSelectedItems.length === 0 ? (
                         <Paper variant="outlined" sx={{ p: 3 }}>
                           <Typography
                             variant="body2"
                             color="text.secondary"
                             align="center"
                           >
-                            Chưa có item nào được chọn.
+                            {selectedItems.length === 0
+                              ? 'Chưa có item nào được chọn. Hãy tick chọn sản phẩm ở bảng bên trái rồi dùng "Cấu hình chung" để thêm.'
+                              : selectedItemsTab === "product"
+                                ? "Không có sản phẩm (toàn bộ tồn kho) nào trong danh sách."
+                                : "Không có lô nào trong danh sách."}
                           </Typography>
                         </Paper>
                       ) : (
-                        selectedItems.map((item, index) => {
+                        filteredSelectedItems.map((item, index) => {
                           const isBatchItem = Boolean(item.batchId);
 
                           return (
@@ -2305,9 +1322,10 @@ export const CampaignManagementPage = () => {
                                       label="Loại khuyến mãi"
                                       value={item.promotionType}
                                       onChange={(event) =>
-                                        handleSelectedPromotionTypeChange(
+                                        handleSelectedItemFieldChange(
                                           item.key,
-                                          event.target.value as PromotionType,
+                                          "promotionType",
+                                          event.target.value,
                                         )
                                       }
                                     >
@@ -2328,9 +1346,10 @@ export const CampaignManagementPage = () => {
                                       label="Kiểu giảm"
                                       value={item.discountType}
                                       onChange={(event) =>
-                                        handleSelectedDiscountTypeChange(
+                                        handleSelectedItemFieldChange(
                                           item.key,
-                                          event.target.value as DiscountType,
+                                          "discountType",
+                                          event.target.value,
                                         )
                                       }
                                     >
@@ -2349,24 +1368,18 @@ export const CampaignManagementPage = () => {
                                     label="Giá trị giảm"
                                     size="small"
                                     required
-                                    value={
-                                      item.discountType === "Percentage"
-                                        ? item.discountValueInput
-                                        : formatNumberVN(
-                                            item.discountValueInput,
-                                          )
-                                    }
+                                    value={item.discountValueInput}
                                     onChange={(event) =>
-                                      handleSelectedDiscountValueChange(
+                                      handleSelectedItemFieldChange(
                                         item.key,
+                                        "discountValueInput",
                                         event.target.value,
-                                        item.discountType,
                                       )
                                     }
                                     placeholder={
                                       item.discountType === "Percentage"
                                         ? "VD: 20"
-                                        : "VD: 50.000"
+                                        : "VD: 50000"
                                     }
                                     InputProps={{
                                       endAdornment: (
@@ -2385,12 +1398,15 @@ export const CampaignManagementPage = () => {
                                     size="small"
                                     required={!isBatchItem}
                                     value={item.maxUsageInput}
-                                    onChange={(event) =>
-                                      handleSelectedMaxUsageChange(
+                                    onChange={(event) => {
+                                      if (!/^\d*$/.test(event.target.value))
+                                        return;
+                                      handleSelectedItemFieldChange(
                                         item.key,
+                                        "maxUsageInput",
                                         event.target.value,
-                                      )
-                                    }
+                                      );
+                                    }}
                                     disabled={isBatchItem}
                                     placeholder={
                                       isBatchItem ? "null" : "Bắt buộc > 0"
@@ -2405,319 +1421,19 @@ export const CampaignManagementPage = () => {
                       )}
                     </Stack>
                   </Box>
-                  <Paper
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      bgcolor: "grey.50",
-                      borderStyle: "dashed",
-                    }}
-                  >
-                    <Stack spacing={1.5}>
-                      <Stack
-                        direction={{ xs: "column", md: "row" }}
-                        alignItems={{ xs: "flex-start", md: "center" }}
-                        justifyContent="space-between"
-                        spacing={1}
-                      >
-                        <Box>
-                          <Typography variant="subtitle1" fontWeight={700}>
-                            Voucher theo chiến lược (tùy chọn)
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Voucher là tính năng bổ sung. Để trống mã voucher
-                            nếu không cần.
-                          </Typography>
-                        </Box>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<AddIcon />}
-                          onClick={addCampaignVoucher}
-                        >
-                          Thêm voucher
-                        </Button>
-                      </Stack>
 
-                      <Stack spacing={2}>
-                        {campaignVouchers.map((voucher, index) => {
-                          const isProductVoucher =
-                            voucher.applyType === "Product";
-                          const isPercentage =
-                            voucher.discountType === "Percentage";
+                  <BulkConfigModal
+                    open={bulkEditModalOpen}
+                    selectedCount={filteredSelectedItems.length}
+                    onClose={() => setBulkEditModalOpen(false)}
+                    onApply={handleBulkEditApply}
+                  />
 
-                          return (
-                            <Paper
-                              key={voucher.key}
-                              variant="outlined"
-                              sx={{ p: 2, position: "relative" }}
-                            >
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() =>
-                                  removeCampaignVoucher(voucher.key)
-                                }
-                                sx={{
-                                  position: "absolute",
-                                  top: 8,
-                                  right: 8,
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-
-                              <Typography
-                                variant="subtitle2"
-                                color="text.secondary"
-                                sx={{ mb: 2 }}
-                              >
-                                Voucher #{index + 1}
-                              </Typography>
-
-                              <Box
-                                sx={{
-                                  display: "grid",
-                                  gridTemplateColumns: {
-                                    xs: "1fr",
-                                    sm: "1fr 1fr",
-                                    md: "1fr 1fr 1fr 1fr",
-                                  },
-                                  gap: 2,
-                                }}
-                              >
-                                <TextField
-                                  label="Mã voucher"
-                                  size="small"
-                                  placeholder="VD: FLASH30"
-                                  value={voucher.code}
-                                  onChange={(event) =>
-                                    handleVoucherFieldChange(
-                                      voucher.key,
-                                      "code",
-                                      event.target.value,
-                                    )
-                                  }
-                                  fullWidth
-                                />
-
-                                <TextField
-                                  label="Giá trị giảm"
-                                  size="small"
-                                  value={
-                                    isPercentage
-                                      ? voucher.discountValueInput
-                                      : formatNumberVN(
-                                          voucher.discountValueInput,
-                                        )
-                                  }
-                                  onChange={(event) => {
-                                    const nextValue = event.target.value;
-
-                                    if (isPercentage) {
-                                      // For percentage, allow decimal input
-                                      if (
-                                        !/^\d*([.,]\d{0,2})?$/.test(nextValue)
-                                      ) {
-                                        return;
-                                      }
-                                      handleVoucherFieldChange(
-                                        voucher.key,
-                                        "discountValueInput",
-                                        nextValue,
-                                      );
-                                    } else {
-                                      // For fixed amount, only allow digits
-                                      const parsed = parseNumberVN(nextValue);
-                                      if (!/^\d*$/.test(parsed)) {
-                                        return;
-                                      }
-                                      handleVoucherFieldChange(
-                                        voucher.key,
-                                        "discountValueInput",
-                                        parsed,
-                                      );
-                                    }
-                                  }}
-                                  placeholder={
-                                    isPercentage ? "%" : "VD: 500.000"
-                                  }
-                                  InputProps={{
-                                    endAdornment: (
-                                      <InputAdornment position="end">
-                                        <FormControl
-                                          size="small"
-                                          sx={{ minWidth: 50 }}
-                                        >
-                                          <Select
-                                            value={voucher.discountType}
-                                            variant="standard"
-                                            sx={{ fontSize: "0.875rem" }}
-                                            onChange={(event) =>
-                                              handleVoucherFieldChange(
-                                                voucher.key,
-                                                "discountType",
-                                                event.target
-                                                  .value as DiscountType,
-                                              )
-                                            }
-                                          >
-                                            <MenuItem value="Percentage">
-                                              %
-                                            </MenuItem>
-                                            <MenuItem value="FixedAmount">
-                                              đ
-                                            </MenuItem>
-                                          </Select>
-                                        </FormControl>
-                                      </InputAdornment>
-                                    ),
-                                  }}
-                                  fullWidth
-                                />
-
-                                <TextField
-                                  label="Giảm tối đa (VND)"
-                                  size="small"
-                                  value={formatNumberVN(
-                                    voucher.maxDiscountAmountInput,
-                                  )}
-                                  onChange={(event) => {
-                                    const parsed = parseNumberVN(
-                                      event.target.value,
-                                    );
-                                    if (!/^\d*$/.test(parsed)) {
-                                      return;
-                                    }
-                                    handleVoucherFieldChange(
-                                      voucher.key,
-                                      "maxDiscountAmountInput",
-                                      parsed,
-                                    );
-                                  }}
-                                  placeholder="VD: 100.000"
-                                  disabled={!isPercentage}
-                                  fullWidth
-                                />
-
-                                <TextField
-                                  label="Đơn tối thiểu (VND)"
-                                  size="small"
-                                  value={formatNumberVN(
-                                    voucher.minOrderValueInput,
-                                  )}
-                                  onChange={(event) => {
-                                    const parsed = parseNumberVN(
-                                      event.target.value,
-                                    );
-                                    if (!/^\d*$/.test(parsed)) {
-                                      return;
-                                    }
-                                    handleVoucherFieldChange(
-                                      voucher.key,
-                                      "minOrderValueInput",
-                                      parsed,
-                                    );
-                                  }}
-                                  placeholder="VD: 500.000"
-                                  fullWidth
-                                />
-
-                                <TextField
-                                  label="Số lượng mã"
-                                  size="small"
-                                  value={voucher.totalQuantityInput}
-                                  onChange={(event) => {
-                                    const nextValue = event.target.value;
-                                    if (!/^\d*$/.test(nextValue)) {
-                                      return;
-                                    }
-                                    handleVoucherFieldChange(
-                                      voucher.key,
-                                      "totalQuantityInput",
-                                      nextValue,
-                                    );
-                                  }}
-                                  placeholder="VD: 500"
-                                  fullWidth
-                                />
-
-                                <TextField
-                                  label="Lượt/khách"
-                                  size="small"
-                                  value={voucher.maxUsagePerUserInput}
-                                  onChange={(event) => {
-                                    const nextValue = event.target.value;
-                                    if (!/^\d*$/.test(nextValue)) {
-                                      return;
-                                    }
-                                    handleVoucherFieldChange(
-                                      voucher.key,
-                                      "maxUsagePerUserInput",
-                                      nextValue,
-                                    );
-                                  }}
-                                  placeholder="VD: 1"
-                                  fullWidth
-                                />
-
-                                <FormControl size="small" fullWidth>
-                                  <InputLabel>Áp dụng</InputLabel>
-                                  <Select
-                                    label="Áp dụng"
-                                    value={voucher.applyType}
-                                    onChange={(event) =>
-                                      handleVoucherFieldChange(
-                                        voucher.key,
-                                        "applyType",
-                                        event.target.value as VoucherType,
-                                      )
-                                    }
-                                  >
-                                    {VOUCHER_APPLY_TYPE_OPTIONS.map(
-                                      (option) => (
-                                        <MenuItem
-                                          key={option.value}
-                                          value={option.value}
-                                        >
-                                          {option.label}
-                                        </MenuItem>
-                                      ),
-                                    )}
-                                  </Select>
-                                </FormControl>
-
-                                <FormControl size="small" fullWidth>
-                                  <InputLabel>Loại item</InputLabel>
-                                  <Select
-                                    label="Loại item"
-                                    value={voucher.targetItemType}
-                                    disabled={!isProductVoucher}
-                                    onChange={(event) =>
-                                      handleVoucherFieldChange(
-                                        voucher.key,
-                                        "targetItemType",
-                                        event.target.value as PromotionType,
-                                      )
-                                    }
-                                  >
-                                    {PROMOTION_TYPE_OPTIONS.map((option) => (
-                                      <MenuItem
-                                        key={option.value}
-                                        value={option.value}
-                                      >
-                                        {option.label}
-                                      </MenuItem>
-                                    ))}
-                                  </Select>
-                                </FormControl>
-                              </Box>
-                            </Paper>
-                          );
-                        })}
-                      </Stack>
-                    </Stack>
-                  </Paper>
+                  {/* Voucher form */}
+                  <VoucherForm
+                    vouchers={campaignVouchers}
+                    onVouchersChange={setCampaignVouchers}
+                  />
                 </Stack>
               </Paper>
             </Box>

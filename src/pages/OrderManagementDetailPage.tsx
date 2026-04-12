@@ -92,7 +92,7 @@ const CARRIER_LABELS: Record<CarrierName, string> = {
   GHTK: "Giao Hàng Tiết Kiệm",
 };
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Thanh toán tiền mặt tại quầy",
   VnPay: "Thanh toán qua VNPay",

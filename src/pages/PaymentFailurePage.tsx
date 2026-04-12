@@ -35,7 +35,7 @@ import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
-import transferIcon from "@/assets/transfer.png";
+import payosIcon from "@/assets/payos.png";
 
 type DeliveryMethod = "Delivery" | "PickupInStore";
 
@@ -176,7 +176,7 @@ const PAYMENT_METHODS: {
     value: "PayOs",
     label: "PayOS",
     description: "Thanh toán qua PayOS",
-    icon: transferIcon,
+    icon: payosIcon,
   },
 ];
 

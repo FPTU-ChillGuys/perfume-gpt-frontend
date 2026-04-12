@@ -79,7 +79,7 @@ type OrderListItemWithReturnable = OrderListItem & {
   isReturnable?: boolean;
 };
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Thanh toán tiền mặt tại quầy",
   VnPay: "Thanh toán qua VNPay",
@@ -88,7 +88,7 @@ const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   PayOs: "Thanh toán qua PayOS",
 };
 
-const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_ICONS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: codIcon,
   CashInStore: storeIcon,
   VnPay: vnpayIcon,
@@ -97,7 +97,7 @@ const PAYMENT_METHOD_ICONS: Record<PaymentMethod, string> = {
   PayOs: transericon,
 };
 
-const RETRY_PAYMENT_METHOD_OPTIONS: PaymentMethod[] = [
+const RETRY_PAYMENT_METHOD_OPTIONS: NonNullable<PaymentMethod>[] = [
   "CashOnDelivery",
   "CashInStore",
   "VnPay",
@@ -249,7 +249,7 @@ export const MyOrdersPage = () => {
   const [retryOrderId, setRetryOrderId] = useState<string | null>(null);
   const [retryPaymentId, setRetryPaymentId] = useState<string | null>(null);
   const [selectedRetryMethod, setSelectedRetryMethod] =
-    useState<PaymentMethod>("CashOnDelivery");
+    useState<NonNullable<PaymentMethod>>("CashOnDelivery");
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
   const [returnRequestStatusByOrderId, setReturnRequestStatusByOrderId] =
     useState<Record<string, ReturnRequestStatus>>({});
@@ -1550,7 +1550,7 @@ export const MyOrdersPage = () => {
             <RadioGroup
               value={selectedRetryMethod}
               onChange={(e) =>
-                setSelectedRetryMethod(e.target.value as PaymentMethod)
+                setSelectedRetryMethod(e.target.value as NonNullable<PaymentMethod>)
               }
             >
               {allowedRetryMethods.map((method) => (

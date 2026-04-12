@@ -52,6 +52,7 @@ import { useAuth } from "../hooks/useAuth";
 import { importStockService } from "../services/importStockService";
 import { NotificationBell } from "../components/common/NotificationBell";
 import { useNotificationSystem } from "../hooks/useNotificationSystem";
+import type { NotificationItem } from "@/services/notificationService";
 
 const drawerWidth = 280;
 const drawerCollapsedWidth = 70;
@@ -121,6 +122,12 @@ const menuGroups: SidebarMenuGroup[] = [
         text: "Quản lý đơn hàng",
         icon: <ShoppingCartIcon />,
         path: "/staff/orders",
+        roles: ["staff"],
+      },
+      {
+        text: "Yêu cầu hủy đơn",
+        icon: <CancelIcon />,
+        path: "/staff/cancel-requests",
         roles: ["staff"],
       },
       {
@@ -287,6 +294,23 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
       userRole: user?.role ?? "",
       userId: user?.id,
     });
+
+  const routePrefix = user?.role === "staff" ? "/staff" : "/admin";
+
+  const handleNotificationClick = (item: NotificationItem) => {
+    if (!item.referenceId) return;
+    switch (item.referenceType) {
+      case "Order":
+        navigate(`${routePrefix}/orders/${item.referenceId}`);
+        break;
+      case "OrderCancelRequest":
+        navigate(`${routePrefix}/cancel-requests/${item.referenceId}`);
+        break;
+      case "OrderReturnRequest":
+        navigate(`${routePrefix}/return-requests/${item.referenceId}`);
+        break;
+    }
+  };
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -626,6 +650,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             unreadCount={unreadCount}
             onMarkAsRead={markAsRead}
             onMarkAllAsRead={markAllAsRead}
+            onItemClick={handleNotificationClick}
           />
           <IconButton onClick={handleMenuOpen} sx={{ p: 0.5, ml: 1 }}>
             <Avatar

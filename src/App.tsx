@@ -674,6 +674,14 @@ function App() {
                         }
                       />
                       <Route
+                        path="/staff/cancel-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderCancelRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/staff/cancel-requests/:cancelRequestId"
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
