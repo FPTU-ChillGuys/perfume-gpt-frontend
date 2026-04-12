@@ -517,6 +517,7 @@ export const CounterCheckoutStaffPage = () => {
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
           "CashInStore",
+          POS_SESSION_ID,
         );
 
         const paymentIdFromRetryResponse = (result.paymentId || "").trim();
@@ -1420,6 +1421,7 @@ export const CounterCheckoutStaffPage = () => {
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
           paymentMethod,
+          POS_SESSION_ID,
         );
 
         const paymentIdFromRetryResponse = (result.paymentId || "").trim();
