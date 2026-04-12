@@ -88,9 +88,19 @@ export const NotificationBell = ({
 
   return (
     <>
-      <IconButton color="inherit" aria-label="Thông báo" onClick={handleOpen}>
+      <IconButton
+        color="default"
+        aria-label="Thông báo"
+        onClick={handleOpen}
+        sx={{
+          transition: "all 0.2s ease",
+          "&:hover": {
+            color: "primary.main",
+          },
+        }}
+      >
         <Badge badgeContent={unreadCount} color="error" max={99}>
-          <NotificationsNoneIcon />
+          <NotificationsNoneIcon fontSize="medium" />
         </Badge>
       </IconButton>
 

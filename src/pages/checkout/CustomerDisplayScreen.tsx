@@ -1,4 +1,9 @@
-import { CheckCircleRounded, OpenInNew } from "@mui/icons-material";
+import {
+  CheckCircleRounded,
+  LocalOffer as VoucherIcon,
+  OpenInNew,
+  Height,
+} from "@mui/icons-material";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 import type { PosPreviewResponse } from "@/services/posService";
@@ -536,8 +541,9 @@ export const CustomerDisplayScreen = () => {
                               </div>
                             </div>
                             {item.discount > 0 && (
-                              <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-600">
-                                🏷️ Giảm {formatCurrency(item.discount)}
+                              <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[12px] font-semibold text-red-600">
+                                <VoucherIcon sx={{ height: 16, width: 16 }} />{" "}
+                                Giảm {formatCurrency(item.discount)}
                               </span>
                             )}
                           </div>

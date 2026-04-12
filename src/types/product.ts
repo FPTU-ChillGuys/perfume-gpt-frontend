@@ -10,6 +10,8 @@ export type ProductVariantsResponse =
 
 export type ProductListItem = components["schemas"]["ProductListItem"];
 export type ProductDetail = components["schemas"]["ProductResponse"];
+export type PublicProductDetail = components["schemas"]["PublicProductResponse"];
+export type PublicProductVariant = components["schemas"]["PublicProductVariantResponse"];
 export type PagedProductList =
   components["schemas"]["PagedResultOfProductListItem"];
 export type VariantPagedItem = components["schemas"]["VariantPagedItem"];

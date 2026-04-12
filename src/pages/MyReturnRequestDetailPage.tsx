@@ -523,18 +523,24 @@ export const MyReturnRequestDetailPage = () => {
                     justifyContent="space-between"
                     alignItems="center"
                     sx={{
-                      px: 3,
-                      py: 2,
+                      px: { xs: 2, sm: 3 },
+                      py: { xs: 1.5, sm: 2 },
                       borderBottom: "1px solid",
                       borderColor: "divider",
-                      gap: 2,
+                      gap: { xs: 1, sm: 2 },
                       flexWrap: "wrap",
                     }}
                   >
                     <Button
                       startIcon={<ArrowBackIcon />}
                       onClick={handleBack}
-                      sx={{ color: "text.secondary", textTransform: "none" }}
+                      size="small"
+                      sx={{ 
+                        color: "text.secondary", 
+                        textTransform: "none",
+                        fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        px: { xs: 1, sm: 2 },
+                      }}
                     >
                       TRỞ LẠI
                     </Button>
@@ -542,7 +548,7 @@ export const MyReturnRequestDetailPage = () => {
                     <Box
                       display="flex"
                       alignItems="center"
-                      gap={2}
+                      gap={{ xs: 0.5, sm: 1, md: 2 }}
                       flexWrap="wrap"
                       justifyContent="flex-end"
                     >
@@ -581,18 +587,26 @@ export const MyReturnRequestDetailPage = () => {
                       <Typography
                         variant="body2"
                         color="text.secondary"
-                        sx={{ letterSpacing: 0.5 }}
+                        sx={{ 
+                          letterSpacing: 0.5,
+                          fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                          display: { xs: "none", sm: "block" },
+                        }}
                       >
                         MÃ ĐƠN HÀNG:{" "}
                         <b style={{ color: "inherit" }}>
                           {(request.orderCode || "-").toUpperCase()}
                         </b>
                       </Typography>
-                      <Divider orientation="vertical" flexItem />
+                      <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
                       <Typography
                         variant="body2"
                         fontWeight={700}
-                        sx={{ color: "#ee4d2d", textTransform: "uppercase" }}
+                        sx={{ 
+                          color: "#ee4d2d", 
+                          textTransform: "uppercase",
+                          fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        }}
                       >
                         {statusLabel(request.status)}
                       </Typography>

@@ -2197,7 +2197,214 @@ export const CampaignManagementPage = () => {
                       fullWidth
                     />
                   </Box>
+                  <Box>
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      alignItems={{ xs: "flex-start", sm: "center" }}
+                      justifyContent="space-between"
+                      spacing={1}
+                      sx={{ mb: 1 }}
+                    >
+                      <Typography variant="subtitle1" fontWeight={700}>
+                        Sản phẩm đã chọn ({selectedSummary.total})
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Theo lô: {selectedSummary.batchCount} | Theo SP:{" "}
+                        {selectedSummary.productCount}
+                      </Typography>
+                    </Stack>
 
+                    <Stack spacing={2}>
+                      {selectedItems.length === 0 ? (
+                        <Paper variant="outlined" sx={{ p: 3 }}>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            align="center"
+                          >
+                            Chưa có item nào được chọn.
+                          </Typography>
+                        </Paper>
+                      ) : (
+                        selectedItems.map((item, index) => {
+                          const isBatchItem = Boolean(item.batchId);
+
+                          return (
+                            <Paper
+                              key={item.key}
+                              variant="outlined"
+                              sx={{ p: 2, position: "relative" }}
+                            >
+                              <IconButton
+                                color="error"
+                                size="small"
+                                onClick={() => removeSelectedItem(item.key)}
+                                sx={{
+                                  position: "absolute",
+                                  top: 8,
+                                  right: 8,
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+
+                              <Stack spacing={2}>
+                                <Stack direction="row" spacing={2}>
+                                  <Avatar
+                                    src={item.variantImageUrl || undefined}
+                                    alt={item.productName}
+                                    variant="rounded"
+                                    sx={{ width: 56, height: 56 }}
+                                  />
+                                  <Box sx={{ flex: 1 }}>
+                                    <Typography
+                                      variant="subtitle2"
+                                      color="text.secondary"
+                                    >
+                                      #{index + 1}
+                                    </Typography>
+                                    <Typography fontWeight={600}>
+                                      {item.productName}
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                      component="div"
+                                    >
+                                      SKU: {item.variantSku}
+                                      {item.batchCode
+                                        ? ` | Batch: ${item.batchCode}`
+                                        : " | Toàn bộ tồn kho"}
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      color="error.main"
+                                      fontWeight={600}
+                                    >
+                                      {item.basePrice != null
+                                        ? `${item.basePrice.toLocaleString("vi-VN")} ₫`
+                                        : "Chưa có giá"}
+                                    </Typography>
+                                  </Box>
+                                </Stack>
+
+                                <Box
+                                  sx={{
+                                    display: "grid",
+                                    gridTemplateColumns: {
+                                      xs: "1fr",
+                                      sm: "1fr 1fr",
+                                      md: "1fr 1fr 1fr 1fr",
+                                    },
+                                    gap: 2,
+                                  }}
+                                >
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel>Loại khuyến mãi</InputLabel>
+                                    <Select
+                                      label="Loại khuyến mãi"
+                                      value={item.promotionType}
+                                      onChange={(event) =>
+                                        handleSelectedPromotionTypeChange(
+                                          item.key,
+                                          event.target.value as PromotionType,
+                                        )
+                                      }
+                                    >
+                                      {PROMOTION_TYPE_OPTIONS.map((option) => (
+                                        <MenuItem
+                                          key={option.value}
+                                          value={option.value}
+                                        >
+                                          {option.label}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+
+                                  <FormControl fullWidth size="small">
+                                    <InputLabel>Kiểu giảm</InputLabel>
+                                    <Select
+                                      label="Kiểu giảm"
+                                      value={item.discountType}
+                                      onChange={(event) =>
+                                        handleSelectedDiscountTypeChange(
+                                          item.key,
+                                          event.target.value as DiscountType,
+                                        )
+                                      }
+                                    >
+                                      {DISCOUNT_TYPE_OPTIONS.map((option) => (
+                                        <MenuItem
+                                          key={option.value}
+                                          value={option.value}
+                                        >
+                                          {option.label}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+
+                                  <TextField
+                                    label="Giá trị giảm"
+                                    size="small"
+                                    required
+                                    value={
+                                      item.discountType === "Percentage"
+                                        ? item.discountValueInput
+                                        : formatNumberVN(
+                                            item.discountValueInput,
+                                          )
+                                    }
+                                    onChange={(event) =>
+                                      handleSelectedDiscountValueChange(
+                                        item.key,
+                                        event.target.value,
+                                        item.discountType,
+                                      )
+                                    }
+                                    placeholder={
+                                      item.discountType === "Percentage"
+                                        ? "VD: 20"
+                                        : "VD: 50.000"
+                                    }
+                                    InputProps={{
+                                      endAdornment: (
+                                        <InputAdornment position="end">
+                                          {item.discountType === "Percentage"
+                                            ? "%"
+                                            : "VND"}
+                                        </InputAdornment>
+                                      ),
+                                    }}
+                                    fullWidth
+                                  />
+
+                                  <TextField
+                                    label="SL tối đa"
+                                    size="small"
+                                    required={!isBatchItem}
+                                    value={item.maxUsageInput}
+                                    onChange={(event) =>
+                                      handleSelectedMaxUsageChange(
+                                        item.key,
+                                        event.target.value,
+                                      )
+                                    }
+                                    disabled={isBatchItem}
+                                    placeholder={
+                                      isBatchItem ? "null" : "Bắt buộc > 0"
+                                    }
+                                    fullWidth
+                                  />
+                                </Box>
+                              </Stack>
+                            </Paper>
+                          );
+                        })
+                      )}
+                    </Stack>
+                  </Box>
                   <Paper
                     variant="outlined"
                     sx={{
@@ -2511,215 +2718,6 @@ export const CampaignManagementPage = () => {
                       </Stack>
                     </Stack>
                   </Paper>
-
-                  <Box>
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      alignItems={{ xs: "flex-start", sm: "center" }}
-                      justifyContent="space-between"
-                      spacing={1}
-                      sx={{ mb: 1 }}
-                    >
-                      <Typography variant="subtitle1" fontWeight={700}>
-                        Sản phẩm đã chọn ({selectedSummary.total})
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Theo lô: {selectedSummary.batchCount} | Theo SP:{" "}
-                        {selectedSummary.productCount}
-                      </Typography>
-                    </Stack>
-
-                    <Stack spacing={2}>
-                      {selectedItems.length === 0 ? (
-                        <Paper variant="outlined" sx={{ p: 3 }}>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            align="center"
-                          >
-                            Chưa có item nào được chọn.
-                          </Typography>
-                        </Paper>
-                      ) : (
-                        selectedItems.map((item, index) => {
-                          const isBatchItem = Boolean(item.batchId);
-
-                          return (
-                            <Paper
-                              key={item.key}
-                              variant="outlined"
-                              sx={{ p: 2, position: "relative" }}
-                            >
-                              <IconButton
-                                color="error"
-                                size="small"
-                                onClick={() => removeSelectedItem(item.key)}
-                                sx={{
-                                  position: "absolute",
-                                  top: 8,
-                                  right: 8,
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-
-                              <Stack spacing={2}>
-                                <Stack direction="row" spacing={2}>
-                                  <Avatar
-                                    src={item.variantImageUrl || undefined}
-                                    alt={item.productName}
-                                    variant="rounded"
-                                    sx={{ width: 56, height: 56 }}
-                                  />
-                                  <Box sx={{ flex: 1 }}>
-                                    <Typography
-                                      variant="subtitle2"
-                                      color="text.secondary"
-                                    >
-                                      #{index + 1}
-                                    </Typography>
-                                    <Typography fontWeight={600}>
-                                      {item.productName}
-                                    </Typography>
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      component="div"
-                                    >
-                                      SKU: {item.variantSku}
-                                      {item.batchCode
-                                        ? ` | Batch: ${item.batchCode}`
-                                        : " | Toàn bộ tồn kho"}
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      color="error.main"
-                                      fontWeight={600}
-                                    >
-                                      {item.basePrice != null
-                                        ? `${item.basePrice.toLocaleString("vi-VN")} ₫`
-                                        : "Chưa có giá"}
-                                    </Typography>
-                                  </Box>
-                                </Stack>
-
-                                <Box
-                                  sx={{
-                                    display: "grid",
-                                    gridTemplateColumns: {
-                                      xs: "1fr",
-                                      sm: "1fr 1fr",
-                                      md: "1fr 1fr 1fr 1fr",
-                                    },
-                                    gap: 2,
-                                  }}
-                                >
-                                  <FormControl fullWidth size="small">
-                                    <InputLabel>Loại khuyến mãi</InputLabel>
-                                    <Select
-                                      label="Loại khuyến mãi"
-                                      value={item.promotionType}
-                                      onChange={(event) =>
-                                        handleSelectedPromotionTypeChange(
-                                          item.key,
-                                          event.target.value as PromotionType,
-                                        )
-                                      }
-                                    >
-                                      {PROMOTION_TYPE_OPTIONS.map((option) => (
-                                        <MenuItem
-                                          key={option.value}
-                                          value={option.value}
-                                        >
-                                          {option.label}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-
-                                  <FormControl fullWidth size="small">
-                                    <InputLabel>Kiểu giảm</InputLabel>
-                                    <Select
-                                      label="Kiểu giảm"
-                                      value={item.discountType}
-                                      onChange={(event) =>
-                                        handleSelectedDiscountTypeChange(
-                                          item.key,
-                                          event.target.value as DiscountType,
-                                        )
-                                      }
-                                    >
-                                      {DISCOUNT_TYPE_OPTIONS.map((option) => (
-                                        <MenuItem
-                                          key={option.value}
-                                          value={option.value}
-                                        >
-                                          {option.label}
-                                        </MenuItem>
-                                      ))}
-                                    </Select>
-                                  </FormControl>
-
-                                  <TextField
-                                    label="Giá trị giảm"
-                                    size="small"
-                                    required
-                                    value={
-                                      item.discountType === "Percentage"
-                                        ? item.discountValueInput
-                                        : formatNumberVN(
-                                            item.discountValueInput,
-                                          )
-                                    }
-                                    onChange={(event) =>
-                                      handleSelectedDiscountValueChange(
-                                        item.key,
-                                        event.target.value,
-                                        item.discountType,
-                                      )
-                                    }
-                                    placeholder={
-                                      item.discountType === "Percentage"
-                                        ? "VD: 20"
-                                        : "VD: 50.000"
-                                    }
-                                    InputProps={{
-                                      endAdornment: (
-                                        <InputAdornment position="end">
-                                          {item.discountType === "Percentage"
-                                            ? "%"
-                                            : "VND"}
-                                        </InputAdornment>
-                                      ),
-                                    }}
-                                    fullWidth
-                                  />
-
-                                  <TextField
-                                    label="SL tối đa"
-                                    size="small"
-                                    required={!isBatchItem}
-                                    value={item.maxUsageInput}
-                                    onChange={(event) =>
-                                      handleSelectedMaxUsageChange(
-                                        item.key,
-                                        event.target.value,
-                                      )
-                                    }
-                                    disabled={isBatchItem}
-                                    placeholder={
-                                      isBatchItem ? "null" : "Bắt buộc > 0"
-                                    }
-                                    fullWidth
-                                  />
-                                </Box>
-                              </Stack>
-                            </Paper>
-                          );
-                        })
-                      )}
-                    </Stack>
-                  </Box>
                 </Stack>
               </Paper>
             </Box>

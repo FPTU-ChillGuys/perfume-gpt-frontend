@@ -315,8 +315,9 @@ export const PaymentFailurePage = () => {
           showToast("Không thể chuyển đến trang thanh toán", "error");
         }
       } else {
+        // COD or CashInStore - navigate to success page
         showToast("Đơn hàng đã được xác nhận!", "success");
-        navigate("/");
+        navigate(`/payment/success?orderId=${orderId}&source=checkout`);
       }
     } catch (error) {
       showToast(
@@ -357,31 +358,36 @@ export const PaymentFailurePage = () => {
   };
 
   if (isLoading) {
-    return (
-      <MainLayout>
-        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            minHeight="60vh"
-          >
-            <CircularProgress />
-          </Box>
-        </Container>
-      </MainLayout>
+    const loadingContent = (
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="60vh"
+        >
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+
+    return isInStoreOrder ? (
+      loadingContent
+    ) : (
+      <MainLayout>{loadingContent}</MainLayout>
     );
   }
 
-  return (
-    <MainLayout>
+  const pageContent = (
+    <>
       <Container
         maxWidth="lg"
         sx={{
           py: { xs: 2, md: 3 },
-          minHeight: { md: "calc(100vh - 112px)" },
+          minHeight: isInStoreOrder ? "100vh" : { md: "calc(100vh - 112px)" },
           display: "flex",
-          alignItems: { md: "center" },
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <Paper
@@ -707,6 +713,8 @@ export const PaymentFailurePage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </MainLayout>
+    </>
   );
+
+  return isInStoreOrder ? pageContent : <MainLayout>{pageContent}</MainLayout>;
 };

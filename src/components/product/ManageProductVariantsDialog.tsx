@@ -340,7 +340,7 @@ export default function ManageProductVariantsDialog({
 
     try {
       setLoadingVariants(true);
-      const productDetail = await productService.getProductDetail(product.id);
+      const productDetail = await productService.getProductDetailForAdmin(product.id);
       setVariants(productDetail?.variants || []);
     } catch (err: any) {
       console.error("Error fetching variants:", err);

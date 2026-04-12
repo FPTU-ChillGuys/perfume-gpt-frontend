@@ -409,7 +409,7 @@ export const ContentManagementPage = () => {
       const [info, fastLook, detail] = await Promise.all([
         productService.getProductInformation(productId),
         productService.getProductFastLook(productId),
-        productService.getProductDetail(productId),
+        productService.getProductDetailForAdmin(productId),
       ]);
       setProductInformation(info);
       setProductFastLook(fastLook);

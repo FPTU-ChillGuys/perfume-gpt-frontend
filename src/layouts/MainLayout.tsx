@@ -6,9 +6,10 @@ import { ScrollToTop } from "../components/common/ScrollToTop";
 
 interface MainLayoutProps {
   children: ReactNode;
+  stickyHeader?: boolean;
 }
 
-export const MainLayout = ({ children }: MainLayoutProps) => {
+export const MainLayout = ({ children, stickyHeader = true }: MainLayoutProps) => {
   return (
     <Box
       sx={{
@@ -16,10 +17,23 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
         display: "flex",
         flexDirection: "column",
         bgcolor: "background.default",
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "hidden",
       }}
     >
-      <Header />
-      <Box component="main" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <Header sticky={stickyHeader} />
+      <Box 
+        component="main" 
+        sx={{ 
+          flex: 1, 
+          display: "flex", 
+          flexDirection: "column",
+          width: "100%",
+          maxWidth: "100%",
+          overflowX: "hidden",
+        }}
+      >
         {children}
       </Box>
       <Footer />

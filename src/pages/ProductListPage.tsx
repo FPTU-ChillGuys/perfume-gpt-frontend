@@ -7,6 +7,7 @@ import {
   type ProductCardProps,
 } from "../components/product/ProductCard";
 import { productService } from "../services/productService";
+import { campaignService } from "../services/campaignService";
 import { trendService } from "../services/ai/trendService";
 import { brandService, type BrandLookupItem } from "../services/brandService";
 import type { ProductListItem, VariantPagedItem } from "../types/product";
@@ -212,10 +213,12 @@ export const ProductListPage = () => {
   const sourceParam = searchParams.get("source");
   const source = isHomeSource(sourceParam) ? sourceParam : null;
   const sourceLabel = searchParams.get("sourceLabel") || "";
+  const campaignIdParam = searchParams.get("campaignId") || "";
   const searchParamValue = searchParams.get("search") || "";
   const categoryIdParam = searchParams.get("categoryId") || "";
   const categoryNameParam = searchParams.get("categoryName") || "";
   const isHomeSourceMode = Boolean(source);
+  const isCampaignMode = Boolean(campaignIdParam);
   const [searchTerm, setSearchTerm] = useState(searchParamValue);
   const [sort, setSort] = useState<SortValue>(
     (searchParams.get("sort") as SortValue) || "featured",
@@ -259,6 +262,27 @@ export const ProductListPage = () => {
       isMounted = false;
     };
   }, []);
+
+  // Helper function to map sort value to API params
+  const getSortParams = (sortValue: SortValue) => {
+    switch (sortValue) {
+      case "newest":
+        return { SortBy: "CreatedAt", IsDescending: true };
+      case "oldest":
+        return { SortBy: "CreatedAt", IsDescending: false };
+      case "priceAsc":
+        return { SortBy: "Price", IsDescending: false };
+      case "priceDesc":
+        return { SortBy: "Price", IsDescending: true };
+      case "nameAsc":
+        return { SortBy: "Name", IsDescending: false };
+      case "nameDesc":
+        return { SortBy: "Name", IsDescending: true };
+      case "featured":
+      default:
+        return {};
+    }
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -307,6 +331,123 @@ export const ProductListPage = () => {
         );
 
       try {
+        // Campaign mode - fetch products for a specific campaign
+        if (campaignIdParam) {
+          const result = await campaignService.getCampaignProducts(
+            campaignIdParam,
+            {
+              PageNumber: page,
+              PageSize: pageSize,
+              IsAvailable: true,
+              ...(selectedBrandId !== "all" && {
+                BrandId: Number(selectedBrandId),
+              }),
+              ...(selectedVolume !== "all" && {
+                Volume: Number(selectedVolume),
+              }),
+              ...(priceRange[0] !== PRICE_RANGE_MIN && {
+                FromPrice: priceRange[0],
+              }),
+              ...(priceRange[1] !== PRICE_RANGE_MAX && {
+                ToPrice: priceRange[1],
+              }),
+              ...getSortParams(sort),
+            },
+          );
+
+          if (!isMounted) {
+            return;
+          }
+
+          const campaignItems = (result.items ?? []).filter(
+            (product): product is ProductListItem & { id: string } =>
+              Boolean(product.id),
+          );
+
+          setCatalogProducts(
+            campaignItems.map((product, index) => ({
+              ...product,
+              originalIndex: index,
+            })),
+          );
+
+          const baseMeta: Record<string, FilterMeta> = Object.fromEntries(
+            campaignItems.map((product) => {
+              const { minPrice, maxPrice } = getPriceRange(product);
+              return [
+                product.id,
+                {
+                  minPrice,
+                  maxPrice,
+                  volumes: [],
+                },
+              ];
+            }),
+          );
+
+          setFilterMetaByProductId(baseMeta);
+          setProducts(
+            campaignItems.map((product) => mapProductToCard(product)),
+          );
+          setTotalCount(result.totalCount ?? 0);
+          setTotalPages(
+            Math.ceil((result.totalCount ?? 0) / Math.max(pageSize, 1)),
+          );
+          setIsLoading(false);
+
+          if (campaignItems.length === 0) {
+            return;
+          }
+
+          // Fetch variants for rich card display
+          const [variantMap, volumeMap] = await Promise.all([
+            resolveVariantMapForProducts(
+              campaignItems.map((product) => product.id),
+              (query) => productService.getProductVariantsPaged(query),
+              { pageSize: 250, maxPages: 10 },
+            ),
+            resolveVolumeMapForProducts(
+              campaignItems.map((product) => product.id),
+              (query) => productService.getProductVariantsPaged(query),
+              { pageSize: 250, maxPages: 10 },
+            ),
+          ]);
+
+          if (!isMounted) {
+            return;
+          }
+
+          const variantRecord = Object.fromEntries(variantMap.entries());
+          const mergedMeta: Record<string, FilterMeta> = Object.fromEntries(
+            campaignItems.map((product) => {
+              const current = baseMeta[product.id] ?? {
+                minPrice: 0,
+                maxPrice: 0,
+                volumes: [],
+              };
+              const volumes = Array.from(volumeMap.get(product.id) ?? []).sort(
+                (a, b) => a - b,
+              );
+              return [
+                product.id,
+                {
+                  ...current,
+                  volumes,
+                },
+              ];
+            }),
+          );
+
+          setVariantByProductId(variantRecord);
+          setFilterMetaByProductId(mergedMeta);
+          setProducts(
+            campaignItems.map((product) =>
+              mapProductToCard(product, variantRecord[product.id]),
+            ),
+          );
+          return;
+        }
+
         if (source) {
           const sourceItemsRaw =
             source === "bestsellers"
@@ -672,7 +813,18 @@ export const ProductListPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [page, pageSize, searchParamValue, categoryIdParam, source]);
+  }, [
+    page,
+    pageSize,
+    searchParamValue,
+    categoryIdParam,
+    source,
+    campaignIdParam,
+    sort,
+    selectedBrandId,
+    selectedVolume,
+    priceRange,
+  ]);
 
   useEffect(() => {
     setPage(1);

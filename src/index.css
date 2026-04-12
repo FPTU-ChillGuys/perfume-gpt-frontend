@@ -2,6 +2,17 @@
 @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=General+Sans:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
+/* Prevent horizontal overflow */
+html,
+body,
+#root {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 /* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 8px;
