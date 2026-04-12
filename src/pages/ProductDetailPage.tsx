@@ -31,7 +31,6 @@ import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { ReviewSection } from "@/components/review/ReviewSection";
-import { markRenderMetric, printPagePerfSummary } from "@/utils/perfMetrics";
 import {
   productDetailTabsContent,
   normalizeProductDetailTabContent,
@@ -141,8 +140,6 @@ const ProductDetailPage = () => {
   const variantCacheRef = useRef<Map<string, MediaResponse[]>>(new Map());
   const reviewTargetCacheRef = useRef<Record<string, ReviewDialogTarget>>({});
   const reviewSummaryCacheRef = useRef<Map<string, string>>(new Map());
-  const pageLoadStartedAtRef = useRef(0);
-  const hasMarkedInitialRenderRef = useRef(false);
 
   // States: AI Review Summary
   const [reviewSummary, setReviewSummary] = useState<string | null>(null);
@@ -173,6 +170,7 @@ const ProductDetailPage = () => {
   const [infoTab, setInfoTab] = useState<"details" | "usage" | "shipping">(
     "details",
   );
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
 
   const fetchMyReviews = useCallback(async (): Promise<ReviewResponse[]> => {
     if (!isAuthenticated) {
@@ -203,9 +201,6 @@ const ProductDetailPage = () => {
       setLoading(false);
       return;
     }
-
-    pageLoadStartedAtRef.current = performance.now();
-    hasMarkedInitialRenderRef.current = false;
 
     let isMounted = true;
     setLoading(true);
@@ -277,22 +272,6 @@ const ProductDetailPage = () => {
       isMounted = false;
     };
   }, [productId]);
-
-  useEffect(() => {
-    if (loading || error || hasMarkedInitialRenderRef.current) {
-      return;
-    }
-
-    const elapsed = performance.now() - pageLoadStartedAtRef.current;
-    hasMarkedInitialRenderRef.current = true;
-    markRenderMetric("/products/:productId", "initial-visible-render", elapsed);
-  }, [loading, error]);
-
-  useEffect(() => {
-    return () => {
-      printPagePerfSummary("/products/:productId");
-    };
-  }, []);
 
   const displayVariants = useMemo(() => {
     return (productDetail?.variants || []).map((variant) => ({
@@ -456,6 +435,20 @@ const ProductDetailPage = () => {
     observer.observe(anchor);
     return () => observer.disconnect();
   }, [shouldRenderReviewSection, selectedVariantId]);
+
+  // Effect: Sticky header visibility - using scroll event for better responsiveness
+  useEffect(() => {
+    const handleScroll = () => {
+      // Show sticky header when scrolled down more than 100px
+      setShowStickyHeader(window.scrollY > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Check initial state
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const selectedVariant = useMemo(
     () =>
@@ -1682,7 +1675,198 @@ const ProductDetailPage = () => {
   };
 
   return (
-    <MainLayout>
+    <MainLayout stickyHeader={false}>
+      {/* Sticky Header */}
+      <Box
+        sx={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bgcolor: "white",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          zIndex: 1100,
+          transition: "transform 0.3s ease-in-out, opacity 0.3s ease-in-out",
+          transform: showStickyHeader ? "translateY(0)" : "translateY(-100%)",
+          opacity: showStickyHeader ? 1 : 0,
+          boxShadow: showStickyHeader ? 2 : 0,
+          pointerEvents: showStickyHeader ? "auto" : "none",
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 2,
+              py: 1.5,
+            }}
+          >
+            {/* Thumbnail */}
+            <Box
+              sx={{
+                width: 60,
+                height: 60,
+                flexShrink: 0,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                overflow: "hidden",
+                bgcolor: "grey.50",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {variantMediaList[0]?.url || selectedVariant?.media?.url ? (
+                <img
+                  src={
+                    variantMediaList[0]?.url ||
+                    selectedVariant?.media?.url ||
+                    ""
+                  }
+                  alt={productDetail?.name || ""}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              ) : (
+                <Typography variant="caption" color="text.disabled">
+                  No image
+                </Typography>
+              )}
+            </Box>
+
+            {/* Product Info */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: "1rem",
+                  lineHeight: 1.3,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {productDetail?.name || ""}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.875rem" }}
+              >
+                {selectedVariant?.displayName?.split(" - ")[0] ||
+                  "Eau De Parfum"}
+              </Typography>
+            </Box>
+
+            {/* Size */}
+            <Box
+              sx={{
+                display: { xs: "none", sm: "flex" },
+                alignItems: "center",
+                justifyContent: "center",
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                border: "2px solid",
+                borderColor: "error.main",
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  color: "error.main",
+                  fontSize: "0.75rem",
+                }}
+              >
+                {selectedVariant?.displayName?.match(/(\d+)\s*ml/i)?.[1] || "—"}
+                ml
+              </Typography>
+            </Box>
+
+            {/* Price */}
+            <Box
+              sx={{
+                display: { xs: "none", md: "flex" },
+                flexDirection: "column",
+                alignItems: "flex-end",
+                minWidth: 120,
+              }}
+            >
+              {hasCampaignDiscount && selectedBasePrice > 0 && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.disabled",
+                    textDecoration: "line-through",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {currencyFormatter.format(selectedBasePrice)}
+                </Typography>
+              )}
+              {!hasCampaignDiscount && hasRetailPriceComparison && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.disabled",
+                    textDecoration: "line-through",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {currencyFormatter.format(selectedRetailPrice)}
+                </Typography>
+              )}
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  color: "error.main",
+                  fontSize: "1.25rem",
+                  lineHeight: 1.2,
+                }}
+              >
+                {mainDisplayedPrice
+                  ? currencyFormatter.format(
+                      hasCampaignDiscount
+                        ? campaignDisplayedPrice
+                        : mainDisplayedPrice,
+                    )
+                  : "Liên hệ"}
+              </Typography>
+            </Box>
+
+            {/* Add to Cart Button */}
+            {!isSelectedVariantOutOfStock && !isBackOfficeRole && (
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => handleAddToCart(false)}
+                disabled={isAdding}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1,
+                  whiteSpace: "nowrap",
+                  minWidth: { xs: "auto", sm: 160 },
+                }}
+              >
+                {isAdding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
+              </Button>
+            )}
+          </Box>
+        </Container>
+      </Box>
+
       <Box py={6}>
         <Container maxWidth="lg">{renderContent()}</Container>
       </Box>

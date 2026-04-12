@@ -53,7 +53,7 @@ const toVietnameseCategoryName = (name?: string | null) => {
   return CATEGORY_NAME_VI[name.trim().toLowerCase()] ?? name;
 };
 
-export const Header = () => {
+export const Header = ({ sticky = true }: { sticky?: boolean }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
@@ -81,7 +81,6 @@ export const Header = () => {
 
   useEffect(() => {
     if (!isAuthenticated || user?.role !== "user") {
-      setLoyaltyBalance(null);
       return;
     }
 
@@ -223,7 +222,7 @@ export const Header = () => {
 
   return (
     <AppBar
-      position="sticky"
+      position={sticky ? "sticky" : "static"}
       color="inherit"
       elevation={0}
       sx={{ borderBottom: 1, borderColor: "divider" }}

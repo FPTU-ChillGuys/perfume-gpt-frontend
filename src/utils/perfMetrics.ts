@@ -108,8 +108,6 @@ export const markRenderMetric = (
     durationMs,
     at: Date.now(),
   });
-
-  console.info(`[perf] ${pageKey} | ${label}: ${durationMs.toFixed(1)}ms`);
 };
 
 const summarizeDurations = (values: number[]) => {
@@ -179,14 +177,6 @@ export const printPagePerfSummary = (pageKey: string) => {
     durationMs: Number(metric.durationMs.toFixed(1)),
   }));
 
-  console.groupCollapsed(`[perf] Summary ${pageKey}`);
-  console.table({
-    requests: requestSummary.count,
-    avgMs: Number(requestSummary.avg.toFixed(1)),
-    p95Ms: Number(requestSummary.p95.toFixed(1)),
-    maxMs: Number(requestSummary.max.toFixed(1)),
-  });
-
   if (endpointRows.length) {
     console.table(endpointRows);
   }
@@ -194,8 +184,6 @@ export const printPagePerfSummary = (pageKey: string) => {
   if (renderRows.length) {
     console.table(renderRows);
   }
-
-  console.groupEnd();
 };
 
 if (isPerfEnabled && typeof window !== "undefined") {

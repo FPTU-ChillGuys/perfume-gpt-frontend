@@ -65,6 +65,10 @@ export const mapProductToCard = (
       ? product.primaryImage.url
       : undefined;
 
+  // Extract tags from product
+  const productTags = (product as Record<string, unknown>).tags;
+  const tags = Array.isArray(productTags) ? productTags.filter((tag): tag is string => typeof tag === 'string') : null;
+
   return {
     id: product.id,
     brand: product.brandName ?? "Đang cập nhật",
@@ -74,6 +78,7 @@ export const mapProductToCard = (
     imageUrl: productPrimaryImageUrl ?? getVariantImageUrl(variant),
     variantId: variant?.id,
     numberOfVariants: product.numberOfVariants ?? 0,
+    tags,
   };
 };
 
@@ -114,6 +119,10 @@ export const mapProductWithVariantsToCard = (
   );
   const price = typeof resolvedPrice === "number" ? resolvedPrice : 0;
 
+  // Extract tags from product
+  const productTags = productSource.tags;
+  const tags = Array.isArray(productTags) ? productTags.filter((tag): tag is string => typeof tag === 'string') : null;
+
   return {
     id: product.id,
     brand: product.brandName ?? "\u0110ang c\u1eadp nh\u1eadt",
@@ -122,6 +131,7 @@ export const mapProductWithVariantsToCard = (
     imageUrl: product.primaryImage?.url ?? undefined,
     variantId: firstVariant?.id,
     numberOfVariants: product.numberOfVariants ?? product.variants?.length ?? 0,
+    tags,
   };
 };
 
