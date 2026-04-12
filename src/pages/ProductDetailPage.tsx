@@ -443,11 +443,11 @@ const ProductDetailPage = () => {
       setShowStickyHeader(window.scrollY > 100);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     // Check initial state
     handleScroll();
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const selectedVariant = useMemo(
@@ -1038,7 +1038,7 @@ const ProductDetailPage = () => {
 
     return (
       <>
-        <Grid container spacing={4}>
+        <Grid container spacing={{ xs: 2, md: 4 }} sx={{ width: "100%", margin: 0 }}>
           <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
             {/* Main image — fixed height so no-image placeholder is same size */}
             <Box
@@ -1047,7 +1047,7 @@ const ProductDetailPage = () => {
                 border: "1px solid",
                 borderColor: "divider",
                 bgcolor: "background.paper",
-                height: 420,
+                height: { xs: 300, sm: 360, md: 420 },
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1269,28 +1269,46 @@ const ProductDetailPage = () => {
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
             <Stack spacing={2.5}>
-              <Typography variant="h4" fontWeight={700}>
+              <Typography
+                variant="h4"
+                fontWeight={700}
+                sx={{
+                  fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2.125rem" },
+                }}
+              >
                 {productName}
               </Typography>
               <Stack spacing={1}>
                 <Typography
-                  sx={{ fontSize: "0.95rem", color: "text.secondary" }}
+                  sx={{
+                    fontSize: { xs: "0.875rem", sm: "0.95rem" },
+                    color: "text.secondary",
+                  }}
                 >
                   Thương hiệu:{" "}
                   <Typography
                     component="span"
-                    sx={{ fontSize: "0.95rem", fontWeight: 600 }}
+                    sx={{
+                      fontSize: { xs: "0.875rem", sm: "0.95rem" },
+                      fontWeight: 600,
+                    }}
                   >
                     {productBrand}
                   </Typography>
                 </Typography>
                 <Typography
-                  sx={{ fontSize: "0.95rem", color: "text.secondary" }}
+                  sx={{
+                    fontSize: { xs: "0.875rem", sm: "0.95rem" },
+                    color: "text.secondary",
+                  }}
                 >
                   Mã hàng:{" "}
                   <Typography
                     component="span"
-                    sx={{ fontSize: "0.95rem", fontWeight: 600 }}
+                    sx={{
+                      fontSize: { xs: "0.875rem", sm: "0.95rem" },
+                      fontWeight: 600,
+                    }}
                   >
                     {selectedVariantDetail?.sku ||
                       selectedVariant?.sku ||
@@ -1300,9 +1318,23 @@ const ProductDetailPage = () => {
                 </Typography>
               </Stack>
 
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Rating value={averageRating} precision={0.1} readOnly />
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+              >
+                <Rating
+                  value={averageRating}
+                  precision={0.1}
+                  readOnly
+                  size="small"
+                />
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                >
                   {`${averageRating.toFixed(1)}/5 (${totalReviews} đánh giá)`}
                 </Typography>
               </Stack>
@@ -1692,6 +1724,7 @@ const ProductDetailPage = () => {
           opacity: showStickyHeader ? 1 : 0,
           boxShadow: showStickyHeader ? 2 : 0,
           pointerEvents: showStickyHeader ? "auto" : "none",
+          overflow: "hidden",
         }}
       >
         <Container maxWidth="lg">
@@ -1699,15 +1732,16 @@ const ProductDetailPage = () => {
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 2,
+              gap: { xs: 1, sm: 2 },
               py: 1.5,
+              px: { xs: 1, sm: 0 },
             }}
           >
             {/* Thumbnail */}
             <Box
               sx={{
-                width: 60,
-                height: 60,
+                width: { xs: 50, sm: 60 },
+                height: { xs: 50, sm: 60 },
                 flexShrink: 0,
                 border: "1px solid",
                 borderColor: "divider",
@@ -1746,7 +1780,7 @@ const ProductDetailPage = () => {
                 variant="h6"
                 sx={{
                   fontWeight: 700,
-                  fontSize: "1rem",
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
                   lineHeight: 1.3,
                   overflow: "hidden",
                   textOverflow: "ellipsis",
@@ -1758,7 +1792,10 @@ const ProductDetailPage = () => {
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ fontSize: "0.875rem" }}
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  display: { xs: "none", sm: "block" },
+                }}
               >
                 {selectedVariant?.displayName?.split(" - ")[0] ||
                   "Eau De Parfum"}
@@ -1867,7 +1904,14 @@ const ProductDetailPage = () => {
         </Container>
       </Box>
 
-      <Box py={6}>
+      <Box 
+        py={{ xs: 3, md: 6 }}
+        sx={{ 
+          width: "100%", 
+          maxWidth: "100%", 
+          overflowX: "hidden" 
+        }}
+      >
         <Container maxWidth="lg">{renderContent()}</Container>
       </Box>
 

@@ -247,8 +247,8 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
             sx={{
               flex: 1,
               maxWidth: 640,
-              mx: 4,
-              display: "flex",
+              mx: { xs: 1, sm: 2, md: 4 },
+              display: { xs: "none", md: "flex" },
               justifyContent: "center",
             }}
           >
@@ -259,7 +259,7 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
           <Box
             sx={{
               display: "flex",
-              gap: 2,
+              gap: { xs: 1, sm: 2 },
               alignItems: "center",
               flexShrink: 0,
             }}
@@ -309,7 +309,8 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
                     textTransform: "none",
                     fontSize: "0.875rem",
                     fontWeight: 500,
-                    px: 1.5,
+                    px: { xs: 0.5, sm: 1.5 },
+                    minWidth: { xs: "auto", sm: "auto" },
                   }}
                 >
                   <Avatar
@@ -317,14 +318,16 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
                     sx={{
                       width: 32,
                       height: 32,
-                      mr: 1,
+                      mr: { xs: 0, sm: 1 },
                       bgcolor: user.avatarUrl ? undefined : "primary.main",
                       fontSize: "0.875rem",
                     }}
                   >
                     {user.name.charAt(0).toUpperCase()}
                   </Avatar>
-                  {user.email}
+                  <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                    {user.email}
+                  </Box>
                 </Button>
                 <Menu
                   anchorEl={anchorEl}
@@ -454,8 +457,12 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
           sx={{
             display: "flex",
             justifyContent: "center",
-            gap: 4,
-            py: 2,
+            gap: { xs: 1, sm: 2, md: 4 },
+            py: { xs: 1, sm: 2 },
+            overflowX: "auto",
+            flexWrap: { xs: "nowrap", md: "wrap" },
+            "&::-webkit-scrollbar": { display: "none" },
+            scrollbarWidth: "none",
           }}
         >
           {/* All products */}
@@ -463,10 +470,15 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
             color="inherit"
             component={RouterLink}
             to="/products"
+            size="small"
             sx={{
               fontWeight: 500,
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              px: { xs: 1, sm: 2 },
               color: "text.primary",
               "&:hover": { color: "primary.main" },
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             Tất cả sản phẩm
@@ -479,10 +491,15 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
               color="inherit"
               component={RouterLink}
               to={`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`}
+              size="small"
               sx={{
                 fontWeight: 500,
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                px: { xs: 1, sm: 2 },
                 color: "text.primary",
                 "&:hover": { color: "primary.main" },
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {toVietnameseCategoryName(cat.name)}
@@ -494,12 +511,17 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
             <>
               <Button
                 color="inherit"
+                size="small"
                 endIcon={moreAnchorEl ? <ArrowDropUp /> : <ArrowDropDown />}
                 onClick={(e) => setMoreAnchorEl(e.currentTarget)}
                 sx={{
                   fontWeight: 500,
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
                   color: "text.primary",
                   "&:hover": { color: "primary.main" },
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
                 }}
               >
                 Thêm
@@ -533,10 +555,15 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
             color="inherit"
             component={RouterLink}
             to="/quiz"
+            size="small"
             sx={{
               fontWeight: 500,
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              px: { xs: 1, sm: 2 },
               color: "text.primary",
               "&:hover": { color: "primary.main" },
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             Survey AI

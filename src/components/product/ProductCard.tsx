@@ -157,7 +157,7 @@ export const ProductCard = ({
       </Link>
 
       {/* Info */}
-      <div className="p-4 bg-gray-50 border-t border-gray-100">
+      <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col" style={{ minHeight: '144px' }}>
         <Link
           to={detailHref}
           onClick={handleProductLinkClick}
@@ -170,7 +170,7 @@ export const ProductCard = ({
             {name}
           </h3>
         </Link>
-        <div className="flex min-h-6 items-center justify-center gap-1">
+        <div className="flex h-6 items-center justify-center gap-1 shrink-0">
           {originalPrice && (
             <span className="text-xs text-gray-400 line-through">
               {formatPrice(originalPrice)}

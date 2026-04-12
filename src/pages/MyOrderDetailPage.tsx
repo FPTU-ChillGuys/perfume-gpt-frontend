@@ -1848,21 +1848,29 @@ export const MyOrderDetailPage = () => {
                     justifyContent="space-between"
                     alignItems="center"
                     sx={{
-                      px: 3,
-                      py: 2,
+                      px: { xs: 2, sm: 3 },
+                      py: { xs: 1.5, sm: 2 },
                       borderBottom: "1px solid",
                       borderColor: "divider",
+                      flexWrap: "wrap",
+                      gap: { xs: 1, sm: 0 },
                     }}
                   >
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }} alignItems="center">
                       <Button
+                        size="small"
                         startIcon={<ArrowBack />}
                         onClick={() =>
                           navigate("/my-orders", {
                             state: { status: backStatus },
                           })
                         }
-                        sx={{ color: "text.secondary", textTransform: "none" }}
+                        sx={{ 
+                          color: "text.secondary", 
+                          textTransform: "none",
+                          fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                          px: { xs: 1, sm: 2 },
+                        }}
                       >
                         TRỞ LẠI
                       </Button>
@@ -1871,7 +1879,7 @@ export const MyOrderDetailPage = () => {
                     <Box
                       display="flex"
                       alignItems="center"
-                      gap={2}
+                      gap={{ xs: 0.5, sm: 1, md: 2 }}
                       flexWrap="wrap"
                       justifyContent="flex-end"
                     >
@@ -1890,13 +1898,18 @@ export const MyOrderDetailPage = () => {
                               from: { transform: "rotate(0deg)" },
                               to: { transform: "rotate(360deg)" },
                             },
+                            fontSize: { xs: "1.1rem", sm: "1.25rem" },
                           }}
                         />
                       </IconButton>
                       <Typography
                         variant="body2"
                         color="text.secondary"
-                        sx={{ letterSpacing: 0.5 }}
+                        sx={{ 
+                          letterSpacing: 0.5,
+                          fontSize: { xs: "0.7rem", sm: "0.875rem" },
+                          display: { xs: "none", sm: "block" },
+                        }}
                       >
                         MÃ ĐƠN HÀNG:{" "}
                         <b style={{ color: "inherit" }}>
@@ -1908,11 +1921,15 @@ export const MyOrderDetailPage = () => {
                           ).toUpperCase()}
                         </b>
                       </Typography>
-                      <Divider orientation="vertical" flexItem />
+                      <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
                       <Typography
                         variant="body2"
                         fontWeight={700}
-                        sx={{ color: "#ee4d2d", textTransform: "uppercase" }}
+                        sx={{ 
+                          color: "#ee4d2d", 
+                          textTransform: "uppercase",
+                          fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                        }}
                       >
                         {orderStatusLabels[order.status!]}
                       </Typography>
@@ -1922,6 +1939,7 @@ export const MyOrderDetailPage = () => {
                           size="small"
                           color="info"
                           variant="outlined"
+                          sx={{ fontSize: { xs: "0.65rem", sm: "0.75rem" } }}
                         />
                       )}
                     </Box>

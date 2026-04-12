@@ -17,10 +17,23 @@ export const MainLayout = ({ children, stickyHeader = true }: MainLayoutProps) =
         display: "flex",
         flexDirection: "column",
         bgcolor: "background.default",
+        width: "100%",
+        maxWidth: "100%",
+        overflowX: "hidden",
       }}
     >
       <Header sticky={stickyHeader} />
-      <Box component="main" sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+      <Box 
+        component="main" 
+        sx={{ 
+          flex: 1, 
+          display: "flex", 
+          flexDirection: "column",
+          width: "100%",
+          maxWidth: "100%",
+          overflowX: "hidden",
+        }}
+      >
         {children}
       </Box>
       <Footer />
