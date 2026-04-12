@@ -11,7 +11,7 @@ import {
     Refresh as RestartIcon,
 } from "@mui/icons-material";
 import type { AssistantPayload } from "@/types/chatbot";
-import QuizProductCard from "./QuizProductCard";
+import SurveyProductCard from "./SurveyProductCard";
 
 interface Props {
     result: AssistantPayload;
@@ -19,7 +19,7 @@ interface Props {
     onRestart: () => void;
 }
 
-export default function QuizResultView({ result, userId, onRestart }: Props) {
+export default function SurveyResultView({ result, userId, onRestart }: Props) {
     return (
         <Box>
             {/* Header */}
@@ -49,7 +49,7 @@ export default function QuizResultView({ result, userId, onRestart }: Props) {
                     </Divider>
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                         {result.products.map((p) => (
-                            <QuizProductCard key={p.id} product={p} userId={userId} />
+                            <SurveyProductCard key={p.id} product={p} userId={userId} />
                         ))}
                     </Box>
                 </>
@@ -63,7 +63,7 @@ export default function QuizResultView({ result, userId, onRestart }: Props) {
                     onClick={onRestart}
                     sx={{ borderRadius: 5, px: 4 }}
                 >
-                    Làm lại quiz
+                    Làm lại survey
                 </Button>
             </Box>
         </Box>

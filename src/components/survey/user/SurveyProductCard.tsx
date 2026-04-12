@@ -27,7 +27,7 @@ interface Props {
     userId: string;
 }
 
-export default function QuizProductCard({ product, userId }: Props) {
+export default function SurveyProductCard({ product, userId }: Props) {
     const navigate = useNavigate();
     const { showToast } = useToast();
 

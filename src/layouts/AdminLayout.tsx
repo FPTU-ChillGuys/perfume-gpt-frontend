@@ -40,7 +40,7 @@ import {
   AssignmentReturn as AssignmentReturnIcon,
   Slideshow as SlideshowIcon,
   SmartToy as BotIcon,
-  Quiz as QuizIcon,
+  Quiz as SurveyIcon,
   Feed as FeedIcon,
   Chat as ChatIcon,
   ThumbsUpDown as ThumbsUpDownIcon,
@@ -265,7 +265,7 @@ const menuGroups: SidebarMenuGroup[] = [
       },
       {
         text: "Survey",
-        icon: <QuizIcon />,
+        icon: <SurveyIcon />,
         path: "/admin/quiz",
         roles: ["admin"],
       },

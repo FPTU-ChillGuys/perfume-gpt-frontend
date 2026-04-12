@@ -13,19 +13,19 @@ export interface MessageEntity extends BaseEntity {
     userMessageLog: any | null;
 }
 
-export interface QuizQuestionEntity extends BaseEntity {
+export interface SurveyQuestionEntity extends BaseEntity {
     questionType: string;
     question: string;
 }
 
-export interface QuizAnswerEntity extends BaseEntity {
+export interface SurveyAnswerEntity extends BaseEntity {
     answer: string;
     question: string;
 }
 
-export interface QuizQuesAnsDetail extends BaseEntity {
-    question: QuizQuestionEntity;
-    answer: QuizAnswerEntity;
+export interface SurveyQuesAnsDetail extends BaseEntity {
+    question: SurveyQuestionEntity;
+    answer: SurveyAnswerEntity;
     quesAns: string;
 }
 
@@ -34,8 +34,8 @@ export interface UserMessageLog extends BaseEntity {
     userLog: string;
 }
 
-export interface UserQuizLog extends BaseEntity {
-    quizQuesAnsDetail: QuizQuesAnsDetail;
+export interface UserSurveyLog extends BaseEntity {
+    surveyQuesAnsDetail: SurveyQuesAnsDetail;
     userLog: string;
 }
 
@@ -52,13 +52,13 @@ export interface UserLog {
     isDeleted?: boolean;
     isActive?: boolean;
     userId?: string | null;
-    eventType?: "message" | "search" | "quiz" | "product" | null;
-    entityType?: "conversation" | "search" | "quiz" | "product" | null;
+    eventType?: "message" | "search" | "survey" | "product" | null;
+    entityType?: "conversation" | "search" | "survey" | "product" | null;
     entityId?: string | null;
     contentText?: string | null;
     metadata?: Record<string, any> | null;
     userMessageLogs?: UserMessageLog[];
-    userQuizLogs?: UserQuizLog[];
+    userSurveyLogs?: UserSurveyLog[];
     userSearchLogs?: UserSearchLog[];
 }
 

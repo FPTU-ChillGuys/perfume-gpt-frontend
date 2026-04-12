@@ -17,19 +17,19 @@ import {
 } from "@mui/material";
 import { Add as AddIcon, Search as SearchIcon } from "@mui/icons-material";
 import { useToast } from "@/hooks/useToast";
-import { quizService } from "@/services/ai/quizService";
-import type { QuizQuestion, QuizQuestionRequest } from "@/types/quiz";
+import { surveyService } from "@/services/ai/surveyService";
+import type { SurveyQuestion, SurveyQuestionRequest } from "@/types/survey";
 import { AdminLayout } from "@/layouts/AdminLayout";
-import QuizQuestionRow from "@/components/quiz/admin/QuizQuestionRow";
-import QuizAddDialog from "@/components/quiz/admin/QuizAddDialog";
-import QuizEditDialog from "@/components/quiz/admin/QuizEditDialog";
-import QuizDeleteDialog from "@/components/quiz/admin/QuizDeleteDialog";
+import SurveyQuestionRow from "@/components/survey/admin/SurveyQuestionRow";
+import SurveyAddDialog from "@/components/survey/admin/SurveyAddDialog";
+import SurveyEditDialog from "@/components/survey/admin/SurveyEditDialog";
+import SurveyDeleteDialog from "@/components/survey/admin/SurveyDeleteDialog";
 
-export default function QuizManagementPage() {
+export default function SurveyManagementPage() {
   const { showToast } = useToast();
 
   // ── List state ────────────────────────────────────────────────
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -39,22 +39,22 @@ export default function QuizManagementPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   const [editOpen, setEditOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<QuizQuestion | null>(null);
+  const [editingItem, setEditingItem] = useState<SurveyQuestion | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletingItem, setDeletingItem] = useState<QuizQuestion | null>(null);
+  const [deletingItem, setDeletingItem] = useState<SurveyQuestion | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // ── Data fetching ─────────────────────────────────────────────
   const fetchQuestions = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await quizService.getQuestions();
+      const response = await surveyService.getQuestions();
       setQuestions(response.data.reverse());
     } catch (error) {
-      console.error("Failed to fetch quiz questions:", error);
-      showToast("Lỗi khi tải danh sách câu hỏi Quiz", "error");
+      console.error("Failed to fetch survey questions:", error);
+      showToast("Lỗi khi tải danh sách câu hỏi Survey", "error");
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export default function QuizManagementPage() {
 
   // ── Add ───────────────────────────────────────────────────────
   const handleCreate = useCallback(
-    async (payloadArray: QuizQuestionRequest[]) => {
+    async (payloadArray: SurveyQuestionRequest[]) => {
       // Validation is now primarily handled inside the dialog via isInvalid,
       // but we can double check
       for (const payload of payloadArray) {
@@ -104,7 +104,7 @@ export default function QuizManagementPage() {
       }
       setIsCreating(true);
       try {
-        await quizService.createQuestions(payloadArray);
+        await surveyService.createQuestions(payloadArray);
         showToast(`Tạo thành công ${payloadArray.length} câu hỏi!`, "success");
         setAddOpen(false);
         fetchQuestions();
@@ -119,7 +119,7 @@ export default function QuizManagementPage() {
   );
 
   // ── Edit ──────────────────────────────────────────────────────
-  const handleOpenEdit = useCallback((item: QuizQuestion) => {
+  const handleOpenEdit = useCallback((item: SurveyQuestion) => {
     setEditingItem(item);
     setEditOpen(true);
   }, []);
@@ -148,7 +148,7 @@ export default function QuizManagementPage() {
       }
       setIsSaving(true);
       try {
-        await quizService.updateQuestion(editingItem.id, payload);
+        await surveyService.updateQuestion(editingItem.id, payload);
         showToast("Cập nhật câu hỏi thành công!", "success");
         fetchQuestions();
         handleCloseEdit();
@@ -163,7 +163,7 @@ export default function QuizManagementPage() {
   );
 
   // ── Delete ────────────────────────────────────────────────────
-  const handleOpenDelete = useCallback((item: QuizQuestion) => {
+  const handleOpenDelete = useCallback((item: SurveyQuestion) => {
     setDeletingItem(item);
     setDeleteOpen(true);
   }, []);
@@ -179,7 +179,7 @@ export default function QuizManagementPage() {
     if (!deletingItem) return;
     setIsDeleting(true);
     try {
-      await quizService.deleteQuestion(deletingItem.id);
+      await surveyService.deleteQuestion(deletingItem.id);
       showToast("Xóa câu hỏi thành công!", "success");
       setQuestions((prev) => prev.filter((q) => q.id !== deletingItem.id));
       handleCloseDelete();
@@ -276,7 +276,7 @@ export default function QuizManagementPage() {
                 </TableRow>
               ) : (
                 filteredQuestions.map((item) => (
-                  <QuizQuestionRow
+                  <SurveyQuestionRow
                     key={item.id}
                     item={item}
                     isExpanded={expandedRows.has(item.id)}
@@ -291,14 +291,14 @@ export default function QuizManagementPage() {
         </TableContainer>
       </Box>
 
-      <QuizAddDialog
+      <SurveyAddDialog
         open={addOpen}
         isCreating={isCreating}
         onClose={() => setAddOpen(false)}
         onSubmit={handleCreate}
       />
 
-      <QuizEditDialog
+      <SurveyEditDialog
         open={editOpen}
         isSaving={isSaving}
         initialData={editingItem}
@@ -306,7 +306,7 @@ export default function QuizManagementPage() {
         onSubmit={handleSaveEdit}
       />
 
-      <QuizDeleteDialog
+      <SurveyDeleteDialog
         open={deleteOpen}
         item={deletingItem}
         isDeleting={isDeleting}

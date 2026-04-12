@@ -16,14 +16,14 @@ import {
     NavigateNext as NextIcon,
 } from "@mui/icons-material";
 import { AuthContext } from "@/contexts/AuthContextType";
-import { quizService } from "@/services/ai/quizService";
+import { surveyService } from "@/services/ai/surveyService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { getOrCreateGuestUserId } from "@/utils/guestUserId";
-import type { QuizQuestion, QuizQuesAnsDetailRequest } from "@/types/quiz";
+import type { SurveyQuestion, SurveyQuesAnsDetailRequest } from "@/types/survey";
 import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
-import QuizQuestionCard from "@/components/quiz/user/QuizQuestionCard";
-import QuizResultView from "@/components/quiz/user/QuizResultView";
+import SurveyQuestionCard from "@/components/survey/user/SurveyQuestionCard";
+import SurveyResultView from "@/components/survey/user/SurveyResultView";
 
 // ── Parse AI response string ────────────────────────────────────
 function parseAiResponse(raw: string): AssistantPayload {
@@ -35,11 +35,11 @@ function parseAiResponse(raw: string): AssistantPayload {
 }
 
 // ── Page ────────────────────────────────────────────────────────
-export default function QuizPage() {
+export default function SurveyPage() {
     const authCtx = useContext(AuthContext);
     const userId = authCtx?.user?.id ?? getOrCreateGuestUserId();
 
-    const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+    const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
     const [loading, setLoading] = useState(true);
     const [selections, setSelections] = useState<Map<string, Set<string>>>(new Map());
     const [currentStep, setCurrentStep] = useState(0);
@@ -50,7 +50,7 @@ export default function QuizPage() {
     const fetchQuestions = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await quizService.getQuestions();
+            const res = await surveyService.getQuestions();
             setQuestions([...res.data].reverse());
         } catch {
             // show empty state
@@ -91,7 +91,7 @@ export default function QuizPage() {
 
     // ── Submit ────────────────────────────────────────────────────
     const handleSubmit = useCallback(async () => {
-        const payload: QuizQuesAnsDetailRequest[] = [];
+        const payload: SurveyQuesAnsDetailRequest[] = [];
         for (const [questionId, answerIds] of selections.entries()) {
             for (const answerId of answerIds) {
                 payload.push({ questionId, answerId });
@@ -99,11 +99,11 @@ export default function QuizPage() {
         }
         setSubmitting(true);
         try {
-            const res = await quizService.submitQuizV2(userId, payload);
+            const res = await surveyService.submitSurveyV2(userId, payload);
             const parsedRes = parseAiResponse(res.data);
             setResult(parsedRes);
         } catch (err) {
-            console.error("Quiz submit error:", err);
+            console.error("Survey submit error:", err);
             setResult({ message: "Đã xảy ra lỗi khi lấy gợi ý. Vui lòng thử lại.", products: [] });
         } finally {
             setSubmitting(false);
@@ -134,7 +134,7 @@ export default function QuizPage() {
                 <Header />
                 <Container maxWidth="md" sx={{ mt: 10, textAlign: "center" }}>
                     <Typography variant="h6" color="text.secondary">
-                        Hiện chưa có câu hỏi quiz. Vui lòng quay lại sau!
+                        Hiện chưa có câu hỏi survey. Vui lòng quay lại sau!
                     </Typography>
                 </Container>
             </>
@@ -147,13 +147,13 @@ export default function QuizPage() {
             <>
                 <Header />
                 <Container maxWidth="md" sx={{ py: 6 }}>
-                    <QuizResultView result={result} userId={userId} onRestart={handleRestart} />
+                    <SurveyResultView result={result} userId={userId} onRestart={handleRestart} />
                 </Container>
             </>
         );
     }
 
-    // ── Quiz ──────────────────────────────────────────────────────
+    // ── Survey ──────────────────────────────────────────────────────
     return (
         <>
             <Header />
@@ -199,7 +199,7 @@ export default function QuizPage() {
 
                 {/* Question card */}
                 {currentQ && (
-                    <QuizQuestionCard
+                    <SurveyQuestionCard
                         question={currentQ}
                         selectedIds={selectedIds}
                         onSingleSelect={handleSingleSelect}
