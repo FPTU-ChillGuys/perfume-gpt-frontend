@@ -21,6 +21,7 @@ import {
     Clear as ClearIcon,
     Visibility as VisibilityIcon,
     AutoGraph as AutoGraphIcon,
+    Refresh as RefreshIcon,
 } from "@mui/icons-material";
 import { inventoryService } from "@/services/ai/inventoryService";
 import { useToast } from "@/hooks/useToast";
@@ -99,7 +100,24 @@ export const RestockAITab = () => {
     const handleViewLog = (log: RestockLog) => {
         try {
             // Log.data contains JSON string
-            const parsedData = JSON.parse(log.inventoryLog) as RestockAIPredictionData;
+            // It could be either:
+            // 1. Direct RestockAIPredictionData: { variants: [...] }
+            // 2. Wrapped response: { success: true, data: { variants: [...] }, __httpStatusCode: 200 }
+            const rawParsed = JSON.parse(log.inventoryLog);
+            
+            let parsedData: RestockAIPredictionData;
+            
+            // Check if it's wrapped in ApiResponse format
+            if (rawParsed.success && rawParsed.data) {
+                // Unwrap the response
+                parsedData = rawParsed.data as RestockAIPredictionData;
+            } else if (rawParsed.variants) {
+                // It's already the direct data
+                parsedData = rawParsed as RestockAIPredictionData;
+            } else {
+                throw new Error("Unexpected data format");
+            }
+            
             setSelectedVariants(parsedData.variants || []);
             setDialogTitle(`Chi tiết log nhập hàng: ${log.id?.substring(0, 8)}`);
             setDetailDialogOpen(true);
@@ -110,9 +128,10 @@ export const RestockAITab = () => {
     };
 
     const handleJobSuccess = (data: RestockAIPredictionData) => {
+        console.log("Job success received data:", data);
         setSelectedVariants(data.variants || []);
         setDialogTitle("Kết quả Dự đoán Nhập hàng mới nhất");
-        // Open detail dialog to show results
+        // Open detail dialog to show results immediately
         setDetailDialogOpen(true);
         // Refresh logs in background
         loadLogs();
