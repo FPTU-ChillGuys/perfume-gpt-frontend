@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Dialog,
     DialogTitle,
@@ -15,19 +16,14 @@ import {
     Paper,
     Box,
     Chip,
-    Tooltip,
 } from "@mui/material";
-import { PictureAsPdf as PictureAsPdfIcon } from "@mui/icons-material";
 import type { RestockAIVariant } from "@/types/inventory";
-import { inventoryService } from "@/services/ai/inventoryService";
-import { useToast } from "@/hooks/useToast";
 
 interface RestockDetailDialogProps {
     open: boolean;
     onClose: () => void;
     data: RestockAIVariant[] | null;
     title?: string;
-    logId?: string | null;
 }
 
 export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
@@ -35,10 +31,8 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
     onClose,
     data,
     title = "Chi tiết dự đoán nhập hàng",
-    logId,
 }) => {
-    const [downloadingPdf, setDownloadingPdf] = React.useState(false);
-    const { showToast } = useToast();
+    const navigate = useNavigate();
 
     // Helper function to format price
     const formatPrice = (price?: number) => {
@@ -49,29 +43,24 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
         }).format(price);
     };
 
-    const handleDownloadPdf = async () => {
-        if (!logId) {
-            showToast("Chỉ có thể tải PDF cho log đã lưu.", "warning");
+    // Handle creating import order from restock suggestions
+    const handleCreateImportOrder = () => {
+        if (!data || data.length === 0) {
             return;
         }
 
-        try {
-            setDownloadingPdf(true);
-            const blob = await inventoryService.downloadRestockLogPdf(logId);
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = `restock-log-${logId.substring(0, 8)}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error("Download restock pdf failed:", error);
-            showToast("Không thể tải PDF log dự đoán nhập hàng.", "error");
-        } finally {
-            setDownloadingPdf(false);
-        }
+        // Create import data structure
+        const importData = data.map((variant) => ({
+            variantId: variant.id,
+            quantity: variant.suggestedRestockQuantity,
+            price: variant.basePrice,
+        }));
+
+        // Encode to base64 for URL
+        const encodedData = btoa(JSON.stringify(importData));
+
+        // Navigate to import stock page with tab 1 (Create Import Stock)
+        navigate(`/admin/import-stock?importData=${encodedData}&tab=1`);
     };
 
     return (
@@ -94,7 +83,6 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                             <TableHead>
                                 <TableRow sx={{ bgcolor: "grey.50" }}>
                                     <TableCell><strong>SKU</strong></TableCell>
-                                    <TableCell><strong>Tên sản phẩm</strong></TableCell>
                                     <TableCell><strong>Volume</strong></TableCell>
                                     <TableCell><strong>Type</strong></TableCell>
                                     <TableCell align="right"><strong>Giá</strong></TableCell>
@@ -107,7 +95,6 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                 {data.map((row) => (
                                     <TableRow key={row.id} hover>
                                         <TableCell>{row.sku}</TableCell>
-                                        <TableCell>{row.productName || "N/A"}</TableCell>
                                         <TableCell>{row.volumeMl}ml</TableCell>
                                         <TableCell>
                                             <Chip label={row.type} size="small" variant="outlined" />
@@ -131,21 +118,16 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                 )}
             </DialogContent>
             <DialogActions>
-                <Tooltip title={logId ? "Tải PDF log này" : "Log mới tạo chưa có mã để tải PDF"}>
-                    <span>
-                        <Button
-                            variant="outlined"
-                            color="inherit"
-                            startIcon={<PictureAsPdfIcon />}
-                            onClick={handleDownloadPdf}
-                            disabled={!logId || downloadingPdf}
-                        >
-                            {downloadingPdf ? "Đang tải..." : "Tải PDF"}
-                        </Button>
-                    </span>
-                </Tooltip>
-                <Button onClick={onClose} variant="contained" color="primary">
+                <Button onClick={onClose} variant="outlined" color="primary">
                     Đóng
+                </Button>
+                <Button
+                    onClick={handleCreateImportOrder}
+                    variant="contained"
+                    color="success"
+                    disabled={!data || data.length === 0}
+                >
+                    Tạo Đơn Nhập Hàng từ Đề xuất này
                 </Button>
             </DialogActions>
         </Dialog>
