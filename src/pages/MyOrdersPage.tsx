@@ -144,6 +144,9 @@ const RETURN_REQUEST_BLOCKED_STATUSES = new Set<ReturnRequestStatus>([
   "Pending",
   "ApprovedForReturn",
   "RequestMoreInfo",
+  "Inspecting",
+  "ReadyForRefund",
+  "Refunded",
 ]);
 
 const CANCEL_REQUEST_BLOCKED_STATUSES = new Set(["Pending"]);
@@ -153,6 +156,11 @@ const returnRequestStatusLabel = (status?: string | null) => {
   if (status === "Pending") return "Yêu cầu đang chờ duyệt";
   if (status === "ApprovedForReturn") return "Yêu cầu đã được duyệt trả hàng";
   if (status === "RequestMoreInfo") return "Cần bổ sung thông tin trả hàng";
+  if (status === "Inspecting") return "Shop đang kiểm tra hàng hoàn";
+  if (status === "ReadyForRefund") return "Chờ hoàn tiền";
+  if (status === "Refunded") return "Đã hoàn tiền";
+  if (status === "Completed") return "Yêu cầu trả hàng đã hoàn tất";
+  if (status === "Rejected") return "Yêu cầu trả hàng đã bị từ chối";
   return `Yêu cầu trả hàng: ${status}`;
 };
 

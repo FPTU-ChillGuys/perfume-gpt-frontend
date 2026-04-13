@@ -182,6 +182,7 @@ export interface OrderReturnRequest {
   requestedRefundAmount?: number;
   approvedRefundAmount?: number;
   isRefunded?: boolean;
+  isRefundOnly?: boolean | null;
   isRestocked?: boolean;
   createdAt?: string;
   updatedAt?: string | null;
@@ -368,6 +369,10 @@ class OrderService {
       isRefunded: Boolean(
         this.getValue<boolean>(item, ["isRefunded", "IsRefunded"]),
       ),
+      isRefundOnly: this.getValue<boolean | null>(item, [
+        "isRefundOnly",
+        "IsRefundOnly",
+      ]) ?? null,
       isRestocked: Boolean(
         this.getValue<boolean>(item, ["isRestocked", "IsRestocked"]),
       ),
@@ -1180,7 +1185,7 @@ class OrderService {
       const requestBody: Record<string, string> = {
         refundMethod,
       };
-
+      console.log("Refund request body:", requestBody);
       const trimmedManualReference = manualTransactionReference?.trim();
       if (trimmedManualReference) {
         requestBody.manualTransactionReference = trimmedManualReference;
@@ -1339,6 +1344,7 @@ class OrderService {
     payload: CreateReturnRequestPayload,
   ): Promise<string> {
     try {
+      console.log("[OrderService] createReturnRequest payload:", payload);
       const requestBody: CreateReturnRequestDto = {
         orderId: payload.orderId,
         reason: payload.reason,
@@ -1352,6 +1358,7 @@ class OrderService {
         recipient: payload.recipient ?? null,
         temporaryMediaIds: payload.temporaryMediaIds ?? null,
       };
+      console.log("[OrderService] createReturnRequest requestBody:", requestBody);
 
       const response = await apiInstance.POST("/api/orderreturnrequests", {
         body: requestBody,

@@ -265,6 +265,9 @@ const RETURN_REQUEST_BLOCKED_STATUSES = new Set([
   "Pending",
   "ApprovedForReturn",
   "RequestMoreInfo",
+  "Inspecting",
+  "ReadyForRefund",
+  "Refunded",
 ]);
 
 const CANCEL_REQUEST_BLOCKED_STATUSES = new Set(["Pending"]);
