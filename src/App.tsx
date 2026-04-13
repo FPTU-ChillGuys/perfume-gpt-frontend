@@ -1,11 +1,9 @@
 import { lazy, Suspense } from "react";
-import { ThemeProvider } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
 import CircularProgress from "@mui/material/CircularProgress";
 import Box from "@mui/material/Box";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import { theme } from "./theme/theme";
+import { AppThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./contexts/ToastProvider";
 import { CartProvider } from "./contexts/CartContext";
@@ -13,6 +11,7 @@ import { ProductQuickViewProvider } from "./contexts/ProductQuickViewContext";
 
 import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
 import { CustomerPurchaseRoute } from "./components/common/CustomerPurchaseRoute";
+import { PublicOnlyRoute } from "./components/common/PublicOnlyRoute";
 import { ChatbotWidgetWrapper } from "./components/chatbot/ChatbotWidgetWrapper";
 import "./App.css";
 
@@ -30,6 +29,16 @@ const LoginPage = lazy(() =>
 );
 const RegisterPage = lazy(() =>
   import("./pages/RegisterPage").then((m) => ({ default: m.RegisterPage })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import("./pages/ForgotPasswordPage").then((m) => ({
+    default: m.ForgotPasswordPage,
+  })),
+);
+const ResetPasswordPage = lazy(() =>
+  import("./pages/ResetPasswordPage").then((m) => ({
+    default: m.ResetPasswordPage,
+  })),
 );
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const StaffDashboard = lazy(() => import("./pages/StaffDashboard"));
@@ -49,9 +58,9 @@ const CounterCheckoutStaffPage = lazy(() =>
     default: m.CounterCheckoutStaffPage,
   })),
 );
-const CounterCheckoutDisplayPage = lazy(() =>
-  import("./pages/checkout/CounterCheckoutDisplayPage").then((m) => ({
-    default: m.CounterCheckoutDisplayPage,
+const CustomerDisplayScreen = lazy(() =>
+  import("./pages/checkout/CustomerDisplayScreen").then((m) => ({
+    default: m.CustomerDisplayScreen,
   })),
 );
 const PaymentSuccessPage = lazy(() =>
@@ -70,6 +79,26 @@ const MyOrdersPage = lazy(() =>
 const MyOrderDetailPage = lazy(() =>
   import("./pages/MyOrderDetailPage").then((m) => ({
     default: m.MyOrderDetailPage,
+  })),
+);
+const MyCancelRequestsPage = lazy(() =>
+  import("./pages/MyCancelRequestsPage").then((m) => ({
+    default: m.MyCancelRequestsPage,
+  })),
+);
+const MyCancelRequestDetailPage = lazy(() =>
+  import("./pages/MyCancelRequestDetailPage").then((m) => ({
+    default: m.MyCancelRequestDetailPage,
+  })),
+);
+const MyReturnRequestsPage = lazy(() =>
+  import("./pages/MyReturnRequestsPage").then((m) => ({
+    default: m.MyReturnRequestsPage,
+  })),
+);
+const MyReturnRequestDetailPage = lazy(() =>
+  import("./pages/MyReturnRequestDetailPage").then((m) => ({
+    default: m.MyReturnRequestDetailPage,
   })),
 );
 const OrderManagementPage = lazy(() =>
@@ -96,6 +125,11 @@ const UserLogsManagementPage = lazy(() =>
     default: m.UserLogsManagementPage,
   })),
 );
+const UserManagementPage = lazy(() =>
+  import("./pages/UserManagementPage").then((m) => ({
+    default: m.UserManagementPage,
+  })),
+);
 const AdminConversationsPage = lazy(() =>
   import("./pages/AdminConversationsPage").then((m) => ({
     default: m.AdminConversationsPage,
@@ -116,6 +150,64 @@ const AIAcceptancePage = lazy(() =>
     default: m.AIAcceptancePage,
   })),
 );
+const CampaignManagementPage = lazy(() =>
+  import("./pages/CampaignManagementPage").then((m) => ({
+    default: m.CampaignManagementPage,
+  })),
+);
+const CampaignManagementDetailPage = lazy(() =>
+  import("./pages/CampaignManagementDetailPage").then((m) => ({
+    default: m.CampaignManagementDetailPage,
+  })),
+);
+const VerifyEmailPage = lazy(() =>
+  import("./pages/VerifyEmailPage").then((m) => ({
+    default: m.VerifyEmailPage,
+  })),
+);
+const AdminVouchersPage = lazy(() =>
+  import("./pages/AdminVouchersPage").then((m) => ({
+    default: m.AdminVouchersPage,
+  })),
+);
+const AttributeManagementPage = lazy(() =>
+  import("./pages/AttributeManagementPage").then((m) => ({
+    default: m.default,
+  })),
+);
+const OrderCancelRequestsPage = lazy(() =>
+  import("./pages/OrderCancelRequestsPage").then((m) => ({
+    default: m.OrderCancelRequestsPage,
+  })),
+);
+const OrderCancelRequestDetailPage = lazy(() =>
+  import("./pages/OrderCancelRequestDetailPage").then((m) => ({
+    default: m.OrderCancelRequestDetailPage,
+  })),
+);
+const OrderReturnRequestsPage = lazy(() =>
+  import("./pages/OrderReturnRequestsPage").then((m) => ({
+    default: m.OrderReturnRequestsPage,
+  })),
+);
+const OrderReturnRequestDetailPage = lazy(() =>
+  import("./pages/OrderReturnRequestDetailPage").then((m) => ({
+    default: m.OrderReturnRequestDetailPage,
+  })),
+);
+const SuppliersPage = lazy(() =>
+  import("./pages/SuppliersPage").then((m) => ({ default: m.SuppliersPage })),
+);
+const LoyaltyTransactionsPage = lazy(() =>
+  import("./pages/LoyaltyTransactionsPage").then((m) => ({
+    default: m.LoyaltyTransactionsPage,
+  })),
+);
+const PaymentTransactionsManagementPage = lazy(() =>
+  import("./pages/PaymentTransactionsManagementPage").then((m) => ({
+    default: m.PaymentTransactionsManagementPage,
+  })),
+);
 
 const PageLoader = () => (
   <Box
@@ -134,8 +226,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+      <AppThemeProvider>
         <BrowserRouter>
           <ToastProvider>
             <AuthProvider>
@@ -145,7 +236,26 @@ function App() {
                     <Routes>
                       <Route path="/" element={<HomePage />} />
                       <Route path="/login" element={<LoginPage />} />
-                      <Route path="/register" element={<RegisterPage />} />
+                      <Route
+                        path="/register"
+                        element={
+                          <PublicOnlyRoute>
+                            <RegisterPage />
+                          </PublicOnlyRoute>
+                        }
+                      />
+                      <Route
+                        path="/forgot-password"
+                        element={<ForgotPasswordPage />}
+                      />
+                      <Route
+                        path="/reset-password"
+                        element={<ResetPasswordPage />}
+                      />
+                      <Route
+                        path="/verify-email"
+                        element={<VerifyEmailPage />}
+                      />
                       <Route
                         path="/checkout/counter/staff"
                         element={
@@ -156,7 +266,7 @@ function App() {
                       />
                       <Route
                         path="/checkout/counter/display"
-                        element={<CounterCheckoutDisplayPage />}
+                        element={<CustomerDisplayScreen />}
                       />
                       <Route path="/products" element={<ProductListPage />} />
                       <Route path="/quiz" element={<QuizPage />} />
@@ -227,7 +337,31 @@ function App() {
                         }
                       />
                       <Route
+                        path="/profile/loyalty"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <ProfilePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/profile/notifications"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <ProfilePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/profile/scent-preferences"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <ProfilePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/profile/quiz-history"
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
                             <ProfilePage />
@@ -247,6 +381,46 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
                             <MyOrderDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-cancel-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyCancelRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyCancelRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-return-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyReturnRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/my-return-requests/:returnRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <MyReturnRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/loyalty"
+                        element={
+                          <RoleBasedRoute allowedRoles={["user"]}>
+                            <LoyaltyTransactionsPage />
                           </RoleBasedRoute>
                         }
                       />
@@ -321,6 +495,14 @@ function App() {
                         element={<UnauthorizedPage />}
                       />
                       <Route
+                        path="/admin/users"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <UserManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/logs"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
@@ -353,10 +535,90 @@ function App() {
                         }
                       />
                       <Route
+                        path="/admin/campaigns"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <CampaignManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/campaigns/:campaignId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <CampaignManagementDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/admin/ai-acceptance"
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <AIAcceptancePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/vouchers"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <AdminVouchersPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/attributes"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <AttributeManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/payment-transactions"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <PaymentTransactionsManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/cancel-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderCancelRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderCancelRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/return-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderReturnRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/return-requests/:returnRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <OrderReturnRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/suppliers"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <SuppliersPage />
                           </RoleBasedRoute>
                         }
                       />
@@ -404,10 +666,50 @@ function App() {
                         }
                       />
                       <Route
+                        path="/staff/return-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderReturnRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/cancel-requests"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderCancelRequestsPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/cancel-requests/:cancelRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderCancelRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/return-requests/:returnRequestId"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <OrderReturnRequestDetailPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
                         path="/staff/inventory"
                         element={
                           <RoleBasedRoute allowedRoles={["staff"]}>
                             <InventoryManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/staff/payment-transactions"
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <PaymentTransactionsManagementPage />
                           </RoleBasedRoute>
                         }
                       />
@@ -427,7 +729,7 @@ function App() {
             </AuthProvider>
           </ToastProvider>
         </BrowserRouter>
-      </ThemeProvider>
+      </AppThemeProvider>
     </GoogleOAuthProvider>
   );
 }

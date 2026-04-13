@@ -51,7 +51,11 @@ export type PagedReviewList =
   components["schemas"]["PagedResultOfReviewListItem"];
 
 export type CreateReviewRequest = components["schemas"]["CreateReviewRequest"];
-export type UpdateReviewRequest = components["schemas"]["UpdateReviewRequest"];
+export interface UpdateReviewRequest {
+  rating?: number;
+  comment?: string;
+  temporaryMediaIds?: string[] | null;
+}
 export interface ModerateReviewRequest {
   status: ReviewStatus;
   reason?: string;

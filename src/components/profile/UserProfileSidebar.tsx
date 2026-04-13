@@ -20,21 +20,28 @@ import {
   Edit as EditIcon,
   ExpandLess,
   ExpandMore,
+  AssignmentReturn as ReturnIcon,
+  Stars as LoyaltyIcon,
+  Spa as SpaIcon,
+  Quiz as QuizIcon,
 } from "@mui/icons-material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 import type { UserCredentials } from "@/services/userService";
 
 interface UserProfileSidebarProps {
   userInfo: UserCredentials | null;
+  avatarUrl?: string | null;
 }
 
-export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
+export const UserProfileSidebar = ({ userInfo, avatarUrl }: UserProfileSidebarProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [accountOpen, setAccountOpen] = useState(true);
+  const [ordersOpen, setOrdersOpen] = useState(true);
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string, includeSubPaths = false) =>
+    pathname === path || (includeSubPaths && pathname.startsWith(`${path}/`));
 
   const navItems = [
     {
@@ -55,12 +62,44 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
     {
       label: "Đơn Mua",
       icon: <OrderIcon fontSize="small" />,
-      path: "/my-orders",
+      isGroup: true,
+      children: [
+        {
+          label: "Lịch Sử Mua Hàng",
+          path: "/my-orders",
+          includeSubPaths: true,
+        },
+        {
+          label: "Hủy Đơn/Hoàn Tiền",
+          path: "/my-cancel-requests",
+          includeSubPaths: true,
+        },
+        {
+          label: "Trả Hàng/Hoàn Tiền",
+          path: "/my-return-requests",
+          includeSubPaths: true,
+        },
+      ],
     },
     {
       label: "Kho Voucher",
       icon: <VoucherIcon fontSize="small" />,
       path: "/profile/vouchers",
+    },
+    {
+      label: "Điểm Thưởng",
+      icon: <LoyaltyIcon fontSize="small" />,
+      path: "/profile/loyalty",
+    },
+    {
+      label: "Sở Thích Hương",
+      icon: <SpaIcon fontSize="small" />,
+      path: "/profile/scent-preferences",
+    },
+    {
+      label: "Lịch Sử Khảo Sát",
+      icon: <QuizIcon fontSize="small" />,
+      path: "/profile/quiz-history",
     },
   ];
 
@@ -73,13 +112,15 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
         flexShrink: 0,
         borderRight: "1px solid",
         borderColor: "divider",
-        bgcolor: "#fafafa",
+        bgcolor: "background.paper",
         pt: 3,
         pb: 4,
       }}
     >
       {/* User info */}
       <Box
+        component={RouterLink}
+        to="/profile"
         sx={{
           px: 3,
           pb: 2.5,
@@ -87,14 +128,16 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
           alignItems: "center",
           gap: 1.5,
           cursor: "pointer",
+          textDecoration: "none",
+          color: "inherit",
         }}
-        onClick={() => navigate("/profile")}
       >
         <Avatar
+          src={avatarUrl || undefined}
           sx={{
             width: 48,
             height: 48,
-            bgcolor: "error.main",
+            bgcolor: avatarUrl ? undefined : "error.main",
             fontSize: "1.2rem",
           }}
         >
@@ -115,12 +158,7 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
               alignItems: "center",
               gap: 0.5,
               color: "text.secondary",
-              cursor: "pointer",
               "&:hover": { color: "primary.main" },
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate("/profile");
             }}
           >
             <EditIcon sx={{ fontSize: 12 }} />
@@ -134,12 +172,15 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
       <List dense disablePadding>
         {navItems.map((item) => {
           if (item.isGroup) {
+            const isOrdersGroup = item.label === "Đơn Mua";
+            const groupOpen = isOrdersGroup ? ordersOpen : accountOpen;
+            const toggleGroup = isOrdersGroup
+              ? () => setOrdersOpen((prev) => !prev)
+              : () => setAccountOpen((prev) => !prev);
+
             return (
               <Box key={item.label}>
-                <ListItemButton
-                  onClick={() => setAccountOpen((prev) => !prev)}
-                  sx={{ py: 1.2, px: 3 }}
-                >
+                <ListItemButton onClick={toggleGroup} sx={{ py: 1.2, px: 3 }}>
                   <ListItemIcon sx={{ minWidth: 32, color: "error.main" }}>
                     {item.icon}
                   </ListItemIcon>
@@ -150,19 +191,25 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
                       </Typography>
                     }
                   />
-                  {accountOpen ? (
+                  {groupOpen ? (
                     <ExpandLess fontSize="small" />
                   ) : (
                     <ExpandMore fontSize="small" />
                   )}
                 </ListItemButton>
-                <Collapse in={accountOpen} timeout="auto" unmountOnExit>
+                <Collapse in={groupOpen} timeout="auto" unmountOnExit>
                   <List dense disablePadding>
                     {item.children?.map((child) => (
                       <ListItemButton
                         key={child.path}
-                        selected={isActive(child.path)}
-                        onClick={() => navigate(child.path)}
+                        component={RouterLink}
+                        to={child.path}
+                        selected={isActive(
+                          child.path,
+                          "includeSubPaths" in child
+                            ? child.includeSubPaths
+                            : false,
+                        )}
                         sx={{
                           pl: 7,
                           py: 0.9,
@@ -188,7 +235,12 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
                             <Typography
                               variant="body2"
                               color={
-                                isActive(child.path)
+                                isActive(
+                                  child.path,
+                                  "includeSubPaths" in child
+                                    ? child.includeSubPaths
+                                    : false,
+                                )
                                   ? "error.main"
                                   : "text.primary"
                               }
@@ -208,8 +260,9 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
           return (
             <ListItemButton
               key={item.path}
+              component={RouterLink}
+              to={item.path!}
               selected={isActive(item.path!)}
-              onClick={() => navigate(item.path!)}
               sx={{
                 py: 1.2,
                 px: 3,
@@ -247,4 +300,11 @@ export const UserProfileSidebar = ({ userInfo }: UserProfileSidebarProps) => {
 };
 
 // Icon components used inside the sidebar (kept local for clarity)
-export { PersonIcon, LocationIcon, LockIcon, OrderIcon, VoucherIcon };
+export {
+  PersonIcon,
+  LocationIcon,
+  LockIcon,
+  OrderIcon,
+  VoucherIcon,
+  ReturnIcon,
+};

@@ -1,12 +1,88 @@
 import type { paths } from "../types/api/v1";
 import createFetchClient, { type Middleware } from "openapi-fetch";
 import { markApiRequestEnd, markApiRequestStart } from "@/utils/perfMetrics";
+import { clearStoredAuth, getStoredAccessToken } from "@/utils/authStorage";
+
+const normalizeBaseUrl = (value?: string) =>
+  (value || "").trim().replace(/\/+$/, "");
+
+const isLocalhostUrl = (value?: string) => {
+  const raw = normalizeBaseUrl(value);
+  if (!raw) return false;
+
+  try {
+    const parsed = new URL(raw);
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+};
+
+const resolveApiBaseUrl = () => {
+  const configured = normalizeBaseUrl(
+    import.meta.env.VITE_API_BASE_URL as string | undefined,
+  );
+
+  if (typeof window !== "undefined") {
+    const isProductionHost =
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    // On deployed frontend, always use same-origin so rewrite/proxy rules handle routing.
+    if (isProductionHost) {
+      return "";
+    }
+  }
+
+  return configured || "";
+};
+
+const resolveAiBaseUrl = () => {
+  const chatbotConfigured = normalizeBaseUrl(
+    import.meta.env.VITE_CHATBOT_BASE_URL as string | undefined,
+  );
+  const apiConfigured = resolveApiBaseUrl();
+
+  // On production hosts, ignore accidental localhost chatbot base URL.
+  if (typeof window !== "undefined") {
+    const isProductionHost =
+      window.location.hostname !== "localhost" &&
+      window.location.hostname !== "127.0.0.1";
+
+    if (isProductionHost && isLocalhostUrl(chatbotConfigured)) {
+      return apiConfigured;
+    }
+  }
+
+  return chatbotConfigured || apiConfigured;
+};
 
 const middleware: Middleware = {
   async onRequest({ request }) {
     markApiRequestStart(request);
 
-    const accessToken = localStorage.getItem("accessToken");
+    try {
+      const url = new URL(request.url);
+      const isNgrokHost =
+        url.hostname.includes("ngrok.io") ||
+        url.hostname.includes("ngrok-free.app") ||
+        url.hostname.includes("ngrok-free.dev");
+
+      const isApiLikePath =
+        url.pathname.startsWith("/api/") ||
+        url.pathname === "/api" ||
+        url.pathname.startsWith("/trends/") ||
+        url.pathname === "/trends";
+
+      // Forward this header for API-like requests so ngrok does not return browser warning HTML.
+      if (isNgrokHost || isApiLikePath) {
+        request.headers.set("ngrok-skip-browser-warning", "true");
+      }
+    } catch {
+      // Ignore URL parsing errors and continue request flow.
+    }
+
+    const accessToken = getStoredAccessToken();
     // (optional) add logic here to refresh token when it expires
 
     if (accessToken) {
@@ -19,9 +95,29 @@ const middleware: Middleware = {
   onResponse({ request, response }) {
     markApiRequestEnd(request, response?.status);
 
+    try {
+      const url = new URL(request.url);
+      const contentType = response?.headers?.get("content-type") || "";
+      const isApiLikePath =
+        url.pathname.startsWith("/api/") ||
+        url.pathname === "/api" ||
+        url.pathname.startsWith("/trends/") ||
+        url.pathname === "/trends";
+
+      if (isApiLikePath && contentType.toLowerCase().includes("text/html")) {
+        throw new Error(
+          "API trả về HTML thay vì JSON. Kiểm tra Vercel rewrite hoặc ngrok tunnel.",
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        return Promise.reject(error);
+      }
+    }
+
     if (response?.status === 401) {
       // Handle unauthorized - but skip redirect if already on login page
-      localStorage.removeItem("accessToken");
+      clearStoredAuth();
       if (!window.location.pathname.startsWith("/login")) {
         window.location.href = "/login";
       }
@@ -36,13 +132,15 @@ const middleware: Middleware = {
   },
 };
 
+export const getApiBaseUrl = resolveApiBaseUrl;
+
 export const apiInstance = createFetchClient<paths>({
-  baseUrl: import.meta.env.VITE_API_BASE_URL,
+  baseUrl: resolveApiBaseUrl(),
 });
 apiInstance.use(middleware);
 
 // AI backend (separate server — paths not in the main OpenAPI schema)
 export const aiApiInstance = createFetchClient<Record<string, any>>({
-  baseUrl: import.meta.env.VITE_CHATBOT_BASE_URL,
+  baseUrl: resolveAiBaseUrl(),
 });
 aiApiInstance.use(middleware);

@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://mustached-gibingly-brigitte.ngrok-free.dev/api/$1"
+    },
+    {
+      "source": "/trends/(.*)",
+      "destination": "https://mustached-gibingly-brigitte.ngrok-free.dev/trends/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

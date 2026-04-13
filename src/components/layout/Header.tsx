@@ -14,7 +14,6 @@ import {
   Badge,
 } from "@mui/material";
 import {
-  NotificationsNone,
   ShoppingCartOutlined,
   PersonOutline,
   ArrowDropDown,
@@ -25,16 +24,20 @@ import {
   PointOfSale as PointOfSaleIcon,
   Tv as TvIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useCart } from "../../hooks/useCart";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CartDropdown } from "../common/CartDropdown";
 import { HeaderSearch } from "./HeaderSearch";
 import {
   categoryService,
   type CategoryLookupItem,
 } from "../../services/categoryService";
+import { loyaltyService } from "../../services/loyaltyService";
+import { NotificationBell } from "../common/NotificationBell";
+import { useNotificationSystem } from "../../hooks/useNotificationSystem";
+import type { NotificationItem } from "@/services/notificationService";
 
 const MAX_VISIBLE_CATEGORIES = 5;
 
@@ -51,8 +54,9 @@ const toVietnameseCategoryName = (name?: string | null) => {
   return CATEGORY_NAME_VI[name.trim().toLowerCase()] ?? name;
 };
 
-export const Header = () => {
+export const Header = ({ sticky = true }: { sticky?: boolean }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
   const { cartCount } = useCart();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -60,6 +64,27 @@ export const Header = () => {
   const [hoverTimerRef, setHoverTimerRef] = useState<number | null>(null);
   const [categories, setCategories] = useState<CategoryLookupItem[]>([]);
   const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
+  const [loyaltyBalance, setLoyaltyBalance] = useState<number | null>(null);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotificationSystem({
+      userRole: user?.role ?? "",
+      userId: user?.id,
+    });
+
+  const handleNotificationClick = (item: NotificationItem) => {
+    if (!item.referenceId) return;
+    switch (item.referenceType) {
+      case "Order":
+        navigate(`/my-orders/${item.referenceId}`);
+        break;
+      case "OrderCancelRequest":
+        navigate(`/my-cancel-requests/${item.referenceId}`);
+        break;
+      case "OrderReturnRequest":
+        navigate(`/my-return-requests/${item.referenceId}`);
+        break;
+    }
+  };
 
   useEffect(() => {
     categoryService
@@ -70,9 +95,37 @@ export const Header = () => {
       });
   }, []);
 
+  useEffect(() => {
+    if (!isAuthenticated || user?.role !== "user") {
+      return;
+    }
+
+    let isMounted = true;
+
+    loyaltyService
+      .getMyBalance()
+      .then((data) => {
+        if (isMounted) {
+          setLoyaltyBalance(data.pointBalance ?? 0);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setLoyaltyBalance(0);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated, user?.role]);
+
   const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
   const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
   const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
+  const isStaffHomepageOrStaffPage =
+    user?.role === "staff" &&
+    (location.pathname === "/" || location.pathname.startsWith("/staff"));
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -133,9 +186,6 @@ export const Header = () => {
 
     // Close dropdown if open
     setCartAnchorEl(null);
-
-    // Navigate to cart
-    navigate("/cart");
   };
 
   const handleDashboard = () => {
@@ -188,7 +238,7 @@ export const Header = () => {
 
   return (
     <AppBar
-      position="sticky"
+      position={sticky ? "sticky" : "static"}
       color="inherit"
       elevation={0}
       sx={{ borderBottom: 1, borderColor: "divider" }}
@@ -199,11 +249,11 @@ export const Header = () => {
           {/* Logo */}
           <Typography
             variant="h5"
-            component="h1"
             color="primary"
             fontWeight="bold"
-            sx={{ flexShrink: 0, cursor: "pointer" }}
-            onClick={() => navigate("/")}
+            sx={{ flexShrink: 0, cursor: "pointer", textDecoration: "none" }}
+            component={RouterLink}
+            to="/"
           >
             PerfumeGPT
           </Typography>
@@ -213,8 +263,8 @@ export const Header = () => {
             sx={{
               flex: 1,
               maxWidth: 640,
-              mx: 4,
-              display: "flex",
+              mx: { xs: 1, sm: 2, md: 4 },
+              display: { xs: "none", md: "flex" },
               justifyContent: "center",
             }}
           >
@@ -225,17 +275,23 @@ export const Header = () => {
           <Box
             sx={{
               display: "flex",
-              gap: 2,
+              gap: { xs: 1, sm: 2 },
               alignItems: "center",
               flexShrink: 0,
             }}
           >
-            <IconButton color="default" aria-label="Thông báo">
-              <NotificationsNone />
-            </IconButton>
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              onItemClick={handleNotificationClick}
+            />
             {!isBackOfficeRole && (
               <>
                 <IconButton
+                  component={RouterLink}
+                  to="/cart"
                   onClick={handleCartClick}
                   onMouseEnter={handleCartHover}
                   onMouseLeave={handleCartLeave}
@@ -270,7 +326,8 @@ export const Header = () => {
                     textTransform: "none",
                     fontSize: "0.875rem",
                     fontWeight: 500,
-                    px: 1.5,
+                    px: { xs: 0.5, sm: 1.5 },
+                    minWidth: { xs: "auto", sm: "auto" },
                   }}
                 >
                   <Avatar
@@ -278,14 +335,16 @@ export const Header = () => {
                     sx={{
                       width: 32,
                       height: 32,
-                      mr: 1,
+                      mr: { xs: 0, sm: 1 },
                       bgcolor: user.avatarUrl ? undefined : "primary.main",
                       fontSize: "0.875rem",
                     }}
                   >
                     {user.name.charAt(0).toUpperCase()}
                   </Avatar>
-                  {user.email}
+                  <Box sx={{ display: { xs: "none", sm: "block" } }}>
+                    {user.email}
+                  </Box>
                 </Button>
                 <Menu
                   anchorEl={anchorEl}
@@ -317,9 +376,7 @@ export const Header = () => {
                       cursor: user.role === "user" ? "pointer" : "default",
                       "&:hover": {
                         bgcolor:
-                          user.role === "user"
-                            ? "action.hover"
-                            : "transparent",
+                          user.role === "user" ? "action.hover" : "transparent",
                       },
                     }}
                   >
@@ -333,22 +390,25 @@ export const Header = () => {
                     >
                       {user.email}
                     </Typography>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        display: "inline-block",
-                        mt: 0.5,
-                        px: 1,
-                        py: 0.25,
-                        bgcolor: "primary.main",
-                        color: "white",
-                        borderRadius: 1,
-                        fontSize: "0.7rem",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {user.role}
-                    </Typography>
+                    {user.role === "user" && loyaltyBalance !== null && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "inline-block",
+                          mt: 0.75,
+                          px: 1.25,
+                          py: 0.35,
+                          color: "error.main",
+                          border: (theme) =>
+                            `1px solid ${theme.palette.error.main}`,
+                          borderRadius: 99,
+                          fontSize: "0.75rem",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {`Số dư: ${loyaltyBalance.toLocaleString("vi-VN")} điểm`}
+                      </Typography>
+                    )}
                   </MenuItem>
                   <Divider />
                   {user.role === "user" && (
@@ -367,7 +427,7 @@ export const Header = () => {
                       <Typography variant="body2">Trang chủ</Typography>
                     </MenuItem>
                   )}
-                  {(user.role === "admin" || user.role === "staff") && (
+                  {isStaffHomepageOrStaffPage && (
                     <MenuItem onClick={handleCounterCheckout} sx={{ py: 1.5 }}>
                       <ListItemIcon>
                         <PointOfSaleIcon fontSize="small" />
@@ -375,7 +435,7 @@ export const Header = () => {
                       <Typography variant="body2">Checkout tại quầy</Typography>
                     </MenuItem>
                   )}
-                  {(user.role === "admin" || user.role === "staff") && (
+                  {isStaffHomepageOrStaffPage && (
                     <MenuItem onClick={handleCounterDisplay} sx={{ py: 1.5 }}>
                       <ListItemIcon>
                         <TvIcon fontSize="small" />
@@ -396,9 +456,10 @@ export const Header = () => {
             ) : (
               <Button
                 startIcon={<PersonOutline />}
+                component={RouterLink}
+                to="/login"
                 color="inherit"
                 sx={{ fontWeight: 500 }}
-                onClick={() => navigate("/login")}
               >
                 Đăng nhập
               </Button>
@@ -413,18 +474,28 @@ export const Header = () => {
           sx={{
             display: "flex",
             justifyContent: "center",
-            gap: 4,
-            py: 2,
+            gap: { xs: 1, sm: 2, md: 4 },
+            py: { xs: 1, sm: 2 },
+            overflowX: "auto",
+            flexWrap: { xs: "nowrap", md: "wrap" },
+            "&::-webkit-scrollbar": { display: "none" },
+            scrollbarWidth: "none",
           }}
         >
           {/* All products */}
           <Button
             color="inherit"
-            onClick={() => navigate("/products")}
+            component={RouterLink}
+            to="/products"
+            size="small"
             sx={{
               fontWeight: 500,
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              px: { xs: 1, sm: 2 },
               color: "text.primary",
               "&:hover": { color: "primary.main" },
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             Tất cả sản phẩm
@@ -435,15 +506,17 @@ export const Header = () => {
             <Button
               key={cat.id}
               color="inherit"
-              onClick={() =>
-                navigate(
-                  `/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`,
-                )
-              }
+              component={RouterLink}
+              to={`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`}
+              size="small"
               sx={{
                 fontWeight: 500,
+                fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                px: { xs: 1, sm: 2 },
                 color: "text.primary",
                 "&:hover": { color: "primary.main" },
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {toVietnameseCategoryName(cat.name)}
@@ -455,12 +528,17 @@ export const Header = () => {
             <>
               <Button
                 color="inherit"
+                size="small"
                 endIcon={moreAnchorEl ? <ArrowDropUp /> : <ArrowDropDown />}
                 onClick={(e) => setMoreAnchorEl(e.currentTarget)}
                 sx={{
                   fontWeight: 500,
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  px: { xs: 1, sm: 2 },
                   color: "text.primary",
                   "&:hover": { color: "primary.main" },
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
                 }}
               >
                 Thêm
@@ -476,11 +554,10 @@ export const Header = () => {
                 {overflowCategories.map((cat) => (
                   <MenuItem
                     key={cat.id}
+                    component={RouterLink}
+                    to={`/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`}
                     onClick={() => {
                       setMoreAnchorEl(null);
-                      navigate(
-                        `/products?categoryId=${cat.id}&categoryName=${encodeURIComponent(cat.name ?? "")}`,
-                      );
                     }}
                   >
                     {toVietnameseCategoryName(cat.name)}
@@ -493,14 +570,20 @@ export const Header = () => {
           {/* Quiz AI */}
           <Button
             color="inherit"
-            onClick={() => navigate("/quiz")}
+            component={RouterLink}
+            to="/quiz"
+            size="small"
             sx={{
               fontWeight: 500,
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              px: { xs: 1, sm: 2 },
               color: "text.primary",
               "&:hover": { color: "primary.main" },
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
-            Quiz AI
+            Khảo sát cùng AI
           </Button>
         </Box>
       </Container>

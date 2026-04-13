@@ -1,9 +1,12 @@
 import { apiInstance } from "@/lib/api";
+import type { components } from "@/types/api/v1";
 
 export interface BrandLookupItem {
   id?: number;
   name?: string;
 }
+
+export type BrandResponse = components["schemas"]["BrandResponse"];
 
 const normalizeName = (value?: string | null) =>
   (value || "").trim().toLowerCase();
@@ -71,6 +74,44 @@ class BrandService {
           error.message ||
           "Failed to create brand",
       );
+    }
+  }
+
+  async getAllBrands(): Promise<BrandResponse[]> {
+    const response = await apiInstance.GET("/api/brands");
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to fetch brands");
+    }
+    return (response.data.payload as BrandResponse[]) ?? [];
+  }
+
+  async getBrand(id: number): Promise<BrandResponse> {
+    const response = await apiInstance.GET("/api/brands/{id}", {
+      params: { path: { id } },
+    });
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to fetch brand");
+    }
+    return response.data.payload as BrandResponse;
+  }
+
+  async updateBrand(id: number, name: string): Promise<BrandResponse> {
+    const response = await apiInstance.PUT("/api/brands/{id}", {
+      params: { path: { id } },
+      body: { name: name.trim() },
+    });
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to update brand");
+    }
+    return response.data.payload as BrandResponse;
+  }
+
+  async deleteBrand(id: number): Promise<void> {
+    const response = await apiInstance.DELETE("/api/brands/{id}", {
+      params: { path: { id } },
+    });
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to delete brand");
     }
   }
 }

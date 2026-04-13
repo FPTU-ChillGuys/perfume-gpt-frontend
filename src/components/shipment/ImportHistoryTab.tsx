@@ -393,7 +393,7 @@ export const ImportHistoryTab: React.FC = () => {
           <TableHead>
             <TableRow
               sx={{
-                bgcolor: "grey.100",
+                bgcolor: "grey.50",
                 "& .MuiTableCell-root": {
                   color: "text.primary",
                   fontWeight: 600,
@@ -682,7 +682,7 @@ export const ImportHistoryTab: React.FC = () => {
                   <TableContainer>
                     <Table size="small">
                       <TableHead>
-                        <TableRow sx={{ bgcolor: "grey.100" }}>
+                        <TableRow sx={{ bgcolor: "grey.50" }}>
                           <TableCell width={40} />
                           <TableCell>Sản phẩm</TableCell>
                           <TableCell align="center">Số lượng</TableCell>

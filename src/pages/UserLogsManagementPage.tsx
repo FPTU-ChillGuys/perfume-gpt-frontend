@@ -232,10 +232,6 @@ export const UserLogsManagementPage = () => {
     return (
         <AdminLayout>
             <Box>
-                <Typography variant="h4" fontWeight="bold" mb={3}>
-                    Quản lý Log Người Dùng
-                </Typography>
-
                 <Paper sx={{ mb: 3 }}>
                     <Tabs value={tabValue} onChange={handleTabChange} aria-label="user logs tabs">
                         <Tab label="Log hoạt động" id="user-log-tab-0" aria-controls="user-log-panel-0" />
@@ -262,12 +258,12 @@ export const UserLogsManagementPage = () => {
                             placeholder={tabValue === 0 ? "Nhập ID..." : "Nhập ID hoặc nội dung tóm tắt..."}
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
-                            onKeyPress={(e) => {
+                            onKeyDown={(e) => {
                                 if (e.key === "Enter") handleSearch();
                             }}
                             InputProps={{
                                 endAdornment: (
-                                    <IconButton onClick={handleSearch} edge="end">
+                                    <IconButton onClick={handleSearch} edge="end" aria-label="Tìm kiếm">
                                         <SearchIcon />
                                     </IconButton>
                                 ),
@@ -298,14 +294,15 @@ export const UserLogsManagementPage = () => {
                             InputLabelProps={{ shrink: true }}
                         />
 
-                        <IconButton
-                            onClick={handleClearFilters}
-                            sx={{ height: 56, borderRadius: 1, border: "1px solid", borderColor: "divider" }}
-                        >
-                            <Tooltip title="Xóa bộ lọc">
+                        <Tooltip title="Xóa bộ lọc">
+                            <IconButton
+                                aria-label="Xóa bộ lọc"
+                                onClick={handleClearFilters}
+                                sx={{ height: 56, borderRadius: 1, border: "1px solid", borderColor: "divider" }}
+                            >
                                 <ClearIcon />
-                            </Tooltip>
-                        </IconButton>
+                            </IconButton>
+                        </Tooltip>
                     </Box>
                 </Paper>
 
@@ -318,7 +315,7 @@ export const UserLogsManagementPage = () => {
                                     <TableCell>User ID</TableCell>
                                     <TableCell align="center">Loại sự kiện</TableCell>
                                     <TableCell align="center">Entity</TableCell>
-                                    <TableCell>Noi dung</TableCell>
+                                    <TableCell>Nội dung</TableCell>
                                     <TableCell>Ngày tạo log</TableCell>
                                     <TableCell>Cập nhật cuối</TableCell>
                                     <TableCell align="center">Thao tác</TableCell>

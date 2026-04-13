@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Link as RouterLink,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Box,
   Container,
@@ -16,12 +20,89 @@ import {
   FormLabel,
   Stack,
   Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { Cancel } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
 import type { PaymentMethod } from "@/types/checkout";
+import type { OrderType } from "@/types/order";
 import { useToast } from "@/hooks/useToast";
+import codIcon from "@/assets/cod.png";
+import storeIcon from "@/assets/store.png";
+import vnpayIcon from "@/assets/vnpay.jpg";
+import momoIcon from "@/assets/momo.png";
+import payosIcon from "@/assets/payos.png";
+
+type DeliveryMethod = "Delivery" | "PickupInStore";
+
+const normalizePaymentMethod = (
+  value?: string | null,
+): PaymentMethod | null => {
+  switch ((value || "").toLowerCase()) {
+    case "cashondelivery":
+    case "cod":
+      return "CashOnDelivery";
+    case "cashinstore":
+    case "store":
+      return "CashInStore";
+    case "vnpay":
+      return "VnPay";
+    case "momo":
+      return "Momo";
+    case "payos":
+      return "PayOs";
+    default:
+      return null;
+  }
+};
+
+const inferGatewayPaymentMethod = (
+  params: URLSearchParams,
+): PaymentMethod | null => {
+  if (
+    params.has("vnp_ResponseCode") ||
+    params.has("vnp_TransactionNo") ||
+    params.has("vnp_TxnRef")
+  ) {
+    return "VnPay";
+  }
+
+  if (
+    params.has("partnerCode") ||
+    params.has("resultCode") ||
+    params.has("transId")
+  ) {
+    return "Momo";
+  }
+
+  return null;
+};
+
+const resolveInitialPaymentMethod = (
+  params: URLSearchParams,
+  deliveryMethod: DeliveryMethod,
+): PaymentMethod => {
+  const queryMethod =
+    normalizePaymentMethod(params.get("paymentMethod")) ||
+    normalizePaymentMethod(params.get("method")) ||
+    normalizePaymentMethod(params.get("originalPaymentMethod")) ||
+    normalizePaymentMethod(params.get("originalMethod"));
+
+  if (queryMethod) {
+    return queryMethod;
+  }
+
+  const inferredMethod = inferGatewayPaymentMethod(params);
+  if (inferredMethod) {
+    return inferredMethod;
+  }
+
+  return deliveryMethod === "PickupInStore" ? "CashInStore" : "CashOnDelivery";
+};
 
 const formatCurrency = (value?: string | number) => {
   const numValue =
@@ -65,19 +146,38 @@ const PAYMENT_METHODS: {
   value: PaymentMethod;
   label: string;
   description: string;
+  icon: string;
 }[] = [
   {
     value: "CashOnDelivery",
     label: "Thanh toán khi nhận hàng",
     description: "Thanh toán bằng tiền mặt khi nhận hàng",
+    icon: codIcon,
   },
   {
     value: "CashInStore",
     label: "Thanh toán tại cửa hàng",
     description: "Thanh toán trực tiếp tại cửa hàng",
+    icon: storeIcon,
   },
-  { value: "VnPay", label: "VnPay", description: "Thanh toán qua VnPay" },
-  { value: "Momo", label: "Momo", description: "Thanh toán qua Momo" },
+  {
+    value: "VnPay",
+    label: "VNPay",
+    description: "Thanh toán qua VNPay",
+    icon: vnpayIcon,
+  },
+  {
+    value: "Momo",
+    label: "MoMo",
+    description: "Thanh toán qua MoMo",
+    icon: momoIcon,
+  },
+  {
+    value: "PayOs",
+    label: "PayOS",
+    description: "Thanh toán qua PayOS",
+    icon: payosIcon,
+  },
 ];
 
 export const PaymentFailurePage = () => {
@@ -86,15 +186,56 @@ export const PaymentFailurePage = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] =
+    useState<DeliveryMethod>("Delivery");
+  const [originalPaymentMethod, setOriginalPaymentMethod] =
+    useState<PaymentMethod>("CashOnDelivery");
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("CashOnDelivery");
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [orderType, setOrderType] = useState<OrderType | null>(null);
+
+  const allowedPaymentMethods = PAYMENT_METHODS.filter((method) =>
+    deliveryMethod === "PickupInStore"
+      ? method.value !== "CashOnDelivery"
+      : method.value !== "CashInStore",
+  );
 
   useEffect(() => {
+    const deliveryMethodParam = searchParams.get("deliveryMethod");
+    const resolvedDeliveryMethod: DeliveryMethod =
+      deliveryMethodParam === "PickupInStore" ||
+      deliveryMethodParam === "Delivery"
+        ? deliveryMethodParam
+        : "Delivery";
+
+    setDeliveryMethod(resolvedDeliveryMethod);
+
+    const initialMethod = resolveInitialPaymentMethod(
+      searchParams,
+      resolvedDeliveryMethod,
+    );
+
+    setOriginalPaymentMethod(initialMethod);
+    setPaymentMethod(initialMethod);
+
     // Simulate loading state
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setIsLoading(false);
     }, 500);
-  }, []);
+
+    return () => clearTimeout(timer);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const allowedValues = allowedPaymentMethods.map((m) => m.value);
+    if (!allowedValues.includes(originalPaymentMethod)) {
+      setOriginalPaymentMethod(allowedValues[0] ?? "VnPay");
+    }
+    if (!allowedValues.includes(paymentMethod)) {
+      setPaymentMethod(allowedValues[0] ?? "VnPay");
+    }
+  }, [allowedPaymentMethods, originalPaymentMethod, paymentMethod]);
 
   const orderId = searchParams.get("orderId") || searchParams.get("orderId");
   const paymentId = searchParams.get("paymentId"); // Get paymentId from URL params
@@ -105,9 +246,51 @@ export const PaymentFailurePage = () => {
   const transactionNo = searchParams.get("vnp_TransactionNo");
   const orderInfo = searchParams.get("vnp_OrderInfo");
 
+  const decodedOrderInfo = decodeURIComponent(orderInfo || "");
+  const hasPosSessionInOrderInfo = /PosSessionId\s*:/i.test(decodedOrderInfo);
+  const isInStoreByUrl =
+    deliveryMethod === "PickupInStore" || hasPosSessionInOrderInfo;
+  const isInStoreOrder = orderType === "Offline" || isInStoreByUrl;
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const resolveOrderType = async () => {
+      if (!orderId) return;
+
+      try {
+        const order = await orderService.getOrderById(orderId);
+        if (!isCancelled) {
+          setOrderType(order.type || null);
+        }
+      } catch {
+        if (!isCancelled) {
+          setOrderType(null);
+        }
+      }
+    };
+
+    void resolveOrderType();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [orderId]);
+
   const errorMessage = getErrorMessage(responseCode);
 
-  const handleRetryPayment = async () => {
+  const getPaymentMethodLabel = (method: PaymentMethod) =>
+    PAYMENT_METHODS.find((item) => item.value === method)?.label || method;
+
+  const processRetryPayment = async () => {
+    if (isInStoreOrder) {
+      showToast(
+        "Đơn tại quầy sẽ do nhân viên xử lý thanh toán lại trên màn hình POS.",
+        "info",
+      );
+      return;
+    }
+
     if (!paymentId) {
       showToast("Không tìm thấy thông tin thanh toán", "error");
       return;
@@ -121,15 +304,20 @@ export const PaymentFailurePage = () => {
       );
 
       // Handle payment redirect
-      if (paymentMethod === "VnPay" || paymentMethod === "Momo") {
+      if (
+        paymentMethod === "VnPay" ||
+        paymentMethod === "Momo" ||
+        paymentMethod === "PayOs"
+      ) {
         if (response.url) {
           window.location.href = response.url;
         } else {
           showToast("Không thể chuyển đến trang thanh toán", "error");
         }
       } else {
+        // COD or CashInStore - navigate to success page
         showToast("Đơn hàng đã được xác nhận!", "success");
-        navigate("/");
+        navigate(`/payment/success?orderId=${orderId}&source=checkout`);
       }
     } catch (error) {
       showToast(
@@ -144,32 +332,62 @@ export const PaymentFailurePage = () => {
     }
   };
 
+  const handleRetryPayment = async () => {
+    const isSameAsOriginal = paymentMethod === originalPaymentMethod;
+
+    if (isSameAsOriginal) {
+      await processRetryPayment();
+      return;
+    }
+
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleConfirmSwitchMethod = async () => {
+    setIsConfirmModalOpen(false);
+    await processRetryPayment();
+  };
+
+  const handleViewOrderDetail = () => {
+    if (!orderId) {
+      showToast("Không tìm thấy mã đơn hàng", "error");
+      return;
+    }
+
+    navigate(`/my-orders/${orderId}`);
+  };
+
   if (isLoading) {
-    return (
-      <MainLayout>
-        <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
-          <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            minHeight="60vh"
-          >
-            <CircularProgress />
-          </Box>
-        </Container>
-      </MainLayout>
+    const loadingContent = (
+      <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="60vh"
+        >
+          <CircularProgress />
+        </Box>
+      </Container>
+    );
+
+    return isInStoreOrder ? (
+      loadingContent
+    ) : (
+      <MainLayout>{loadingContent}</MainLayout>
     );
   }
 
-  return (
-    <MainLayout>
+  const pageContent = (
+    <>
       <Container
         maxWidth="lg"
         sx={{
           py: { xs: 2, md: 3 },
-          minHeight: { md: "calc(100vh - 112px)" },
+          minHeight: isInStoreOrder ? "100vh" : { md: "calc(100vh - 112px)" },
           display: "flex",
-          alignItems: { md: "center" },
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <Paper
@@ -299,7 +517,7 @@ export const PaymentFailurePage = () => {
             </Box>
 
             <Box sx={{ flex: 0.95 }}>
-              {paymentId && (
+              {!isInStoreOrder && paymentId && (
                 <Box
                   sx={{
                     p: 2,
@@ -322,22 +540,45 @@ export const PaymentFailurePage = () => {
                         setPaymentMethod(e.target.value as PaymentMethod)
                       }
                     >
-                      {PAYMENT_METHODS.map((method) => (
+                      {allowedPaymentMethods.map((method) => (
                         <FormControlLabel
                           key={method.value}
                           value={method.value}
                           control={<Radio size="small" />}
                           label={
-                            <Box>
-                              <Typography variant="body2" fontWeight={600}>
-                                {method.label}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {method.description}
-                              </Typography>
+                            <Box
+                              display="flex"
+                              alignItems="center"
+                              gap={1.5}
+                              py={0.5}
+                            >
+                              <Box
+                                component="img"
+                                src={method.icon}
+                                alt={method.label}
+                                sx={{
+                                  width: 36,
+                                  height: 36,
+                                  objectFit: "contain",
+                                  borderRadius: 1,
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                  bgcolor: "#fff",
+                                  p: 0.5,
+                                  flexShrink: 0,
+                                }}
+                              ></Box>
+                              <Box>
+                                <Typography variant="body2" fontWeight={600}>
+                                  {method.label}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {method.description}
+                                </Typography>
+                              </Box>
                             </Box>
                           }
                           sx={{
@@ -359,8 +600,15 @@ export const PaymentFailurePage = () => {
                 </Box>
               )}
 
+              {isInStoreOrder && (
+                <Alert severity="info" sx={{ mb: 2, textAlign: "left" }}>
+                  Đơn hàng tại quầy sẽ được nhân viên xử lý retry thanh toán
+                  trên màn hình POS. Vui lòng chờ nhân viên hỗ trợ.
+                </Alert>
+              )}
+
               <Stack spacing={1.25}>
-                {paymentId ? (
+                {!isInStoreOrder && paymentId ? (
                   <Button
                     variant="contained"
                     color="error"
@@ -371,22 +619,35 @@ export const PaymentFailurePage = () => {
                   >
                     {isRetrying ? <CircularProgress size={24} /> : "Thử lại"}
                   </Button>
-                ) : (
+                ) : !isInStoreOrder ? (
                   <Button
                     variant="contained"
                     color="error"
                     size="large"
-                    onClick={() => navigate("/checkout")}
+                    component={RouterLink}
+                    to="/checkout"
                     sx={{ minHeight: 44 }}
                   >
                     Về trang thanh toán
+                  </Button>
+                ) : null}
+                {!isInStoreOrder && orderId && (
+                  <Button
+                    variant="outlined"
+                    color="info"
+                    size="large"
+                    onClick={handleViewOrderDetail}
+                    sx={{ minHeight: 44 }}
+                  >
+                    Xem chi tiết đơn hàng
                   </Button>
                 )}
                 <Button
                   variant="outlined"
                   color="primary"
                   size="large"
-                  onClick={() => navigate("/")}
+                  component={RouterLink}
+                  to="/"
                   sx={{ minHeight: 44 }}
                 >
                   Về trang chủ
@@ -409,6 +670,51 @@ export const PaymentFailurePage = () => {
           </Stack>
         </Paper>
       </Container>
-    </MainLayout>
+
+      <Dialog
+        open={isConfirmModalOpen}
+        onClose={() => {
+          if (!isRetrying) {
+            setIsConfirmModalOpen(false);
+          }
+        }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Xác nhận đổi phương thức thanh toán</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary">
+            Bạn đang đổi phương thức thanh toán từ{" "}
+            <Typography component="span" fontWeight={700} color="text.primary">
+              {getPaymentMethodLabel(originalPaymentMethod)}
+            </Typography>{" "}
+            sang{" "}
+            <Typography component="span" fontWeight={700} color="text.primary">
+              {getPaymentMethodLabel(paymentMethod)}
+            </Typography>
+            . Bạn có chắc chắn muốn tiếp tục?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setIsConfirmModalOpen(false)}
+            disabled={isRetrying}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmSwitchMethod}
+            disabled={isRetrying}
+          >
+            Xác nhận
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
+
+  return isInStoreOrder ? pageContent : <MainLayout>{pageContent}</MainLayout>;
 };

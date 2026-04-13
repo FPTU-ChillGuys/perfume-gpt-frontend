@@ -8,6 +8,7 @@ import {
   Divider,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { ShoppingCartOutlined } from "@mui/icons-material";
 import { cartService } from "@/services/cartService";
 import type { CartItem } from "@/types/cart";
 
@@ -114,11 +115,40 @@ export const CartDropdown = ({
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
-              py: 4,
+              py: 3,
+              px: 2,
+              gap: 1,
             }}
           >
-            <Typography variant="body2" color="text.secondary">
+            <Box
+              sx={{
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                bgcolor: "grey.100",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ShoppingCartOutlined
+                sx={{ fontSize: 32, color: "text.secondary" }}
+              />
+            </Box>
+            <Typography
+              variant="body1"
+              fontWeight={600}
+              color="text.primary"
+              textAlign="center"
+            >
               Giỏ hàng trống
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              textAlign="center"
+            >
+              Chưa có sản phẩm nào
             </Typography>
           </Box>
         ) : (
@@ -167,7 +197,7 @@ export const CartDropdown = ({
                     {item.imageUrl ? (
                       <img
                         src={item.imageUrl}
-                        alt={item.variantName || "Product"}
+                        alt={item.variantName || "Sản phẩm"}
                         style={{
                           width: "100%",
                           height: "100%",
@@ -176,7 +206,7 @@ export const CartDropdown = ({
                       />
                     ) : (
                       <Typography variant="caption" color="text.secondary">
-                        No Image
+                        Không có ảnh
                       </Typography>
                     )}
                   </Box>

@@ -9,6 +9,7 @@ export interface AuthContextType {
   login: (credentials: LoginRequest) => Promise<User>;
   googleLogin: (idToken: string) => Promise<User>;
   logout: () => void;
+  updateUser: (partial: Partial<User>) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(

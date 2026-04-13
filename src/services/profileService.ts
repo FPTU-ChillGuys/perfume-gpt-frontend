@@ -1,36 +1,18 @@
 import { apiInstance } from "@/lib/api";
 import type { UserProfile, UpdateProfileRequest } from "../types/profile";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 class ProfileService {
   private readonly PROFILE_ENDPOINT = "/api/profiles";
 
   async getMyProfile(): Promise<UserProfile> {
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      const response = await fetch(
-        `${API_BASE_URL}${this.PROFILE_ENDPOINT}/me`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "*/*",
-          },
-        },
-      );
+      const response = await apiInstance.GET("/api/profiles/me");
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to fetch profile");
       }
 
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.message || "Failed to fetch profile");
-      }
-
-      return data.payload as UserProfile;
+      return response.data.payload as unknown as UserProfile;
     } catch (error: any) {
       console.error("Get profile error:", error);
       throw new Error(error.message || "Không thể tải thông tin profile");

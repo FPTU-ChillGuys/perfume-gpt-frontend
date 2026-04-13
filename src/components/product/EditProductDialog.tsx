@@ -363,7 +363,7 @@ export default function EditProductDialog({
         scentLookup,
       ] = await Promise.all([
         attributeService.getAttributes(),
-        productService.getProductDetail(productId),
+        productService.getProductDetailForAdmin(productId),
         productService.getProductImages(productId),
         brandService.getBrandsLookup(),
         categoryService.getCategoriesLookup(),
@@ -492,14 +492,16 @@ export default function EditProductDialog({
                   ) {
                     attributeOption = {
                       id: firstAttr.attributeId,
+                      internalCode: `ATTR_${firstAttr.attributeId}`,
                       name:
                         firstAttr.attribute ||
                         `Attribute ${firstAttr.attributeId}`,
                       description: firstAttr.description || undefined,
                     };
                     if (
+                      attributeOption &&
                       !fallbackAttributes.some(
-                        (item) => item.id === attributeOption!.id,
+                        (item) => item.id === firstAttr.attributeId,
                       )
                     ) {
                       fallbackAttributes.push(attributeOption);

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 import {
   Box,
   Container,
@@ -12,6 +13,13 @@ import {
   Card,
   CardContent,
   Checkbox,
+  Alert,
+  Chip,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Stack,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -21,12 +29,18 @@ import {
   ShoppingCart,
   CheckCircle,
   RadioButtonUnchecked,
+  LocalOffer,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { cartService } from "@/services/cartService";
-import type { CartItem, CartTotals } from "@/types/cart";
+import type { CartItem, CartTotals, ApplyVoucherResponse } from "@/types/cart";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
+import {
+  voucherService,
+  type AvailableVoucherResponse,
+} from "@/services/voucherService";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -45,9 +59,21 @@ export const CartPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
   const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[]>([]);
-  const [hasInitializedSelection, setHasInitializedSelection] =
-    useState(false);
+  const [hasInitializedSelection, setHasInitializedSelection] = useState(false);
+  const [totalsWarningMessage, setTotalsWarningMessage] = useState<
+    string | null
+  >(null);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [appliedVoucher, setAppliedVoucher] =
+    useState<ApplyVoucherResponse | null>(null);
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
+  const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
+  const [myVoucherList, setMyVoucherList] = useState<AvailableVoucherResponse[]>([]);
+  const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   const roundCheckboxSx = {
     p: 0.5,
@@ -71,25 +97,39 @@ export const CartPage = () => {
   );
 
   const loadTotals = useCallback(
-    async (selectedIds: string[]) => {
+    async (selectedIds: string[], voucherCodeOverride?: string | null) => {
       try {
         const allIds = getSelectableItemIds();
         if (!allIds.length || selectedIds.length === 0) {
-          setTotals({ subtotal: 0, shippingFee: 0, discount: 0, totalPrice: 0 });
-          return;
+          setTotals({
+            subtotal: 0,
+            shippingFee: 0,
+            discount: 0,
+            totalPrice: 0,
+          });
+          setTotalsWarningMessage(null);
+          return null;
         }
 
+        const activeVoucher =
+          voucherCodeOverride !== undefined
+            ? voucherCodeOverride || undefined
+            : appliedVoucher?.voucherCode || undefined;
+
         const totalsData = shouldQuerySelectedItems(selectedIds)
-          ? await cartService.getTotals(undefined, selectedIds)
-          : await cartService.getTotals();
+          ? await cartService.getTotals(activeVoucher, selectedIds)
+          : await cartService.getTotals(activeVoucher);
 
         setTotals(totalsData);
+        setTotalsWarningMessage(totalsData.warningMessage || null);
+        return totalsData;
       } catch (error) {
         console.error("Error loading cart totals:", error);
-        showToast("Không thể tính tổng tiền giỏ hàng", "error");
+        setTotalsWarningMessage(null);
+        return null;
       }
     },
-    [getSelectableItemIds, shouldQuerySelectedItems, showToast],
+    [getSelectableItemIds, shouldQuerySelectedItems, appliedVoucher],
   );
 
   const loadCart = useCallback(
@@ -144,8 +184,40 @@ export const CartPage = () => {
   // Initial load - chỉ chạy một lần khi component mount
   useEffect(() => {
     void loadCart(true);
+    // Load voucher from sessionStorage if exists
+    const savedVoucher = sessionStorage.getItem("appliedVoucherCode");
+    if (savedVoucher) {
+      setVoucherCode(savedVoucher);
+    }
+
+    // Cleanup: Remove voucher when leaving cart (unless going to checkout)
+    return () => {
+      // Small delay to check where we're navigating
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        // Only keep voucher if navigating to checkout
+        if (!currentPath.includes("/checkout")) {
+          sessionStorage.removeItem("appliedVoucherCode");
+        }
+      }, 100);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-apply voucher after items loaded
+  useEffect(() => {
+    if (!hasInitializedSelection || !voucherCode || appliedVoucher) {
+      return;
+    }
+    const savedVoucher = sessionStorage.getItem("appliedVoucherCode");
+    if (savedVoucher && savedVoucher === voucherCode && items.length > 0) {
+      // Auto apply voucher from session
+      setTimeout(() => {
+        void applyVoucher();
+      }, 500);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasInitializedSelection, items.length]);
 
   useEffect(() => {
     if (!hasInitializedSelection) {
@@ -153,6 +225,77 @@ export const CartPage = () => {
     }
     void loadTotals(selectedCartItemIds);
   }, [hasInitializedSelection, loadTotals, selectedCartItemIds]);
+
+  const applyVoucher = async () => {
+    const normalizedVoucher = voucherCode.trim();
+
+    if (!normalizedVoucher) {
+      return;
+    }
+
+    if (
+      appliedVoucher &&
+      appliedVoucher.voucherCode.toLowerCase() ===
+        normalizedVoucher.toLowerCase()
+    ) {
+      return;
+    }
+
+    setVoucherError(null);
+    setIsApplyingVoucher(true);
+    try {
+      const updatedTotals = await loadTotals(
+        selectedCartItemIds,
+        normalizedVoucher,
+      );
+
+      if (!updatedTotals) {
+        setAppliedVoucher(null);
+        setVoucherError(
+          "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại.",
+        );
+        return;
+      }
+
+      setAppliedVoucher({
+        voucherCode: normalizedVoucher,
+        discountAmount: updatedTotals?.discount ?? 0,
+        finalAmount: updatedTotals?.totalPrice ?? 0,
+        message: "Đã áp dụng mã giảm giá",
+      });
+      setVoucherCode(normalizedVoucher);
+      // Save to sessionStorage for sync with checkout
+      sessionStorage.setItem("appliedVoucherCode", normalizedVoucher);
+    } catch (error) {
+      const msg =
+        error instanceof Error ? error.message : "Mã giảm giá không hợp lệ";
+      setVoucherError(
+        msg.toLowerCase().includes("not found") ||
+          msg.toLowerCase().includes("404") ||
+          msg.toLowerCase().includes("failed to apply")
+          ? "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại."
+          : msg,
+      );
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
+
+  const removeVoucher = async () => {
+    setIsApplyingVoucher(true);
+    try {
+      setAppliedVoucher(null);
+      setVoucherCode("");
+      setVoucherError(null);
+      // Remove from sessionStorage when user manually removes voucher
+      sessionStorage.removeItem("appliedVoucherCode");
+      await loadTotals(selectedCartItemIds, null);
+    } catch (error) {
+      // Silent error
+    } finally {
+      setIsApplyingVoucher(false);
+    }
+  };
 
   const handleToggleItem = (cartItemId?: string) => {
     if (!cartItemId) {
@@ -195,7 +338,6 @@ export const CartPage = () => {
       await cartService.updateCartItem(cartItemId, nextQuantity);
       await loadCart();
       await refreshCart();
-      showToast("Đã cập nhật số lượng", "success");
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : "Không thể cập nhật số lượng",
@@ -211,12 +353,16 @@ export const CartPage = () => {
       return;
     }
 
+    setConfirmDeleteId(cartItemId);
+  };
+
+  const doRemoveItem = async (cartItemId: string) => {
+    setConfirmDeleteId(null);
     setUpdatingItemId(cartItemId);
     try {
       await cartService.removeCartItem(cartItemId);
       await loadCart();
       await refreshCart();
-      showToast("Đã xóa sản phẩm khỏi giỏ hàng", "success");
     } catch (error) {
       showToast(
         error instanceof Error
@@ -229,11 +375,13 @@ export const CartPage = () => {
     }
   };
 
-  const handleClearCart = async () => {
-    if (items.length === 0) {
-      return;
-    }
+  const handleClearCart = () => {
+    if (items.length === 0) return;
+    setConfirmClearOpen(true);
+  };
 
+  const doClearCart = async () => {
+    setConfirmClearOpen(false);
     setIsClearing(true);
     try {
       await cartService.clearCart();
@@ -241,7 +389,11 @@ export const CartPage = () => {
       setSelectedCartItemIds([]);
       setHasInitializedSelection(false);
       await refreshCart();
-      showToast("Đã xóa toàn bộ giỏ hàng", "success");
+      setAppliedVoucher(null);
+      setVoucherCode("");
+      setVoucherError(null);
+      // Remove from sessionStorage when clearing cart
+      sessionStorage.removeItem("appliedVoucherCode");
     } catch (error) {
       showToast(
         error instanceof Error
@@ -277,7 +429,8 @@ export const CartPage = () => {
         <Box display="flex" alignItems="center" gap={2} mb={4}>
           <Button
             startIcon={<ArrowBack />}
-            onClick={() => navigate("/")}
+            component={RouterLink}
+            to="/"
             variant="outlined"
             sx={{ minWidth: "auto" }}
           >
@@ -307,7 +460,8 @@ export const CartPage = () => {
             <Button
               variant="contained"
               color="error"
-              onClick={() => navigate("/")}
+              component={RouterLink}
+              to="/"
             >
               Khám phá ngay
             </Button>
@@ -335,16 +489,12 @@ export const CartPage = () => {
                   <Checkbox
                     checked={
                       getSelectableItemIds().length > 0 &&
-                      selectedCartItemIds.length === getSelectableItemIds().length
-                    }
-                    indeterminate={
-                      selectedCartItemIds.length > 0 &&
-                      selectedCartItemIds.length < getSelectableItemIds().length
+                      selectedCartItemIds.length ===
+                        getSelectableItemIds().length
                     }
                     onChange={(e) => handleToggleSelectAll(e.target.checked)}
                     icon={<RadioButtonUnchecked fontSize="small" />}
                     checkedIcon={<CheckCircle fontSize="small" />}
-                    indeterminateIcon={<CheckCircle fontSize="small" />}
                     sx={roundCheckboxSx}
                   />
                   <Typography variant="body2" fontWeight={500}>
@@ -352,7 +502,8 @@ export const CartPage = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  Đã chọn {selectedCartItemIds.length}/{getSelectableItemIds().length}
+                  Đã chọn {selectedCartItemIds.length}/
+                  {getSelectableItemIds().length}
                 </Typography>
               </Box>
 
@@ -361,9 +512,23 @@ export const CartPage = () => {
                   const itemKey =
                     item.cartItemId ?? `${item.variantId}-${index}`;
                   const quantity = Math.max(1, item.quantity ?? 1);
-                  const lineTotal = item.subTotal
-                    ? Number(item.subTotal)
-                    : Number(item.variantPrice ?? 0) * quantity;
+                  // Strict check: only true if discount exists AND is greater than 0
+                  const hasDiscount = !!(
+                    item.discount &&
+                    Number(item.discount) > 0 &&
+                    item.subTotal &&
+                    Number(item.subTotal) > 0
+                  );
+                  const percentage = hasDiscount
+                    ? Math.round(
+                        (Number(item.discount) / Number(item.subTotal)) * 100,
+                      )
+                    : 0;
+                  const lineTotal = item.finalTotal
+                    ? Number(item.finalTotal)
+                    : item.subTotal
+                      ? Number(item.subTotal)
+                      : Number(item.variantPrice ?? 0) * quantity;
 
                   return (
                     <Box
@@ -427,95 +592,133 @@ export const CartPage = () => {
                               )}
                             </Box>
                             <Box flex={1}>
-                              <Typography
-                                variant="h6"
-                                fontWeight={600}
-                                gutterBottom
+                              <Box
+                                display="flex"
+                                alignItems="flex-start"
+                                gap={1}
+                                mb={1}
                               >
-                                {item.variantName ?? "Sản phẩm chưa đặt tên"}
+                                <Typography
+                                  variant="h6"
+                                  fontWeight={600}
+                                  flex={1}
+                                >
+                                  {item.variantName ?? "Sản phẩm chưa đặt tên"}
+                                </Typography>
+                                {hasDiscount && (
+                                  <Chip
+                                    icon={<LocalOffer fontSize="small" />}
+                                    label={`-${percentage}%`}
+                                    color="error"
+                                    size="small"
+                                    sx={{ fontWeight: 600 }}
+                                  />
+                                )}
+                              </Box>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                mb={2}
+                              >
+                                {item.volumeMl ? `${item.volumeMl} ml` : ""}
+                                {item.volumeMl && item.variantPrice
+                                  ? " • "
+                                  : ""}
+                                {item.variantPrice
+                                  ? formatCurrency(item.variantPrice)
+                                  : ""}
                               </Typography>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              mb={2}
-                            >
-                              {item.volumeMl ? `${item.volumeMl} ml` : ""}
-                              {item.volumeMl && item.variantPrice ? " • " : ""}
-                              {item.variantPrice
-                                ? formatCurrency(item.variantPrice)
-                                : ""}
-                            </Typography>
-                            <Box
-                              display="flex"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              flexWrap="wrap"
-                              gap={2}
-                              pt={2}
-                              borderTop={1}
-                              borderColor="divider"
-                            >
                               <Box
                                 display="flex"
                                 alignItems="center"
-                                gap={1}
-                                border={1}
+                                justifyContent="space-between"
+                                flexWrap="wrap"
+                                gap={2}
+                                pt={2}
+                                borderTop={1}
                                 borderColor="divider"
-                                borderRadius={"24px"}
-                                px={2}
-                                py={0.5}
                               >
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    handleQuantityChange(item.cartItemId, -1)
-                                  }
-                                  disabled={
-                                    quantity <= 1 ||
-                                    updatingItemId === item.cartItemId
-                                  }
+                                <Box
+                                  display="flex"
+                                  alignItems="center"
+                                  gap={1}
+                                  border={1}
+                                  borderColor="divider"
+                                  borderRadius={"24px"}
+                                  px={2}
+                                  py={0.5}
                                 >
-                                  <RemoveIcon fontSize="small" />
-                                </IconButton>
-                                <Typography
-                                  variant="body2"
-                                  fontWeight={600}
-                                  minWidth="2ch"
-                                  textAlign="center"
+                                  <IconButton
+                                    size="small"
+                                    aria-label="Giảm số lượng"
+                                    onClick={() =>
+                                      handleQuantityChange(item.cartItemId, -1)
+                                    }
+                                    disabled={
+                                      quantity <= 1 ||
+                                      updatingItemId === item.cartItemId
+                                    }
+                                  >
+                                    <RemoveIcon fontSize="small" />
+                                  </IconButton>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={600}
+                                    minWidth="2ch"
+                                    textAlign="center"
+                                  >
+                                    {quantity}
+                                  </Typography>
+                                  <IconButton
+                                    size="small"
+                                    aria-label="Tăng số lượng"
+                                    onClick={() =>
+                                      handleQuantityChange(item.cartItemId, 1)
+                                    }
+                                    disabled={
+                                      updatingItemId === item.cartItemId
+                                    }
+                                  >
+                                    <AddIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                                <Box
+                                  display="flex"
+                                  flexDirection="column"
+                                  alignItems="flex-end"
+                                  gap={0.5}
                                 >
-                                  {quantity}
-                                </Typography>
-                                <IconButton
+                                  {hasDiscount && item.subTotal && (
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                      sx={{ textDecoration: "line-through" }}
+                                    >
+                                      {formatCurrency(item.subTotal)}
+                                    </Typography>
+                                  )}
+                                  <Typography
+                                    variant="h6"
+                                    color="error"
+                                    fontWeight={600}
+                                  >
+                                    {formatCurrency(lineTotal)}
+                                  </Typography>
+                                </Box>
+                                <Button
                                   size="small"
+                                  color="error"
+                                  startIcon={<DeleteIcon />}
                                   onClick={() =>
-                                    handleQuantityChange(item.cartItemId, 1)
+                                    handleRemoveItem(item.cartItemId)
                                   }
                                   disabled={updatingItemId === item.cartItemId}
                                 >
-                                  <AddIcon fontSize="small" />
-                                </IconButton>
+                                  Xóa
+                                </Button>
                               </Box>
-                              <Typography
-                                variant="h6"
-                                color="error"
-                                fontWeight={600}
-                              >
-                                {formatCurrency(lineTotal)}
-                              </Typography>
-                              <Button
-                                size="small"
-                                color="error"
-                                startIcon={<DeleteIcon />}
-                                onClick={() =>
-                                  handleRemoveItem(item.cartItemId)
-                                }
-                                disabled={updatingItemId === item.cartItemId}
-                              >
-                                Xóa
-                              </Button>
                             </Box>
                           </Box>
-                        </Box>
                         </CardContent>
                       </Card>
                     </Box>
@@ -529,6 +732,120 @@ export const CartPage = () => {
                 <Typography variant="h6" fontWeight={600} mb={2}>
                   Tóm tắt đơn hàng
                 </Typography>
+
+                {totalsWarningMessage && (
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    {totalsWarningMessage}
+                  </Alert>
+                )}
+
+                {/* Voucher */}
+                <Box mb={2}>
+                  <Box display="flex" gap={1} alignItems="stretch">
+                    <TextField
+                      size="small"
+                      placeholder="Mã giảm giá"
+                      value={voucherCode}
+                      onChange={(e) => {
+                        setVoucherCode(e.target.value);
+                        if (voucherError) setVoucherError(null);
+                      }}
+                      disabled={!!appliedVoucher || isApplyingVoucher}
+                      error={!!voucherError}
+                      fullWidth
+                    />
+                    {!appliedVoucher && (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={applyVoucher}
+                        disabled={isApplyingVoucher || !voucherCode.trim()}
+                        sx={{
+                          minWidth: 110,
+                          whiteSpace: "nowrap",
+                          px: 2,
+                        }}
+                      >
+                        {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
+                      </Button>
+                    )}
+                  </Box>
+                  {!appliedVoucher && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      fullWidth
+                      startIcon={<LocalOffer />}
+                      onClick={async () => {
+                        setVoucherPickerOpen(true);
+                        setLoadingMyVouchers(true);
+                        try {
+                          const data = await voucherService.getAvailable({
+                            PageSize: 50,
+                          });
+                          setMyVoucherList(data.items);
+                        } catch {
+                          setMyVoucherList([]);
+                        } finally {
+                          setLoadingMyVouchers(false);
+                        }
+                      }}
+                      disabled={isApplyingVoucher}
+                      sx={{ mt: 1 }}
+                    >
+                      Chọn voucher
+                    </Button>
+                  )}
+                  {voucherError && (
+                    <Typography
+                      variant="caption"
+                      color="error"
+                      sx={{ mt: 0.5, display: "block" }}
+                    >
+                      {voucherError}
+                    </Typography>
+                  )}
+                  {appliedVoucher && (
+                    <Box
+                      sx={{
+                        mt: 1,
+                        p: 1.5,
+                        bgcolor: "success.lighter",
+                        borderRadius: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography
+                          variant="body2"
+                          color="success.main"
+                          fontWeight={600}
+                        >
+                          ✓ {appliedVoucher.voucherCode}
+                        </Typography>
+                        {totals.discount > 0 && (
+                          <Typography variant="caption" color="success.main">
+                            -{formatCurrency(totals.discount)}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={removeVoucher}
+                        disabled={isApplyingVoucher}
+                        sx={{ minWidth: 50, fontSize: "0.75rem" }}
+                      >
+                        Xóa
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+
+                <Divider sx={{ my: 2 }} />
+
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2" color="text.secondary">
                     Tạm tính
@@ -566,11 +883,21 @@ export const CartPage = () => {
                   variant="contained"
                   color="error"
                   size="large"
-                  onClick={() =>
+                  onClick={() => {
+                    // Ensure voucher is saved before navigation
+                    if (appliedVoucher?.voucherCode) {
+                      sessionStorage.setItem(
+                        "appliedVoucherCode",
+                        appliedVoucher.voucherCode,
+                      );
+                    }
                     navigate("/checkout", {
-                      state: { selectedCartItemIds },
-                    })
-                  }
+                      state: {
+                        selectedCartItemIds,
+                        voucherCode: appliedVoucher?.voucherCode,
+                      },
+                    });
+                  }}
                   disabled={selectedCartItemIds.length === 0}
                   sx={{ py: 1.5, mt: 2 }}
                 >
@@ -592,6 +919,110 @@ export const CartPage = () => {
           </Box>
         )}
       </Container>
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Xóa sản phẩm"
+        description="Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?"
+        confirmText="Xóa"
+        loading={updatingItemId === confirmDeleteId}
+        onConfirm={() => confirmDeleteId && void doRemoveItem(confirmDeleteId)}
+        onClose={() => setConfirmDeleteId(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmClearOpen}
+        title="Xóa toàn bộ giỏ hàng"
+        description="Toàn bộ sản phẩm trong giỏ hàng sẽ bị xóa. Bạn có chắc chắn không?"
+        confirmText="Xóa hết"
+        loading={isClearing}
+        onConfirm={() => void doClearCart()}
+        onClose={() => setConfirmClearOpen(false)}
+      />
+
+      {/* Voucher picker dialog */}
+      <Dialog
+        open={voucherPickerOpen}
+        onClose={() => setVoucherPickerOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          Chọn voucher
+          <IconButton onClick={() => setVoucherPickerOpen(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {loadingMyVouchers ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : myVoucherList.length === 0 ? (
+            <Typography color="text.secondary" textAlign="center" py={4}>
+              Bạn chưa có voucher nào.
+            </Typography>
+          ) : (
+            <Stack spacing={1.5}>
+              {myVoucherList.map((v) => (
+                <Paper
+                  key={v.id}
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    cursor: "pointer",
+                    "&:hover": { bgcolor: "action.hover" },
+                  }}
+                  onClick={async () => {
+                    const code = v.code ?? "";
+                    if (!code) return;
+                    setVoucherPickerOpen(false);
+                    setVoucherCode(code);
+                    setIsApplyingVoucher(true);
+                    setVoucherError(null);
+                    try {
+                      const updatedTotals = await loadTotals(selectedCartItemIds, code);
+                      if (!updatedTotals) {
+                        setAppliedVoucher(null);
+                        setVoucherError("Không thể áp dụng voucher này.");
+                        return;
+                      }
+                      setAppliedVoucher({
+                        voucherCode: code,
+                        discountAmount: updatedTotals.discount ?? 0,
+                        finalAmount: updatedTotals.totalPrice ?? 0,
+                        message: "Đã áp dụng mã giảm giá",
+                      });
+                      sessionStorage.setItem("appliedVoucherCode", code);
+                    } catch {
+                      setVoucherError("Không thể áp dụng voucher này.");
+                      setAppliedVoucher(null);
+                      sessionStorage.removeItem("appliedVoucherCode");
+                    } finally {
+                      setIsApplyingVoucher(false);
+                    }
+                  }}
+                >
+                  <Typography fontWeight={600}>
+                    <LocalOffer fontSize="small" sx={{ mr: 0.5, verticalAlign: "middle" }} />
+                    {v.code}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {v.discountType === "Percentage"
+                      ? `Giảm ${v.discountValue}%`
+                      : `Giảm ${formatCurrency(v.discountValue)}`}
+                  </Typography>
+                  {v.minOrderValue ? (
+                    <Typography variant="caption" color="text.secondary">
+                      Đơn tối thiểu: {formatCurrency(v.minOrderValue)}
+                    </Typography>
+                  ) : null}
+                </Paper>
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 };

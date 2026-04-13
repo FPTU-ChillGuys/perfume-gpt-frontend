@@ -1,9 +1,17 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -12,9 +20,9 @@ import {
   DialogContentText,
   DialogTitle,
   Divider,
-  MenuItem,
+  FormControlLabel,
+  IconButton,
   Paper,
-  Select,
   Stack,
   Table,
   TableBody,
@@ -23,28 +31,51 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import {
+  Add,
   ArrowBack,
   AssignmentReturn,
   CancelOutlined,
   ExpandLess,
   ExpandMore,
+  HighlightOff,
+  Inventory,
+  CheckCircle,
   LocalShipping,
-  MoveToInbox,
+  Storage,
   Payments,
   Person,
   Phone,
   Receipt,
+  LocalPrintshopOutlined,
+  Remove,
+  Search,
+  SwapHoriz,
   StarBorder,
+  Sync,
   LocationOn,
 } from "@mui/icons-material";
+import { useReactToPrint } from "react-to-print";
 import { AdminLayout } from "@/layouts/AdminLayout";
-import { orderService } from "@/services/orderService";
+import {
+  type OrderInvoice,
+  orderService,
+  type OrderCancelRequest,
+  type PickListBatchInfo,
+  type PickListItemResponse,
+  type PickListResponse,
+} from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
+import { OrderInvoicePrint } from "@/components/order/OrderInvoicePrint";
 import type { PaymentMethod } from "@/types/checkout";
 import type { CarrierName, OrderResponse, OrderStatus } from "@/types/order";
+import {
+  STAFF_CANCEL_ORDER_REASON_OPTIONS,
+  type CancelOrderReason,
+} from "@/utils/cancelOrderReason";
 import {
   getOrderStatusChipSx,
   orderStatusColors,
@@ -54,42 +85,52 @@ import {
   paymentStatusColors,
   paymentStatusLabels,
 } from "@/utils/orderStatus";
+import { formatDateTimeCompactVN, formatDateVN } from "@/utils/dateTime";
 
 const CARRIER_LABELS: Record<CarrierName, string> = {
   GHN: "Giao Hàng Nhanh",
   GHTK: "Giao Hàng Tiết Kiệm",
 };
 
-const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
   CashInStore: "Thanh toán tiền mặt tại quầy",
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
+  PayOs: "Thanh toán qua PayOS",
 };
 
 const STATUS_TO_STEP: Record<OrderStatus, number> = {
   Pending: 0,
-  Processing: 1,
-  Delivering: 3,
-  Delivered: 4,
-  Canceled: -1,
+  Preparing: 2,
+  ReadyToPick: 3,
+  Delivering: 4,
+  Delivered: 5,
+  Returning: -2,
+  Cancelled: -1,
+  Partial_Returned: -2,
   Returned: -2,
 };
 
 const STEPS = [
   { label: "Đơn Hàng Đã Đặt", Icon: Receipt },
   { label: "Đơn Hàng Đã Thanh Toán", Icon: Payments },
-  { label: "Đã Giao Cho ĐVVC", Icon: LocalShipping },
-  { label: "Đang Giao Hàng", Icon: MoveToInbox },
+  { label: "Đang Chuẩn Bị", Icon: Inventory },
+  { label: "Chờ Lấy Hàng", Icon: Storage },
+  { label: "Đang Giao Hàng", Icon: LocalShipping },
   { label: "Hoàn tất", Icon: StarBorder },
 ];
 
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
-  Pending: ["Processing", "Canceled"],
-  Processing: ["Canceled"],
-  Delivering: ["Delivered", "Returned"],
+  Pending: ["Preparing", "Cancelled"],
+  Preparing: ["Cancelled"],
+  ReadyToPick: ["Cancelled"],
+  Delivering: [],
   Delivered: [],
-  Canceled: [],
+  Returning: ["Returned"],
+  Cancelled: [],
+  Partial_Returned: [],
   Returned: [],
 };
 
@@ -97,16 +138,22 @@ const fmt = (value?: number | null) =>
   `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))}đ`;
 
 const fmtDateShort = (value?: string | null) => {
-  if (!value) return "-";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("vi-VN");
+  return formatDateVN(value);
 };
 
 const fmtDate = (s?: string | null) => {
-  if (!s) return null;
-  const d = new Date(s);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")} ${d.getDate().toString().padStart(2, "0")}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getFullYear()}`;
+  return formatDateTimeCompactVN(s);
 };
+
+const isSupportedPaymentMethod = (
+  value?: string | null,
+): value is PaymentMethod =>
+  value === "CashOnDelivery" ||
+  value === "CashInStore" ||
+  value === "VnPay" ||
+  value === "Momo" ||
+  value === "ExternalBankTransfer" ||
+  value === "PayOs";
 
 interface StepperProps {
   status: OrderStatus;
@@ -125,7 +172,7 @@ const OrderStepper = ({
 }: StepperProps) => {
   const baseStep = STATUS_TO_STEP[status] ?? 0;
   const activeStep = paidAt && baseStep < 1 ? 1 : baseStep;
-  const isCanceled = status === "Canceled";
+  const isCanceled = status === "Cancelled";
   const isReturned = status === "Returned";
   const isSpecial = isCanceled || isReturned;
 
@@ -262,7 +309,7 @@ const OrderStepper = ({
                 <Box
                   sx={{
                     flex: 1,
-                    height: 2,
+                    height: 3,
                     bgcolor: lineColor,
                     mt: "27px",
                     mx: 0.5,
@@ -284,11 +331,48 @@ interface FulfillInputItem {
   quantity: string;
 }
 
-interface ProcessingOrderDetail {
+interface AutoFulfillItem {
   id: string;
   variantName?: string;
-  quantity?: number;
+  orderQuantity: number;
+  reservedQuantity: number;
+  scannedBatchCode: string;
+  quantity: number;
 }
+
+interface FulfillRowValidation {
+  orderDetailId: string;
+  isBatchMatched: boolean;
+  isQuantityValid: boolean;
+  isValid: boolean;
+  selectedBatchReserved: number;
+  message?: string;
+}
+
+interface DisplayBatchInfo {
+  reservationId?: string;
+  batchId?: string;
+  batchCode: string;
+  note?: string | null;
+  reservedQuantity?: number;
+  expiryDate?: string;
+}
+
+const STAFF_CANCELABLE_STATUSES: OrderStatus[] = [
+  "Pending",
+  "Preparing",
+  "ReadyToPick",
+];
+
+const CANCEL_REQUEST_BLOCKED_STATUSES = new Set(["Pending"]);
+
+const SWAP_DAMAGE_NOTE_SUGGESTIONS = [
+  "Hàng móp méo, không đạt chất lượng",
+  "Bao bì rách/tem niêm phong bị lỗi",
+  "Sản phẩm có dấu hiệu chảy nước hoặc biến đổi mùi",
+  "Batch này lỗi khi kiểm tra ngoại quan",
+  "Cần đổi batch để đảm bảo chất lượng giao khách",
+];
 
 export const OrderManagementDetailPage = () => {
   const { orderId } = useParams<{ orderId: string }>();
@@ -306,17 +390,37 @@ export const OrderManagementDetailPage = () => {
     defaultBackPath;
 
   const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [orderCancelRequest, setOrderCancelRequest] =
+    useState<OrderCancelRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | "">("");
-  const [note, setNote] = useState("");
+  const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
+  const [cancelNote, setCancelNote] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isFulfilling, setIsFulfilling] = useState(false);
   const [expandedBatches, setExpandedBatches] = useState<
     Record<string, boolean>
   >({});
-  const [fulfillInputs, setFulfillInputs] = useState<FulfillInputItem[]>([]);
+  const [isPackagingConfirmed, setIsPackagingConfirmed] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [isSyncingShipping, setIsSyncingShipping] = useState(false);
+  const [pickList, setPickList] = useState<PickListResponse | null>(null);
+  const [isPickListLoading, setIsPickListLoading] = useState(false);
+  const [fulfillInputs, setFulfillInputs] = useState<FulfillInputItem[]>([]);
+  const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false);
+  const [damagedReservationId, setDamagedReservationId] = useState("");
+  const [swapDamageNote, setSwapDamageNote] = useState("");
+  const [swappingBatchCode, setSwappingBatchCode] = useState("");
+  const [isSwappingBatch, setIsSwappingBatch] = useState(false);
+  const [isInStoreCompletionDialogOpen, setIsInStoreCompletionDialogOpen] =
+    useState(false);
+  const [isCompletingInStorePickup, setIsCompletingInStorePickup] =
+    useState(false);
+  const [invoiceData, setInvoiceData] = useState<OrderInvoice | null>(null);
+  const [isPreparingInvoicePrint, setIsPreparingInvoicePrint] = useState(false);
+  const [shouldTriggerInvoicePrint, setShouldTriggerInvoicePrint] =
+    useState(false);
+  const invoicePrintRef = useRef<HTMLDivElement | null>(null);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -324,19 +428,32 @@ export const OrderManagementDetailPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await orderService.getOrderById(orderId);
+      const [data, cancelRequests] = await Promise.all([
+        orderService.getOrderById(orderId),
+        orderService
+          .getAllCancelRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          })
+          .catch(() => null),
+      ]);
+
+      const latestCancelRequest =
+        cancelRequests?.items
+          ?.filter((item) => item.orderId === data.id)
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime(),
+          )[0] ?? null;
+
       setOrder(data);
-      setSelectedStatus("");
-      setNote("");
-      setFulfillInputs(
-        (data.orderDetails ?? [])
-          .filter((detail) => Boolean(detail.id))
-          .map((detail) => ({
-            orderDetailId: detail.id!,
-            scannedBatchCode: "",
-            quantity: "",
-          })),
-      );
+      setOrderCancelRequest(latestCancelRequest);
+      setCancelReason("");
+      setCancelNote("");
+      setIsPackagingConfirmed(false);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Không thể tải chi tiết đơn hàng",
@@ -351,10 +468,125 @@ export const OrderManagementDetailPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
-  const availableStatuses = useMemo(() => {
-    if (!order?.status) return [];
-    return allowedTransitions[order.status] ?? [];
-  }, [order?.status]);
+  useEffect(() => {
+    const loadPickList = async () => {
+      if (!order?.id || order.status !== "Preparing") {
+        setPickList(null);
+        return;
+      }
+
+      try {
+        setIsPickListLoading(true);
+        const data = await orderService.getOrderPickList(order.id);
+        setPickList(data);
+      } catch (err) {
+        setPickList(null);
+        showToast(
+          err instanceof Error ? err.message : "Không thể tải dữ liệu picklist",
+          "warning",
+        );
+      } finally {
+        setIsPickListLoading(false);
+      }
+    };
+
+    void loadPickList();
+    // `showToast` can be unstable across renders; avoid reloading picklist unnecessarily.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.id, order?.status]);
+
+  const isShippingManagedStatus = order?.status === "Delivering";
+  const hasTrackingNumber = Boolean(order?.shippingInfo?.trackingNumber);
+  const canPrepareOrder = order?.status === "Pending";
+  const canCancelOrder =
+    !!order?.status && STAFF_CANCELABLE_STATUSES.includes(order.status);
+  const hasBlockingCancelRequest = Boolean(
+    orderCancelRequest?.id &&
+      CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
+  );
+
+  const selectedCancelReasonLabel = useMemo(() => {
+    if (!cancelReason) {
+      return "";
+    }
+
+    return (
+      STAFF_CANCEL_ORDER_REASON_OPTIONS.find(
+        (option) => option.value === cancelReason,
+      )?.label || ""
+    );
+  }, [cancelReason]);
+
+  const pickListItemMap = useMemo(() => {
+    const map = new Map<string, PickListItemResponse>();
+    (pickList?.items || []).forEach((item) => {
+      if (item.orderDetailId) {
+        map.set(item.orderDetailId, item);
+      }
+    });
+    return map;
+  }, [pickList?.items]);
+
+  const getDetailBatches = useCallback(
+    (
+      orderDetailId?: string,
+      fallbackBatches?: Array<
+        Partial<{
+          batchId: string;
+          batchCode: string;
+          reservedQuantity: number;
+          expiryDate: string;
+        }>
+      >,
+    ): DisplayBatchInfo[] => {
+      if (orderDetailId) {
+        const pickListItem = pickListItemMap.get(orderDetailId);
+        if (pickListItem?.batches?.length) {
+          return pickListItem.batches.map((batch: PickListBatchInfo) => ({
+            reservationId: batch.reservationId,
+            batchId: batch.batchId,
+            batchCode: batch.batchCode,
+            note: batch.note,
+            reservedQuantity: batch.reservedQuantity,
+            expiryDate: batch.expiryDate || undefined,
+          }));
+        }
+      }
+
+      return (fallbackBatches || []).map((batch) => ({
+        batchId: batch.batchId,
+        batchCode: batch.batchCode || "-",
+        reservedQuantity: batch.reservedQuantity,
+        expiryDate: batch.expiryDate,
+      }));
+    },
+    [pickListItemMap],
+  );
+
+  useEffect(() => {
+    if (order?.status !== "Preparing") {
+      setFulfillInputs([]);
+      return;
+    }
+
+    setFulfillInputs((prev) => {
+      const prevMap = new Map(prev.map((item) => [item.orderDetailId, item]));
+
+      return (order.orderDetails || [])
+        .filter((detail) => Boolean(detail.id))
+        .map((detail) => {
+          const existing = prevMap.get(detail.id!);
+
+          return {
+            orderDetailId: detail.id!,
+            // Keep already-scanned value if user has entered one.
+            scannedBatchCode: existing?.scannedBatchCode ?? "",
+            quantity:
+              existing?.quantity ?? String(Number(detail.quantity ?? 0)),
+          };
+        });
+    });
+  }, [getDetailBatches, order?.status, order?.orderDetails, pickListItemMap]);
 
   const subtotal = useMemo(
     () =>
@@ -373,55 +605,174 @@ export const OrderManagementDetailPage = () => {
     return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
   }, [order?.paymentTransactions]);
 
-  const processingOrderDetails = useMemo<ProcessingOrderDetail[]>(() => {
-    if (order?.status !== "Processing") {
+  const latestPaymentTransaction = useMemo(
+    () =>
+      [...(order?.paymentTransactions ?? [])]
+        .reverse()
+        .find((transaction) => transaction?.id),
+    [order?.paymentTransactions],
+  );
+
+  const latestPaymentMethod = useMemo(
+    () =>
+      [...(order?.paymentTransactions ?? [])]
+        .reverse()
+        .find((transaction) => transaction?.paymentMethod)?.paymentMethod,
+    [order?.paymentTransactions],
+  );
+
+  const currentPaymentMethod = useMemo<PaymentMethod | null>(() => {
+    return isSupportedPaymentMethod(latestPaymentMethod)
+      ? latestPaymentMethod
+      : null;
+  }, [latestPaymentMethod]);
+
+  const paymentId = latestPaymentTransaction?.id ?? null;
+  const isPickupInStoreOrder = Boolean(
+    order &&
+    (order.type === "Offline" || (!order.recipientInfo && !order.shippingInfo)),
+  );
+  const canCompleteInStoreOrder =
+    order?.status === "ReadyToPick" && isPickupInStoreOrder;
+  const isCashInStoreOrderPayment = currentPaymentMethod === "CashInStore";
+  const canPrintInvoice =
+    order?.status === "Delivered" && order?.paymentStatus === "Paid";
+
+  const triggerInvoicePrint = useReactToPrint({
+    contentRef: invoicePrintRef,
+    documentTitle: `hoa-don-${order?.code || order?.id || "order"}`,
+    onAfterPrint: () => {
+      setIsPreparingInvoicePrint(false);
+    },
+    onPrintError: () => {
+      setIsPreparingInvoicePrint(false);
+      showToast("Không thể in hóa đơn. Vui lòng thử lại.", "error");
+    },
+  });
+
+  const autoFulfillItems = useMemo<AutoFulfillItem[]>(() => {
+    if (order?.status !== "Preparing") {
       return [];
     }
 
+    const fulfillMap = new Map(
+      fulfillInputs.map((input) => [input.orderDetailId, input]),
+    );
+
     return (order.orderDetails ?? [])
       .filter((detail) => Boolean(detail.id))
-      .map((detail) => ({
-        id: detail.id!,
-        variantName: detail.variantName,
-        quantity: detail.quantity,
-      }));
-  }, [order?.orderDetails, order?.status]);
+      .map((detail) => {
+        const detailBatches = getDetailBatches(
+          detail.id,
+          detail.reservedBatches,
+        );
+        const selectedInput = detail.id ? fulfillMap.get(detail.id) : undefined;
+        const quantity = Number(
+          selectedInput?.quantity ?? detail.quantity ?? 0,
+        );
+        const selectedBatchCode = selectedInput?.scannedBatchCode?.trim() || "";
+        const selectedBatch = detailBatches.find(
+          (batch) => batch.batchCode === selectedBatchCode,
+        );
 
-  const hasInvalidFulfillInput = useMemo(() => {
-    if (order?.status !== "Processing") {
-      return false;
+        return {
+          id: detail.id!,
+          variantName: detail.variantName,
+          orderQuantity: Number(detail.quantity ?? 0),
+          reservedQuantity: Number(selectedBatch?.reservedQuantity ?? 0),
+          scannedBatchCode: selectedBatchCode,
+          quantity,
+        };
+      });
+  }, [fulfillInputs, getDetailBatches, order?.orderDetails, order?.status]);
+
+  const fulfillRowValidations = useMemo<FulfillRowValidation[]>(() => {
+    if (order?.status !== "Preparing") {
+      return [];
     }
 
-    if (processingOrderDetails.length === 0) {
-      return true;
-    }
+    return autoFulfillItems.map((item) => {
+      const isBatchMatched = Boolean(item.scannedBatchCode);
+      const isQuantityValid =
+        Number.isFinite(item.quantity) &&
+        item.quantity > 0 &&
+        item.quantity <= Math.max(item.reservedQuantity, 0);
 
-    return processingOrderDetails.some((detail) => {
-      const row = fulfillInputs.find(
-        (input) => input.orderDetailId === detail.id,
-      );
-      if (!row) {
-        return true;
+      if (!isBatchMatched) {
+        return {
+          orderDetailId: item.id,
+          isBatchMatched,
+          isQuantityValid: false,
+          isValid: false,
+          selectedBatchReserved: item.reservedQuantity,
+          message: "Mã lô không khớp",
+        };
       }
 
-      const qty = Number(row.quantity);
-      return !row.scannedBatchCode.trim() || !Number.isFinite(qty) || qty <= 0;
-    });
-  }, [fulfillInputs, order?.status, processingOrderDetails]);
+      if (!isQuantityValid) {
+        return {
+          orderDetailId: item.id,
+          isBatchMatched,
+          isQuantityValid,
+          isValid: false,
+          selectedBatchReserved: item.reservedQuantity,
+          message:
+            item.reservedQuantity <= 0
+              ? "Batch đã chọn không còn số lượng giữ"
+              : `Số lượng vượt quá SL giữ (${item.reservedQuantity})`,
+        };
+      }
 
-  const handleFulfillInputChange = (
-    orderDetailId: string,
-    field: "scannedBatchCode" | "quantity",
-    value: string,
-  ) => {
-    setFulfillInputs((prev) =>
-      prev.map((item) =>
-        item.orderDetailId === orderDetailId
-          ? { ...item, [field]: value }
-          : item,
-      ),
+      return {
+        orderDetailId: item.id,
+        isBatchMatched,
+        isQuantityValid,
+        isValid: true,
+        selectedBatchReserved: item.reservedQuantity,
+      };
+    });
+  }, [autoFulfillItems, order?.status]);
+
+  const isAllFulfillRowsValid = useMemo(
+    () =>
+      fulfillRowValidations.length > 0 &&
+      fulfillRowValidations.every((item) => item.isValid),
+    [fulfillRowValidations],
+  );
+
+  const autoFulfillError = useMemo(() => {
+    if (order?.status !== "Preparing") {
+      return null;
+    }
+
+    if (autoFulfillItems.length === 0) {
+      return "Không tìm thấy order detail để đóng gói";
+    }
+
+    const missingBatch = autoFulfillItems.find(
+      (item) => !item.scannedBatchCode,
     );
-  };
+    if (missingBatch) {
+      return `Mã lô không khớp cho sản phẩm ${missingBatch.variantName || missingBatch.id}`;
+    }
+
+    const invalidQuantity = autoFulfillItems.find(
+      (item) => !Number.isFinite(item.quantity) || item.quantity <= 0,
+    );
+    if (invalidQuantity) {
+      return `Số lượng đóng gói không hợp lệ cho sản phẩm ${invalidQuantity.variantName || invalidQuantity.id}`;
+    }
+
+    const insufficientReserved = autoFulfillItems.find(
+      (item) =>
+        item.reservedQuantity > 0 && item.quantity > item.reservedQuantity,
+    );
+    if (insufficientReserved) {
+      return `Số lượng giữ hàng không đủ cho sản phẩm ${insufficientReserved.variantName || insufficientReserved.id}`;
+    }
+
+    return null;
+  }, [autoFulfillItems, order?.status]);
 
   const handleBack = () => {
     navigate(backPath, {
@@ -429,23 +780,19 @@ export const OrderManagementDetailPage = () => {
     });
   };
 
-  const executeUpdateStatus = async () => {
-    if (!order?.id || !selectedStatus) return;
+  const handlePrepareOrder = async () => {
+    if (!order?.id || order.status !== "Pending") {
+      return;
+    }
 
     try {
       setIsUpdating(true);
-      await orderService.updateOrderStatus(
-        order.id,
-        selectedStatus,
-        note || undefined,
-      );
-      showToast("Cập nhật trạng thái đơn hàng thành công", "success");
+      await orderService.staffPrepareOrder(order.id);
+      showToast("Đã chuyển đơn hàng sang trạng thái Đang chuẩn bị", "success");
       await loadOrder();
     } catch (err) {
       showToast(
-        err instanceof Error
-          ? err.message
-          : "Không thể cập nhật trạng thái đơn hàng",
+        err instanceof Error ? err.message : "Không thể xác nhận đơn hàng",
         "error",
       );
     } finally {
@@ -453,18 +800,48 @@ export const OrderManagementDetailPage = () => {
     }
   };
 
-  const handleUpdateStatus = async () => {
-    if (selectedStatus === "Canceled") {
-      setIsCancelDialogOpen(true);
+  const openCancelDialog = () => {
+    if (!canCancelOrder || hasBlockingCancelRequest) {
+      if (hasBlockingCancelRequest) {
+        showToast("Đơn hàng đã gửi yêu cầu hủy, đang chờ xử lý", "info");
+      }
       return;
     }
 
-    await executeUpdateStatus();
+    setCancelReason("");
+    setCancelNote("");
+    setIsCancelDialogOpen(true);
   };
 
   const handleConfirmCancelStatus = async () => {
+    if (!order?.id) {
+      return;
+    }
+
+    if (!cancelReason) {
+      showToast("Vui lòng chọn lý do hủy đơn", "warning");
+      return;
+    }
+
     setIsCancelDialogOpen(false);
-    await executeUpdateStatus();
+
+    try {
+      setIsUpdating(true);
+      await orderService.staffCancelOrder(
+        order.id,
+        cancelReason,
+        cancelNote || undefined,
+      );
+      showToast("Đã hủy đơn hàng thành công", "success");
+      await loadOrder();
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Không thể hủy đơn hàng",
+        "error",
+      );
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const handleFulfillOrder = async () => {
@@ -472,37 +849,32 @@ export const OrderManagementDetailPage = () => {
       return;
     }
 
-    if (order.status !== "Processing") {
+    if (order.status !== "Preparing") {
       showToast(
-        "Chỉ có thể đóng gói khi đơn đang ở trạng thái Đang xử lý",
+        "Chỉ có thể đóng gói khi đơn đang ở trạng thái Đang chuẩn bị",
         "warning",
       );
       return;
     }
 
-    if (processingOrderDetails.length === 0) {
-      showToast("Không tìm thấy order detail để đóng gói", "error");
-      return;
-    }
-
-    if (hasInvalidFulfillInput) {
+    if (!isPackagingConfirmed) {
       showToast(
-        "Vui lòng nhập mã batch và số lượng hợp lệ cho từng order detail",
-        "error",
+        "Vui lòng xác nhận đã đóng gói đúng số lô và số lượng trước khi bàn giao",
+        "warning",
       );
       return;
     }
 
-    const fulfillPayload = processingOrderDetails.map((detail) => {
-      const row = fulfillInputs.find(
-        (item) => item.orderDetailId === detail.id,
-      )!;
-      return {
-        orderDetailId: detail.id!,
-        scannedBatchCode: row.scannedBatchCode.trim(),
-        quantity: Number(row.quantity),
-      };
-    });
+    if (autoFulfillError) {
+      showToast(autoFulfillError, "error");
+      return;
+    }
+
+    const fulfillPayload = autoFulfillItems.map((item) => ({
+      orderDetailId: item.id,
+      scannedBatchCode: item.scannedBatchCode,
+      quantity: item.quantity,
+    }));
 
     try {
       setIsFulfilling(true);
@@ -510,7 +882,7 @@ export const OrderManagementDetailPage = () => {
         items: fulfillPayload,
       });
       showToast(
-        "Đóng gói thành công, đơn hàng đã chuyển sang Đang giao hàng",
+        "Đóng gói thành công, đơn hàng đã chuyển sang Sẵn sàng bàn giao",
         "success",
       );
       await loadOrder();
@@ -524,12 +896,222 @@ export const OrderManagementDetailPage = () => {
     }
   };
 
+  const handleSyncShippingStatus = async () => {
+    if (!orderId || !order?.customerId) {
+      showToast("Không tìm thấy thông tin khách hàng để đồng bộ đơn", "error");
+      return;
+    }
+
+    try {
+      setIsSyncingShipping(true);
+      await orderService.syncShippingStatusByUserId(order.customerId);
+      await loadOrder();
+      showToast("Đã đồng bộ trạng thái vận chuyển", "success");
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Không thể đồng bộ trạng thái vận chuyển",
+        "error",
+      );
+    } finally {
+      setIsSyncingShipping(false);
+    }
+  };
+
+  const completeInStorePickup = async () => {
+    if (!order?.id) {
+      return;
+    }
+
+    try {
+      setIsCompletingInStorePickup(true);
+
+      if (isCashInStoreOrderPayment) {
+        await orderService.deliverInStoreOrder(order.id);
+        showToast(
+          "Đã xác nhận thu tiền tại quầy và hoàn tất đơn hàng",
+          "success",
+        );
+      } else {
+        await orderService.deliverInStoreOrder(order.id);
+        showToast("Đã xác nhận khách nhận hàng tại cửa hàng", "success");
+      }
+
+      await loadOrder();
+    } catch (err) {
+      showToast(
+        err instanceof Error
+          ? err.message
+          : "Không thể xác nhận hoàn tất đơn nhận tại cửa hàng",
+        "error",
+      );
+    } finally {
+      setIsCompletingInStorePickup(false);
+    }
+  };
+
+  const handleCompleteInStoreAction = () => {
+    if (!canCompleteInStoreOrder) {
+      return;
+    }
+
+    if (isCashInStoreOrderPayment) {
+      if (!paymentId) {
+        showToast("Không tìm thấy giao dịch để xác nhận đã thu tiền", "error");
+        return;
+      }
+
+      setIsInStoreCompletionDialogOpen(true);
+      return;
+    }
+
+    void completeInStorePickup();
+  };
+
+  const handleConfirmCashInStoreCompletion = () => {
+    setIsInStoreCompletionDialogOpen(false);
+    void completeInStorePickup();
+  };
+
+  const handlePrintInvoice = async () => {
+    if (!order?.id || !canPrintInvoice) {
+      showToast(
+        "Chỉ có thể in hóa đơn khi đơn hàng đã giao hàng và đã thanh toán",
+        "warning",
+      );
+      return;
+    }
+
+    try {
+      setIsPreparingInvoicePrint(true);
+      const invoice = await orderService.getOrderInvoice(order.id);
+      setInvoiceData(invoice);
+      setShouldTriggerInvoicePrint(true);
+    } catch (err) {
+      setIsPreparingInvoicePrint(false);
+      showToast(
+        err instanceof Error ? err.message : "Không thể tải dữ liệu hóa đơn",
+        "error",
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!shouldTriggerInvoicePrint || !invoiceData) {
+      return;
+    }
+
+    setShouldTriggerInvoicePrint(false);
+    triggerInvoicePrint();
+  }, [invoiceData, shouldTriggerInvoicePrint, triggerInvoicePrint]);
+
   const toggleBatchDetails = (detailId?: string) => {
     if (!detailId) return;
     setExpandedBatches((prev) => ({
       ...prev,
       [detailId]: !prev[detailId],
     }));
+  };
+
+  const handleBatchCodeChange = (orderDetailId: string, value: string) => {
+    const normalizedValue = value.trim();
+    setFulfillInputs((prev) => {
+      const exists = prev.some((item) => item.orderDetailId === orderDetailId);
+
+      if (!exists) {
+        return [
+          ...prev,
+          {
+            orderDetailId,
+            scannedBatchCode: normalizedValue,
+            quantity: "1",
+          },
+        ];
+      }
+
+      return prev.map((item) =>
+        item.orderDetailId === orderDetailId
+          ? { ...item, scannedBatchCode: normalizedValue }
+          : item,
+      );
+    });
+  };
+
+  const handleQuantityChange = (orderDetailId: string, value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    setFulfillInputs((prev) =>
+      prev.map((item) =>
+        item.orderDetailId === orderDetailId
+          ? { ...item, quantity: digitsOnly || "0" }
+          : item,
+      ),
+    );
+  };
+
+  const handleAdjustQuantity = (orderDetailId: string, delta: number) => {
+    setFulfillInputs((prev) =>
+      prev.map((item) => {
+        if (item.orderDetailId !== orderDetailId) {
+          return item;
+        }
+
+        const nextValue = Math.max(0, Number(item.quantity || 0) + delta);
+        return { ...item, quantity: String(nextValue) };
+      }),
+    );
+  };
+
+  useEffect(() => {
+    if (!isAllFulfillRowsValid && isPackagingConfirmed) {
+      setIsPackagingConfirmed(false);
+    }
+  }, [isAllFulfillRowsValid, isPackagingConfirmed]);
+
+  const handleSimulateScanBatch = (
+    orderDetailId: string,
+    batchCode: string,
+  ) => {
+    handleBatchCodeChange(orderDetailId, batchCode);
+    showToast(`Đã điền mã batch ${batchCode}`, "success");
+  };
+
+  const openSwapDamagedDialog = (reservationId: string, batchCode: string) => {
+    setDamagedReservationId(reservationId);
+    setSwappingBatchCode(batchCode);
+    setSwapDamageNote("");
+    setIsSwapDialogOpen(true);
+  };
+
+  const handleConfirmSwapDamagedBatch = async () => {
+    if (!order?.id || !damagedReservationId) {
+      return;
+    }
+
+    try {
+      setIsSwappingBatch(true);
+      const result = await orderService.swapDamagedOrderReservation(order.id, {
+        damagedReservationId,
+        damageNote: swapDamageNote.trim() || null,
+      });
+
+      setIsSwapDialogOpen(false);
+      showToast(
+        result.newBatchCode
+          ? `Đã đổi sang batch mới ${result.newBatchCode}`
+          : result.message || "Đổi batch thành công",
+        "success",
+      );
+
+      await loadOrder();
+    } catch (err) {
+      showToast(
+        err instanceof Error ? err.message : "Không thể đổi batch lỗi",
+        "error",
+      );
+    } finally {
+      setIsSwappingBatch(false);
+    }
   };
 
   return (
@@ -583,8 +1165,45 @@ export const OrderManagementDetailPage = () => {
                   alignItems="center"
                   flexWrap="wrap"
                 >
+                  {canPrintInvoice && (
+                    <Tooltip title="In hóa đơn">
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            void handlePrintInvoice();
+                          }}
+                          disabled={isPreparingInvoicePrint || isLoading}
+                          aria-label="In hóa đơn"
+                        >
+                          <LocalPrintshopOutlined />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  )}
+                  <IconButton
+                    size="small"
+                    onClick={handleSyncShippingStatus}
+                    disabled={isSyncingShipping}
+                    aria-label="Đồng bộ trạng thái vận chuyển"
+                  >
+                    <Sync
+                      sx={{
+                        animation: isSyncingShipping
+                          ? "sync-spin 0.9s linear infinite"
+                          : "none",
+                        "@keyframes sync-spin": {
+                          from: { transform: "rotate(0deg)" },
+                          to: { transform: "rotate(360deg)" },
+                        },
+                      }}
+                    />
+                  </IconButton>
                   <Typography variant="body2" color="text.secondary">
-                    Mã đơn: <b>{(order.id ?? "").toUpperCase()}</b>
+                    Mã đơn:{" "}
+                    <b>
+                      {(order.code || order.id || orderId || "-").toUpperCase()}
+                    </b>
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     |
@@ -593,6 +1212,14 @@ export const OrderManagementDetailPage = () => {
                     <Chip
                       label={orderTypeLabels[order.type]}
                       color={orderTypeColors[order.type]}
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
+                  {isPickupInStoreOrder && (
+                    <Chip
+                      label="Nhận tại cửa hàng"
+                      color="info"
                       size="small"
                       variant="outlined"
                     />
@@ -709,6 +1336,19 @@ export const OrderManagementDetailPage = () => {
                                 <b>{order.shippingInfo.trackingNumber}</b>
                               </Typography>
                             )}
+                            {order.status === "Delivering" &&
+                              order.shippingInfo.estimatedDeliveryDate && (
+                                <Typography
+                                  variant="body2"
+                                  color="info.main"
+                                  fontWeight={600}
+                                >
+                                  Dự kiến nhận hàng:{" "}
+                                  {fmtDateShort(
+                                    order.shippingInfo.estimatedDeliveryDate,
+                                  )}
+                                </Typography>
+                              )}
                           </Stack>
                         )}
                       </Box>
@@ -731,17 +1371,21 @@ export const OrderManagementDetailPage = () => {
                     <TableContainer>
                       <Table>
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "#fafafa" }}>
+                          <TableRow sx={{ bgcolor: "action.hover" }}>
                             <TableCell>Sản phẩm</TableCell>
                             <TableCell align="center">Số lượng</TableCell>
                             <TableCell align="right">Đơn giá</TableCell>
                             <TableCell align="right">Thành tiền</TableCell>
                             <TableCell align="left">Batch giữ hàng</TableCell>
+                            <TableCell align="left"></TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {order.orderDetails?.map((item, index) => {
-                            const batches = item.reservedBatches || [];
+                            const batches = getDetailBatches(
+                              item.id,
+                              item.reservedBatches,
+                            );
                             const rowKey =
                               item.id || `${item.variantName}-${index}`;
                             const isExpandable =
@@ -805,10 +1449,7 @@ export const OrderManagementDetailPage = () => {
                                   >
                                     {fmt(item.total)}
                                   </TableCell>
-                                  <TableCell
-                                    align="left"
-                                    sx={{ minWidth: 280 }}
-                                  >
+                                  <TableCell align="center">
                                     {batches.length === 0 ? (
                                       <Typography
                                         variant="body2"
@@ -833,33 +1474,35 @@ export const OrderManagementDetailPage = () => {
                                               : "outlined"
                                           }
                                         />
-                                        {isExpandable ? (
-                                          <Button
-                                            size="small"
-                                            variant="text"
-                                            onClick={() =>
-                                              toggleBatchDetails(item.id)
-                                            }
-                                            endIcon={
-                                              isExpanded ? (
-                                                <ExpandLess />
-                                              ) : (
-                                                <ExpandMore />
-                                              )
-                                            }
-                                            sx={{
-                                              px: 0,
-                                              minWidth: 0,
-                                              textTransform: "none",
-                                            }}
-                                          >
-                                            {isExpanded
-                                              ? "Ẩn chi tiết"
-                                              : "Xem chi tiết"}
-                                          </Button>
-                                        ) : null}
                                       </Stack>
                                     )}
+                                  </TableCell>
+                                  <TableCell>
+                                    {isExpandable ? (
+                                      <Button
+                                        size="small"
+                                        variant="text"
+                                        onClick={() =>
+                                          toggleBatchDetails(item.id)
+                                        }
+                                        endIcon={
+                                          isExpanded ? (
+                                            <ExpandLess />
+                                          ) : (
+                                            <ExpandMore />
+                                          )
+                                        }
+                                        sx={{
+                                          px: 0,
+                                          minWidth: 0,
+                                          textTransform: "none",
+                                        }}
+                                      >
+                                        {isExpanded
+                                          ? "Ẩn chi tiết"
+                                          : "Xem chi tiết"}
+                                      </Button>
+                                    ) : null}
                                   </TableCell>
                                 </TableRow>
 
@@ -908,6 +1551,9 @@ export const OrderManagementDetailPage = () => {
                                               <TableCell align="right">
                                                 Hạn sử dụng
                                               </TableCell>
+                                              <TableCell align="right">
+                                                Thao tác
+                                              </TableCell>
                                             </TableRow>
                                           </TableHead>
                                           <TableBody>
@@ -937,6 +1583,58 @@ export const OrderManagementDetailPage = () => {
                                                       batch.expiryDate,
                                                     )}
                                                   </TableCell>
+                                                  <TableCell align="right">
+                                                    {item.id ? (
+                                                      <Stack
+                                                        direction="row"
+                                                        spacing={0.5}
+                                                        justifyContent="flex-end"
+                                                      >
+                                                        <IconButton
+                                                          size="small"
+                                                          color="primary"
+                                                          onClick={() =>
+                                                            handleSimulateScanBatch(
+                                                              item.id!,
+                                                              batch.batchCode,
+                                                            )
+                                                          }
+                                                          title="Quét batch này"
+                                                          disabled={
+                                                            order.status !==
+                                                              "Preparing" ||
+                                                            isFulfilling ||
+                                                            isUpdating
+                                                          }
+                                                        >
+                                                          <Search fontSize="small" />
+                                                        </IconButton>
+
+                                                        {order.status ===
+                                                          "Preparing" &&
+                                                          batch.reservationId && (
+                                                            <IconButton
+                                                              size="small"
+                                                              color="warning"
+                                                              onClick={() =>
+                                                                openSwapDamagedDialog(
+                                                                  batch.reservationId!,
+                                                                  batch.batchCode,
+                                                                )
+                                                              }
+                                                              title="Swap batch lỗi"
+                                                              disabled={
+                                                                isSwappingBatch ||
+                                                                isUpdating ||
+                                                                isFulfilling
+                                                              }
+                                                            >
+                                                              <SwapHoriz fontSize="small" />
+                                                            </IconButton>
+                                                          )}
+                                                      </Stack>
+                                                    ) : null}
+                                                  </TableCell>
                                                 </TableRow>
                                               ),
                                             )}
@@ -961,91 +1659,277 @@ export const OrderManagementDetailPage = () => {
                       Cập nhật trạng thái
                     </Typography>
 
-                    {availableStatuses.length === 0 ? (
+                    {!canPrepareOrder &&
+                    !canCancelOrder &&
+                    !isShippingManagedStatus ? (
                       <Alert severity="info">
                         Đơn hàng đã ở trạng thái cuối, không thể cập nhật thêm.
                       </Alert>
                     ) : (
                       <Stack spacing={2}>
-                        {order.status === "Processing" && (
+                        {isShippingManagedStatus && (
                           <Alert severity="info">
-                            Đơn đang ở trạng thái Đang xử lý. Vui lòng nhập mã
-                            batch và số lượng cho từng order detail khi đóng
-                            gói.
+                            Đơn hàng đang được đơn vị vận chuyển xử lý. Trạng
+                            thái sẽ được cập nhật qua đồng bộ vận chuyển.
                           </Alert>
                         )}
 
-                        {order.status === "Processing" && (
-                          <Stack spacing={1.5}>
-                            {processingOrderDetails.map((detail) => {
-                              const input = fulfillInputs.find(
-                                (item) => item.orderDetailId === detail.id,
-                              );
+                        {canPrepareOrder && (
+                          <Button
+                            variant="contained"
+                            onClick={handlePrepareOrder}
+                            disabled={
+                              isUpdating ||
+                              isFulfilling ||
+                              isCompletingInStorePickup
+                            }
+                            sx={{
+                              bgcolor: "#2e7d32",
+                              "&:hover": { bgcolor: "#1b5e20" },
+                            }}
+                          >
+                            {isUpdating
+                              ? "Đang xác nhận..."
+                              : "Xác nhận đơn hàng"}
+                          </Button>
+                        )}
 
-                              return (
-                                <Box
-                                  key={detail.id}
-                                  sx={{
-                                    p: 1.5,
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                    borderRadius: 1,
-                                  }}
+                        {canCompleteInStoreOrder && (
+                          <>
+                            <Alert severity="info">
+                              Đơn nhận tại cửa hàng đang ở trạng thái Chờ lấy
+                              hàng. Xác nhận khi khách đã đến nhận.
+                            </Alert>
+
+                            <Button
+                              variant="contained"
+                              color={
+                                isCashInStoreOrderPayment
+                                  ? "warning"
+                                  : "success"
+                              }
+                              onClick={handleCompleteInStoreAction}
+                              disabled={
+                                isUpdating ||
+                                isFulfilling ||
+                                isCompletingInStorePickup
+                              }
+                            >
+                              {isCompletingInStorePickup
+                                ? "Đang xác nhận..."
+                                : "Xác nhận khách đã nhận hàng"}
+                            </Button>
+                          </>
+                        )}
+
+                        {order.status === "Preparing" && !hasTrackingNumber && (
+                          <Alert severity="info">
+                            Đơn đang ở trạng thái Đang chuẩn bị. Hệ thống sẽ tự
+                            động sử dụng batch giữ hàng và số lượng của đơn,
+                            Staff chỉ cần xác nhận đã đóng gói đúng để chuyển
+                            đơn sang trạng thái Sẵn sàng bàn giao.
+                          </Alert>
+                        )}
+
+                        {order.status === "Preparing" && !hasTrackingNumber && (
+                          <Box
+                            sx={{
+                              p: 1.5,
+                              border: "1px solid",
+                              borderColor: "divider",
+                              borderRadius: 1,
+                            }}
+                          >
+                            <Typography variant="body2" fontWeight={600} mb={1}>
+                              Batch code khi fulfill
+                            </Typography>
+
+                            <Stack spacing={1}>
+                              {fulfillInputs.map((input) => {
+                                const detail = order.orderDetails?.find(
+                                  (item) => item.id === input.orderDetailId,
+                                );
+                                const rowValidation =
+                                  fulfillRowValidations.find(
+                                    (row) =>
+                                      row.orderDetailId === input.orderDetailId,
+                                  );
+
+                                const statusColor = rowValidation?.isValid
+                                  ? "success.main"
+                                  : rowValidation?.message
+                                    ? "error.main"
+                                    : "divider";
+
+                                return (
+                                  <Box
+                                    key={input.orderDetailId}
+                                    sx={{
+                                      p: 1,
+                                      border: "1px solid",
+                                      borderColor: statusColor,
+                                      borderRadius: 1,
+                                    }}
+                                  >
+                                    <TextField
+                                      label={
+                                        detail?.variantName
+                                          ? `Batch code - ${detail.variantName}`
+                                          : "Batch code"
+                                      }
+                                      value={input.scannedBatchCode}
+                                      onChange={(event) =>
+                                        handleBatchCodeChange(
+                                          input.orderDetailId,
+                                          event.target.value,
+                                        )
+                                      }
+                                      placeholder="Nhập hoặc bấm icon kính lúp ở bảng batch"
+                                      size="small"
+                                      fullWidth
+                                      disabled={isUpdating || isFulfilling}
+                                      InputProps={{
+                                        endAdornment: rowValidation?.isValid ? (
+                                          <CheckCircle
+                                            sx={{
+                                              color: "success.main",
+                                              fontSize: 20,
+                                            }}
+                                          />
+                                        ) : rowValidation?.message ? (
+                                          <HighlightOff
+                                            sx={{
+                                              color: "error.main",
+                                              fontSize: 20,
+                                            }}
+                                          />
+                                        ) : undefined,
+                                      }}
+                                    />
+
+                                    <Stack
+                                      direction="row"
+                                      alignItems="center"
+                                      spacing={1}
+                                      mt={1}
+                                    >
+                                      <IconButton
+                                        size="small"
+                                        onClick={() =>
+                                          handleAdjustQuantity(
+                                            input.orderDetailId,
+                                            -1,
+                                          )
+                                        }
+                                        disabled={isUpdating || isFulfilling}
+                                      >
+                                        <Remove fontSize="small" />
+                                      </IconButton>
+
+                                      <TextField
+                                        size="small"
+                                        label="Số lượng"
+                                        value={input.quantity}
+                                        onChange={(event) =>
+                                          handleQuantityChange(
+                                            input.orderDetailId,
+                                            event.target.value,
+                                          )
+                                        }
+                                        inputProps={{
+                                          inputMode: "numeric",
+                                          pattern: "[0-9]*",
+                                        }}
+                                        sx={{ width: 120 }}
+                                        disabled={isUpdating || isFulfilling}
+                                      />
+
+                                      <IconButton
+                                        size="small"
+                                        onClick={() =>
+                                          handleAdjustQuantity(
+                                            input.orderDetailId,
+                                            1,
+                                          )
+                                        }
+                                        disabled={isUpdating || isFulfilling}
+                                      >
+                                        <Add fontSize="small" />
+                                      </IconButton>
+
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        SL giữ:{" "}
+                                        {rowValidation?.selectedBatchReserved ??
+                                          0}
+                                      </Typography>
+                                    </Stack>
+
+                                    {rowValidation?.message && (
+                                      <Typography
+                                        variant="caption"
+                                        color="error.main"
+                                        mt={0.75}
+                                        display="block"
+                                      >
+                                        {rowValidation.message}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+
+                            {isPickListLoading && (
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                mt={1}
+                                display="block"
+                              >
+                                Đang tải picklist...
+                              </Typography>
+                            )}
+                          </Box>
+                        )}
+
+                        {order.status === "Preparing" && !hasTrackingNumber && (
+                          <Stack spacing={1.5}>
+                            <Box
+                              sx={{
+                                p: 1.5,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                borderRadius: 1,
+                              }}
+                            >
+                              <FormControlLabel
+                                control={
+                                  <Checkbox
+                                    checked={isPackagingConfirmed}
+                                    onChange={(e) =>
+                                      setIsPackagingConfirmed(e.target.checked)
+                                    }
+                                    disabled={
+                                      isUpdating ||
+                                      isFulfilling ||
+                                      !isAllFulfillRowsValid
+                                    }
+                                  />
+                                }
+                                label="Tôi đã đóng gói sản phẩm với đúng số lô và đủ số lượng"
+                              />
+                              {autoFulfillError && (
+                                <Typography
+                                  variant="caption"
+                                  color="error.main"
                                 >
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={600}
-                                    mb={1}
-                                  >
-                                    OrderDetailId: {detail.id}
-                                  </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    display="block"
-                                    mb={1.5}
-                                  >
-                                    {detail.variantName} - Số lượng đơn:{" "}
-                                    {detail.quantity ?? 0}
-                                  </Typography>
-                                  <Stack
-                                    direction={{ xs: "column", sm: "row" }}
-                                    spacing={1.5}
-                                  >
-                                    <TextField
-                                      label="Mã batch"
-                                      size="small"
-                                      fullWidth
-                                      value={input?.scannedBatchCode ?? ""}
-                                      onChange={(e) =>
-                                        handleFulfillInputChange(
-                                          detail.id!,
-                                          "scannedBatchCode",
-                                          e.target.value,
-                                        )
-                                      }
-                                      disabled={isUpdating || isFulfilling}
-                                    />
-                                    <TextField
-                                      label="Số lượng"
-                                      size="small"
-                                      type="number"
-                                      fullWidth
-                                      inputProps={{ min: 1 }}
-                                      value={input?.quantity ?? ""}
-                                      onChange={(e) =>
-                                        handleFulfillInputChange(
-                                          detail.id!,
-                                          "quantity",
-                                          e.target.value,
-                                        )
-                                      }
-                                      disabled={isUpdating || isFulfilling}
-                                    />
-                                  </Stack>
-                                </Box>
-                              );
-                            })}
+                                  {autoFulfillError}
+                                </Typography>
+                              )}
+                            </Box>
 
                             <Button
                               variant="contained"
@@ -1053,7 +1937,8 @@ export const OrderManagementDetailPage = () => {
                               disabled={
                                 isFulfilling ||
                                 isUpdating ||
-                                hasInvalidFulfillInput
+                                !isPackagingConfirmed ||
+                                Boolean(autoFulfillError)
                               }
                               sx={{
                                 bgcolor: "#1976d2",
@@ -1062,53 +1947,34 @@ export const OrderManagementDetailPage = () => {
                             >
                               {isFulfilling
                                 ? "Đang đóng gói..."
-                                : "Đóng gói & bàn giao vận chuyển"}
+                                : "Đóng gói và chờ bàn giao"}
                             </Button>
                           </Stack>
                         )}
 
-                        <Select
-                          value={selectedStatus}
-                          displayEmpty
-                          onChange={(e) =>
-                            setSelectedStatus(e.target.value as OrderStatus)
-                          }
-                          size="small"
-                          disabled={isUpdating}
-                        >
-                          <MenuItem value="">
-                            <em>Chọn trạng thái mới</em>
-                          </MenuItem>
-                          {availableStatuses.map((next) => (
-                            <MenuItem key={next} value={next}>
-                              {orderStatusLabels[next]}
-                            </MenuItem>
-                          ))}
-                        </Select>
-
-                        <TextField
-                          label="Ghi chú"
-                          placeholder="Nhập ghi chú (không bắt buộc)"
-                          multiline
-                          rows={3}
-                          value={note}
-                          onChange={(e) => setNote(e.target.value)}
-                          disabled={isUpdating}
-                        />
-
-                        <Button
-                          variant="contained"
-                          disabled={!selectedStatus || isUpdating}
-                          onClick={handleUpdateStatus}
-                          sx={{
-                            bgcolor: "#ee4d2d",
-                            "&:hover": { bgcolor: "#d03e27" },
-                          }}
-                        >
-                          {isUpdating
-                            ? "Đang cập nhật..."
-                            : "Cập nhật trạng thái"}
-                        </Button>
+                        {canCancelOrder && (
+                          <>
+                            <Divider />
+                            <Stack alignItems="flex-end">
+                              <Button
+                                variant="outlined"
+                                color="error"
+                                onClick={openCancelDialog}
+                                disabled={
+                                  hasBlockingCancelRequest ||
+                                  isUpdating ||
+                                  isFulfilling ||
+                                  isCompletingInStorePickup
+                                }
+                                sx={{ minWidth: 160 }}
+                              >
+                                {hasBlockingCancelRequest
+                                  ? "Đã hủy đơn"
+                                  : "Hủy đơn hàng"}
+                              </Button>
+                            </Stack>
+                          </>
+                        )}
                       </Stack>
                     )}
                   </Paper>
@@ -1130,8 +1996,12 @@ export const OrderManagementDetailPage = () => {
                         <Typography variant="body2" color="text.secondary">
                           Phí vận chuyển
                         </Typography>
-                        <Typography variant="body2">
-                          {fmt(shippingFee)}
+                        <Typography
+                          variant="body2"
+                          color="success.main"
+                          fontWeight={500}
+                        >
+                          FREE
                         </Typography>
                       </Box>
 
@@ -1195,17 +2065,92 @@ export const OrderManagementDetailPage = () => {
         </Paper>
       </Box>
 
+      <OrderInvoicePrint ref={invoicePrintRef} invoice={invoiceData} />
+
+      <Dialog
+        open={isInStoreCompletionDialogOpen}
+        onClose={() =>
+          !isCompletingInStorePickup && setIsInStoreCompletionDialogOpen(false)
+        }
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Xác nhận đã thu tiền tại quầy</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn xác nhận đã thu đủ số tiền <b>{fmt(total)}</b> cho đơn hàng{" "}
+            <b>{(order?.code || order?.id || orderId || "-").toUpperCase()}</b>?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setIsInStoreCompletionDialogOpen(false)}
+            disabled={isCompletingInStorePickup}
+          >
+            Đóng
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleConfirmCashInStoreCompletion}
+            disabled={isCompletingInStorePickup}
+          >
+            {isCompletingInStorePickup
+              ? "Đang xác nhận..."
+              : "Xác nhận thu tiền"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog
         open={isCancelDialogOpen}
         onClose={() => setIsCancelDialogOpen(false)}
-        maxWidth="xs"
+        maxWidth="sm"
         fullWidth
       >
         <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Bạn có chắc chắn muốn chuyển đơn hàng sang trạng thái Đã hủy không?
+          <DialogContentText sx={{ mb: 1.5 }}>
+            Vui lòng chọn lý do hủy đơn theo quy định trước khi xác nhận.
           </DialogContentText>
+
+          <TextField
+            fullWidth
+            label="Lý do hủy *"
+            value={selectedCancelReasonLabel}
+            placeholder="Chọn lý do bằng các chip bên dưới"
+            InputProps={{ readOnly: true }}
+            sx={{ mb: 1.5 }}
+          />
+
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            useFlexGap
+            mb={1.5}
+          >
+            {STAFF_CANCEL_ORDER_REASON_OPTIONS.map((option) => (
+              <Chip
+                key={option.value}
+                clickable
+                label={option.label}
+                color={cancelReason === option.value ? "primary" : "default"}
+                onClick={() => setCancelReason(option.value)}
+                sx={{ maxWidth: "100%" }}
+              />
+            ))}
+          </Stack>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="Ghi chú (tuỳ chọn)"
+            placeholder="Nhập thêm ghi chú nếu cần"
+            value={cancelNote}
+            onChange={(event) => setCancelNote(event.target.value)}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsCancelDialogOpen(false)}>Đóng</Button>
@@ -1213,9 +2158,66 @@ export const OrderManagementDetailPage = () => {
             color="error"
             variant="contained"
             onClick={handleConfirmCancelStatus}
-            disabled={isUpdating || selectedStatus !== "Canceled"}
+            disabled={isUpdating || !cancelReason}
           >
             {isUpdating ? "Đang hủy..." : "Xác nhận hủy"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={isSwapDialogOpen}
+        onClose={() => !isSwappingBatch && setIsSwapDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Swap batch bị lỗi</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 1.5 }}>
+            Xác nhận đổi batch cho mã <b>{swappingBatchCode || "-"}</b>. Hệ
+            thống sẽ tự điều phối sang batch phù hợp khác.
+          </DialogContentText>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="Ghi chú lỗi batch (tuỳ chọn)"
+            placeholder="Nhập mô tả lỗi hàng"
+            value={swapDamageNote}
+            onChange={(event) => setSwapDamageNote(event.target.value)}
+            sx={{ mb: 1.5 }}
+          />
+
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {SWAP_DAMAGE_NOTE_SUGGESTIONS.map((suggestion) => (
+              <Chip
+                key={suggestion}
+                clickable
+                label={suggestion}
+                color={
+                  swapDamageNote.trim() === suggestion ? "primary" : "default"
+                }
+                onClick={() => setSwapDamageNote(suggestion)}
+                sx={{ maxWidth: "100%" }}
+              />
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setIsSwapDialogOpen(false)}
+            disabled={isSwappingBatch}
+          >
+            Đóng
+          </Button>
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={handleConfirmSwapDamagedBatch}
+            disabled={isSwappingBatch || !damagedReservationId}
+          >
+            {isSwappingBatch ? "Đang đổi batch..." : "Xác nhận swap"}
           </Button>
         </DialogActions>
       </Dialog>

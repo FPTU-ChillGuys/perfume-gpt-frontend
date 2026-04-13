@@ -294,9 +294,26 @@ const ProductQuickViewDialog = ({
       await cartService.addItem(selectedVariant.id, 1);
       await refreshCart();
       showToast("Đã thêm vào giỏ hàng", "success");
+
       if (navigateAfterAdd) {
         onClose();
-        navigate("/checkout");
+
+        // Get updated cart to find the newly added item
+        const cartItems = await cartService.getItems();
+        const addedItem = cartItems.find(
+          (item) => item.variantId === selectedVariant.id,
+        );
+
+        if (addedItem?.cartItemId) {
+          // Navigate with only the newly added item selected
+          navigate("/checkout", {
+            state: {
+              selectedCartItemIds: [addedItem.cartItemId],
+            },
+          });
+        } else {
+          navigate("/checkout");
+        }
       }
     } catch (err: any) {
       showToast(
@@ -356,7 +373,7 @@ const ProductQuickViewDialog = ({
                 justifyContent: "center",
                 alignItems: "center",
                 minHeight: 320,
-                bgcolor: "white",
+                bgcolor: "background.paper",
               }}
             >
               {heroImage ? (

@@ -45,6 +45,7 @@ import {
   WarningAmber as WarningAmberIcon,
   Category as CategoryIcon,
   ViewList as ViewListIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
@@ -63,6 +64,7 @@ import {
   type StockAdjustmentStatus,
 } from "@/services/stockAdjustmentService";
 import { useToast } from "@/hooks/useToast";
+import { exportToCsv } from "@/utils/exportCsv";
 
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type ExpiryDaysFilter = "" | "30" | "60" | "90";
@@ -127,14 +129,14 @@ const ADJUSTMENT_STATUS_OPTIONS: Array<StockAdjustmentStatus | ""> = [
   "Pending",
   "InProgress",
   "Completed",
-  "Canceled",
+  "Cancelled",
 ];
 
 const statusLabelMap: Record<StockAdjustmentStatus, string> = {
   Pending: "Chờ duyệt",
   InProgress: "Đang xử lý",
   Completed: "Hoàn thành",
-  Canceled: "Đã hủy",
+  Cancelled: "Đã hủy",
 };
 
 const reasonLabelMap: Record<StockAdjustmentReason, string> = {
@@ -450,6 +452,17 @@ export const InventoryManagementPage = () => {
     setStockStatusFilter("");
     setExpiryDaysFilter("");
     setPage(0);
+  };
+
+  const handleExportCsv = () => {
+    exportToCsv(stocks, `ton-kho-${new Date().toISOString().slice(0, 10)}`, [
+      { key: "variantId", header: "Variant ID" },
+      { key: "variantSku", header: "SKU" },
+      { key: "productName", header: "Sản phẩm" },
+      { key: "totalQuantity", header: "Tổng nhập" },
+      { key: "availableQuantity", header: "Khả dụng" },
+      { key: "status", header: "Trạng thái" },
+    ]);
   };
 
   const loadBatchesByVariantId = useCallback(async (variantId: string) => {
@@ -775,7 +788,7 @@ export const InventoryManagementPage = () => {
   };
 
   const handleUpdateAdjustmentStatus = async (
-    nextStatus: Extract<StockAdjustmentStatus, "InProgress" | "Canceled">,
+    nextStatus: Extract<StockAdjustmentStatus, "InProgress" | "Cancelled">,
   ) => {
     if (!selectedAdjustmentDetail?.id) {
       return;
@@ -1031,6 +1044,16 @@ export const InventoryManagementPage = () => {
                   sx={{ height: 56 }}
                 >
                   Xóa lọc
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="success"
+                  startIcon={<DownloadIcon />}
+                  onClick={handleExportCsv}
+                  disabled={stocks.length === 0}
+                  sx={{ height: 56 }}
+                >
+                  Xuất CSV
                 </Button>
               </Box>
             </Paper>
@@ -1544,7 +1567,7 @@ export const InventoryManagementPage = () => {
                               color={
                                 item.status === "Completed"
                                   ? "success"
-                                  : item.status === "Canceled"
+                                  : item.status === "Cancelled"
                                     ? "error"
                                     : "warning"
                               }
@@ -1921,7 +1944,7 @@ export const InventoryManagementPage = () => {
                       variant="outlined"
                       color="error"
                       startIcon={<CancelIcon />}
-                      onClick={() => handleUpdateAdjustmentStatus("Canceled")}
+                      onClick={() => handleUpdateAdjustmentStatus("Cancelled")}
                       disabled={statusSubmitting || verifySubmitting}
                     >
                       {statusSubmitting ? "Đang xử lý..." : "Hủy yêu cầu"}

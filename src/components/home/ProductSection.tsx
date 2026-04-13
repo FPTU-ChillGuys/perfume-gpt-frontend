@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard, type ProductCardProps } from "../product/ProductCard";
 
@@ -7,6 +8,8 @@ interface ProductSectionProps {
   products: ProductCardProps[];
   isLoading?: boolean;
   emptyMessage?: string;
+  viewMoreHref?: string;
+  enableInfiniteScroll?: boolean; // Enable infinite carousel looping
 }
 
 const SKELETON_ITEMS = 6;
@@ -30,6 +33,8 @@ export const ProductSection = ({
   products,
   isLoading = false,
   emptyMessage = "Hiện chưa có sản phẩm để hiển thị.",
+  viewMoreHref = "/products",
+  enableInfiniteScroll = false,
 }: ProductSectionProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -41,13 +46,45 @@ export const ProductSection = ({
   const lastXRef = useRef(0);
   const lastTimeRef = useRef(0);
   const momentumRef = useRef<number | null>(null);
+  const isResettingRef = useRef(false); // Prevent recursive resets
 
   const updateScrollButtons = () => {
     if (!scrollContainerRef.current) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
-    setCanScrollLeft(scrollLeft > 0);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
+
+    // For infinite scroll, always show buttons if products exist
+    if (enableInfiniteScroll && products.length > 0) {
+      setCanScrollLeft(true);
+      setCanScrollRight(true);
+    } else {
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
+    }
+
+    // Handle infinite scroll loop
+    if (enableInfiniteScroll && !isDragging && !isResettingRef.current) {
+      const itemWidth = scrollWidth / products.length;
+      const originalCount = products.length / 3; // Assuming 3x repeat
+      const oneSetWidth = itemWidth * originalCount;
+
+      // If scrolled past 2/3 (near end), jump back to 1/3
+      if (scrollLeft >= oneSetWidth * 2) {
+        isResettingRef.current = true;
+        scrollContainerRef.current.scrollLeft = scrollLeft - oneSetWidth;
+        setTimeout(() => {
+          isResettingRef.current = false;
+        }, 50);
+      }
+      // If scrolled before 1/3 (near start), jump forward to 2/3
+      else if (scrollLeft <= oneSetWidth * 0.3) {
+        isResettingRef.current = true;
+        scrollContainerRef.current.scrollLeft = scrollLeft + oneSetWidth;
+        setTimeout(() => {
+          isResettingRef.current = false;
+        }, 50);
+      }
+    }
   };
 
   const scroll = (direction: "left" | "right") => {
@@ -155,7 +192,6 @@ export const ProductSection = ({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging || !scrollContainerRef.current) return;
-    e.preventDefault();
 
     const touch = e.touches[0]!;
     const x = touch.pageX - scrollContainerRef.current.offsetLeft;
@@ -184,11 +220,59 @@ export const ProductSection = ({
 
   useEffect(() => {
     if (!isLoading && products.length > 0) {
-      setTimeout(updateScrollButtons, 100);
+      setTimeout(() => {
+        // Initialize scroll position at middle set for infinite scroll
+        if (enableInfiniteScroll && scrollContainerRef.current) {
+          const { scrollWidth } = scrollContainerRef.current;
+          const itemWidth = scrollWidth / products.length;
+          const originalCount = products.length / 3; // Assuming 3x repeat
+          const oneSetWidth = itemWidth * originalCount;
+
+          // Start at the middle set (1/3 position)
+          scrollContainerRef.current.scrollLeft = oneSetWidth;
+        }
+        updateScrollButtons();
+      }, 100);
     }
 
     const handleResize = () => updateScrollButtons();
     window.addEventListener("resize", handleResize);
+
+    // Add touch event listeners with passive: false to allow preventDefault
+    const container = scrollContainerRef.current;
+    if (container) {
+      const touchMoveHandler = (e: TouchEvent) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        if (!touch || !container) return;
+        
+        const x = touch.pageX - container.offsetLeft;
+        const walk = (x - startX) * 1.2;
+        container.scrollLeft = scrollLeft - walk;
+
+        const now = Date.now();
+        const dt = now - lastTimeRef.current;
+        if (dt > 0) {
+          velocityRef.current = ((touch.pageX - lastXRef.current) / dt) * 10;
+        }
+        lastXRef.current = touch.pageX;
+        lastTimeRef.current = now;
+
+        updateScrollButtons();
+      };
+
+      container.addEventListener("touchmove", touchMoveHandler, { passive: false });
+
+      return () => {
+        window.removeEventListener("resize", handleResize);
+        container.removeEventListener("touchmove", touchMoveHandler);
+        if (momentumRef.current) {
+          cancelAnimationFrame(momentumRef.current);
+        }
+      };
+    }
 
     return () => {
       window.removeEventListener("resize", handleResize);
@@ -197,19 +281,20 @@ export const ProductSection = ({
         cancelAnimationFrame(momentumRef.current);
       }
     };
-  }, [isLoading, products.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, products.length, enableInfiniteScroll, isDragging, startX, scrollLeft]);
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold">{title}</h2>
-          <a
-            href="#"
+          <Link
+            to={viewMoreHref}
             className="flex items-center gap-1 text-gray-600 hover:text-red-600 font-medium"
           >
             Xem thêm
             <ChevronRight size={18} />
-          </a>
+          </Link>
         </div>
 
         {/* Products Carousel */}
@@ -248,7 +333,6 @@ export const ProductSection = ({
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseLeave}
               onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
               className="flex gap-4 overflow-x-auto scrollbar-hide"
               style={{
@@ -260,9 +344,9 @@ export const ProductSection = ({
                 WebkitOverflowScrolling: "touch",
               }}
             >
-              {products.map((product) => (
+              {products.map((product, index) => (
                 <div
-                  key={product.id}
+                  key={`${product.id}-${index}`}
                   className="shrink-0"
                   style={{
                     width: "calc((100% - 5 * 1rem) / 6)",

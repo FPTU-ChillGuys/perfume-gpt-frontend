@@ -15,6 +15,7 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import CelebrationIcon from "@mui/icons-material/Celebration";
 import { ReviewCard } from "@/components/review/ReviewCard";
 import { productReviewService } from "@/services/reviewService";
+import { useAuth } from "@/hooks/useAuth";
 import { markRenderMetric } from "@/utils/perfMetrics";
 import {
   type ReviewResponse,
@@ -176,6 +177,8 @@ export const ReviewSection = ({
   refreshToken = 0,
   onStatisticsChange,
 }: ReviewSectionProps) => {
+  const { user } = useAuth();
+  const canReply = user?.role === "staff" || user?.role === "admin";
   const [reviews, setReviews] = useState<ReviewResponse[]>([]);
   const [stats, setStats] = useState<ReviewStatisticsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -324,7 +327,19 @@ export const ReviewSection = ({
           <Grid container spacing={2.5}>
             {visibleReviews.slice(0, visibleCount).map((review) => (
               <Grid key={review.id} size={{ xs: 12, md: 6 }}>
-                <ReviewCard review={review} clampLines={5} />
+                <ReviewCard
+                  review={review}
+                  clampLines={5}
+                  onReply={
+                    canReply
+                      ? async (reviewId, comment) => {
+                          await productReviewService.answerReview(reviewId, comment);
+                          const updated = await productReviewService.getVariantReviews(variantId!);
+                          setReviews(updated);
+                        }
+                      : undefined
+                  }
+                />
               </Grid>
             ))}
           </Grid>

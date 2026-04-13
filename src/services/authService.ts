@@ -2,6 +2,13 @@ import { apiInstance } from "@/lib/api";
 import { jwtDecode } from "jwt-decode";
 import type { LoginRequest, User } from "../types/auth";
 import { getUserFromToken, isTokenExpired } from "../utils/jwt";
+import {
+  clearStoredAuth,
+  getStoredAccessToken,
+  getStoredUser,
+  migrateLegacyAuthToSession,
+  setStoredAuth,
+} from "@/utils/authStorage";
 
 type GoogleIdTokenPayload = {
   name?: string;
@@ -39,9 +46,8 @@ class AuthService {
       throw new Error("Invalid token format");
     }
 
-    // Store token and user info
-    localStorage.setItem("accessToken", accessToken);
-    localStorage.setItem("user", JSON.stringify(user));
+    // Store token and user info in tab-scoped storage.
+    setStoredAuth(accessToken, JSON.stringify(user));
 
     return user;
   }
@@ -75,9 +81,8 @@ class AuthService {
         avatarUrl: user.avatarUrl || googlePayload.picture,
       };
 
-      // Store token and user info
-      localStorage.setItem("accessToken", accessToken);
-      localStorage.setItem("user", JSON.stringify(enrichedUser));
+      // Store token and user info in tab-scoped storage.
+      setStoredAuth(accessToken, JSON.stringify(enrichedUser));
 
       return enrichedUser;
     } catch (error: any) {
@@ -91,13 +96,14 @@ class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("user");
+    clearStoredAuth();
   }
 
   getCurrentUser(): User | null {
-    const token = localStorage.getItem("accessToken");
-    const userStr = localStorage.getItem("user");
+    migrateLegacyAuthToSession();
+
+    const token = getStoredAccessToken();
+    const userStr = getStoredUser();
 
     if (!token || !userStr) {
       return null;
@@ -116,14 +122,80 @@ class AuthService {
     }
   }
 
+  async register(data: {
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    password: string;
+    clientUri: string;
+  }): Promise<string> {
+    const response = await apiInstance.POST(`${this.AUTH_ENDPOINT}/register`, {
+      body: data,
+    });
+    if (response.error !== undefined || !response.data?.success) {
+      if (response.response?.status === 409) {
+        throw new Error("Email hoặc số điện thoại đã được đăng ký.");
+      }
+      throw new Error(
+        response.data?.message || "Đăng ký thất bại. Vui lòng thử lại.",
+      );
+    }
+    return (
+      response.data.message ||
+      "Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản."
+    );
+  }
+
+  async verifyEmail(email: string, token: string): Promise<string> {
+    const response = await apiInstance.GET(
+      `${this.AUTH_ENDPOINT}/verify-email`,
+      {
+        params: { query: { Email: email, token } },
+      },
+    );
+    if (response.error !== undefined || !response.data?.success) {
+      throw new Error(response.data?.message || "Xác thực email thất bại.");
+    }
+    return response.data.message || "Xác thực email thành công!";
+  }
+
+  async forgotPassword(email: string, clientUri: string): Promise<string> {
+    const response = await apiInstance.POST(
+      `${this.AUTH_ENDPOINT}/forgot-password`,
+      { body: { email, clientUri } },
+    );
+    if (response.error !== undefined || !response.data?.success) {
+      throw new Error(
+        response.data?.message || "Gửi yêu cầu đặt lại mật khẩu thất bại.",
+      );
+    }
+    return response.data.message || "Email đặt lại mật khẩu đã được gửi.";
+  }
+
+  async resetPassword(
+    email: string,
+    token: string,
+    password: string,
+    confirmPassword: string,
+  ): Promise<string> {
+    const response = await apiInstance.POST(
+      `${this.AUTH_ENDPOINT}/reset-password`,
+      { body: { email, token, password, confirmPassword } },
+    );
+    if (response.error !== undefined || !response.data?.success) {
+      throw new Error(response.data?.message || "Đặt lại mật khẩu thất bại.");
+    }
+    return response.data.message || "Mật khẩu đã được đặt lại thành công.";
+  }
+
   isAuthenticated(): boolean {
-    const token = localStorage.getItem("accessToken");
+    const token = getStoredAccessToken();
     if (!token) return false;
     return !isTokenExpired(token);
   }
 
   getAccessToken(): string | null {
-    return localStorage.getItem("accessToken");
+    return getStoredAccessToken();
   }
 }
 

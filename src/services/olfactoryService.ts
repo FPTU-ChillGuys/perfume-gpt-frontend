@@ -26,6 +26,57 @@ class OlfactoryService {
     }
   }
 
+  async getAllOlfactory(): Promise<OlfactoryLookupItem[]> {
+    try {
+      const response = await apiInstance.GET("/api/olfactoryfamilies");
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to fetch olfactory families");
+      }
+      return (response.data.payload || []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+      }));
+    } catch (error: any) {
+      console.error("Error fetching olfactory families:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to fetch olfactory families",
+      );
+    }
+  }
+
+  async updateOlfactory(id: number, name: string): Promise<void> {
+    try {
+      const response = await apiInstance.PUT("/api/olfactoryfamilies/{id}", {
+        params: { path: { id } },
+        body: { name: name.trim() },
+      });
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update olfactory family");
+      }
+    } catch (error: any) {
+      console.error("Error updating olfactory family:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to update olfactory family",
+      );
+    }
+  }
+
+  async deleteOlfactory(id: number): Promise<void> {
+    try {
+      const response = await apiInstance.DELETE("/api/olfactoryfamilies/{id}", {
+        params: { path: { id } },
+      });
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to delete olfactory family");
+      }
+    } catch (error: any) {
+      console.error("Error deleting olfactory family:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to delete olfactory family",
+      );
+    }
+  }
+
   async createOlfactoryFamily(name: string): Promise<OlfactoryLookupItem> {
     try {
       const trimmedName = name.trim();

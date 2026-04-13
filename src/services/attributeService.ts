@@ -174,6 +174,75 @@ class AttributeService {
       );
     }
   }
+
+  async updateAttribute(
+    attributeId: number,
+    payload: { name: string; description?: string | null; isVariantLevel: boolean },
+  ): Promise<void> {
+    try {
+      const response = await apiInstance.PUT("/api/attributes/{attributeId}", {
+        params: { path: { attributeId } },
+        body: payload,
+      });
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update attribute");
+      }
+    } catch (error: any) {
+      console.error("Error updating attribute:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to update attribute",
+      );
+    }
+  }
+
+  async deleteAttribute(attributeId: number): Promise<void> {
+    try {
+      const response = await apiInstance.DELETE("/api/attributes/{attributeId}", {
+        params: { path: { attributeId } },
+      });
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to delete attribute");
+      }
+    } catch (error: any) {
+      console.error("Error deleting attribute:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to delete attribute",
+      );
+    }
+  }
+
+  async updateAttributeValue(valueId: number, value: string): Promise<void> {
+    try {
+      const response = await apiInstance.PUT("/api/attributes/values/{valueId}", {
+        params: { path: { valueId } },
+        body: { value: value.trim() },
+      });
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update attribute value");
+      }
+    } catch (error: any) {
+      console.error("Error updating attribute value:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to update attribute value",
+      );
+    }
+  }
+
+  async deleteAttributeValue(valueId: number): Promise<void> {
+    try {
+      const response = await apiInstance.DELETE("/api/attributes/values/{valueId}", {
+        params: { path: { valueId } },
+      });
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to delete attribute value");
+      }
+    } catch (error: any) {
+      console.error("Error deleting attribute value:", error);
+      throw new Error(
+        error.response?.data?.message || error.message || "Failed to delete attribute value",
+      );
+    }
+  }
 }
 
 export const attributeService = new AttributeService();

@@ -3,24 +3,7 @@ import type { ProductListItem } from "@/types/product";
 import { convertProductCardOutputToProducts, type ProductCardOutputItem } from "@/types/ai/product.output";
 import dayjs from "dayjs";
 
-/**
- * Trả về Chủ nhật gần nhất (≤ referenceDate).
- * Nếu referenceDate đã là Chủ nhật thì trả về chính ngày đó.
- */
-export const getLastSunday = (referenceDate: Date = new Date()): Date => {
-    const d = dayjs(referenceDate);
-    // dayjs: 0 = Sunday
-    const daysFromSunday = d.day(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
-    return d.subtract(daysFromSunday, "day").toDate();
-};
-
-/**
- * Trả về Chủ nhật trước đó (7 ngày trước Chủ nhật gần nhất).
- */
-export const getPrevSunday = (referenceDate: Date = new Date()): Date => {
-    const lastSunday = getLastSunday(referenceDate);
-    return dayjs(lastSunday).subtract(7, "day").toDate();
-};
+// Các hàm hỗ trợ lấy ngày đã được cập nhật để sử dụng theo ngày thay vì tuần.
 
 class TrendService {
     /**
@@ -37,7 +20,7 @@ class TrendService {
         try {
             const finalEndDate = endDate
                 ? dayjs(endDate).format("YYYY-MM-DD")
-                : dayjs(getLastSunday()).format("YYYY-MM-DD");
+                : dayjs().format("YYYY-MM-DD");
             const finalStartDate = startDate
                 ? dayjs(startDate).format("YYYY-MM-DD")
                 : undefined;
@@ -91,21 +74,21 @@ class TrendService {
     }
 
     /**
-     * Helper function: Cố gắng lấy xu hướng cho tuần hiện tại (Chủ nhật gần nhất).
-     * Nếu backend báo pending (về null), và không yêu cầu forceRefresh, thì lấy fallback (Chủ nhật trước đó)
-     * Trả về kết quả (hoặc empty array, hoặc null nếu cả 2 tuần đều đang processing).
+     * Helper function: Cố gắng lấy xu hướng cho ngày hôm nay.
+     * Nếu backend báo pending (về null), và không yêu cầu forceRefresh, thì lấy fallback (ngày hôm qua)
+     * Trả về kết quả (hoặc empty array, hoặc null nếu cả 2 ngày đều đang processing).
      */
-    async getCurrentOrPreviousWeeklyTrend(forceRefresh?: boolean): Promise<ProductListItem[] | null> {
-        const lastSunday = dayjs(getLastSunday()).format("YYYY-MM-DD");
-        const prevSunday = dayjs(getPrevSunday()).format("YYYY-MM-DD");
+    async getCurrentOrPreviousDailyTrend(forceRefresh?: boolean): Promise<ProductListItem[] | null> {
+        const today = dayjs().format("YYYY-MM-DD");
+        const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
 
-        let products = await this.getTrendingProducts("weekly", lastSunday, undefined, forceRefresh).catch((e) => {
+        let products = await this.getTrendingProducts("weekly", today, undefined, forceRefresh).catch((e) => {
             if (!forceRefresh) console.warn(e);
             return null;
         });
 
         if (products === null && !forceRefresh) {
-            products = await this.getTrendingProducts("weekly", prevSunday).catch(() => null);
+            products = await this.getTrendingProducts("weekly", yesterday).catch(() => null);
         }
 
         return products;

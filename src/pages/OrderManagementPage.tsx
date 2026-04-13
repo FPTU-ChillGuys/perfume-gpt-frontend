@@ -29,10 +29,13 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   ContentCopy as ContentCopyIcon,
+  Download as DownloadIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
+import { exportToCsv } from "@/utils/exportCsv";
+import { formatDateTimeVN } from "@/utils/dateTime";
 import type { OrderListItem, OrderStatus, OrderType } from "@/types/order";
 import {
   orderStatusLabels,
@@ -47,10 +50,13 @@ import {
 const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
   { label: "Tất cả", value: "" },
   { label: orderStatusLabels.Pending, value: "Pending" },
-  { label: orderStatusLabels.Processing, value: "Processing" },
+  { label: orderStatusLabels.Preparing, value: "Preparing" },
+  { label: orderStatusLabels.ReadyToPick, value: "ReadyToPick" },
   { label: orderStatusLabels.Delivering, value: "Delivering" },
   { label: orderStatusLabels.Delivered, value: "Delivered" },
-  { label: orderStatusLabels.Canceled, value: "Canceled" },
+  { label: orderStatusLabels.Cancelled, value: "Cancelled" },
+  { label: orderStatusLabels.Returning, value: "Returning" },
+  { label: orderStatusLabels.Partial_Returned, value: "Partial_Returned" },
   { label: orderStatusLabels.Returned, value: "Returned" },
 ];
 
@@ -61,7 +67,18 @@ const formatCurrency = (value?: number) => {
 
 const formatDate = (dateStr?: string) => {
   if (!dateStr) return "";
-  return new Date(dateStr).toLocaleString("vi-VN");
+  return formatDateTimeVN(dateStr);
+};
+
+const getDisplayOrderCode = (order?: OrderListItem | null) =>
+  order?.code || order?.id || "-";
+
+const getDisplayCustomerName = (customerName?: string | null) => {
+  const normalized = (customerName || "").trim();
+  if (!normalized || normalized.toUpperCase() === "N/A") {
+    return "Khách lẻ";
+  }
+  return normalized;
 };
 
 export const OrderManagementPage = () => {
@@ -140,11 +157,23 @@ export const OrderManagementPage = () => {
     setPage(0);
   };
 
-  const handleCopyOrderId = async (orderId?: string | null) => {
-    if (!orderId) return;
+  const handleExportCsv = () => {
+    exportToCsv(orders, `don-hang-${new Date().toISOString().slice(0, 10)}`, [
+      { key: "code", header: "Mã đơn hàng" },
+      { key: "customerName", header: "Khách hàng" },
+      { key: "customerId", header: "Mã khách hàng" },
+      { key: "status", header: "Trạng thái" },
+      { key: "totalAmount", header: "Tổng tiền" },
+      { key: "type", header: "Loại" },
+      { key: "createdAt", header: "Ngày tạo" },
+    ]);
+  };
+
+  const handleCopyOrderCode = async (orderCode?: string | null) => {
+    if (!orderCode) return;
 
     try {
-      await navigator.clipboard.writeText(orderId);
+      await navigator.clipboard.writeText(orderCode);
       showToast("Đã sao chép mã đơn hàng", "success");
     } catch {
       showToast("Không thể sao chép mã đơn hàng", "error");
@@ -335,6 +364,17 @@ export const OrderManagementPage = () => {
               >
                 Xóa bộ lọc
               </Button>
+              <Button
+                fullWidth
+                variant="outlined"
+                color="success"
+                startIcon={<DownloadIcon />}
+                onClick={handleExportCsv}
+                disabled={orders.length === 0}
+                sx={{ height: 56 }}
+              >
+                Xuất CSV
+              </Button>
             </Box>
           </Box>
         </Paper>
@@ -379,23 +419,25 @@ export const OrderManagementPage = () => {
                   >
                     <TableCell sx={{ maxWidth: 260 }}>
                       <Box display="flex" alignItems="center" gap={0.5}>
-                        <Tooltip title={order.id || ""}>
+                        <Tooltip title={getDisplayOrderCode(order)}>
                           <Typography
                             variant="body2"
                             fontWeight={500}
                             sx={{ fontFamily: "monospace" }}
                             noWrap
                           >
-                            {order.id || "-"}
+                            {getDisplayOrderCode(order)}
                           </Typography>
                         </Tooltip>
-                        {!!order.id && (
+                        {!!(order.code || order.id) && (
                           <Tooltip title="Sao chép mã đơn">
                             <IconButton
                               size="small"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                void handleCopyOrderId(order.id);
+                                void handleCopyOrderCode(
+                                  order.code || order.id,
+                                );
                               }}
                             >
                               <ContentCopyIcon sx={{ fontSize: 14 }} />
@@ -406,7 +448,7 @@ export const OrderManagementPage = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
-                        {order.customerName || "N/A"}
+                        {getDisplayCustomerName(order.customerName)}
                       </Typography>
                     </TableCell>
                     <TableCell>

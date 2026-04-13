@@ -1,11 +1,13 @@
-import { apiInstance } from "@/lib/api";
+import { apiInstance, getApiBaseUrl } from "@/lib/api";
 import type { StaffLookupResponse } from "../types/staff-user";
 import type { components } from "@/types/api/v1";
+import { getStoredAccessToken } from "@/utils/authStorage";
 
 export type UserCredentials = components["schemas"]["UserCredentialsResponse"];
+export type UserAvatar = components["schemas"]["MediaResponse"];
+export type UpdateUserBasicInfoRequest = components["schemas"]["UpdateUserBasicInfoRequest"];
 
 class UserService {
-
   async getUserMe(): Promise<UserCredentials> {
     const response = await apiInstance.GET("/api/users/me");
     if (!response.data?.success) {
@@ -34,6 +36,80 @@ class UserService {
           "Failed to fetch staff lookup",
       );
     }
+  }
+
+  async getUserById(id: string): Promise<string | null> {
+    const response = await apiInstance.GET("/api/users/{id}", {
+      params: {
+        path: { id },
+      },
+    });
+
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to fetch user by id");
+    }
+
+    return (response.data.payload as string | null | undefined) ?? null;
+  }
+
+  async getMyAvatar(): Promise<UserAvatar | null> {
+    const response = await apiInstance.GET("/api/users/avatar");
+
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to fetch avatar");
+    }
+
+    return (response.data.payload as UserAvatar | null | undefined) ?? null;
+  }
+
+  async uploadAvatar(file: File, altText?: string): Promise<string> {
+    const accessToken = getStoredAccessToken();
+    if (!accessToken) {
+      throw new Error("Bạn chưa đăng nhập");
+    }
+
+    const formData = new FormData();
+    formData.append("Avatar", file);
+    formData.append("AltText", altText || "");
+
+    const baseUrl = getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/api/users/avatar`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result?.success) {
+      throw new Error(result?.message || "Tải ảnh đại diện thất bại");
+    }
+
+    return result.message || "Tải ảnh đại diện thành công";
+  }
+
+  async deleteMyAvatar(): Promise<string> {
+    const response = await apiInstance.DELETE("/api/users/avatar");
+
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to delete avatar");
+    }
+
+    return response.data.message || "Xóa ảnh đại diện thành công";
+  }
+
+  async updateUserMe(body: UpdateUserBasicInfoRequest): Promise<string> {
+    const response = await apiInstance.PUT("/api/users/me", { body });
+    if ((response as any).error) {
+      const err = (response as any).error;
+      throw new Error(err?.message || "Cập nhật thông tin thất bại");
+    }
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Cập nhật thông tin thất bại");
+    }
+    return response.data.message || "Cập nhật thông tin thành công";
   }
 }
 

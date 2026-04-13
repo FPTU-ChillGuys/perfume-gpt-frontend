@@ -18,7 +18,7 @@ import {
   Facebook,
   ArrowBack,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { GoogleLogin } from "@react-oauth/google";
 
@@ -59,11 +59,11 @@ export const LoginPage = () => {
       )) as any;
       // Redirect after successful login
       if (userData?.role === "admin") {
-        window.location.href = "/admin/dashboard";
+        navigate("/admin/dashboard", { replace: true });
       } else if (userData?.role === "staff") {
-        window.location.href = "/staff/dashboard";
+        navigate("/staff/dashboard", { replace: true });
       } else {
-        window.location.href = "/";
+        navigate("/", { replace: true });
       }
     } catch (err: any) {
       console.error("Google login error:", err);
@@ -98,11 +98,11 @@ export const LoginPage = () => {
       const userData = (await login({ credential: email, password })) as any;
       // Redirect after successful login
       if (userData?.role === "admin") {
-        window.location.href = "/admin/dashboard";
+        navigate("/admin/dashboard", { replace: true });
       } else if (userData?.role === "staff") {
-        window.location.href = "/staff/dashboard";
+        navigate("/staff/dashboard", { replace: true });
       } else {
-        window.location.href = "/";
+        navigate("/", { replace: true });
       }
     } catch (err: any) {
       console.error("Login error:", err);
@@ -145,7 +145,8 @@ export const LoginPage = () => {
         <Button
           startIcon={<ArrowBack />}
           color="inherit"
-          onClick={() => navigate("/")}
+          component={RouterLink}
+          to="/"
           sx={{ fontWeight: 500 }}
         >
           QUAY LẠI TRANG CHỦ
@@ -167,7 +168,7 @@ export const LoginPage = () => {
           sx={{
             width: "100%",
             maxWidth: 480,
-            bgcolor: "white",
+            bgcolor: "background.paper",
             p: 3,
             borderRadius: 2,
             boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
@@ -237,7 +238,8 @@ export const LoginPage = () => {
                   Mật khẩu
                 </Typography>
                 <Link
-                  href="#"
+                  component={RouterLink}
+                  to="/forgot-password"
                   variant="body2"
                   color="error"
                   underline="hover"
@@ -313,8 +315,8 @@ export const LoginPage = () => {
           </Divider>
 
           {/* Social Login */}
-          <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mb: 2 }}>
+            <Box>
               <GoogleLogin
                 onSuccess={handleGoogleLoginSuccess}
                 onError={handleGoogleLoginError}
@@ -324,36 +326,17 @@ export const LoginPage = () => {
                 text="continue_with"
               />
             </Box>
-            <Button
-              variant="outlined"
-              fullWidth
-              startIcon={<Facebook />}
-              sx={{
-                py: 0.8,
-                borderColor: "divider",
-                color: "text.primary",
-                "&:hover": {
-                  borderColor: "divider",
-                  bgcolor: "action.hover",
-                },
-              }}
-            >
-              Facebook
-            </Button>
           </Box>
 
           {/* Sign Up Link */}
           <Typography variant="body2" textAlign="center" color="text.secondary">
             Bạn chưa có tài khoản?{" "}
             <Link
-              href="#"
+              component={RouterLink}
+              to="/register"
               color="primary"
               underline="hover"
               fontWeight={600}
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/register");
-              }}
             >
               Đăng ký ngay
             </Link>

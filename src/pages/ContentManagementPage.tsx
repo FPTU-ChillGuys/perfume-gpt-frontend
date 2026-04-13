@@ -116,19 +116,16 @@ export const ContentManagementPage = () => {
         throw new Error("Sản phẩm thiếu thông tin brand hoặc category");
       }
 
-      const attributePayload =
-        product.attributes
-          ?.filter((attr) => attr.attributeId && attr.valueId)
-          .map((attr) => ({
-            attributeId: attr.attributeId!,
-            valueId: attr.valueId!,
-          })) || [];
+      const attributePayload = overrides?.attributes ?? [];
 
       return {
         name: product.name || "",
         brandId: product.brandId,
         categoryId: product.categoryId,
         description: product.description ?? null,
+        origin: "",
+        olfactoryFamilyIds: [],
+        scentNotes: [],
         attributes: attributePayload,
         ...overrides,
       };
@@ -412,7 +409,7 @@ export const ContentManagementPage = () => {
       const [info, fastLook, detail] = await Promise.all([
         productService.getProductInformation(productId),
         productService.getProductFastLook(productId),
-        productService.getProductDetail(productId),
+        productService.getProductDetailForAdmin(productId),
       ]);
       setProductInformation(info);
       setProductFastLook(fastLook);
@@ -522,13 +519,15 @@ export const ContentManagementPage = () => {
       ];
 
       if (targetProduct.id === selectedProduct?.id && productInformation) {
-        metadataNotes.push(
-          productInformation.scentGroup,
-          productInformation.productCode,
-          productInformation.releaseYear
-            ? `Ra mắt ${productInformation.releaseYear}`
-            : undefined,
-        );
+        if (productInformation.scentGroup) {
+          metadataNotes.push(productInformation.scentGroup);
+        }
+        if (productInformation.productCode) {
+          metadataNotes.push(productInformation.productCode);
+        }
+        if (productInformation.releaseYear) {
+          metadataNotes.push(`Ra mắt ${productInformation.releaseYear}`);
+        }
       }
 
       const existing = banners.find(
@@ -665,17 +664,8 @@ export const ContentManagementPage = () => {
 
   return (
     <AdminLayout>
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        <Stack spacing={4}>
-          <Box>
-            <Typography variant="h4" fontWeight={700} gutterBottom>
-              Quản lý banner & sản phẩm
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Điều phối nội dung hero banner và tài sản hình ảnh sản phẩm trong
-              cùng một bảng điều khiển.
-            </Typography>
-          </Box>
+      <Box>
+        <Stack spacing={3}>
 
           {/* Banner Section */}
           <Paper sx={{ p: 3 }}>
@@ -913,10 +903,10 @@ export const ContentManagementPage = () => {
               </Alert>
             )}
 
-            <TableContainer>
+            <TableContainer component={Paper}>
               <Table size="small">
                 <TableHead>
-                  <TableRow>
+                  <TableRow sx={{ bgcolor: "grey.50" }}>
                     <TableCell width={80}>Hình</TableCell>
                     <TableCell>Tên sản phẩm</TableCell>
                     <TableCell>Thương hiệu</TableCell>
@@ -1146,7 +1136,7 @@ export const ContentManagementPage = () => {
             </Box>
           </Paper>
         </Stack>
-      </Container>
+      </Box>
 
       <BannerFormDialog
         open={bannerDialogOpen}

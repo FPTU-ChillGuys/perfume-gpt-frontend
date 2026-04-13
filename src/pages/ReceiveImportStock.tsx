@@ -170,8 +170,8 @@ const ReceiveImportStock: React.FC = () => {
         const lookupVariants = await productService.getProductVariants();
         const nextMap = lookupVariants.reduce<Record<string, string>>(
           (acc, variant) => {
-            if (variant.id && variant.primaryImage?.url) {
-              acc[variant.id] = variant.primaryImage.url;
+            if (variant.id && variant.primaryImageUrl) {
+              acc[variant.id] = variant.primaryImageUrl;
             }
             return acc;
           },

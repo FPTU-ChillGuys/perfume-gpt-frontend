@@ -4,6 +4,7 @@ import type {
   ProductVariant,
   ProductListItem,
   ProductDetail,
+  PublicProductDetail,
   ProductListItemWithVariants,
   PagedProductList,
   PagedProductListWithVariants,
@@ -30,6 +31,11 @@ type PaginatedQuery = {
   SortOrder?: string;
   IsDescending?: boolean;
 };
+
+type HomeProductQuery = Pick<
+  PaginatedQuery,
+  "PageNumber" | "PageSize" | "IsDescending"
+>;
 
 type SemanticProductSearchQuery = {
   searchText?: string;
@@ -152,16 +158,18 @@ class ProductService {
     query: SemanticProductSearchQuery,
   ): Promise<PagedProductListWithVariants> {
     try {
-      const response = await apiInstance.GET("/api/products/search/semantic", {
-        params: { query },
-      });
+      // Endpoint not in generated OpenAPI spec — bypass strict path typing
+      const response = await (apiInstance as any).GET(
+        "/api/products/search/semantic",
+        { params: { query } },
+      );
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to search products");
       }
 
       return (
-        response.data.payload ||
+        (response.data.payload as PagedProductListWithVariants) ||
         this.createEmptyPagedResult<ProductListItemWithVariants>(query)
       );
     } catch (error: any) {
@@ -193,7 +201,7 @@ class ProductService {
     }
   }
 
-  async getProductDetail(productId: string): Promise<ProductDetail | null> {
+  async getProductDetail(productId: string): Promise<PublicProductDetail | null> {
     try {
       const response = await apiInstance.GET("/api/products/{productId}", {
         params: { path: { productId } },
@@ -210,6 +218,34 @@ class ProductService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch product detail",
+      );
+    }
+  }
+
+  async getProductDetailForAdmin(
+    productId: string,
+  ): Promise<ProductDetail | null> {
+    try {
+      const response = await (apiInstance as any).GET(
+        "/api/admin/products/{productId}",
+        {
+          params: { path: { productId } },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to fetch product for admin",
+        );
+      }
+
+      return response.data.payload || null;
+    } catch (error: any) {
+      console.error("Error fetching product detail for admin:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch product detail for admin",
       );
     }
   }
@@ -244,14 +280,14 @@ class ProductService {
     }
   }
 
-  async getBestSellers(): Promise<PagedProductList> {
+  async getBestSellers(query?: HomeProductQuery): Promise<PagedProductList> {
     try {
       const response = await apiInstance.GET("/api/products/best-sellers", {
         params: {
           query: {
-            PageNumber: 1,
-            PageSize: 24,
-            IsDescending: true,
+            PageNumber: query?.PageNumber ?? 1,
+            PageSize: query?.PageSize ?? 24,
+            IsDescending: query?.IsDescending ?? true,
           },
         },
       });
@@ -275,14 +311,14 @@ class ProductService {
     }
   }
 
-  async getNewArrivals(): Promise<PagedProductList> {
+  async getNewArrivals(query?: HomeProductQuery): Promise<PagedProductList> {
     try {
       const response = await apiInstance.GET("/api/products/new-arrivals", {
         params: {
           query: {
-            PageNumber: 1,
-            PageSize: 24,
-            IsDescending: true,
+            PageNumber: query?.PageNumber ?? 1,
+            PageSize: query?.PageSize ?? 24,
+            IsDescending: query?.IsDescending ?? true,
           },
         },
       });

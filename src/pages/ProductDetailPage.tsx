@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Box,
-  Breadcrumbs,
   Button,
   CircularProgress,
   Container,
   Divider,
   Grid,
   IconButton,
-  Link,
   Stack,
   Tab,
   Tabs,
@@ -33,14 +31,13 @@ import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { ReviewSection } from "@/components/review/ReviewSection";
-import { markRenderMetric, printPagePerfSummary } from "@/utils/perfMetrics";
 import {
   productDetailTabsContent,
   normalizeProductDetailTabContent,
 } from "@/constants/productDetailTabsContent";
 import type {
   MediaResponse,
-  ProductDetail,
+  PublicProductDetail,
   ProductInformation,
 } from "@/types/product";
 import type {
@@ -129,9 +126,8 @@ const ProductDetailPage = () => {
   const [information, setInformation] = useState<ProductInformation | null>(
     null,
   );
-  const [productDetail, setProductDetail] = useState<ProductDetail | null>(
-    null,
-  );
+  const [productDetail, setProductDetail] =
+    useState<PublicProductDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
@@ -145,8 +141,6 @@ const ProductDetailPage = () => {
   const variantCacheRef = useRef<Map<string, MediaResponse[]>>(new Map());
   const reviewTargetCacheRef = useRef<Record<string, ReviewDialogTarget>>({});
   const reviewSummaryCacheRef = useRef<Map<string, string>>(new Map());
-  const pageLoadStartedAtRef = useRef(0);
-  const hasMarkedInitialRenderRef = useRef(false);
 
   // States: AI Review Summary
   const [reviewSummary, setReviewSummary] = useState<string | null>(null);
@@ -177,6 +171,7 @@ const ProductDetailPage = () => {
   const [infoTab, setInfoTab] = useState<"details" | "usage" | "shipping">(
     "details",
   );
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
 
   const fetchMyReviews = useCallback(async (): Promise<ReviewResponse[]> => {
     if (!isAuthenticated) {
@@ -209,15 +204,12 @@ const ProductDetailPage = () => {
       return;
     }
 
-    pageLoadStartedAtRef.current = performance.now();
-    hasMarkedInitialRenderRef.current = false;
-
     let isMounted = true;
     setLoading(true);
     setError(null);
 
     const fetchData = async () => {
-      const applyDetail = (detailResponse: ProductDetail | null) => {
+      const applyDetail = (detailResponse: PublicProductDetail | null) => {
         if (!detailResponse) {
           return;
         }
@@ -306,22 +298,6 @@ const ProductDetailPage = () => {
     setSearchParams(nextParams, { replace: true });
   }, [selectedVariantId, searchParams, setSearchParams]);
 
-  useEffect(() => {
-    if (loading || error || hasMarkedInitialRenderRef.current) {
-      return;
-    }
-
-    const elapsed = performance.now() - pageLoadStartedAtRef.current;
-    hasMarkedInitialRenderRef.current = true;
-    markRenderMetric("/products/:productId", "initial-visible-render", elapsed);
-  }, [loading, error]);
-
-  useEffect(() => {
-    return () => {
-      printPagePerfSummary("/products/:productId");
-    };
-  }, []);
-
   const displayVariants = useMemo(() => {
     return (productDetail?.variants || []).map((variant) => ({
       id: variant.id || "",
@@ -340,6 +316,12 @@ const ProductDetailPage = () => {
       media: variant.media?.[0] || null,
       mediaList: variant.media || [],
       sku: variant.sku || null,
+      campaignName: variant.campaignName || null,
+      voucherCode: variant.voucherCode || null,
+      discountedPrice:
+        typeof variant.discountedPrice === "number"
+          ? variant.discountedPrice
+          : null,
     }));
   }, [productDetail]);
 
@@ -479,6 +461,20 @@ const ProductDetailPage = () => {
     return () => observer.disconnect();
   }, [shouldRenderReviewSection, selectedVariantId]);
 
+  // Effect: Sticky header visibility - using scroll event for better responsiveness
+  useEffect(() => {
+    const handleScroll = () => {
+      // Show sticky header when scrolled down more than 100px
+      setShowStickyHeader(window.scrollY > 100);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    // Check initial state
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   const selectedVariant = useMemo(
     () =>
       displayVariants.find((variant) => variant.id === selectedVariantId) ||
@@ -506,18 +502,38 @@ const ProductDetailPage = () => {
     return stockQuantity !== null && stockQuantity <= 0;
   };
 
-  const selectedVariantStockQuantity = getVariantStockQuantity(selectedVariant);
   const isSelectedVariantOutOfStock = isVariantOutOfStock(selectedVariant);
   const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
   const selectedBasePrice = Number(selectedVariant?.price || 0);
+  const selectedDiscountedPrice = Number(selectedVariant?.discountedPrice || 0);
+  const hasCampaignDiscount =
+    selectedDiscountedPrice > 0 &&
+    selectedBasePrice > 0 &&
+    selectedDiscountedPrice < selectedBasePrice;
+  const campaignDisplayedPrice = hasCampaignDiscount
+    ? selectedDiscountedPrice
+    : selectedBasePrice;
+  const mainDisplayedPrice = selectedBasePrice;
   const selectedRetailPrice = Number(selectedVariant?.retailPrice || 0);
+  const campaignSavingAmount = hasCampaignDiscount
+    ? selectedBasePrice - selectedDiscountedPrice
+    : 0;
+  const campaignSavingPercent =
+    hasCampaignDiscount && selectedBasePrice > 0
+      ? (campaignSavingAmount / selectedBasePrice) * 100
+      : 0;
+  const selectedCampaignName = selectedVariant?.campaignName?.trim() || "";
+  const selectedVoucherCode = selectedVariant?.voucherCode?.trim() || "";
+  const shouldShowCampaignCard =
+    hasCampaignDiscount &&
+    (Boolean(selectedCampaignName) || Boolean(selectedVoucherCode));
   const hasRetailPriceComparison =
-    selectedBasePrice > 0 && selectedRetailPrice > selectedBasePrice;
+    mainDisplayedPrice > 0 && selectedRetailPrice > mainDisplayedPrice;
   const savingAmount = hasRetailPriceComparison
-    ? selectedRetailPrice - selectedBasePrice
+    ? selectedRetailPrice - mainDisplayedPrice
     : 0;
   const savingPercent = hasRetailPriceComparison
-    ? ((selectedRetailPrice - selectedBasePrice) / selectedRetailPrice) * 100
+    ? ((selectedRetailPrice - mainDisplayedPrice) / selectedRetailPrice) * 100
     : 0;
   const shouldShowSavings = savingAmount > 0;
 
@@ -716,8 +732,24 @@ const ProductDetailPage = () => {
       await cartService.addItem(selectedVariant.id, 1);
       await refreshCart();
       showToast("Đã thêm sản phẩm vào giỏ hàng", "success");
+
       if (redirectToCheckout) {
-        navigate("/checkout");
+        // Get updated cart to find the newly added item
+        const cartItems = await cartService.getItems();
+        const addedItem = cartItems.find(
+          (item) => item.variantId === selectedVariant.id,
+        );
+
+        if (addedItem?.cartItemId) {
+          // Navigate with only the newly added item selected
+          navigate("/checkout", {
+            state: {
+              selectedCartItemIds: [addedItem.cartItemId],
+            },
+          });
+        } else {
+          navigate("/checkout");
+        }
       }
     } catch (err: any) {
       showToast(err?.message || "Không thể thêm sản phẩm vào giỏ", "error");
@@ -996,7 +1028,7 @@ const ProductDetailPage = () => {
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
-          <Button variant="contained" onClick={() => navigate("/")}>
+          <Button variant="contained" component={RouterLink} to="/">
             Quay lại trang chủ
           </Button>
         </Box>
@@ -1031,22 +1063,7 @@ const ProductDetailPage = () => {
 
     return (
       <>
-        <Box mb={2}>
-          <Breadcrumbs separator="/">
-            <Link
-              underline="hover"
-              color="inherit"
-              component="button"
-              onClick={() => navigate("/")}
-              sx={{ cursor: "pointer" }}
-            >
-              Trang chủ
-            </Link>
-            <Typography color="text.primary">{productName}</Typography>
-          </Breadcrumbs>
-        </Box>
-
-        <Grid container spacing={4}>
+        <Grid container spacing={{ xs: 2, md: 4 }} sx={{ width: "100%", margin: 0 }}>
           <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
             {/* Main image — fixed height so no-image placeholder is same size */}
             <Box
@@ -1054,8 +1071,8 @@ const ProductDetailPage = () => {
                 borderRadius: 3,
                 border: "1px solid",
                 borderColor: "divider",
-                bgcolor: "white",
-                height: 420,
+                bgcolor: "background.paper",
+                height: { xs: 300, sm: 360, md: 420 },
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1276,24 +1293,73 @@ const ProductDetailPage = () => {
               })()}
           </Grid>
           <Grid size={{ xs: 12, md: 6 }}>
-            <Stack spacing={2}>
-              <Typography variant="h4" fontWeight={700}>
+            <Stack spacing={2.5}>
+              <Typography
+                variant="h4"
+                fontWeight={700}
+                sx={{
+                  fontSize: { xs: "1.5rem", sm: "1.75rem", md: "2.125rem" },
+                }}
+              >
                 {productName}
               </Typography>
-              <Typography color="text.secondary">
-                Thương hiệu: {productBrand}
-              </Typography>
-              <Typography color="text.secondary">
-                Mã hàng:{" "}
-                {selectedVariantDetail?.sku ||
-                  selectedVariant?.sku ||
-                  information?.productCode ||
-                  "Đang cập nhật"}
-              </Typography>
+              <Stack spacing={1}>
+                <Typography
+                  sx={{
+                    fontSize: { xs: "0.875rem", sm: "0.95rem" },
+                    color: "text.secondary",
+                  }}
+                >
+                  Thương hiệu:{" "}
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontSize: { xs: "0.875rem", sm: "0.95rem" },
+                      fontWeight: 600,
+                    }}
+                  >
+                    {productBrand}
+                  </Typography>
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: "0.875rem", sm: "0.95rem" },
+                    color: "text.secondary",
+                  }}
+                >
+                  Mã hàng:{" "}
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontSize: { xs: "0.875rem", sm: "0.95rem" },
+                      fontWeight: 600,
+                    }}
+                  >
+                    {selectedVariantDetail?.sku ||
+                      selectedVariant?.sku ||
+                      information?.productCode ||
+                      "Đang cập nhật"}
+                  </Typography>
+                </Typography>
+              </Stack>
 
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Rating value={averageRating} precision={0.1} readOnly />
-                <Typography variant="body2" color="text.secondary">
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                flexWrap="wrap"
+              >
+                <Rating
+                  value={averageRating}
+                  precision={0.1}
+                  readOnly
+                  size="small"
+                />
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                >
                   {`${averageRating.toFixed(1)}/5 (${totalReviews} đánh giá)`}
                 </Typography>
               </Stack>
@@ -1383,58 +1449,228 @@ const ProductDetailPage = () => {
                   })}
                 </ToggleButtonGroup>
               </Box>
-
-              {/* Price */}
-              <Stack spacing={0.5}>
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  alignItems="baseline"
-                  flexWrap="wrap"
+              {shouldShowCampaignCard && (
+                <Box
+                  sx={{
+                    borderRadius: 2,
+                    border: "1px solid",
+                    borderColor: "error.main",
+                    bgcolor: "#fff5f5",
+                    p: 2,
+                    display: "inline-flex",
+                    flexDirection: "column",
+                    gap: 1,
+                  }}
                 >
-                  <Typography variant="h4" fontWeight={700} color="error">
-                    {selectedVariant?.price
-                      ? currencyFormatter.format(Number(selectedVariant.price))
-                      : "Liên hệ"}
-                  </Typography>
-                  {hasRetailPriceComparison && (
-                    <Typography
-                      variant="body1"
-                      color="text.secondary"
-                      sx={{ textDecoration: "line-through" }}
-                    >
-                      {currencyFormatter.format(selectedRetailPrice)}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" color="text.secondary">
-                    Giá đã bao gồm VAT
-                  </Typography>
-                </Stack>
-                {hasRetailPriceComparison && shouldShowSavings && (
-                  <Typography
-                    variant="body2"
-                    color="success.main"
-                    fontWeight={600}
+                  <Stack
+                    direction="row"
+                    spacing={1.5}
+                    alignItems="center"
+                    flexWrap="wrap"
                   >
-                    {`Tiết kiệm ${currencyFormatter.format(savingAmount)} (${formatSavingPercent(savingPercent)})`}
-                  </Typography>
+                    {selectedCampaignName && (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        {/* Campaign name badge */}
+                        <Box
+                          sx={{
+                            px: 2,
+                            py: 0.75,
+                            borderRadius: 1.5,
+                            bgcolor: "error.main",
+                            display: "inline-flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Typography
+                            component="span"
+                            sx={{
+                              fontSize: "0.875rem",
+                              fontWeight: 700,
+                              color: "white",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            {selectedCampaignName}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                    )}
+                    {campaignSavingPercent > 0 && (
+                      <Typography
+                        sx={{
+                          fontSize: "0.9rem",
+                          color: "error.main",
+                          fontWeight: 700,
+                        }}
+                      >
+                        Giảm {formatSavingPercent(campaignSavingPercent)}
+                      </Typography>
+                    )}
+                  </Stack>
+                  {selectedVoucherCode && (
+                    <Box>
+                      <Typography
+                        component="span"
+                        sx={{ fontSize: "0.875rem", color: "text.secondary" }}
+                      >
+                        Áp dụng mã {""}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        sx={{
+                          fontSize: "0.875rem",
+                          fontWeight: 800,
+                          color: "error.main",
+                          px: 1.5,
+                          py: 0.5,
+                          bgcolor: "rgba(211, 47, 47, 0.08)",
+                          borderRadius: 1,
+                          border: "1px dashed",
+                          borderColor: "error.main",
+                        }}
+                      >
+                        {selectedVoucherCode}
+                      </Typography>
+                      <Typography
+                        component="span"
+                        sx={{ fontSize: "0.875rem", color: "text.secondary" }}
+                      >
+                        {""} để được giảm thêm
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              )}
+              {/* Price */}
+              <Stack spacing={1}>
+                {hasCampaignDiscount ? (
+                  <>
+                    {/* Hiển thị khi có campaign discount */}
+                    <Stack
+                      direction="row"
+                      spacing={1.5}
+                      alignItems="baseline"
+                      flexWrap="wrap"
+                    >
+                      <Typography
+                        sx={{
+                          fontSize: { xs: "2rem", sm: "2.5rem" },
+                          fontWeight: 700,
+                          color: "error.main",
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {currencyFormatter.format(campaignDisplayedPrice)}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontSize: { xs: "1.1rem", sm: "1.25rem" },
+                          color: "text.disabled",
+                          textDecoration: "line-through",
+                          fontWeight: 400,
+                        }}
+                      >
+                        {currencyFormatter.format(selectedBasePrice)}
+                      </Typography>
+                    </Stack>
+                    <Typography
+                      sx={{
+                        fontSize: "0.875rem",
+                        color: "text.secondary",
+                      }}
+                    >
+                      Giá đã bao gồm VAT
+                    </Typography>
+                    {campaignSavingAmount > 0 && (
+                      <Typography
+                        sx={{
+                          fontSize: "0.9rem",
+                          color: "success.main",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Tiết kiệm{" "}
+                        {currencyFormatter.format(campaignSavingAmount)} (
+                        {formatSavingPercent(campaignSavingPercent)})
+                      </Typography>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* Hiển thị khi không có campaign */}
+                    <Stack
+                      direction="row"
+                      spacing={1.5}
+                      alignItems="baseline"
+                      flexWrap="wrap"
+                    >
+                      <Typography
+                        sx={{
+                          fontSize: { xs: "2rem", sm: "2.5rem" },
+                          fontWeight: 700,
+                          color: "error.main",
+                          lineHeight: 1.2,
+                        }}
+                      >
+                        {mainDisplayedPrice
+                          ? currencyFormatter.format(mainDisplayedPrice)
+                          : "Liên hệ"}
+                      </Typography>
+                      {hasRetailPriceComparison && (
+                        <Typography
+                          sx={{
+                            fontSize: { xs: "1.1rem", sm: "1.25rem" },
+                            color: "text.disabled",
+                            textDecoration: "line-through",
+                            fontWeight: 400,
+                          }}
+                        >
+                          {currencyFormatter.format(selectedRetailPrice)}
+                        </Typography>
+                      )}
+                    </Stack>
+                    <Typography
+                      sx={{
+                        fontSize: "0.875rem",
+                        color: "text.secondary",
+                      }}
+                    >
+                      Giá đã bao gồm VAT
+                    </Typography>
+                    {hasRetailPriceComparison && shouldShowSavings && (
+                      <Typography
+                        sx={{
+                          fontSize: "0.9rem",
+                          color: "success.main",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Tiết kiệm {currencyFormatter.format(savingAmount)} (
+                        {formatSavingPercent(savingPercent)})
+                      </Typography>
+                    )}
+                  </>
                 )}
               </Stack>
 
-              {selectedVariantStockQuantity !== null &&
-                (isSelectedVariantOutOfStock ? (
-                  <Typography variant="h4" color="error.main" fontWeight={700}>
-                    Hết hàng
-                  </Typography>
-                ) : (
-                  <Typography
-                    variant="body2"
-                    color="success.main"
-                    fontWeight={600}
-                  >
-                    {`Còn ${selectedVariantStockQuantity} sản phẩm`}
-                  </Typography>
-                ))}
+              {isSelectedVariantOutOfStock && (
+                <Alert
+                  severity="error"
+                  sx={{
+                    borderRadius: 2,
+                    bgcolor: "#fff5f5",
+                    border: "1px solid",
+                    borderColor: "error.light",
+                    "& .MuiAlert-message": {
+                      fontSize: "1rem",
+                      fontWeight: 600,
+                    },
+                  }}
+                >
+                  Sản phẩm đã hết hàng
+                </Alert>
+              )}
 
               {/* Action buttons */}
               {!isSelectedVariantOutOfStock && !isBackOfficeRole && (
@@ -1458,10 +1694,18 @@ const ProductDetailPage = () => {
               )}
 
               {isBackOfficeRole && (
-                <Typography variant="body2" color="text.secondary">
+                <Alert
+                  severity="info"
+                  sx={{
+                    borderRadius: 2,
+                    "& .MuiAlert-message": {
+                      fontSize: "0.875rem",
+                    },
+                  }}
+                >
                   Tài khoản admin/staff chỉ có quyền xem sản phẩm, không hỗ trợ
                   mua hàng online.
-                </Typography>
+                </Alert>
               )}
             </Stack>
           </Grid>
@@ -1488,8 +1732,211 @@ const ProductDetailPage = () => {
   };
 
   return (
-    <MainLayout>
-      <Box py={6}>
+    <MainLayout stickyHeader={false}>
+      {/* Sticky Header */}
+      <Box
+        sx={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bgcolor: "white",
+          borderBottom: "1px solid",
+          borderColor: "divider",
+          zIndex: 1100,
+          transition: "transform 0.3s ease-in-out, opacity 0.3s ease-in-out",
+          transform: showStickyHeader ? "translateY(0)" : "translateY(-100%)",
+          opacity: showStickyHeader ? 1 : 0,
+          boxShadow: showStickyHeader ? 2 : 0,
+          pointerEvents: showStickyHeader ? "auto" : "none",
+          overflow: "hidden",
+        }}
+      >
+        <Container maxWidth="lg">
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: { xs: 1, sm: 2 },
+              py: 1.5,
+              px: { xs: 1, sm: 0 },
+            }}
+          >
+            {/* Thumbnail */}
+            <Box
+              sx={{
+                width: { xs: 50, sm: 60 },
+                height: { xs: 50, sm: 60 },
+                flexShrink: 0,
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1,
+                overflow: "hidden",
+                bgcolor: "grey.50",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {variantMediaList[0]?.url || selectedVariant?.media?.url ? (
+                <img
+                  src={
+                    variantMediaList[0]?.url ||
+                    selectedVariant?.media?.url ||
+                    ""
+                  }
+                  alt={productDetail?.name || ""}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              ) : (
+                <Typography variant="caption" color="text.disabled">
+                  No image
+                </Typography>
+              )}
+            </Box>
+
+            {/* Product Info */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: "0.875rem", sm: "1rem" },
+                  lineHeight: 1.3,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {productDetail?.name || ""}
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                  display: { xs: "none", sm: "block" },
+                }}
+              >
+                {selectedVariant?.displayName?.split(" - ")[0] ||
+                  "Eau De Parfum"}
+              </Typography>
+            </Box>
+
+            {/* Size */}
+            <Box
+              sx={{
+                display: { xs: "none", sm: "flex" },
+                alignItems: "center",
+                justifyContent: "center",
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                border: "2px solid",
+                borderColor: "error.main",
+                flexShrink: 0,
+              }}
+            >
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  color: "error.main",
+                  fontSize: "0.75rem",
+                }}
+              >
+                {selectedVariant?.displayName?.match(/(\d+)\s*ml/i)?.[1] || "—"}
+                ml
+              </Typography>
+            </Box>
+
+            {/* Price */}
+            <Box
+              sx={{
+                display: { xs: "none", md: "flex" },
+                flexDirection: "column",
+                alignItems: "flex-end",
+                minWidth: 120,
+              }}
+            >
+              {hasCampaignDiscount && selectedBasePrice > 0 && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.disabled",
+                    textDecoration: "line-through",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {currencyFormatter.format(selectedBasePrice)}
+                </Typography>
+              )}
+              {!hasCampaignDiscount && hasRetailPriceComparison && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: "text.disabled",
+                    textDecoration: "line-through",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {currencyFormatter.format(selectedRetailPrice)}
+                </Typography>
+              )}
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  color: "error.main",
+                  fontSize: "1.25rem",
+                  lineHeight: 1.2,
+                }}
+              >
+                {mainDisplayedPrice
+                  ? currencyFormatter.format(
+                      hasCampaignDiscount
+                        ? campaignDisplayedPrice
+                        : mainDisplayedPrice,
+                    )
+                  : "Liên hệ"}
+              </Typography>
+            </Box>
+
+            {/* Add to Cart Button */}
+            {!isSelectedVariantOutOfStock && !isBackOfficeRole && (
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => handleAddToCart(false)}
+                disabled={isAdding}
+                sx={{
+                  textTransform: "none",
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1,
+                  whiteSpace: "nowrap",
+                  minWidth: { xs: "auto", sm: 160 },
+                }}
+              >
+                {isAdding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
+              </Button>
+            )}
+          </Box>
+        </Container>
+      </Box>
+
+      <Box 
+        py={{ xs: 3, md: 6 }}
+        sx={{ 
+          width: "100%", 
+          maxWidth: "100%", 
+          overflowX: "hidden" 
+        }}
+      >
         <Container maxWidth="lg">{renderContent()}</Container>
       </Box>
 

@@ -3,8 +3,39 @@ import type { components } from "@/types/api/v1";
 import type { ApplyVoucherRequest, ApplyVoucherResponse } from "@/types/cart";
 
 export type VoucherResponse = components["schemas"]["VoucherResponse"];
+export type AvailableVoucherResponse = components["schemas"]["AvailableVoucherResponse"];
 type VoucherListResponse =
   components["schemas"]["PagedResultOfVoucherResponse"];
+
+
+export type UserVoucherResponse = components["schemas"]["UserVoucherResponse"];
+export type RedeemableVoucherResponse = components["schemas"]["RedeemableVoucherResponse"];
+
+export interface CreateVoucherRequest {
+  code: string;
+  discountType: "Percentage" | "FixedAmount";
+  discountValue: number;
+  applyType: "Order" | "Product";
+  requiredPoints: number;
+  maxDiscountAmount: number | null;
+  minOrderValue: number;
+  expiryDate: string;
+  totalQuantity: number;
+  maxUsagePerUser: number | null;
+  isPublic: boolean;
+}
+
+export interface UpdateVoucherRequest extends CreateVoucherRequest {
+  remainingQuantity: number;
+}
+
+export interface PagedVouchers {
+  items: VoucherResponse[];
+  totalCount: number;
+  pageNumber: number;
+  pageSize: number;
+  totalPages: number;
+}
 
 class VoucherService {
   private readonly BASE_ENDPOINT = "/api/vouchers";
@@ -88,6 +119,131 @@ class VoucherService {
       );
     }
   }
+
+  async getAll(params?: {
+    PageNumber?: number;
+    PageSize?: number;
+    Code?: string;
+    IsExpired?: boolean;
+  }): Promise<PagedVouchers> {
+    const response = await apiInstance.GET(this.BASE_ENDPOINT, {
+      params: { query: params },
+    });
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load vouchers");
+    }
+    const payload = response.data.payload as VoucherListResponse | null | undefined;
+    return {
+      items: payload?.items ?? [],
+      totalCount: payload?.totalCount ?? 0,
+      pageNumber: payload?.pageNumber ?? 1,
+      pageSize: payload?.pageSize ?? 10,
+      totalPages: payload?.totalPages ?? 1,
+    };
+  }
+
+  async getById(voucherId: string): Promise<VoucherResponse> {
+    const response = await apiInstance.GET(
+      `${this.BASE_ENDPOINT}/{voucherId}` as any,
+      { params: { path: { voucherId } } } as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load voucher");
+    }
+    return response.data.payload as VoucherResponse;
+  }
+
+  async create(body: CreateVoucherRequest): Promise<VoucherResponse> {
+    const response = await apiInstance.POST(this.BASE_ENDPOINT as any, {
+      body,
+    } as any);
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to create voucher");
+    }
+    return response.data.payload as VoucherResponse;
+  }
+
+  async update(
+    voucherId: string,
+    body: UpdateVoucherRequest,
+  ): Promise<VoucherResponse> {
+    const response = await apiInstance.PUT(
+      `${this.BASE_ENDPOINT}/{voucherId}` as any,
+      { params: { path: { voucherId } }, body } as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to update voucher");
+    }
+    return response.data.payload as VoucherResponse;
+  }
+
+  async deleteVoucher(voucherId: string): Promise<void> {
+    const response = await apiInstance.DELETE(
+      `${this.BASE_ENDPOINT}/{voucherId}` as any,
+      { params: { path: { voucherId } } } as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to delete voucher");
+    }
+  }
+
+  async getMyVouchers(params?: {
+    Status?: string;
+    IsUsed?: boolean;
+    IsExpired?: boolean;
+    Code?: string;
+    PageNumber?: number;
+    PageSize?: number;
+  }): Promise<UserVoucherResponse[]> {
+    const response = await apiInstance.GET("/api/vouchers/me", {
+      params: { query: params },
+    } as any);
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load my vouchers");
+    }
+    const payload = response.data.payload as any;
+    return (payload?.items ?? payload ?? []) as UserVoucherResponse[];
+  }
+
+  async getRedeemableList(): Promise<RedeemableVoucherResponse[]> {
+    const response = await apiInstance.GET("/api/vouchers/redeemable-list");
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load redeemable vouchers");
+    }
+    const payload = response.data.payload as any;
+    if (Array.isArray(payload)) return payload;
+    if (payload?.items && Array.isArray(payload.items)) return payload.items;
+    return [];
+  }
+
+  async getAvailable(params?: {
+    PageNumber?: number;
+    PageSize?: number;
+  }): Promise<{ items: AvailableVoucherResponse[]; totalCount: number }> {
+    const response = await apiInstance.GET("/api/vouchers/available", {
+      params: { query: params },
+    });
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to load vouchers");
+    }
+    const payload = response.data.payload as any;
+    return {
+      items: payload?.items ?? [],
+      totalCount: payload?.totalCount ?? 0,
+    };
+  }
+
+  async redeemVoucher(voucherId: string): Promise<string> {
+    const response = await apiInstance.POST(
+      `${this.BASE_ENDPOINT}/redeem` as any,
+      { body: { voucherId } } as any,
+    );
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Failed to redeem voucher");
+    }
+    return response.data.message || "Nhận voucher thành công!";
+  }
 }
 
 export const voucherService = new VoucherService();
+

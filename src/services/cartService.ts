@@ -16,11 +16,14 @@ const DEFAULT_TOTALS: CartTotals = {
   totalPrice: 0,
 };
 
+const PROMOTION_WARNING_REGEX =
+  /not in promotion|khong.*khuyen mai|không.*khuyến mãi/i;
+
 class CartService {
   private readonly ITEMS_ENDPOINT = "/api/cart/items";
   private readonly TOTAL_ENDPOINT = "/api/cart/total";
   private readonly CLEAR_ENDPOINT = "/api/cart/clear";
-  private readonly ADD_TO_CART_ENDPOINT = "/api/cart/items/add-to-cart";
+  private readonly ADD_TO_CART_ENDPOINT = "/api/cart/items";
 
   async getCartWithTotals(
     voucherId?: string,
@@ -108,23 +111,37 @@ class CartService {
         params: query ? { query } : undefined,
       });
 
+      const payload = response.data?.payload;
+      const rawMessage = (response.data?.message || "").trim();
+      const warningMessage = PROMOTION_WARNING_REGEX.test(rawMessage)
+        ? rawMessage
+        : undefined;
+
+      if (payload) {
+        return {
+          subtotal: Number(
+            (payload as { subtotal?: number; subTotal?: number }).subtotal ??
+              (payload as { subTotal?: number }).subTotal ??
+              0,
+          ),
+          shippingFee: Number(payload.shippingFee ?? 0),
+          discount: Number(payload.discount ?? 0),
+          totalPrice: Number(
+            (payload as { totalPrice?: number; total?: number }).totalPrice ??
+              (payload as { total?: number }).total ??
+              0,
+          ),
+          warningMessage,
+        };
+      }
+
       if (!response.data?.success) {
         throw new Error(
           response.data?.message || "Failed to fetch cart totals",
         );
       }
 
-      const payload = response.data.payload;
-      if (!payload) {
-        return DEFAULT_TOTALS;
-      }
-
-      return {
-        subtotal: Number(payload.subtotal ?? 0),
-        shippingFee: Number(payload.shippingFee ?? 0),
-        discount: Number(payload.discount ?? 0),
-        totalPrice: Number(payload.totalPrice ?? 0),
-      };
+      return DEFAULT_TOTALS;
     } catch (error: any) {
       console.error("Error fetching cart totals:", error);
       throw new Error(
@@ -156,17 +173,14 @@ class CartService {
 
   async updateCartItem(cartItemId: string, quantity: number) {
     try {
-      const response = await apiInstance.PUT(
-        `/api/cart/items/{id}/update-cart-item`,
-        {
-          params: {
-            path: {
-              id: cartItemId,
-            },
+      const response = await apiInstance.PUT(`/api/cart/items/{id}`, {
+        params: {
+          path: {
+            id: cartItemId,
           },
-          body: { quantity },
         },
-      );
+        body: { quantity },
+      });
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to update cart item");
@@ -183,16 +197,13 @@ class CartService {
 
   async removeCartItem(cartItemId: string) {
     try {
-      const response = await apiInstance.DELETE(
-        `/api/cart/items/{id}/remove-from-cart`,
-        {
-          params: {
-            path: {
-              id: cartItemId,
-            },
+      const response = await apiInstance.DELETE(`/api/cart/items/{id}`, {
+        params: {
+          path: {
+            id: cartItemId,
           },
         },
-      );
+      });
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Failed to remove cart item");

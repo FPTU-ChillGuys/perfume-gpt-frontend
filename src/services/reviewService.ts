@@ -1,4 +1,5 @@
 import { apiInstance } from "@/lib/api";
+import { getStoredAccessToken } from "@/utils/authStorage";
 import type {
   ReviewResponse,
   ReviewStatisticsResponse,
@@ -188,18 +189,23 @@ class ProductReviewService {
     payload: UpdateReviewRequest,
   ): Promise<BulkActionResultOfstring> {
     try {
-      const response = await apiInstance.PUT("/api/reviews/{reviewId}", {
-        params: { path: { reviewId } },
-        body: payload,
+      const accessToken = getStoredAccessToken();
+      const response = await fetch(`/api/reviews/${reviewId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify(payload),
       });
 
-      if (!response.data?.success) {
-        throw new Error(
-          response.data?.message || "Không thể cập nhật đánh giá",
-        );
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || "Không thể cập nhật đánh giá");
       }
 
-      return response.data.payload as BulkActionResultOfstring;
+      return (data.payload as BulkActionResultOfstring) || {};
     } catch (error: any) {
       console.error("Error updating review:", error);
       throw new Error(
@@ -232,12 +238,15 @@ class ProductReviewService {
     payload: ModerateReviewRequest,
   ): Promise<string> {
     try {
-      const response = await apiInstance.PUT("/api/reviews/{reviewId}", {
-        params: { path: { reviewId } },
-        body: {
-          comment: payload.reason || "",
+      const response = await apiInstance.POST(
+        "/api/reviews/{reviewId}/answer",
+        {
+          params: { path: { reviewId } },
+          body: {
+            staffFeedbackComment: payload.reason || "",
+          },
         },
-      });
+      );
 
       if (!response.data?.success) {
         throw new Error(response.data?.message || "Không thể duyệt đánh giá");
@@ -252,14 +261,40 @@ class ProductReviewService {
     }
   }
 
+  async answerReview(
+    reviewId: string,
+    staffFeedbackComment: string,
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/reviews/{reviewId}/answer",
+        {
+          params: { path: { reviewId } },
+          body: { staffFeedbackComment },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Không thể gửi phản hồi");
+      }
+
+      return response.data.message || "Đã gửi phản hồi";
+    } catch (error: any) {
+      console.error("Error answering review:", error);
+      throw new Error(
+        this.extractErrorMessage(error, "Không thể gửi phản hồi"),
+      );
+    }
+  }
+
   async uploadTemporaryImages(files: File[]): Promise<TemporaryReviewMedia[]> {
     if (!files.length) {
       return [];
     }
 
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      const endpoint = `${import.meta.env.VITE_API_BASE_URL}/api/reviews/images/temporary`;
+      const accessToken = getStoredAccessToken();
+      const endpoint = "/api/reviews/images/temporary";
 
       let lastErrorMessage = "Không thể tải ảnh tạm thời";
 
