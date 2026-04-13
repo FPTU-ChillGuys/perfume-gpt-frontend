@@ -15,10 +15,10 @@ import type {
 
 class QuizService {
 
-    // 1. GET /quizzes/questions
+    // 1. GET /surveys/questions
     async getQuestions(): Promise<QuizQuestionsResponse> {
         try {
-            const response = await aiApiInstance.GET("/quizzes/questions", {});
+            const response = await aiApiInstance.GET("/surveys/questions", {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to fetch quiz questions");
@@ -30,10 +30,10 @@ class QuizService {
         }
     }
 
-    // 2. GET /quizzes/questions/{id}
+    // 2. GET /surveys/questions/{id}
     async getQuestionById(id: string): Promise<QuizQuestionResponse> {
         try {
-            const response = await aiApiInstance.GET(`/quizzes/questions/${id}`, {});
+            const response = await aiApiInstance.GET(`/surveys/questions/${id}`, {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to fetch quiz question");
@@ -45,10 +45,10 @@ class QuizService {
         }
     }
 
-    // 3. POST /quizzes/questions
+    // 3. POST /surveys/questions
     async createQuestion(data: QuizQuestionRequest): Promise<CreateQuizQuestionResponse> {
         try {
-            const response = await aiApiInstance.POST("/quizzes/questions", {
+            const response = await aiApiInstance.POST("/surveys/questions", {
                 body: data
             });
 
@@ -62,10 +62,10 @@ class QuizService {
         }
     }
 
-    // 3.5. POST /quizzes/questions/list
+    // 3.5. POST /surveys/questions/list
     async createQuestions(data: QuizQuestionRequest[]): Promise<any> {
         try {
-            const response = await aiApiInstance.POST("/quizzes/questions/list", {
+            const response = await aiApiInstance.POST("/surveys/questions/list", {
                 body: data
             });
 
@@ -80,10 +80,10 @@ class QuizService {
     }
 
 
-    // 4. PUT /quizzes/questions/{id} — update question, questionType, answers
+    // 4. PUT /surveys/questions/{id} — update question, questionType, answers
     async updateQuestion(id: string, payload: { question: string; questionType?: QuestionType; answers: QuizAnswerRequest[] }): Promise<any> {
         try {
-            const response = await aiApiInstance.PUT(`/quizzes/questions/${id}`, {
+            const response = await aiApiInstance.PUT(`/surveys/questions/${id}`, {
                 body: payload
             });
 
@@ -97,10 +97,10 @@ class QuizService {
         }
     }
 
-    // 5. GET /quizzes/user/{userId}/check-first-time
+    // 5. GET /surveys/user/{userId}/check-first-time
     async checkFirstTime(userId: string): Promise<CheckFirstTimeResponse> {
         try {
-            const response = await aiApiInstance.GET(`/quizzes/user/${userId}/check-first-time`, {});
+            const response = await aiApiInstance.GET(`/surveys/user/${userId}/check-first-time`, {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to check first time status");
@@ -112,10 +112,10 @@ class QuizService {
         }
     }
 
-    // 6. POST /quizzes/user?userId={userId}
+    // 6. POST /surveys/user?userId={userId}
     async submitQuizAndGetAI(userId: string, answers: QuizQuesAnsDetailRequest[]): Promise<SubmitQuizResponse> {
         try {
-            const response = await aiApiInstance.POST("/quizzes/user", {
+            const response = await aiApiInstance.POST("/surveys/user", {
                 params: {
                     query: { userId }
                 },
@@ -132,10 +132,10 @@ class QuizService {
         }
     }
 
-    // 7. POST /quizzes/user/v2?userId={userId}
+    // 7. POST /surveys/user/v2?userId={userId}
     async submitQuizV2(userId: string, answers: QuizQuesAnsDetailRequest[]): Promise<SubmitQuizResponse> {
         try {
-            const response = await aiApiInstance.POST("/quizzes/user/v2", {
+            const response = await aiApiInstance.POST("/surveys/user/v2", {
                 params: {
                     query: { userId }
                 },
@@ -152,10 +152,10 @@ class QuizService {
         }
     }
 
-    // 8. GET /quizzes/user/{userId}
+    // 8. GET /surveys/user/{userId}
     async getUserQuizRecord(userId: string): Promise<UserQuizRecordResponse> {
         try {
-            const response = await aiApiInstance.GET(`/quizzes/user/${userId}`, {});
+            const response = await aiApiInstance.GET(`/surveys/user/${userId}`, {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to fetch user quiz record");
@@ -167,10 +167,10 @@ class QuizService {
         }
     }
 
-    // 9. DELETE /quizzes/questions/{id} (soft delete)
+    // 9. DELETE /surveys/questions/{id} (soft delete)
     async deleteQuestion(id: string): Promise<{ success: boolean; error: string | null; data: boolean }> {
         try {
-            const response = await aiApiInstance.DELETE(`/quizzes/questions/${id}`, {});
+            const response = await aiApiInstance.DELETE(`/surveys/questions/${id}`, {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to delete quiz question");

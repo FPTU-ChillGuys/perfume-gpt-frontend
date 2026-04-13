@@ -237,7 +237,7 @@ export const HeaderSearch = () => {
                         ) : suggestions.length > 0 ? (
                             <List sx={{ p: 0 }}>
                                 {suggestions.map((product) => {
-                                    const imageUrl = product.primaryImage?.url || "https://placehold.co/400x400?text=No+Image";
+                                    const imageUrl = product.primaryImage || "https://placehold.co/400x400?text=No+Image";
                                     const displayGender = extractSuggestionGender(product);
                                     const semanticPrice = extractSuggestionPrice(product);
                                     const fallbackPrice = product.id
@@ -259,7 +259,7 @@ export const HeaderSearch = () => {
                                             <ListItemAvatar>
                                                 <Avatar
                                                     variant="rounded"
-                                                    src={imageUrl}
+                                                    src={imageUrl as string}
                                                     alt={product.name || ""}
                                                     sx={{ width: 48, height: 48, bgcolor: "transparent" }}
                                                 />
