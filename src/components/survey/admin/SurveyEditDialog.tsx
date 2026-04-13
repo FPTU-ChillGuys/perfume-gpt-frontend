@@ -23,8 +23,8 @@ import {
     RemoveCircleOutline as RemoveAnswerIcon,
     Save as SaveIcon,
 } from "@mui/icons-material";
-import { QuestionType } from "@/types/quiz";
-import type { QuizQuestion } from "@/types/quiz";
+import { QuestionType } from "@/types/survey";
+import type { SurveyQuestion } from "@/types/survey";
 
 interface SubmitPayload {
     question: string;
@@ -35,12 +35,12 @@ interface SubmitPayload {
 interface Props {
     open: boolean;
     isSaving: boolean;
-    initialData: QuizQuestion | null; // seed state when dialog opens
+    initialData: SurveyQuestion | null; // seed state when dialog opens
     onClose: () => void;
     onSubmit: (payload: SubmitPayload) => void;
 }
 
-export default function QuizEditDialog({ open, isSaving, initialData, onClose, onSubmit }: Props) {
+export default function SurveyEditDialog({ open, isSaving, initialData, onClose, onSubmit }: Props) {
     // Local form state — keystrokes stay inside this component
     const [question, setQuestion] = useState("");
     const [questionType, setQuestionType] = useState<QuestionType>(QuestionType.SINGLE);

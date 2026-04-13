@@ -15,7 +15,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AssistantPayload } from "@/types/chatbot";
-import QuizProductCard from "./QuizProductCard";
+import SurveyProductCard from "./SurveyProductCard";
 
 interface Props {
     result: AssistantPayload;
@@ -25,7 +25,7 @@ interface Props {
     onRestart: () => void;
 }
 
-export default function QuizResultView({ result, userId, onReviewAnswers, onResetAnswers, onRestart }: Props) {
+export default function SurveyResultView({ result, userId, onReviewAnswers, onResetAnswers, onRestart }: Props) {
     return (
         <Box>
             {/* Header */}
@@ -81,7 +81,7 @@ export default function QuizResultView({ result, userId, onReviewAnswers, onRese
                     </Divider>
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                         {result.products.map((p) => (
-                            <QuizProductCard key={p.id} product={p} userId={userId} />
+                            <SurveyProductCard key={p.id} product={p} userId={userId} />
                         ))}
                     </Box>
                 </>
@@ -122,7 +122,7 @@ export default function QuizResultView({ result, userId, onReviewAnswers, onRese
                     onClick={onRestart}
                     sx={{ borderRadius: 5, px: 3 }}
                 >
-                    Làm lại quiz
+                    Làm lại survey
                 </Button>
             </Box>
         </Box>

@@ -16,18 +16,18 @@ import {
     NavigateNext as NextIcon,
 } from "@mui/icons-material";
 import { AuthContext } from "@/contexts/AuthContextType";
-import { quizService } from "@/services/ai/quizService";
+import { surveyService } from "@/services/ai/surveyService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { getOrCreateGuestUserId } from "@/utils/guestUserId";
-import type { QuizQuestion, QuizQuesAnsDetailRequest } from "@/types/quiz";
+import type { SurveyQuestion, SurveyQuesAnsDetailRequest } from "@/types/survey";
 import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
-import QuizQuestionCard from "@/components/quiz/user/QuizQuestionCard";
-import QuizResultView from "@/components/quiz/user/QuizResultView";
+import SurveyQuestionCard from "@/components/survey/user/SurveyQuestionCard";
+import SurveyResultView from "@/components/survey/user/SurveyResultView";
 import { dexieCache } from "@/utils/dexieCache";
 import { CACHE_KEYS, CACHE_TTL } from "@/constants/cache";
 
-interface CachedQuizResult {
+interface CachedSurveyResult {
     result: AssistantPayload | null;
     selections: Array<{ questionId: string; answerIds: string[] }>;
     currentStep: number;
@@ -57,18 +57,23 @@ const deserializeSelections = (
 // ── Parse AI response string ────────────────────────────────────
 function parseAiResponse(raw: string): AssistantPayload {
     try {
-        return JSON.parse(raw) as AssistantPayload;
+        const parsed = JSON.parse(raw);
+        return {
+            message: parsed.message || "",
+            products: parsed.products || [],
+            suggestedQuestions: parsed.suggestedQuestions || [],
+        };
     } catch {
-        return { message: raw, products: [] };
+        return { message: raw, products: [], suggestedQuestions: [] };
     }
 }
 
 // ── Page ────────────────────────────────────────────────────────
-export default function QuizPage() {
+export default function SurveyPage() {
     const authCtx = useContext(AuthContext);
     const userId = authCtx?.user?.id ?? getOrCreateGuestUserId();
 
-    const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+    const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
     const [loading, setLoading] = useState(true);
     const [selections, setSelections] = useState<Map<string, Set<string>>>(new Map());
     const [currentStep, setCurrentStep] = useState(0);
@@ -76,13 +81,13 @@ export default function QuizPage() {
     const [result, setResult] = useState<AssistantPayload | null>(null);
     const [lastResult, setLastResult] = useState<AssistantPayload | null>(null);
     const [hydrated, setHydrated] = useState(false);
-    const quizResultCacheKey = `${CACHE_KEYS.QUIZ_RESULT}_${userId}`;
+    const surveyResultCacheKey = `${CACHE_KEYS.SURVEY_RESULT}_${userId}`;
 
     // ── Fetch ─────────────────────────────────────────────────────
     const fetchQuestions = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await quizService.getQuestions();
+            const res = await surveyService.getQuestions();
             setQuestions([...res.data].reverse());
         } catch {
             // show empty state
@@ -96,8 +101,8 @@ export default function QuizPage() {
     useEffect(() => {
         let isMounted = true;
 
-        const restoreQuizResult = async () => {
-            const cached = await dexieCache.get<CachedQuizResult>(quizResultCacheKey);
+        const restoreSurveyResult = async () => {
+            const cached = await dexieCache.get<CachedSurveyResult>(surveyResultCacheKey);
             if (!isMounted) {
                 return;
             }
@@ -124,30 +129,30 @@ export default function QuizPage() {
             setHydrated(true);
         };
 
-        void restoreQuizResult();
+        void restoreSurveyResult();
 
         return () => {
             isMounted = false;
         };
-    }, [quizResultCacheKey]);
+    }, [surveyResultCacheKey]);
 
     useEffect(() => {
         if (!hydrated) {
             return;
         }
 
-        const payload: CachedQuizResult = {
+        const payload: CachedSurveyResult = {
             result: lastResult,
             selections: serializeSelections(selections),
             currentStep,
         };
 
-        void dexieCache.set<CachedQuizResult>(
-            quizResultCacheKey,
+        void dexieCache.set<CachedSurveyResult>(
+            surveyResultCacheKey,
             payload,
             CACHE_TTL.ONE_DAY,
         );
-    }, [currentStep, hydrated, lastResult, quizResultCacheKey, selections]);
+    }, [currentStep, hydrated, lastResult, surveyResultCacheKey, selections]);
 
     useEffect(() => {
         if (!questions.length) {
@@ -187,7 +192,7 @@ export default function QuizPage() {
 
     // ── Submit ────────────────────────────────────────────────────
     const handleSubmit = useCallback(async () => {
-        const payload: QuizQuesAnsDetailRequest[] = [];
+        const payload: SurveyQuesAnsDetailRequest[] = [];
         for (const [questionId, answerIds] of selections.entries()) {
             for (const answerId of answerIds) {
                 payload.push({ questionId, answerId });
@@ -195,12 +200,12 @@ export default function QuizPage() {
         }
         setSubmitting(true);
         try {
-            const res = await quizService.submitQuizV2(userId, payload);
+            const res = await surveyService.submitSurveyV2(userId, payload);
             const parsedRes = parseAiResponse(res.data);
             setResult(parsedRes);
             setLastResult(parsedRes);
-            await dexieCache.set<CachedQuizResult>(
-                quizResultCacheKey,
+            await dexieCache.set<CachedSurveyResult>(
+                surveyResultCacheKey,
                 {
                     result: parsedRes,
                     selections: serializeSelections(selections),
@@ -209,12 +214,16 @@ export default function QuizPage() {
                 CACHE_TTL.ONE_DAY,
             );
         } catch (err) {
-            console.error("Quiz submit error:", err);
-            const fallbackResult = { message: "Đã xảy ra lỗi khi lấy gợi ý. Vui lòng thử lại.", products: [] };
+            console.error("Survey submit error:", err);
+            const fallbackResult: AssistantPayload = {
+                message: "Đã xảy ra lỗi khi lấy gợi ý. Vui lòng thử lại.",
+                products: [],
+                suggestedQuestions: [],
+            };
             setResult(fallbackResult);
             setLastResult(fallbackResult);
-            await dexieCache.set<CachedQuizResult>(
-                quizResultCacheKey,
+            await dexieCache.set<CachedSurveyResult>(
+                surveyResultCacheKey,
                 {
                     result: fallbackResult,
                     selections: serializeSelections(selections),
@@ -225,7 +234,7 @@ export default function QuizPage() {
         } finally {
             setSubmitting(false);
         }
-    }, [userId, selections, currentStep, quizResultCacheKey]);
+    }, [userId, selections, currentStep, surveyResultCacheKey]);
 
     const handleReviewAnswers = useCallback(() => {
         setResult(null);
@@ -249,8 +258,8 @@ export default function QuizPage() {
         setCurrentStep(0);
         setResult(null);
         setLastResult(null);
-        void dexieCache.delete(quizResultCacheKey);
-    }, [quizResultCacheKey]);
+        void dexieCache.delete(surveyResultCacheKey);
+    }, [surveyResultCacheKey]);
 
     // ── Loading ───────────────────────────────────────────────────
     if (loading && !result) {
@@ -270,7 +279,7 @@ export default function QuizPage() {
                 <Header />
                 <Container maxWidth="md" sx={{ mt: 10, textAlign: "center" }}>
                     <Typography variant="h6" color="text.secondary">
-                        Hiện chưa có câu hỏi quiz. Vui lòng quay lại sau!
+                        Hiện chưa có câu hỏi survey. Vui lòng quay lại sau!
                     </Typography>
                 </Container>
             </>
@@ -283,7 +292,7 @@ export default function QuizPage() {
             <>
                 <Header />
                 <Container maxWidth="md" sx={{ py: 6 }}>
-                    <QuizResultView
+                    <SurveyResultView
                         result={result}
                         userId={userId}
                         onReviewAnswers={handleReviewAnswers}
@@ -295,7 +304,7 @@ export default function QuizPage() {
         );
     }
 
-    // ── Quiz ──────────────────────────────────────────────────────
+    // ── Survey ──────────────────────────────────────────────────────
     return (
         <>
             <Header />
@@ -316,7 +325,7 @@ export default function QuizPage() {
                             onClick={handleViewLastResult}
                             sx={{ mt: 1.25, textTransform: "none" }}
                         >
-                            Xem lại kết quả quiz gần nhất
+                            Xem lại kết quả survey gần nhất
                         </Button>
                     )}
                 </Box>
@@ -351,7 +360,7 @@ export default function QuizPage() {
 
                 {/* Question card */}
                 {currentQ && (
-                    <QuizQuestionCard
+                    <SurveyQuestionCard
                         question={currentQ}
                         selectedIds={selectedIds}
                         onSingleSelect={handleSingleSelect}

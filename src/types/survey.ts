@@ -1,14 +1,14 @@
 import { z } from "zod";
 import { productCardOutputItemSchema } from "./ai/product.output";
 
-/** Loại câu hỏi quiz */
+/** Loại câu hỏi survey */
 export const QuestionType = {
     SINGLE: 'single',
     MULTIPLE: 'multiple',
 } as const;
 export type QuestionType = typeof QuestionType[keyof typeof QuestionType];
 
-export interface QuizAnswer {
+export interface SurveyAnswer {
     id: string;
     createdAt: string;
     updatedAt: string;
@@ -16,38 +16,38 @@ export interface QuizAnswer {
     answer: string;
 }
 
-export interface QuizQuestion {
+export interface SurveyQuestion {
     id: string;
     createdAt: string;
     updatedAt: string;
     question: string;
     questionType: QuestionType;
-    answers: QuizAnswer[];
+    answers: SurveyAnswer[];
 }
 
-export interface QuizAnswerRequest {
+export interface SurveyAnswerRequest {
     answer: string;
 }
 
-export interface QuizQuestionRequest {
+export interface SurveyQuestionRequest {
     question: string;
     questionType?: QuestionType;
-    answers: QuizAnswerRequest[];
+    answers: SurveyAnswerRequest[];
 }
 
-export interface QuizQuestionsResponse {
+export interface SurveyQuestionsResponse {
     success: boolean;
     error: string | null;
-    data: QuizQuestion[];
+    data: SurveyQuestion[];
 }
 
-export interface QuizQuestionResponse {
+export interface SurveyQuestionResponse {
     success: boolean;
     error: string | null;
-    data: QuizQuestion;
+    data: SurveyQuestion;
 }
 
-export interface CreateQuizQuestionResponse {
+export interface CreateSurveyQuestionResponse {
     success: boolean;
     error: string | null;
     data: string; // Returns ID of the created question
@@ -59,12 +59,12 @@ export interface CheckFirstTimeResponse {
     data: boolean;
 }
 
-export interface QuizQuesAnsDetailRequest {
+export interface SurveyQuesAnsDetailRequest {
     questionId: string;
     answerId: string;
 }
 
-export interface UserQuizDetail {
+export interface UserSurveyDetail {
     id: string;
     createdAt: string;
     updatedAt: string;
@@ -74,49 +74,49 @@ export interface UserQuizDetail {
     answer: string;
 }
 
-export interface UserQuizRecord {
+export interface UserSurveyRecord {
     id: string;
     createdAt: string;
     updatedAt: string;
     userId: string;
-    details: UserQuizDetail[];
+    details: UserSurveyDetail[];
 }
 
-export interface SubmitQuizResponse {
+export interface SubmitSurveyResponse {
     success: boolean;
     error: string | null;
     data: string; // Returns string (id or success string)
 }
 
-export interface UserQuizRecordResponse {
+export interface UserSurveyRecordResponse {
     success: boolean;
     error: string | null;
-    data: UserQuizRecord;
+    data: UserSurveyRecord;
 }
 
 // ============ AI Output Schemas & Parsers ============
-export const quizOutputItemSchema = z.object({
+export const surveyOutputItemSchema = z.object({
     message: z.string(),
     products: z.array(productCardOutputItemSchema)
 });
 
-export const quizOutputSchema = quizOutputItemSchema;
-export type QuizOutputItem = z.infer<typeof quizOutputItemSchema>;
+export const surveyOutputSchema = surveyOutputItemSchema;
+export type SurveyOutputItem = z.infer<typeof surveyOutputItemSchema>;
 
-export const convertQuizOutputToResult = (output: unknown): QuizOutputItem | null => {
+export const convertSurveyOutputToResult = (output: unknown): SurveyOutputItem | null => {
     try {
         const jsonOutput = typeof output === 'string' ? JSON.parse(output) : output;
-        const parsedOutput = quizOutputSchema.safeParse(jsonOutput);
+        const parsedOutput = surveyOutputSchema.safeParse(jsonOutput);
 
         if (!parsedOutput.success) {
-            console.error('[Quiz Output] Invalid structured output from AI.', parsedOutput.error.issues);
-            console.warn('[Quiz Output] Output format:', JSON.stringify(jsonOutput).substring(0, 200));
+            console.error('[Survey Output] Invalid structured output from AI.', parsedOutput.error.issues);
+            console.warn('[Survey Output] Output format:', JSON.stringify(jsonOutput).substring(0, 200));
             return null;
         }
 
         return parsedOutput.data;
     } catch (error) {
-        console.error('[Quiz Output] Error parsing structured output:', error);
+        console.error('[Survey Output] Error parsing structured output:', error);
         return null;
     }
 };

@@ -28,19 +28,19 @@ export type ProductCardOutputItem = z.infer<typeof productCardOutputItemSchema>;
 export const convertProductCardOutputToProducts = (output: unknown): ProductCardOutputItem[] => {
     try {
         const jsonOutput = typeof output === 'string' ? JSON.parse(output) : output;
-        
+
         // Handle direct array format: [{ id, name, ... }]
         if (Array.isArray(jsonOutput)) {
             const itemSchema = z.array(productCardOutputItemSchema);
             const parsedArray = itemSchema.safeParse(jsonOutput);
-            
+
             if (!parsedArray.success) {
                 console.error('[Product Output] Invalid array format from AI.', parsedArray.error.issues);
                 return [];
             }
             return parsedArray.data;
         }
-        
+
         // Handle object format: { products: [...] }
         const parsedOutput = productOutputSchema.safeParse(jsonOutput);
 

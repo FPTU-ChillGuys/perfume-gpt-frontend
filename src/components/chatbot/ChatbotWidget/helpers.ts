@@ -35,9 +35,14 @@ export function parseAssistantPayload(raw: string): AssistantPayload {
       };
     }
     
-    return parsed as AssistantPayload;
+    // Ensure suggestedQuestions exists even if not in parsed
+    return {
+      message: parsed.message || "",
+      products: parsed.products || [],
+      suggestedQuestions: parsed.suggestedQuestions || [],
+    };
   } catch {
-    return { message: raw, products: [] };
+    return { message: raw, products: [], suggestedQuestions: [] };
   }
 }
 
