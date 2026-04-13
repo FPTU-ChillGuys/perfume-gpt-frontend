@@ -25,6 +25,7 @@ import { Header } from "@/components/layout/Header";
 import SurveyQuestionCard from "@/components/survey/user/SurveyQuestionCard";
 import SurveyResultView from "@/components/survey/user/SurveyResultView";
 
+
 // ── Parse AI response string ────────────────────────────────────
 function parseAiResponse(raw: string): AssistantPayload {
     try {

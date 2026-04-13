@@ -14,10 +14,10 @@ import type {
 
 
 class SurveyService {
-    // 1. GET /surveyzes/questions
+    // 1. GET /surveys/questions
     async getQuestions(): Promise<SurveyQuestionsResponse> {
         try {
-            const response = await aiApiInstance.GET("/surveyzes/questions", {});
+            const response = await aiApiInstance.GET("/surveys/questions", {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to fetch survey questions");
@@ -29,10 +29,10 @@ class SurveyService {
         }
     }
 
-    // 2. GET /surveyzes/questions/{id}
+    // 2. GET /surveys/questions/{id}
     async getQuestionById(id: string): Promise<SurveyQuestionResponse> {
         try {
-            const response = await aiApiInstance.GET(`/surveyzes/questions/${id}`, {});
+            const response = await aiApiInstance.GET(`/surveys/questions/${id}`, {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to fetch survey question");
@@ -44,10 +44,10 @@ class SurveyService {
         }
     }
 
-    // 3. POST /surveyzes/questions
+    // 3. POST /surveys/questions
     async createQuestion(data: SurveyQuestionRequest): Promise<CreateSurveyQuestionResponse> {
         try {
-            const response = await aiApiInstance.POST("/surveyzes/questions", {
+            const response = await aiApiInstance.POST("/surveys/questions", {
                 body: data
             });
 
@@ -61,10 +61,10 @@ class SurveyService {
         }
     }
 
-    // 3.5. POST /surveyzes/questions/list
+    // 3.5. POST /surveys/questions/list
     async createQuestions(data: SurveyQuestionRequest[]): Promise<any> {
         try {
-            const response = await aiApiInstance.POST("/surveyzes/questions/list", {
+            const response = await aiApiInstance.POST("/surveys/questions/list", {
                 body: data
             });
 
@@ -79,10 +79,10 @@ class SurveyService {
     }
 
 
-    // 4. PUT /surveyzes/questions/{id} — update question, questionType, answers
+    // 4. PUT /surveys/questions/{id} — update question, questionType, answers
     async updateQuestion(id: string, payload: { question: string; questionType?: QuestionType; answers: SurveyAnswerRequest[] }): Promise<any> {
         try {
-            const response = await aiApiInstance.PUT(`/surveyzes/questions/${id}`, {
+            const response = await aiApiInstance.PUT(`/surveys/questions/${id}`, {
                 body: payload
             });
 
@@ -96,10 +96,10 @@ class SurveyService {
         }
     }
 
-    // 5. GET /surveyzes/user/{userId}/check-first-time
+    // 5. GET /surveys/user/{userId}/check-first-time
     async checkFirstTime(userId: string): Promise<CheckFirstTimeResponse> {
         try {
-            const response = await aiApiInstance.GET(`/surveyzes/user/${userId}/check-first-time`, {});
+            const response = await aiApiInstance.GET(`/surveys/user/${userId}/check-first-time`, {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to check first time status");
@@ -111,10 +111,10 @@ class SurveyService {
         }
     }
 
-    // 6. POST /surveyzes/user?userId={userId}
+    // 6. POST /surveys/user?userId={userId}
     async submitSurveyAndGetAI(userId: string, answers: SurveyQuesAnsDetailRequest[]): Promise<SubmitSurveyResponse> {
         try {
-            const response = await aiApiInstance.POST("/surveyzes/user", {
+            const response = await aiApiInstance.POST("/surveys/user", {
                 params: {
                     query: { userId }
                 },
@@ -131,10 +131,10 @@ class SurveyService {
         }
     }
 
-    // 7. POST /surveyzes/user/v2?userId={userId}
+    // 7. POST /surveys/user/v2?userId={userId}
     async submitSurveyV2(userId: string, answers: SurveyQuesAnsDetailRequest[]): Promise<SubmitSurveyResponse> {
         try {
-            const response = await aiApiInstance.POST("/surveyzes/user/v2", {
+            const response = await aiApiInstance.POST("/surveys/user/v2", {
                 params: {
                     query: { userId }
                 },
@@ -151,10 +151,10 @@ class SurveyService {
         }
     }
 
-    // 8. GET /surveyzes/user/{userId}
+    // 8. GET /surveys/user/{userId}
     async getUserSurveyRecord(userId: string): Promise<UserSurveyRecordResponse> {
         try {
-            const response = await aiApiInstance.GET(`/surveyzes/user/${userId}`, {});
+            const response = await aiApiInstance.GET(`/surveys/user/${userId}`, {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to fetch user survey record");
@@ -166,10 +166,10 @@ class SurveyService {
         }
     }
 
-    // 9. DELETE /surveyzes/questions/{id} (soft delete)
+    // 9. DELETE /surveys/questions/{id} (soft delete)
     async deleteQuestion(id: string): Promise<{ success: boolean; error: string | null; data: boolean }> {
         try {
-            const response = await aiApiInstance.DELETE(`/surveyzes/questions/${id}`, {});
+            const response = await aiApiInstance.DELETE(`/surveys/questions/${id}`, {});
 
             if (!response.data?.success) {
                 throw new Error(response.data?.error || "Failed to delete survey question");

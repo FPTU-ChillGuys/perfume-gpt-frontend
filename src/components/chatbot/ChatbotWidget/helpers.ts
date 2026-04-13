@@ -1,5 +1,5 @@
-import type { ProductCardOutputItem } from "@/types/ai/product.output";
 import type { ChatMessage, AssistantPayload, ChatProduct } from "@/types/chatbot";
+import type { ProductCardOutputItem } from "@/types/ai/product.output";
 
 export function parseAssistantPayload(raw: string): AssistantPayload {
   try {
@@ -31,6 +31,7 @@ export function parseAssistantPayload(raw: string): AssistantPayload {
       return {
         message: parsed.message || raw,
         products,
+        suggestedQuestions: parsed.suggestedQuestions || [],
       };
     }
     

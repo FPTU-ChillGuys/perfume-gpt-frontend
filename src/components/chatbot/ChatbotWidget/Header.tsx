@@ -1,20 +1,17 @@
-import { Box, Avatar, Typography, Tooltip, Switch, IconButton } from "@mui/material";
-import { VolumeUp as VolumeUpIcon, Close as CloseIcon } from "@mui/icons-material";
+import { Box, Avatar, Typography, IconButton } from "@mui/material";
+import {
+  Close as CloseIcon,
+  Settings as SettingsIcon,
+} from "@mui/icons-material";
 import AiLogo from "@/assets/AI_LOGO.png";
 
 interface ChatHeaderProps {
-  dialogMode: boolean;
-  testMicMode: boolean;
-  onDialogModeChange: (enabled: boolean) => void;
-  onTestMicClick: () => void;
+  onSettingsClick: (event: React.MouseEvent<HTMLElement>) => void;
   onClose: () => void;
 }
 
 export function ChatHeader({
-  dialogMode,
-  testMicMode,
-  onDialogModeChange,
-  onTestMicClick,
+  onSettingsClick,
   onClose,
 }: ChatHeaderProps) {
   return (
@@ -61,64 +58,17 @@ export function ChatHeader({
         </Box>
       </Box>
 
-      {/* Dialog Mode Toggle */}
-      <Tooltip
-        title={
-          testMicMode
-            ? "Đang test mic..."
-            : dialogMode
-              ? "Tắt chế độ hội thoại"
-              : "Bật chế độ hội thoại"
-        }
+      <IconButton
+        size="small"
+        onClick={onSettingsClick}
+        sx={{
+          color: "rgba(255,255,255,0.8)",
+          "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.1)" },
+          mr: 0.5,
+        }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-          <VolumeUpIcon
-            sx={{
-              fontSize: 18,
-              opacity: dialogMode ? 1 : 0.6,
-              transition: "opacity 0.2s",
-            }}
-          />
-          <Switch
-            size="small"
-            checked={dialogMode}
-            onChange={(e) => {
-              onDialogModeChange(e.target.checked);
-            }}
-            sx={{
-              "& .MuiSwitch-switchBase.Mui-checked": {
-                color: "#2ecc71",
-              },
-              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                backgroundColor: "#2ecc71",
-              },
-            }}
-          />
-        </Box>
-      </Tooltip>
-
-      {/* Test Mic Button */}
-      {dialogMode && (
-        <Tooltip title={testMicMode ? "Dừng test mic" : "Test microphone"}>
-          <IconButton
-            size="small"
-            onClick={onTestMicClick}
-            sx={{
-              color: testMicMode ? "#dc2626" : "text.secondary",
-              bgcolor: testMicMode ? "#fef2f2" : "transparent",
-              border: testMicMode ? "1.5px solid #dc2626" : "none",
-              animation: testMicMode ? "pulse 1s infinite" : "none",
-              "@keyframes pulse": {
-                "0%, 100%": { opacity: 1 },
-                "50%": { opacity: 0.6 },
-              },
-              "&:hover": { bgcolor: "#fef2f2" },
-            }}
-          >
-            🎤
-          </IconButton>
-        </Tooltip>
-      )}
+        <SettingsIcon fontSize="small" />
+      </IconButton>
 
       <IconButton
         size="small"

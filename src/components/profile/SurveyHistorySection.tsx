@@ -9,7 +9,6 @@ import {
   Chip,
   alpha,
 } from "@mui/material";
-import SurveyIcon from "@mui/icons-material/Quiz";
 import QuestionAnswerIcon from "@mui/icons-material/QuestionAnswer";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
@@ -82,7 +81,7 @@ export const SurveyHistorySection = () => {
             bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
           }}
         >
-          <SurveyIcon color="primary" />
+          <QuestionAnswerIcon color="primary" />
         </Box>
         <Typography variant="h6" fontWeight="bold">
           Lịch sử khảo sát hương
@@ -117,7 +116,7 @@ export const SurveyHistorySection = () => {
             borderRadius: 3,
           }}
         >
-          <SurveyIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
+          <QuestionAnswerIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
           <Typography color="text.secondary" fontWeight={500}>
             Bạn chưa thực hiện khảo sát nào.
           </Typography>

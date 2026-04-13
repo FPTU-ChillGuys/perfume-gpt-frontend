@@ -6,7 +6,19 @@ import {
   Paper,
   Tooltip,
   Divider,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Switch,
+  Select,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
+import {
+  VolumeUp as VolumeUpIcon,
+  VolumeOff as VolumeOffIcon,
+} from "@mui/icons-material";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 import { useNavigate } from "react-router-dom";
 import AiLogo from "@/assets/AI_LOGO.png";
@@ -34,10 +46,19 @@ export default function ChatbotWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [dialogMode, setDialogMode] = useState(false);
   const [conversationActive, setConversationActive] = useState(false);
   const [textToSpeak, setTextToSpeak] = useState<string | null>(null);
-  const [testMicMode, setTestMicMode] = useState(false);
+  const [aiSpeaking, setAiSpeaking] = useState(false);
+
+  // Settings states
+  const [voiceEnabled, setVoiceEnabled] = useState(() => {
+    return localStorage.getItem("chatbot_voice_enabled") !== "false";
+  });
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => {
+    return localStorage.getItem("chatbot_selected_voice") || null;
+  });
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
 
   const {
     transcript,
@@ -52,6 +73,30 @@ export default function ChatbotWidget() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastInputTimeRef = useRef<number>(Date.now());
+
+  // Initialize voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const availableVoices = window.speechSynthesis.getVoices();
+      setVoices(availableVoices);
+    };
+
+    loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+  }, []);
+
+  // Persist settings
+  useEffect(() => {
+    localStorage.setItem("chatbot_voice_enabled", String(voiceEnabled));
+  }, [voiceEnabled]);
+
+  useEffect(() => {
+    if (selectedVoiceURI) {
+      localStorage.setItem("chatbot_selected_voice", selectedVoiceURI);
+    }
+  }, [selectedVoiceURI]);
 
   // Stable IDs for the lifetime of the widget
   const conversationId = useRef(uuid());
@@ -71,7 +116,7 @@ export default function ChatbotWidget() {
     await SpeechRecognition.stopListening();
   }, [clearSilenceTimer]);
 
-  const startListening = useCallback(async () => {
+  const startListening = useCallback(async (continuous = true) => {
     if (!browserSupportsSpeechRecognition) {
       showToast("Trình duyệt không hỗ trợ nhập giọng nói.", "error");
       return;
@@ -88,7 +133,7 @@ export default function ChatbotWidget() {
       resetTranscript();
       lastInputTimeRef.current = Date.now();
       await SpeechRecognition.startListening({
-        continuous: true,
+        continuous,
         language: "vi-VN",
       });
     } catch (e) {
@@ -107,6 +152,9 @@ export default function ChatbotWidget() {
       const finalText = text.trim();
       if (!finalText || loading) return;
 
+      // Stop listening immediately when sending
+      void stopListening();
+
       const newUserMsg: ChatMessage = { sender: "user", message: finalText };
       const updatedMessages = [...messages, newUserMsg];
       setMessages(updatedMessages);
@@ -122,8 +170,8 @@ export default function ChatbotWidget() {
 
         setMessages(data.messages);
 
-        // Auto-speak if dialog mode active
-        if (dialogMode && data.messages.length > 0) {
+        // Auto-speak last response
+        if (data.messages.length > 0) {
           const lastMsg = data.messages[data.messages.length - 1];
           if (lastMsg && lastMsg.sender === "assistant") {
             const payload = parseAssistantPayload(lastMsg.message);
@@ -136,18 +184,19 @@ export default function ChatbotWidget() {
       } finally {
         setLoading(false);
 
-        // Resume listening if in conversation mode
-        if (conversationActive && !testMicMode) {
-          setTimeout(() => startListening(), 300);
+        // Resume listening if in persistent conversation mode AND voice is disabled
+        // (If voice is enabled, utterance.onend will handle resuming)
+        if (conversationActive && !voiceEnabled) {
+          setTimeout(() => startListening(true), 300);
         }
       }
     },
-    [conversationActive, dialogMode, loading, messages, showToast, startListening, testMicMode],
+    [conversationActive, loading, messages, showToast, startListening],
   );
 
-  // Handle auto-submit when input hasn't changed for 3 seconds
+  // Handle auto-submit in conversation mode
   useEffect(() => {
-    if (!dialogMode || !conversationActive || testMicMode) {
+    if (!conversationActive) {
       clearSilenceTimer();
       return;
     }
@@ -171,14 +220,15 @@ export default function ChatbotWidget() {
     }, SILENCE_TIMEOUT);
 
     return () => clearSilenceTimer();
-  }, [input, dialogMode, conversationActive, testMicMode, sendMessageText, clearSilenceTimer]);
+  }, [input, conversationActive, sendMessageText, clearSilenceTimer]);
 
   // Update input field with transcript in real-time
   useEffect(() => {
-    if (dialogMode && conversationActive && !testMicMode) {
+    // Only update if transcript is NOT empty, AI is NOT speaking, and NOT loading
+    if (transcript && !aiSpeaking && !loading && !window.speechSynthesis.speaking) {
       setInput(transcript);
     }
-  }, [transcript, dialogMode, conversationActive, testMicMode]);
+  }, [transcript, aiSpeaking, loading]);
 
   // Scroll to bottom on new message
   useEffect(() => {
@@ -187,24 +237,42 @@ export default function ChatbotWidget() {
 
   // Handle text-to-speech
   useEffect(() => {
-    if (textToSpeak && "speechSynthesis" in window) {
+    if (textToSpeak && voiceEnabled && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
+      setAiSpeaking(true);
+      resetTranscript();
 
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = "vi-VN";
+
+      // Apply selected voice
+      if (selectedVoiceURI) {
+        const voice = voices.find((v) => v.voiceURI === selectedVoiceURI);
+        if (voice) utterance.voice = voice;
+      } else {
+        // Fallback to first Vietnamese voice
+        const viVoice = voices.find((v) => v.lang.startsWith("vi"));
+        if (viVoice) utterance.voice = viVoice;
+      }
       utterance.rate = 1;
       utterance.pitch = 1;
       utterance.volume = 1;
       utterance.onend = () => {
-        if (dialogMode && conversationActive && open) {
-          setTimeout(() => startListening(), 300);
+        setAiSpeaking(false);
+        if (conversationActive && open) {
+          setTimeout(() => startListening(true), 300);
         }
+      };
+      utterance.onerror = () => {
+        setAiSpeaking(false);
       };
 
       window.speechSynthesis.speak(utterance);
       setTextToSpeak(null);
+    } else if (textToSpeak && !voiceEnabled) {
+      setTextToSpeak(null);
     }
-  }, [startListening, textToSpeak, dialogMode, conversationActive, open]);
+  }, [startListening, textToSpeak, conversationActive, open, voiceEnabled, voices, selectedVoiceURI, resetTranscript]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -226,38 +294,27 @@ export default function ChatbotWidget() {
   };
 
   const handleVoiceInput = useCallback(async () => {
-    if (testMicMode) {
-      setTestMicMode(false);
+    if (listening) {
       await stopListening();
-    } else if (dialogMode) {
-      if (conversationActive) {
-        setConversationActive(false);
-        clearSilenceTimer();
-        await stopListening();
-        window.speechSynthesis.cancel();
-      } else {
-        setConversationActive(true);
-        setInput("");
-        resetTranscript();
-        await startListening();
-      }
     } else {
-      if (listening) {
-        await stopListening();
-      } else {
-        await startListening();
-      }
+      setConversationActive(false);
+      resetTranscript();
+      await startListening(false); // Record once
     }
-  }, [
-    clearSilenceTimer,
-    conversationActive,
-    dialogMode,
-    listening,
-    startListening,
-    stopListening,
-    testMicMode,
-    resetTranscript,
-  ]);
+  }, [listening, startListening, stopListening, resetTranscript]);
+
+  const handleConversationToggle = useCallback(async () => {
+    if (conversationActive) {
+      setConversationActive(false);
+      await stopListening();
+      window.speechSynthesis.cancel();
+    } else {
+      setConversationActive(true);
+      setInput("");
+      resetTranscript();
+      await startListening(true); // Persistent mode
+    }
+  }, [conversationActive, resetTranscript, startListening, stopListening]);
 
   const handleAddToCart = useCallback(
     async (variantId: string, productName: string) => {
@@ -330,27 +387,55 @@ export default function ChatbotWidget() {
           }}
         >
           <ChatHeader
-            dialogMode={dialogMode}
-            testMicMode={testMicMode}
-            onDialogModeChange={(enabled) => {
-              setDialogMode(enabled);
-              if (!enabled) {
-                setConversationActive(false);
-                setTestMicMode(false);
-              }
-            }}
-            onTestMicClick={() => {
-              if (testMicMode) {
-                setTestMicMode(false);
-                void stopListening();
-              } else {
-                setTestMicMode(true);
-                resetTranscript();
-                void startListening();
-              }
-            }}
+            onSettingsClick={(e) => setSettingsAnchor(e.currentTarget)}
             onClose={() => setOpen(false)}
           />
+
+          <Menu
+            anchorEl={settingsAnchor}
+            open={Boolean(settingsAnchor)}
+            onClose={() => setSettingsAnchor(null)}
+            PaperProps={{
+              sx: { width: 280, borderRadius: 2, mt: 1 }
+            }}
+          >
+            <MenuItem sx={{ py: 1.5 }}>
+              <ListItemIcon>
+                {voiceEnabled ? <VolumeUpIcon /> : <VolumeOffIcon />}
+              </ListItemIcon>
+              <ListItemText primary="Phát giọng nói AI" />
+              <Switch
+                edge="end"
+                checked={voiceEnabled}
+                onChange={(e) => setVoiceEnabled(e.target.checked)}
+              />
+            </MenuItem>
+
+            <Divider />
+
+            <Box sx={{ p: 2 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>Chọn giọng nói</InputLabel>
+                <Select
+                  value={selectedVoiceURI || ""}
+                  label="Chọn giọng nói"
+                  onChange={(e) => setSelectedVoiceURI(e.target.value)}
+                  disabled={!voiceEnabled}
+                >
+                  {voices
+                    .filter(v => v.lang.startsWith("vi") || v.lang.startsWith("en"))
+                    .map((voice) => (
+                      <MenuItem key={voice.voiceURI} value={voice.voiceURI}>
+                        {voice.name} ({voice.lang})
+                      </MenuItem>
+                    ))}
+                  {voices.length === 0 && (
+                    <MenuItem disabled>Đang tải danh sách giọng...</MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+            </Box>
+          </Menu>
 
           <Divider />
 
@@ -359,26 +444,28 @@ export default function ChatbotWidget() {
             loading={loading}
             onMessageClick={(s) => setInput(s)}
             messagesEndRef={messagesEndRef}
-            renderMessage={(msg, idx) => (
+            renderMessage={(msg, idx, isLastMessage) => (
               <MessageBubble
                 key={idx}
                 msg={msg}
                 onAddToCart={handleAddToCart}
                 onNavigate={handleNavigate}
+                onSuggestionClick={sendMessageText}
+                isLastMessage={isLastMessage}
               />
             )}
             renderTypingIndicator={() => <TypingIndicator />}
           />
 
           <ChatInput
-            dialogMode={dialogMode}
-            testMicMode={testMicMode}
             conversationActive={conversationActive}
             input={input}
             transcript={transcript}
             loading={loading}
+            listening={listening}
             browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
             onVoiceInput={handleVoiceInput}
+            onConversationToggle={handleConversationToggle}
             onInputChange={setInput}
             onKeyDown={handleKeyDown}
             onSend={handleSend}
