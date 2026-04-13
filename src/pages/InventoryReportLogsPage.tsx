@@ -359,6 +359,7 @@ export const InventoryReportLogsPage = () => {
             <AIInventoryReportDialog
                 open={aiDialogOpen}
                 onClose={() => setAiDialogOpen(false)}
+                onSuccess={loadLogs}
             />
         </AdminLayout>
     );

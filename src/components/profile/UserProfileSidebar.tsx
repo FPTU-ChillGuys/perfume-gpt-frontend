@@ -23,7 +23,7 @@ import {
   AssignmentReturn as ReturnIcon,
   Stars as LoyaltyIcon,
   Spa as SpaIcon,
-  Quiz as QuizIcon,
+  Quiz as SurveyIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
@@ -98,8 +98,8 @@ export const UserProfileSidebar = ({ userInfo, avatarUrl }: UserProfileSidebarPr
     },
     {
       label: "Lịch Sử Khảo Sát",
-      icon: <QuizIcon fontSize="small" />,
-      path: "/profile/quiz-history",
+      icon: <SurveyIcon fontSize="small" />,
+      path: "/profile/survey-history",
     },
   ];
 

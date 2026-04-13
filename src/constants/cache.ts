@@ -27,4 +27,5 @@ export const CACHE_TTL = {
 export const CACHE_KEYS = {
   CATEGORIES_LOOKUP: "categories_lookup",
   ALL_PRODUCTS_FOR_CATEGORY_FILTER: "all_products_for_category_filter",
+  SURVEY_RESULT: "survey_result",
 } as const;

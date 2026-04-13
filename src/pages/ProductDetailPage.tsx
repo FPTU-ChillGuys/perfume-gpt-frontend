@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -117,6 +117,7 @@ const sortVariantMediaWithPrimaryFirst = (mediaList: MediaResponse[]) => {
 
 const ProductDetailPage = () => {
   const { productId } = useParams<{ productId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
@@ -194,6 +195,7 @@ const ProductDetailPage = () => {
   const THUMB_VISIBLE = 5;
   const THUMB_SIZE = 72;
   const THUMB_GAP = 8;
+  const requestedVariantId = searchParams.get("variantId");
 
   useEffect(() => {
     if (!productId) {
@@ -214,7 +216,12 @@ const ProductDetailPage = () => {
 
         setProductDetail(detailResponse);
 
-        const firstAvailableVariant = detailResponse.variants?.find(
+        const variants = detailResponse.variants ?? [];
+        const requestedVariant = requestedVariantId
+          ? variants.find((variant) => variant.id === requestedVariantId)
+          : undefined;
+
+        const firstAvailableVariant = variants.find(
           (variant) => {
             const stockQuantity = variant?.stockQuantity;
             return typeof stockQuantity !== "number" || stockQuantity > 0;
@@ -222,11 +229,19 @@ const ProductDetailPage = () => {
         );
 
         setSelectedVariantId(
-          (current) =>
-            current ||
-            firstAvailableVariant?.id ||
-            detailResponse.variants?.[0]?.id ||
-            null,
+          (current) => {
+            const currentVariantStillValid = current
+              ? variants.some((variant) => variant.id === current)
+              : false;
+
+            return (
+              requestedVariant?.id ||
+              (currentVariantStillValid ? current : null) ||
+              firstAvailableVariant?.id ||
+              variants[0]?.id ||
+              null
+            );
+          },
         );
       };
 
@@ -271,7 +286,17 @@ const ProductDetailPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [productId]);
+  }, [productId, requestedVariantId]);
+
+  useEffect(() => {
+    if (!selectedVariantId || searchParams.get("variantId") === selectedVariantId) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("variantId", selectedVariantId);
+    setSearchParams(nextParams, { replace: true });
+  }, [selectedVariantId, searchParams, setSearchParams]);
 
   const displayVariants = useMemo(() => {
     return (productDetail?.variants || []).map((variant) => ({

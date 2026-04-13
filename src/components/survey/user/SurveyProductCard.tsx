@@ -27,7 +27,7 @@ interface Props {
     userId: string;
 }
 
-export default function QuizProductCard({ product, userId }: Props) {
+export default function SurveyProductCard({ product, userId }: Props) {
     const navigate = useNavigate();
     const { showToast } = useToast();
 
@@ -37,7 +37,10 @@ export default function QuizProductCard({ product, userId }: Props) {
     const [adding, setAdding] = useState(false);
 
     const goToProduct = () => {
-        navigate(`/products/${product.id}`);
+        const variantQuery = selectedVariant?.id
+            ? `?variantId=${encodeURIComponent(selectedVariant.id)}`
+            : "";
+        navigate(`/products/${product.id}${variantQuery}`);
     };
 
     const handleAddToCart = async (e: React.MouseEvent) => {

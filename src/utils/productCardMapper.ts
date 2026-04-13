@@ -43,12 +43,27 @@ export const mapProductToCard = (
   product: ProductListItem & { id: string },
   variant?: VariantCardSource,
 ): ProductCardProps => {
-  const finiteVariantPrices = Array.isArray(product.variantPrices)
+  const finiteVariantPricesFromField = Array.isArray(product.variantPrices)
     ? product.variantPrices.filter(
         (candidate): candidate is number =>
           typeof candidate === "number" && Number.isFinite(candidate),
       )
     : [];
+
+  const variantItems = Array.isArray((product as any).variants)
+    ? ((product as any).variants as Array<{ basePrice?: number; volumeMl?: number }>)
+    : [];
+  const finiteVariantPricesFromItems = variantItems
+    .map((item) => item.basePrice)
+    .filter(
+      (candidate): candidate is number =>
+        typeof candidate === "number" && Number.isFinite(candidate),
+    );
+
+  const finiteVariantPrices = [
+    ...finiteVariantPricesFromField,
+    ...finiteVariantPricesFromItems,
+  ];
 
   const minVariantPrice =
     finiteVariantPrices.length > 0

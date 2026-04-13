@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Dialog,
     DialogTitle,
@@ -31,6 +32,8 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
     data,
     title = "Chi tiết dự đoán nhập hàng",
 }) => {
+    const navigate = useNavigate();
+
     // Helper function to format price
     const formatPrice = (price?: number) => {
         if (price === undefined) return "N/A";
@@ -38,6 +41,26 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
             style: "currency",
             currency: "VND",
         }).format(price);
+    };
+
+    // Handle creating import order from restock suggestions
+    const handleCreateImportOrder = () => {
+        if (!data || data.length === 0) {
+            return;
+        }
+
+        // Create import data structure
+        const importData = data.map((variant) => ({
+            variantId: variant.id,
+            quantity: variant.suggestedRestockQuantity,
+            price: variant.basePrice,
+        }));
+
+        // Encode to base64 for URL
+        const encodedData = btoa(JSON.stringify(importData));
+
+        // Navigate to import stock page with tab 1 (Create Import Stock)
+        navigate(`/admin/import-stock?importData=${encodedData}&tab=1`);
     };
 
     return (
@@ -95,8 +118,16 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                 )}
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose} variant="contained" color="primary">
+                <Button onClick={onClose} variant="outlined" color="primary">
                     Đóng
+                </Button>
+                <Button
+                    onClick={handleCreateImportOrder}
+                    variant="contained"
+                    color="success"
+                    disabled={!data || data.length === 0}
+                >
+                    Tạo Đơn Nhập Hàng từ Đề xuất này
                 </Button>
             </DialogActions>
         </Dialog>
