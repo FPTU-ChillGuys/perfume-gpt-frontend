@@ -9,8 +9,8 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
   Delivered: "Đã giao hàng",
   Returning: "Đang hoàn trả",
   Cancelled: "Đã hủy",
-  Partial_Returned: "Trả hàng một phần",
-  Returned: "Đã trả hàng",
+  Partial_Returned: "Trả hàng một phần/Hoàn tiền một phần",
+  Returned: "Đã trả hàng/Hoàn tiền",
 };
 
 // Vietnamese labels for payment status

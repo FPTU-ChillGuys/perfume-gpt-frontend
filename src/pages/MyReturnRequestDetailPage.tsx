@@ -535,8 +535,8 @@ export const MyReturnRequestDetailPage = () => {
                       startIcon={<ArrowBackIcon />}
                       onClick={handleBack}
                       size="small"
-                      sx={{ 
-                        color: "text.secondary", 
+                      sx={{
+                        color: "text.secondary",
                         textTransform: "none",
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         px: { xs: 1, sm: 2 },
@@ -587,7 +587,7 @@ export const MyReturnRequestDetailPage = () => {
                       <Typography
                         variant="body2"
                         color="text.secondary"
-                        sx={{ 
+                        sx={{
                           letterSpacing: 0.5,
                           fontSize: { xs: "0.75rem", sm: "0.875rem" },
                           display: { xs: "none", sm: "block" },
@@ -598,12 +598,16 @@ export const MyReturnRequestDetailPage = () => {
                           {(request.orderCode || "-").toUpperCase()}
                         </b>
                       </Typography>
-                      <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                      <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={{ display: { xs: "none", sm: "block" } }}
+                      />
                       <Typography
                         variant="body2"
                         fontWeight={700}
-                        sx={{ 
-                          color: "#ee4d2d", 
+                        sx={{
+                          color: "#ee4d2d",
                           textTransform: "uppercase",
                           fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         }}
@@ -876,6 +880,19 @@ export const MyReturnRequestDetailPage = () => {
                         </Box>
                       </Box>
                     </Box>
+
+                    {request.status === "ApprovedForReturn" &&
+                      request.returnShippingInfo?.trackingNumber && (
+                        <Alert severity="success" sx={{ mb: 1 }}>
+                          <Typography variant="body2" sx={{ lineHeight: 1.6 }}>
+                            Vui lòng <strong>in đơn vận chuyển</strong> từ nút
+                            "In phiếu" ở trên, sau đó{" "}
+                            <strong>dán vào bên ngoài kiện hàng</strong> để bưu
+                            tá có thể đến lấy. Bước này rất quan trọng để đảm
+                            bảo việc vận chuyển diễn ra suôn sẻ.
+                          </Typography>
+                        </Alert>
+                      )}
 
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
