@@ -2,6 +2,7 @@ import {
     Box,
     Button,
     Chip,
+    CircularProgress,
     Divider,
     Typography,
 } from "@mui/material";
@@ -21,11 +22,12 @@ interface Props {
     result: AssistantPayload;
     userId: string;
     onReviewAnswers: () => void;
-    onResetAnswers: () => void;
+    onReanalyze: () => void;
     onRestart: () => void;
+    isSubmitting?: boolean;
 }
 
-export default function SurveyResultView({ result, userId, onReviewAnswers, onResetAnswers, onRestart }: Props) {
+export default function SurveyResultView({ result, userId, onReviewAnswers, onReanalyze, onRestart, isSubmitting }: Props) {
     return (
         <Box>
             {/* Header */}
@@ -109,11 +111,12 @@ export default function SurveyResultView({ result, userId, onReviewAnswers, onRe
                 <Button
                     variant="outlined"
                     color="warning"
-                    startIcon={<ResetIcon />}
-                    onClick={onResetAnswers}
+                    startIcon={isSubmitting ? <CircularProgress size={18} color="inherit" /> : <ResetIcon />}
+                    onClick={onReanalyze}
+                    disabled={isSubmitting}
                     sx={{ borderRadius: 5, px: 3 }}
                 >
-                    Reset đáp án
+                    {isSubmitting ? "Đang phân tích..." : "Reset đáp án"}
                 </Button>
 
                 <Button

@@ -241,11 +241,9 @@ export default function SurveyPage() {
         setCurrentStep(0);
     }, []);
 
-    const handleResetAnswersOnly = useCallback(() => {
-        setSelections(new Map());
-        setCurrentStep(0);
-        setResult(null);
-    }, []);
+    const handleReanalyze = useCallback(async () => {
+        await handleSubmit();
+    }, [handleSubmit]);
 
     const handleViewLastResult = useCallback(() => {
         if (lastResult) {
@@ -296,8 +294,9 @@ export default function SurveyPage() {
                         result={result}
                         userId={userId}
                         onReviewAnswers={handleReviewAnswers}
-                        onResetAnswers={handleResetAnswersOnly}
+                        onReanalyze={handleReanalyze}
                         onRestart={handleRestart}
+                        isSubmitting={submitting}
                     />
                 </Container>
             </>
