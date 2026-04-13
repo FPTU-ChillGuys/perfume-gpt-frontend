@@ -266,7 +266,7 @@ const menuGroups: SidebarMenuGroup[] = [
       {
         text: "Survey",
         icon: <SurveyIcon />,
-        path: "/admin/quiz",
+        path: "/admin/survey/",
         roles: ["admin"],
       },
       {
