@@ -11,12 +11,16 @@ interface MessageBubbleProps {
   msg: ChatMessage;
   onAddToCart: (variantId: string, productName: string) => void;
   onNavigate: (productId: string) => void;
+  onSuggestionClick?: (question: string) => void;
+  isLastMessage?: boolean;
 }
 
 export function MessageBubble({
   msg,
   onAddToCart,
   onNavigate,
+  onSuggestionClick,
+  isLastMessage = false,
 }: MessageBubbleProps) {
   const isUser = msg.sender === "user";
 
@@ -76,7 +80,7 @@ export function MessageBubble({
             borderRadius: "18px 18px 18px 4px",
             px: 2,
             py: 1,
-            mb: payload.products.length > 0 ? 1 : 0,
+            mb: payload.products?.length > 0 ? 1 : 0,
             "& > p": { lineHeight: 1.6, mb: 1, margin: 0 },
             "& > p:last-child": { mb: 0 },
             "& ul, & ol": { pl: 2, mb: 1 },
@@ -116,7 +120,7 @@ export function MessageBubble({
         </Box>
 
         {/* Product cards */}
-        {payload.products.length > 0 && (
+        {payload.products?.length > 0 && (
           <Box
             sx={{
               display: "flex",
@@ -137,6 +141,43 @@ export function MessageBubble({
                 onAddToCart={onAddToCart}
                 onNavigate={onNavigate}
               />
+            ))}
+          </Box>
+        )}
+
+        {/* Suggested questions - only show in last message */}
+        {isLastMessage && payload.suggestedQuestions && payload.suggestedQuestions.length > 0 && (
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 1,
+              mt: 1.5,
+            }}
+          >
+            {payload.suggestedQuestions.map((question, idx) => (
+              <Box
+                key={idx}
+                onClick={() => onSuggestionClick?.(question)}
+                sx={{
+                  bgcolor: "#fff",
+                  border: "1px solid #dc2626",
+                  color: "#dc2626",
+                  borderRadius: "16px",
+                  px: 1.5,
+                  py: 0.5,
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                  "&:hover": {
+                    bgcolor: "#fef2f2",
+                    transform: "translateY(-1px)",
+                    boxShadow: "0 2px 4px rgba(220,38,38,0.1)",
+                  },
+                }}
+              >
+                {question}
+              </Box>
             ))}
           </Box>
         )}

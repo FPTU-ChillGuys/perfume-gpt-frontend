@@ -31,6 +31,7 @@ export function parseAssistantPayload(raw: string): AssistantPayload {
       return {
         message: parsed.message || raw,
         products,
+        suggestedQuestions: parsed.suggestedQuestions || [],
       };
     }
     

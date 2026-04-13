@@ -7,7 +7,7 @@ interface ChatMessagesProps {
   loading: boolean;
   onMessageClick: (suggestion: string) => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  renderMessage: (msg: ChatMessage, idx: number) => React.ReactNode;
+  renderMessage: (msg: ChatMessage, idx: number, isLastMessage: boolean) => React.ReactNode;
   renderTypingIndicator: () => React.ReactNode;
 }
 
@@ -97,7 +97,7 @@ export function ChatMessages({
         </Box>
       )}
 
-      {messages.map((msg, idx) => renderMessage(msg, idx))}
+      {messages.map((msg, idx) => renderMessage(msg, idx, idx === messages.length - 1))}
 
       {loading && renderTypingIndicator()}
       <div ref={messagesEndRef} />
