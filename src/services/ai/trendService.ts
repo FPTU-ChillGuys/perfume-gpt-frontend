@@ -78,7 +78,7 @@ class TrendService {
      * Nếu backend báo pending (về null), và không yêu cầu forceRefresh, thì lấy fallback (ngày hôm qua)
      * Trả về kết quả (hoặc empty array, hoặc null nếu cả 2 ngày đều đang processing).
      */
-    async getCurrentOrPreviousDailyTrend(forceRefresh?: boolean): Promise<ProductListItem[] | null> {
+    async getCurrentOrPreviousWeeklyTrend(forceRefresh?: boolean): Promise<ProductListItem[] | null> {
         const today = dayjs().format("YYYY-MM-DD");
         const yesterday = dayjs().subtract(1, "day").format("YYYY-MM-DD");
 

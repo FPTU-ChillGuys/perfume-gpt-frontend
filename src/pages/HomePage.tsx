@@ -106,7 +106,7 @@ export const HomePage = () => {
       setIsTrendingLoading(true);
       try {
         const products =
-          await trendService.getCurrentOrPreviousDailyTrend(false);
+          await trendService.getCurrentOrPreviousWeeklyTrend(false);
 
         if (!isMounted) return;
 
