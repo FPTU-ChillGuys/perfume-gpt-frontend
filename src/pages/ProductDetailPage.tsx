@@ -145,6 +145,8 @@ const ProductDetailPage = () => {
   const variantCacheRef = useRef<Map<string, MediaResponse[]>>(new Map());
   const reviewTargetCacheRef = useRef<Record<string, ReviewDialogTarget>>({});
   const reviewSummaryCacheRef = useRef<Map<string, string>>(new Map());
+  const reviewAbortControllerRef = useRef<AbortController | null>(null);
+  const variantChangeTimerRef = useRef<number | null>(null);
 
   // States: AI Review Summary
   const [reviewSummary, setReviewSummary] = useState<string | null>(null);
@@ -199,8 +201,8 @@ const ProductDetailPage = () => {
   const THUMB_VISIBLE = 5;
   const THUMB_SIZE = 72;
   const THUMB_GAP = 8;
-  const requestedVariantId = searchParams.get("variantId");
 
+  // Effect: Fetch product data ONLY when productId changes
   useEffect(() => {
     if (!productId) {
       setError("Không tìm thấy sản phẩm");
@@ -213,38 +215,6 @@ const ProductDetailPage = () => {
     setError(null);
 
     const fetchData = async () => {
-      const applyDetail = (detailResponse: PublicProductDetail | null) => {
-        if (!detailResponse) {
-          return;
-        }
-
-        setProductDetail(detailResponse);
-
-        const variants = detailResponse.variants ?? [];
-        const requestedVariant = requestedVariantId
-          ? variants.find((variant) => variant.id === requestedVariantId)
-          : undefined;
-
-        const firstAvailableVariant = variants.find((variant) => {
-          const stockQuantity = variant?.stockQuantity;
-          return typeof stockQuantity !== "number" || stockQuantity > 0;
-        });
-
-        setSelectedVariantId((current) => {
-          const currentVariantStillValid = current
-            ? variants.some((variant) => variant.id === current)
-            : false;
-
-          return (
-            requestedVariant?.id ||
-            (currentVariantStillValid ? current : null) ||
-            firstAvailableVariant?.id ||
-            variants[0]?.id ||
-            null
-          );
-        });
-      };
-
       try {
         const detailPromise = productService.getProductDetail(productId);
         const infoPromise = productService.getProductInformation(productId);
@@ -255,7 +225,7 @@ const ProductDetailPage = () => {
           return;
         }
 
-        applyDetail(detailFirst);
+        setProductDetail(detailFirst);
         setLoading(false);
 
         const infoResult = await Promise.allSettled([infoPromise]);
@@ -267,8 +237,6 @@ const ProductDetailPage = () => {
         if (infoResult[0]?.status === "fulfilled") {
           setInformation(infoResult[0].value);
         }
-
-        setLoading(false);
       } catch (err: any) {
         if (!isMounted) {
           return;
@@ -286,20 +254,57 @@ const ProductDetailPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [productId, requestedVariantId]);
+  }, [productId]); // Only depend on productId, not variant
 
+  // Effect: Initialize variant selection after product data loads
   useEffect(() => {
-    if (
-      !selectedVariantId ||
-      searchParams.get("variantId") === selectedVariantId
-    ) {
-      return;
+    if (!productDetail) return;
+
+    const variants = productDetail.variants ?? [];
+    if (variants.length === 0) return;
+
+    // Only set variant if not already selected
+    if (selectedVariantId) {
+      // Verify current selection is still valid
+      const isValid = variants.some((v) => v.id === selectedVariantId);
+      if (isValid) return;
     }
 
+    // Priority: URL param > first available > first variant
+    const requestedVariantId = searchParams.get("variantId");
+    const requestedVariant = requestedVariantId
+      ? variants.find((v) => v.id === requestedVariantId)
+      : undefined;
+
+    const firstAvailableVariant = variants.find((variant) => {
+      const stockQuantity = variant?.stockQuantity;
+      return typeof stockQuantity !== "number" || stockQuantity > 0;
+    });
+
+    const selectedId =
+      requestedVariant?.id ||
+      firstAvailableVariant?.id ||
+      variants[0]?.id ||
+      null;
+
+    if (selectedId) {
+      setSelectedVariantId(selectedId);
+    }
+  }, [productDetail, selectedVariantId, searchParams]);
+
+  // Effect: Sync selected variant to URL (one-way: state -> URL)
+  useEffect(() => {
+    if (!selectedVariantId) return;
+
+    const currentVariantInUrl = searchParams.get("variantId");
+    if (currentVariantInUrl === selectedVariantId) return;
+
+    // Use window.history to avoid triggering React Router re-renders
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("variantId", selectedVariantId);
-    setSearchParams(nextParams, { replace: true });
-  }, [selectedVariantId, searchParams, setSearchParams]);
+    const newUrl = `${window.location.pathname}?${nextParams.toString()}`;
+    window.history.replaceState(null, "", newUrl);
+  }, [selectedVariantId, searchParams]);
 
   const displayVariants = useMemo(() => {
     return (productDetail?.variants || []).map((variant) => ({
@@ -326,6 +331,20 @@ const ProductDetailPage = () => {
           ? variant.discountedPrice
           : null,
     }));
+  }, [productDetail]);
+
+  // Effect: Pre-cache all variant media for instant switching
+  useEffect(() => {
+    if (!productDetail?.variants) return;
+
+    productDetail.variants.forEach((variant) => {
+      if (!variant.id) return;
+      // Skip if already cached
+      if (variantCacheRef.current.has(variant.id)) return;
+
+      const sorted = sortVariantMediaWithPrimaryFirst(variant.media || []);
+      variantCacheRef.current.set(variant.id, sorted);
+    });
   }, [productDetail]);
 
   useEffect(() => {
@@ -380,10 +399,17 @@ const ProductDetailPage = () => {
     setIsLoadingMedia(false);
   }, [selectedVariantId, productDetail, displayVariants]);
 
-  // Effect: Fetch AI Review Summary
+  // Effect: Fetch AI Review Summary with debounce and abort control
   useEffect(() => {
+    // Abort any ongoing request when variant changes
+    if (reviewAbortControllerRef.current) {
+      reviewAbortControllerRef.current.abort();
+      reviewAbortControllerRef.current = null;
+    }
+
     if (!selectedVariantId || loading) {
       setReviewSummary(null);
+      setIsReviewLoading(false);
       return;
     }
 
@@ -403,32 +429,50 @@ const ProductDetailPage = () => {
     }
 
     let isMounted = true;
+    // Increase debounce to 800ms to prevent spam
     const timer = window.setTimeout(() => {
+      if (!isMounted) return;
+
       setIsReviewLoading(true);
       setReviewError(null);
       setReviewSummary(null);
 
+      const abortController = new AbortController();
+      reviewAbortControllerRef.current = abortController;
+
       reviewService
         .fetchReviewSummaryWithPolling(selectedVariantId)
         .then((summary) => {
-          if (!isMounted) return;
+          if (!isMounted || abortController.signal.aborted) return;
           reviewSummaryCacheRef.current.set(selectedVariantId, summary);
           setReviewSummary(summary);
         })
         .catch((err) => {
-          if (!isMounted) return;
-          setReviewError(
-            err.message || "Không thể tải tóm tắt đánh giá hiện tại.",
-          );
+          if (!isMounted || abortController.signal.aborted) return;
+          // Only show error if it's not an abort error
+          if (err.name !== "AbortError") {
+            setReviewError(
+              err.message || "Không thể tải tóm tắt đánh giá hiện tại.",
+            );
+          }
         })
         .finally(() => {
-          if (isMounted) setIsReviewLoading(false);
+          if (isMounted && !abortController.signal.aborted) {
+            setIsReviewLoading(false);
+          }
+          if (reviewAbortControllerRef.current === abortController) {
+            reviewAbortControllerRef.current = null;
+          }
         });
-    }, 500);
+    }, 800);
 
     return () => {
       isMounted = false;
       window.clearTimeout(timer);
+      if (reviewAbortControllerRef.current) {
+        reviewAbortControllerRef.current.abort();
+        reviewAbortControllerRef.current = null;
+      }
     };
   }, [selectedVariantId, loading, shouldLoadReviewSummary]);
 
@@ -476,6 +520,18 @@ const ProductDetailPage = () => {
     handleScroll();
 
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (variantChangeTimerRef.current) {
+        window.clearTimeout(variantChangeTimerRef.current);
+      }
+      if (reviewAbortControllerRef.current) {
+        reviewAbortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const selectedVariant = useMemo(
@@ -557,14 +613,25 @@ const ProductDetailPage = () => {
   );
 
   const handleVariantChange = (_: unknown, value: string | null) => {
-    if (value) {
+    if (!value || value === selectedVariantId) return;
+
+    // Update state immediately for instant UI response
+    setSelectedVariantId(value);
+
+    // Clear any pending variant change logging
+    if (variantChangeTimerRef.current) {
+      window.clearTimeout(variantChangeTimerRef.current);
+    }
+
+    // Debounce only the activity logging to avoid spam
+    variantChangeTimerRef.current = window.setTimeout(() => {
       productActivityLogService
         .logProductView(productId, value)
         .catch((error) => {
           console.error("Failed to log variant click", error);
         });
-      setSelectedVariantId(value);
-    }
+      variantChangeTimerRef.current = null;
+    }, 500); // Increase debounce for logging only
   };
 
   const resolveReviewTargetForVariant = async (
