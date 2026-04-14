@@ -6,9 +6,13 @@ import {
   Button,
   CircularProgress,
   Divider,
+  Chip,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCartOutlined } from "@mui/icons-material";
+import {
+  ShoppingCartOutlined,
+  LocalOffer as LocalOfferIcon,
+} from "@mui/icons-material";
 import { cartService } from "@/services/cartService";
 import type { CartItem } from "@/types/cart";
 
@@ -42,11 +46,13 @@ export const CartDropdown = ({
     try {
       const fetchedItems = await cartService.getItems();
       setItems(fetchedItems);
-      // Tính tổng từ items
-      const totalAmount = fetchedItems.reduce(
-        (sum, item) => sum + (Number(item.subTotal) || 0),
-        0,
-      );
+      // Tính tổng từ items sử dụng finalTotal (nếu có discount) hoặc subTotal
+      const totalAmount = fetchedItems.reduce((sum, item) => {
+        const itemTotal = item.finalTotal
+          ? Number(item.finalTotal)
+          : Number(item.subTotal || 0);
+        return sum + itemTotal;
+      }, 0);
       setTotal(totalAmount);
     } catch (error) {
       console.error("Failed to load cart items:", error);
@@ -77,6 +83,7 @@ export const CartDropdown = ({
         vertical: "top",
         horizontal: "right",
       }}
+      disableScrollLock
       PaperProps={{
         sx: {
           mt: 1,
@@ -167,79 +174,123 @@ export const CartDropdown = ({
                 },
               }}
             >
-              {items.map((item) => (
-                <Box
-                  key={item.cartItemId}
-                  sx={{
-                    display: "flex",
-                    gap: 2,
-                    py: 2,
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    "&:last-child": {
-                      borderBottom: "none",
-                    },
-                  }}
-                >
+              {items.map((item) => {
+                // Strict check: only true if discount exists AND is greater than 0
+                const hasDiscount = !!(
+                  item.discount &&
+                  Number(item.discount) > 0 &&
+                  item.subTotal &&
+                  Number(item.subTotal) > 0
+                );
+                const percentage = hasDiscount
+                  ? Math.round(
+                      (Number(item.discount) / Number(item.subTotal)) * 100,
+                    )
+                  : 0;
+                const lineTotal = item.finalTotal
+                  ? Number(item.finalTotal)
+                  : item.subTotal
+                    ? Number(item.subTotal)
+                    : 0;
+
+                return (
                   <Box
+                    key={item.cartItemId}
                     sx={{
-                      width: 60,
-                      height: 60,
-                      flexShrink: 0,
-                      bgcolor: "grey.100",
-                      borderRadius: 1,
-                      overflow: "hidden",
                       display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      gap: 2,
+                      py: 2,
+                      borderBottom: "1px solid",
+                      borderColor: "divider",
+                      "&:last-child": {
+                        borderBottom: "none",
+                      },
                     }}
                   >
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.variantName || "Sản phẩm"}
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <Typography variant="caption" color="text.secondary">
-                        Không có ảnh
-                      </Typography>
-                    )}
-                  </Box>
-
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography
-                      variant="body2"
-                      fontWeight={600}
+                    <Box
                       sx={{
+                        width: 60,
+                        height: 60,
+                        flexShrink: 0,
+                        bgcolor: "grey.100",
+                        borderRadius: 1,
                         overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        mb: 0.5,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
                     >
-                      {item.variantName}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Số lượng: {item.quantity}
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      fontWeight={600}
-                      color="error.main"
-                      sx={{ mt: 0.5 }}
-                    >
-                      {formatCurrency(item.subTotal)}
-                    </Typography>
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.variantName || "Sản phẩm"}
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          Không có ảnh
+                        </Typography>
+                      )}
+                    </Box>
+
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          mb: 0.5,
+                        }}
+                      >
+                        {item.variantName}
+                      </Typography>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        display="block"
+                        mb={0.5}
+                      >
+                        Số lượng: {item.quantity}
+                      </Typography>
+                      <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                        {hasDiscount && item.subTotal && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ textDecoration: "line-through" }}
+                          >
+                            {formatCurrency(item.subTotal)}
+                          </Typography>
+                        )}
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          color="error.main"
+                        >
+                          {formatCurrency(lineTotal)}
+                        </Typography>
+                        {hasDiscount && (
+                          <Chip
+                            icon={<LocalOfferIcon fontSize="small" />}
+                            label={`-${percentage}%`}
+                            color="error"
+                            size="small"
+                            variant="filled"
+                          />
+                        )}
+                      </Box>
+                    </Box>
                   </Box>
-                </Box>
-              ))}
+                );
+              })}
             </Box>
 
             <Divider sx={{ my: 2 }} />
