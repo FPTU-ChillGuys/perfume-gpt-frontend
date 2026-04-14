@@ -4982,6 +4982,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ledgers/cash-flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    FromDate?: string;
+                    ToDate?: string;
+                    FlowType?: components["schemas"]["CashFlowType"];
+                    Category?: components["schemas"]["CashFlowCategory"];
+                    ReferenceId?: string;
+                    ReferenceCode?: string;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ledgers/inventory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    FromDate?: string;
+                    ToDate?: string;
+                    VariantId?: string;
+                    BatchId?: string;
+                    Type?: components["schemas"]["StockTransactionType"];
+                    ReferenceId?: string;
+                    ActorId?: string;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/loyaltytransactions/me/history": {
         parameters: {
             query?: never;
@@ -13080,8 +13201,22 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfPagedResultOfCashFlowLedgerItemResponse: {
+            payload?: null | components["schemas"]["PagedResultOfCashFlowLedgerItemResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfPagedResultOfImportTicketListItem: {
             payload?: null | components["schemas"]["PagedResultOfImportTicketListItem"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfPagedResultOfInventoryLedgerItemResponse: {
+            payload?: null | components["schemas"]["PagedResultOfInventoryLedgerItemResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -13501,6 +13636,24 @@ export interface components {
         CancelRequestStatus: "Pending" | "Approved" | "Rejected";
         /** @enum {string} */
         CarrierName: "GHN" | "GHTK";
+        /** @enum {string} */
+        CashFlowCategory: "OrderPayment" | "Refund" | "ShippingFeeToGHN" | "SupplierPayment";
+        CashFlowLedgerItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: date-time */
+            transactionDate?: string;
+            /** Format: decimal */
+            amount?: number;
+            flowType?: components["schemas"]["CashFlowType"];
+            category?: components["schemas"]["CashFlowCategory"];
+            /** Format: uuid */
+            referenceId?: string;
+            referenceCode?: null | string;
+            description?: null | string;
+        };
+        /** @enum {string} */
+        CashFlowType: "In" | "Out";
         CategoriesLookupItem: {
             /** Format: int32 */
             id?: number;
@@ -13970,6 +14123,26 @@ export interface components {
             createdAt?: string;
             importDetails: components["schemas"]["ImportDetailResponse"][];
         };
+        InventoryLedgerItemResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: uuid */
+            variantId?: string;
+            /** Format: uuid */
+            batchId?: string;
+            /** Format: int32 */
+            quantityChange?: number;
+            /** Format: int32 */
+            balanceAfter?: number;
+            type?: components["schemas"]["StockTransactionType"];
+            /** Format: uuid */
+            referenceId?: string;
+            description?: null | string;
+            /** Format: uuid */
+            actorId?: null | string;
+        };
         InventoryLevelsResponse: {
             /** Format: int32 */
             totalVariants?: number;
@@ -14318,8 +14491,34 @@ export interface components {
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
+        PagedResultOfCashFlowLedgerItemResponse: {
+            items: components["schemas"]["CashFlowLedgerItemResponse"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
         PagedResultOfImportTicketListItem: {
             items: components["schemas"]["ImportTicketListItem"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
+        PagedResultOfInventoryLedgerItemResponse: {
+            items: components["schemas"]["InventoryLedgerItemResponse"][];
             /** Format: int32 */
             pageNumber: number;
             /** Format: int32 */
@@ -15301,6 +15500,8 @@ export interface components {
         };
         /** @enum {string} */
         StockStatus: "OutOfStock" | "LowStock" | "Normal";
+        /** @enum {string} */
+        StockTransactionType: "Import" | "Sales" | "Adjustment";
         StringSegment: {
             buffer?: null | string;
             /** Format: int32 */

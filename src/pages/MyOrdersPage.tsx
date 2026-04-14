@@ -263,6 +263,8 @@ export const MyOrdersPage = () => {
     useState<Record<string, ReturnRequestStatus>>({});
   const [cancelRequestStatusByOrderId, setCancelRequestStatusByOrderId] =
     useState<Record<string, string>>({});
+  const [reviewedOrderDetailIds, setReviewedOrderDetailIds] =
+    useState<Set<string>>(new Set());
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
@@ -271,6 +273,7 @@ export const MyOrdersPage = () => {
         { items, totalCount: count },
         returnRequestResult,
         cancelRequestResult,
+        myReviews,
       ] = await Promise.all([
         orderService.getMyOrders({
           PageNumber: page,
@@ -300,6 +303,9 @@ export const MyOrdersPage = () => {
             SortOrder: "desc",
           })
           .catch(() => ({ items: [] as OrderCancelRequest[] })),
+        productReviewService
+          .getMyReviews()
+          .catch(() => []),
       ]);
 
       const latestStatusByOrderId: Record<string, ReturnRequestStatus> = {};
@@ -324,10 +330,18 @@ export const MyOrdersPage = () => {
         }
       });
 
+      const reviewedDetailIds = new Set<string>();
+      myReviews.forEach((review) => {
+        if (review.orderDetailId) {
+          reviewedDetailIds.add(review.orderDetailId);
+        }
+      });
+
       setOrders(items as OrderListItemWithReturnable[]);
       setTotalCount(count);
       setReturnRequestStatusByOrderId(latestStatusByOrderId);
       setCancelRequestStatusByOrderId(latestCancelStatusByOrderId);
+      setReviewedOrderDetailIds(reviewedDetailIds);
     } catch (error) {
       console.error("Failed to load my orders", error);
       showToast(
@@ -400,6 +414,28 @@ export const MyOrdersPage = () => {
   const getDisplayOrderCode = (order?: OrderListItemWithReturnable | null) =>
     order?.code || order?.id || "-";
 
+  const getOrderReviewStatus = (order: OrderListItemWithReturnable) => {
+    const orderDetails = order.orderDetails ?? [];
+    if (orderDetails.length === 0) return null;
+
+    let reviewedCount = 0;
+    orderDetails.forEach((detail) => {
+      if (detail.id && reviewedOrderDetailIds.has(detail.id)) {
+        reviewedCount++;
+      }
+    });
+
+    if (reviewedCount === 0) {
+      return null; // No reviews yet
+    }
+
+    if (reviewedCount === orderDetails.length) {
+      return "fully"; // All items reviewed
+    }
+
+    return "partial"; // Some items reviewed
+  };
+
   const handleCopyOrderCode = async (orderCode?: string | null) => {
     if (!orderCode) return;
 
@@ -428,7 +464,9 @@ export const MyOrdersPage = () => {
   };
 
   const handleReviewSuccess = () => {
-    // reviews are loaded fresh on detail page
+    // Reload orders to update review status
+    void loadOrders();
+    handleReviewDialogClose();
   };
 
   const handleConfirmCancelOrder = async () => {
@@ -1198,14 +1236,27 @@ export const MyOrdersPage = () => {
                               {order.status === "Delivered" && (
                                 <Button
                                   size="small"
-                                  variant="contained"
+                                  variant={getOrderReviewStatus(order) === "fully" ? "outlined" : "contained"}
                                   onClick={() => handleOpenDetail(order.id)}
                                   sx={{
-                                    bgcolor: "#ee4d2d",
-                                    "&:hover": { bgcolor: "#d03e27" },
+                                    ...(getOrderReviewStatus(order) === "fully"
+                                      ? {
+                                          borderColor: "#999",
+                                          color: "#999",
+                                          "&:hover": {
+                                            borderColor: "#666",
+                                            bgcolor: "rgba(0,0,0,0.04)",
+                                          },
+                                        }
+                                      : {
+                                          bgcolor: "#ee4d2d",
+                                          "&:hover": { bgcolor: "#d03e27" },
+                                        }),
                                   }}
                                 >
-                                  Đánh giá
+                                  {getOrderReviewStatus(order) === "fully"
+                                    ? "Đã đánh giá"
+                                    : "Đánh giá"}
                                 </Button>
                               )}
                               <Button

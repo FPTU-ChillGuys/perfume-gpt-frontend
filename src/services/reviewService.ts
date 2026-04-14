@@ -1,4 +1,4 @@
-import { apiInstance } from "@/lib/api";
+import { apiInstance, getApiBaseUrl } from "@/lib/api";
 import { getStoredAccessToken } from "@/utils/authStorage";
 import type {
   ReviewResponse,
@@ -184,36 +184,6 @@ class ProductReviewService {
     }
   }
 
-  async updateReview(
-    reviewId: string,
-    payload: UpdateReviewRequest,
-  ): Promise<BulkActionResultOfstring> {
-    try {
-      const accessToken = getStoredAccessToken();
-      const response = await fetch(`/api/reviews/${reviewId}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await response.json().catch(() => null);
-
-      if (!response.ok || !data?.success) {
-        throw new Error(data?.message || "Không thể cập nhật đánh giá");
-      }
-
-      return (data.payload as BulkActionResultOfstring) || {};
-    } catch (error: any) {
-      console.error("Error updating review:", error);
-      throw new Error(
-        this.extractErrorMessage(error, "Không thể cập nhật đánh giá"),
-      );
-    }
-  }
-
   async deleteReview(reviewId: string): Promise<string> {
     try {
       const response = await apiInstance.DELETE("/api/reviews/{reviewId}", {
@@ -294,7 +264,8 @@ class ProductReviewService {
 
     try {
       const accessToken = getStoredAccessToken();
-      const endpoint = "/api/reviews/images/temporary";
+      const baseUrl = getApiBaseUrl();
+      const endpoint = `${baseUrl}/api/reviews/images/temporary`;
 
       let lastErrorMessage = "Không thể tải ảnh tạm thời";
 

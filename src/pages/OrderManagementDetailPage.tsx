@@ -298,7 +298,7 @@ const OrderSummaryBox = ({ order }: OrderSummaryProps) => {
         <Typography variant="body2" color="text.secondary">
           Phí vận chuyển
         </Typography>
-        <Typography variant="body2" fontWeight={500}>
+        <Typography variant="body2" fontWeight={500} color="success.main">
           {fmt(order.shippingFee ?? 0)}
         </Typography>
       </Box>
