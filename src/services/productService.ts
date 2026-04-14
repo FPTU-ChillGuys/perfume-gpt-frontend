@@ -804,6 +804,33 @@ class ProductService {
       );
     }
   }
+
+  async getPolicy(
+    policyCode: "USAGE_STORAGE" | "SHIPPING_RETURN",
+  ): Promise<{
+    policyCode: string;
+    title: string;
+    htmlContent: string;
+    lastUpdated?: string;
+  } | null> {
+    try {
+      const response = await apiInstance.GET("/api/policies/{policyCode}", {
+        params: {
+          path: { policyCode },
+        },
+      });
+
+      if (!response.data?.success) {
+        console.warn(`Failed to fetch policy ${policyCode}`);
+        return null;
+      }
+
+      return response.data.payload || null;
+    } catch (error: any) {
+      console.error(`Error fetching policy ${policyCode}:`, error);
+      return null;
+    }
+  }
 }
 
 export const productService = new ProductService();

@@ -35,10 +35,6 @@ import { productActivityLogService } from "@/services/ai/productActivityLogServi
 import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewSection } from "@/components/review/ReviewSection";
-import {
-  productDetailTabsContent,
-  normalizeProductDetailTabContent,
-} from "@/constants/productDetailTabsContent";
 import type {
   MediaResponse,
   PublicProductDetail,
@@ -179,6 +175,17 @@ const ProductDetailPage = () => {
   );
   const [showStickyHeader, setShowStickyHeader] = useState(false);
 
+  // States: System Policies
+  const [usagePolicy, setUsagePolicy] = useState<{
+    title: string;
+    htmlContent: string;
+  } | null>(null);
+  const [shippingPolicy, setShippingPolicy] = useState<{
+    title: string;
+    htmlContent: string;
+  } | null>(null);
+  const [isPoliciesLoading, setIsPoliciesLoading] = useState(false);
+
   const fetchMyReviews = useCallback(async (): Promise<ReviewResponse[]> => {
     if (!isAuthenticated) {
       setMyReviews([]);
@@ -197,6 +204,53 @@ const ProductDetailPage = () => {
       setIsLoadingMyReviews(false);
     }
   }, [isAuthenticated]);
+
+  // Effect: Fetch policies ONCE on component mount (not dependent on variant)
+  useEffect(() => {
+    let isMounted = true;
+    setIsPoliciesLoading(true);
+
+    const fetchPolicies = async () => {
+      try {
+        // Fetch both policies in parallel
+        const [usageResponse, shippingResponse] = await Promise.all([
+          productService.getPolicy("USAGE_STORAGE"),
+          productService.getPolicy("SHIPPING_RETURN"),
+        ]);
+
+        if (!isMounted) return;
+
+        if (usageResponse?.title && usageResponse?.htmlContent) {
+          setUsagePolicy({
+            title: usageResponse.title,
+            htmlContent: usageResponse.htmlContent,
+          });
+        }
+
+        if (shippingResponse?.title && shippingResponse?.htmlContent) {
+          setShippingPolicy({
+            title: shippingResponse.title,
+            htmlContent: shippingResponse.htmlContent,
+          });
+        }
+      } catch (error) {
+        if (isMounted) {
+          console.error("Error fetching policies:", error);
+          // Keep using defaults on error
+        }
+      } finally {
+        if (isMounted) {
+          setIsPoliciesLoading(false);
+        }
+      }
+    };
+
+    void fetchPolicies();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array - fetch only once on mount
 
   const THUMB_VISIBLE = 5;
   const THUMB_SIZE = 72;
@@ -299,7 +353,7 @@ const ProductDetailPage = () => {
     // Read directly from window.location to get the actual current URL
     const currentUrlParams = new URLSearchParams(window.location.search);
     const currentVariantInUrl = currentUrlParams.get("variantId");
-    
+
     if (currentVariantInUrl === selectedVariantId) return;
 
     // Update URL without triggering React Router re-renders
@@ -876,13 +930,6 @@ const ProductDetailPage = () => {
   );
 
   const renderInformationTabs = () => {
-    const usageContent = normalizeProductDetailTabContent(
-      productDetailTabsContent.usageAndStorage,
-    );
-    const shippingContent = normalizeProductDetailTabContent(
-      productDetailTabsContent.shippingAndReturn,
-    );
-
     return (
       <Box mt={4}>
         <Tabs
@@ -963,25 +1010,39 @@ const ProductDetailPage = () => {
             </Stack>
           )}
 
-          {infoTab === "usage" && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ whiteSpace: "pre-line", lineHeight: 1.8 }}
-            >
-              {usageContent}
-            </Typography>
-          )}
+          {infoTab === "usage" &&
+            (usagePolicy?.htmlContent ? (
+              <Box
+                component="div"
+                color="text.secondary"
+                lineHeight={1.8}
+                sx={{
+                  "& p": { m: 0, mb: 1.5 },
+                  "& p:last-child": { mb: 0 },
+                  "& ul": { pl: 2, mb: 1.5 },
+                  "& ol": { pl: 2, mb: 1.5 },
+                  "& li": { mb: 0.5 },
+                }}
+                dangerouslySetInnerHTML={{ __html: usagePolicy.htmlContent }}
+              />
+            ) : null)}
 
-          {infoTab === "shipping" && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ whiteSpace: "pre-line", lineHeight: 1.8 }}
-            >
-              {shippingContent}
-            </Typography>
-          )}
+          {infoTab === "shipping" &&
+            (shippingPolicy?.htmlContent ? (
+              <Box
+                component="div"
+                color="text.secondary"
+                lineHeight={1.8}
+                sx={{
+                  "& p": { m: 0, mb: 1.5 },
+                  "& p:last-child": { mb: 0 },
+                  "& ul": { pl: 2, mb: 1.5 },
+                  "& ol": { pl: 2, mb: 1.5 },
+                  "& li": { mb: 0.5 },
+                }}
+                dangerouslySetInnerHTML={{ __html: shippingPolicy.htmlContent }}
+              />
+            ) : null)}
         </Box>
       </Box>
     );
