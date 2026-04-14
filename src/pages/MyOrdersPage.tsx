@@ -1357,7 +1357,6 @@ export const MyOrdersPage = () => {
                   </Alert>
                   <Autocomplete
                     options={vietQrBanks}
-                    freeSolo
                     value={selectedCancelRefundBank}
                     inputValue={cancelRefundBankName}
                     loading={isLoadingVietQrBanks}
@@ -1369,24 +1368,17 @@ export const MyOrdersPage = () => {
                     isOptionEqualToValue={(option, value) =>
                       option.id === value.id
                     }
-                    onInputChange={(_, value) => {
-                      setCancelRefundBankName(value);
-                      if (
-                        selectedCancelRefundBank &&
-                        getBankDisplayName(selectedCancelRefundBank) !== value
-                      ) {
-                        setSelectedCancelRefundBank(null);
-                      }
+                    onInputChange={() => {
+                      // Prevent free input - only allow selection from list
                     }}
                     onChange={(_, bank) => {
                       if (!bank) {
                         setSelectedCancelRefundBank(null);
+                        setCancelRefundBankName("");
                         return;
                       }
 
                       if (typeof bank === "string") {
-                        setSelectedCancelRefundBank(null);
-                        setCancelRefundBankName(bank);
                         return;
                       }
 
@@ -1452,6 +1444,10 @@ export const MyOrdersPage = () => {
                           vietQrBankError ||
                           "Chọn ngân hàng từ danh sách VietQR"
                         }
+                        inputProps={{
+                          ...params.inputProps,
+                          readOnly: true,
+                        }}
                       />
                     )}
                   />
@@ -1558,7 +1554,9 @@ export const MyOrdersPage = () => {
             <RadioGroup
               value={selectedRetryMethod}
               onChange={(e) =>
-                setSelectedRetryMethod(e.target.value as NonNullable<PaymentMethod>)
+                setSelectedRetryMethod(
+                  e.target.value as NonNullable<PaymentMethod>,
+                )
               }
             >
               {allowedRetryMethods.map((method) => (

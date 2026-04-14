@@ -81,6 +81,7 @@ export type CreateReturnRequestDto =
   components["schemas"]["CreateReturnRequestDto"];
 export type ReturnOrderReason = components["schemas"]["ReturnOrderReason"];
 export type CancelOrderReason = components["schemas"]["CancelOrderReason"];
+export type CancelRequestStatus = components["schemas"]["CancelRequestStatus"];
 export type ContactAddressInformation =
   components["schemas"]["ContactAddressInformation"];
 export interface CreateReturnRequestPayload {

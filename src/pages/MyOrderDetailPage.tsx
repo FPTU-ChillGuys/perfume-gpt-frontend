@@ -714,8 +714,7 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
     return "Khuyến mãi";
   };
 
-  const showVoucherDiscount =
-    (order.voucherDiscountTotal ?? 0) > 0;
+  const showVoucherDiscount = (order.voucherDiscountTotal ?? 0) > 0;
 
   return (
     <Stack spacing={1}>
@@ -737,7 +736,7 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
 
       {showVoucherDiscount && (
         <Box display="flex" justifyContent="space-between">
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="body2" color="text.secondary" component="div">
             {getVoucherTypeLabel(order.voucherType)}
             {order.voucherCode && (
               <Chip
@@ -750,6 +749,7 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
                   backgroundColor: "success.light",
                   color: "success.dark",
                   borderRadius: 1,
+                  display: "inline-flex",
                 }}
               />
             )}
@@ -2656,7 +2656,6 @@ export const MyOrderDetailPage = () => {
                   </Alert>
                   <Autocomplete
                     options={vietQrBanks}
-                    freeSolo
                     value={selectedCancelRefundBank}
                     inputValue={cancelRefundBankName}
                     loading={isLoadingVietQrBanks}
@@ -2668,24 +2667,18 @@ export const MyOrderDetailPage = () => {
                     isOptionEqualToValue={(option, value) =>
                       option.id === value.id
                     }
-                    onInputChange={(_, value) => {
-                      setCancelRefundBankName(value);
-                      if (
-                        selectedCancelRefundBank &&
-                        getBankDisplayName(selectedCancelRefundBank) !== value
-                      ) {
-                        setSelectedCancelRefundBank(null);
-                      }
+                    onInputChange={() => {
+                      // Prevent free input - only allow selection from list
                     }}
                     onChange={(_, bank) => {
                       if (!bank) {
                         setSelectedCancelRefundBank(null);
+                        setCancelRefundBankName("");
                         return;
                       }
 
+                      // Only accept bank objects, reject strings
                       if (typeof bank === "string") {
-                        setSelectedCancelRefundBank(null);
-                        setCancelRefundBankName(bank);
                         return;
                       }
 
@@ -2751,6 +2744,10 @@ export const MyOrderDetailPage = () => {
                           vietQrBankError ||
                           "Chọn ngân hàng từ danh sách VietQR"
                         }
+                        inputProps={{
+                          ...params.inputProps,
+                          readOnly: true,
+                        }}
                       />
                     )}
                   />
@@ -3308,7 +3305,6 @@ export const MyOrderDetailPage = () => {
                 </Alert>
                 <Autocomplete
                   options={vietQrBanks}
-                  freeSolo
                   value={selectedRefundBank}
                   inputValue={refundBankName}
                   loading={isLoadingVietQrBanks}
@@ -3320,24 +3316,18 @@ export const MyOrderDetailPage = () => {
                   isOptionEqualToValue={(option, value) =>
                     option.id === value.id
                   }
-                  onInputChange={(_, value) => {
-                    setRefundBankName(value);
-                    if (
-                      selectedRefundBank &&
-                      getBankDisplayName(selectedRefundBank) !== value
-                    ) {
-                      setSelectedRefundBank(null);
-                    }
+                  onInputChange={() => {
+                    // Prevent free input - only allow selection from list
                   }}
                   onChange={(_, bank) => {
                     if (!bank) {
                       setSelectedRefundBank(null);
+                      setRefundBankName("");
                       return;
                     }
 
+                    // Only accept bank objects, reject strings
                     if (typeof bank === "string") {
-                      setSelectedRefundBank(null);
-                      setRefundBankName(bank);
                       return;
                     }
 
@@ -3395,6 +3385,10 @@ export const MyOrderDetailPage = () => {
                       helperText={
                         vietQrBankError || "Chọn ngân hàng từ danh sách VietQR"
                       }
+                      inputProps={{
+                        ...params.inputProps,
+                        readOnly: true,
+                      }}
                     />
                   )}
                 />

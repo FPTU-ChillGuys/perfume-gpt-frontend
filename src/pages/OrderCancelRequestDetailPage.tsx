@@ -38,6 +38,13 @@ import {
   type CancelOrderReason,
 } from "@/utils/cancelOrderReason";
 import { formatDateTimeVN, formatDateVN } from "@/utils/dateTime";
+import {
+  CancelStatusStepper,
+  RefundInfoSection,
+  OrderItemsSummary,
+} from "@/components/cancel-request";
+
+type CancelRequestStatus = "Pending" | "Approved" | "Rejected";
 
 const REJECT_NOTE_SUGGESTIONS = [
   "Lý do hủy không hợp lệ theo chính sách hiện tại.",

@@ -5,8 +5,8 @@ import {
   Button,
   CircularProgress,
   Container,
-  Divider,
   Paper,
+  Divider,
   Stack,
   Typography,
 } from "@mui/material";
@@ -16,22 +16,32 @@ import { orderService, type OrderCancelRequest } from "@/services/orderService";
 import { userService } from "@/services/userService";
 import type { UserCredentials } from "@/services/userService";
 import type { OrderResponse } from "@/types/order";
-import type { PaymentMethod } from "@/types/checkout";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import {
   CANCEL_ORDER_REASON_OPTIONS,
   type CancelOrderReason,
 } from "@/utils/cancelOrderReason";
 import { useToast } from "@/hooks/useToast";
-import { formatDateTimeVN } from "@/utils/dateTime";
+import { formatDateVN } from "@/utils/dateTime";
+import {
+  CancelStatusStepper,
+  RefundInfoSection,
+  OrderItemsSummary,
+} from "@/components/cancel-request";
 
 type CancelRequestStatus = "Pending" | "Approved" | "Rejected";
 
-const statusLabel = (status?: string) => {
-  if (status === "Pending") return "Chờ xử lý";
-  if (status === "Approved") return "Đã duyệt";
-  if (status === "Rejected") return "Từ chối";
-  return status || "-";
+const getStatusLabel = (status: CancelRequestStatus): string => {
+  switch (status) {
+    case "Pending":
+      return "Chờ xử lí";
+    case "Approved":
+      return "Đã duyệt";
+    case "Rejected":
+      return "Từ chối";
+    default:
+      return status;
+  }
 };
 
 const cancelReasonLabel = (reason?: string | null) => {
@@ -42,20 +52,6 @@ const cancelReasonLabel = (reason?: string | null) => {
   );
 
   return matchedReason?.label || reason;
-};
-
-const formatDate = (value?: string | null) => formatDateTimeVN(value);
-
-const formatCurrency = (value?: number | null) =>
-  `${new Intl.NumberFormat("vi-VN").format(Number(value ?? 0))} đ`;
-
-const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
-  CashOnDelivery: "Thanh toán khi nhận hàng",
-  CashInStore: "Thanh toán tại quầy",
-  VnPay: "Thanh toán qua VNPay",
-  Momo: "Thanh toán qua MoMo",
-  ExternalBankTransfer: "Chuyển khoản ngân hàng",
-  PayOs: "Thanh toán qua PayOS",
 };
 
 export const MyCancelRequestDetailPage = () => {
@@ -124,25 +120,8 @@ export const MyCancelRequestDetailPage = () => {
     });
   };
 
-  const orderSubtotal =
-    order?.orderDetails?.reduce(
-      (sum, item) => sum + Number(item.total ?? 0),
-      0,
-    ) ?? 0;
-  const shippingFee = Number(order?.shippingInfo?.shippingFee ?? 0);
-  const grandTotal = Number(order?.totalAmount ?? 0);
-  const voucherDiscount = Math.max(orderSubtotal + shippingFee - grandTotal, 0);
-
-  const paymentMethod =
-    order?.paymentTransactions?.find(
-      (transaction) =>
-        transaction.transactionType === "Payment" &&
-        transaction.status === "Success" &&
-        Boolean(transaction.paymentMethod),
-    )?.paymentMethod ||
-    order?.paymentTransactions?.find((transaction) =>
-      Boolean(transaction.paymentMethod),
-    )?.paymentMethod;
+  const cancelRequestStatus = (request?.status ??
+    "Pending") as CancelRequestStatus;
 
   return (
     <MainLayout>
@@ -234,11 +213,7 @@ export const MyCancelRequestDetailPage = () => {
                           ).toUpperCase()}
                         </b>
                       </Typography>
-                      <Divider
-                        orientation="vertical"
-                        flexItem
-                        sx={{ display: { xs: "none", sm: "block" } }}
-                      />
+                      <Divider orientation="vertical" flexItem />
                       <Typography
                         variant="body2"
                         fontWeight={700}
@@ -246,359 +221,139 @@ export const MyCancelRequestDetailPage = () => {
                           color: "#ee4d2d",
                           textTransform: "uppercase",
                           fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                          whiteSpace: "nowrap",
                         }}
                       >
-                        {statusLabel(request.status)}
+                        {getStatusLabel(cancelRequestStatus)}
                       </Typography>
                     </Box>
                   </Box>
 
                   <Box sx={{ p: 3 }}>
-                    <Stack spacing={2}>
-                      <Paper
-                        variant="outlined"
-                        sx={{ p: 2.5, borderRadius: 2 }}
+                    <Stack spacing={3}>
+                      <CancelStatusStepper
+                        status={cancelRequestStatus}
+                        isRefunded={request?.isRefunded}
+                      />
+
+                      <Box
+                        display="grid"
+                        gridTemplateColumns={{ xs: "1fr", lg: "1.2fr 1.8fr" }}
+                        gap={2.5}
                       >
-                        <Stack
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          mb={1.5}
+                        {/* Cột Trái: Thông tin chung */}
+                        <Paper
+                          variant="outlined"
+                          sx={{ p: 2.5, borderRadius: 2 }}
                         >
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                          >
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              sx={{ fontFamily: "monospace" }}
-                            >
-                              Đơn hàng: #{order?.code || request.orderId || "-"}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              ·
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {formatDate(request.createdAt)}
-                            </Typography>
-                          </Stack>
-                        </Stack>
-
-                        <Divider sx={{ mb: 1.5 }} />
-
-                        <Stack spacing={1}>
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Lý do hủy:</strong>{" "}
-                            {cancelReasonLabel(request.reason)}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Số tiền hoàn:</strong>{" "}
-                            <Typography
-                              component="span"
-                              variant="subtitle2"
-                              fontWeight={700}
-                              sx={{ color: "#ee4d2d" }}
-                            >
-                              {formatCurrency(request.refundAmount)}
-                            </Typography>
-                          </Typography>
-                          {request.staffNote && (
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Ghi chú xử lý:</strong>{" "}
-                              {request.staffNote}
-                            </Typography>
-                          )}
-                          {request.updatedAt && (
-                            <Typography variant="body2" color="text.secondary">
-                              <strong>Ngày xử lý:</strong>{" "}
-                              {formatDate(request.updatedAt)}
-                            </Typography>
-                          )}
-                        </Stack>
-                      </Paper>
-
-                      {order && (
-                        <Box
-                          display="grid"
-                          gridTemplateColumns={{ xs: "1fr", lg: "2fr 1fr" }}
-                          gap={2}
-                        >
-                          <Paper variant="outlined" sx={{ borderRadius: 2 }}>
-                            <Box
-                              sx={{
-                                px: 2,
-                                py: 1.25,
-                                borderBottom: "1px solid",
-                                borderColor: "divider",
-                              }}
-                            >
-                              <Typography fontWeight={700} variant="subtitle2">
-                                Sản phẩm trong đơn
+                          <Stack spacing={1.5}>
+                            <Box display="flex" justifyContent="space-between">
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                sx={{ fontFamily: "monospace" }}
+                              >
+                                Mã đơn hàng:
+                              </Typography>
+                              <Typography variant="body2" fontWeight={600}>
+                                #{order?.code || request?.orderId || "-"}
                               </Typography>
                             </Box>
-                            <Stack spacing={1} sx={{ p: 2 }}>
-                              {order.orderDetails?.length ? (
-                                order.orderDetails.map((item) => (
-                                  <Box
-                                    key={item.id}
-                                    display="flex"
-                                    gap={1.5}
-                                    alignItems="center"
-                                    sx={{
-                                      p: 1,
-                                      borderRadius: 1.5,
-                                      border: "1px solid",
-                                      borderColor: "divider",
-                                    }}
-                                  >
-                                    {item.imageUrl ? (
-                                      <Box
-                                        component="img"
-                                        src={item.imageUrl}
-                                        alt={item.variantName || "Sản phẩm"}
-                                        sx={{
-                                          width: 64,
-                                          height: 64,
-                                          objectFit: "cover",
-                                          borderRadius: 1,
-                                          border: "1px solid",
-                                          borderColor: "divider",
-                                          flexShrink: 0,
-                                        }}
-                                      />
-                                    ) : (
-                                      <Box
-                                        sx={{
-                                          width: 64,
-                                          height: 64,
-                                          borderRadius: 1,
-                                          bgcolor: "grey.100",
-                                          border: "1px solid",
-                                          borderColor: "divider",
-                                          flexShrink: 0,
-                                        }}
-                                      />
-                                    )}
 
-                                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                                      <Typography
-                                        variant="body2"
-                                        fontWeight={600}
-                                        noWrap
-                                      >
-                                        {item.variantName || "Sản phẩm"}
-                                      </Typography>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        Số lượng: {item.quantity || 0}
-                                      </Typography>
-                                      <Box
-                                        display="flex"
-                                        justifyContent="space-between"
-                                        alignItems="center"
-                                        mt={0.5}
-                                        gap={1}
-                                      >
-                                        <Typography
-                                          variant="caption"
-                                          color="text.secondary"
-                                        >
-                                          Đơn giá:{" "}
-                                          {formatCurrency(item.unitPrice)}
-                                        </Typography>
-                                        <Typography
-                                          variant="body2"
-                                          fontWeight={700}
-                                          sx={{ color: "#ee4d2d" }}
-                                        >
-                                          {formatCurrency(item.total)}
-                                        </Typography>
-                                      </Box>
-                                    </Box>
-                                  </Box>
-                                ))
-                              ) : (
+                            <Box display="flex" justifyContent="space-between">
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Ngày yêu cầu:
+                              </Typography>
+                              <Typography variant="body2">
+                                {formatDateVN(request?.createdAt)}
+                              </Typography>
+                            </Box>
+
+                            <Box display="flex" justifyContent="space-between">
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Lý do hủy:
+                              </Typography>
+                              <Typography variant="body2" fontWeight={600}>
+                                {cancelReasonLabel(request?.reason)}
+                              </Typography>
+                            </Box>
+
+                            {request?.staffNote && (
+                              <Box
+                                display="flex"
+                                justifyContent="space-between"
+                              >
                                 <Typography
                                   variant="body2"
                                   color="text.secondary"
                                 >
-                                  Không có sản phẩm.
+                                  Ghi chú xử lý:
                                 </Typography>
-                              )}
-                            </Stack>
-                          </Paper>
+                                <Typography variant="body2">
+                                  {request.staffNote}
+                                </Typography>
+                              </Box>
+                            )}
 
-                          <Stack spacing={2}>
-                            <Paper
-                              variant="outlined"
-                              sx={{ p: 2, borderRadius: 2 }}
-                            >
-                              <Typography
-                                variant="subtitle2"
-                                fontWeight={700}
-                                mb={1.5}
+                            {request?.updatedAt && (
+                              <Box
+                                display="flex"
+                                justifyContent="space-between"
                               >
-                                Thông tin giao hàng
-                              </Typography>
-                              <Stack spacing={1}>
-                                <Box>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    Khách hàng
-                                  </Typography>
-                                  <Typography>
-                                    {order.recipientInfo?.recipientName || "—"}
-                                  </Typography>
-                                </Box>
-                                <Box>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    Số điện thoại
-                                  </Typography>
-                                  <Typography>
-                                    {order.recipientInfo
-                                      ?.recipientPhoneNumber || "—"}
-                                  </Typography>
-                                </Box>
-                                <Box>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    Địa chỉ nhận hàng
-                                  </Typography>
-                                  <Typography>
-                                    {order.recipientInfo?.fullAddress || "—"}
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            </Paper>
-
-                            <Paper
-                              variant="outlined"
-                              sx={{ p: 2, borderRadius: 2 }}
-                            >
-                              <Typography
-                                variant="subtitle2"
-                                fontWeight={700}
-                                mb={1.5}
-                              >
-                                Chi tiết thanh toán
-                              </Typography>
-                              <Stack spacing={1}>
-                                <Box
-                                  display="flex"
-                                  justifyContent="space-between"
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
                                 >
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    Tạm tính
-                                  </Typography>
-                                  <Typography variant="body2">
-                                    {formatCurrency(orderSubtotal)}
-                                  </Typography>
-                                </Box>
-                                <Box
-                                  display="flex"
-                                  justifyContent="space-between"
-                                >
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    Phí vận chuyển
-                                  </Typography>
-                                  <Typography
-                                    variant="body2"
-                                    color="success.main"
-                                    fontWeight={500}
-                                  >
-                                    {order.shippingInfo?.shippingFee
-                                      ? formatCurrency(
-                                          order.shippingInfo.shippingFee,
-                                        )
-                                      : "-"}
-                                  </Typography>
-                                </Box>
-                                {voucherDiscount > 0 && (
-                                  <Box
-                                    display="flex"
-                                    justifyContent="space-between"
-                                  >
-                                    <Typography
-                                      variant="body2"
-                                      color="text.secondary"
-                                    >
-                                      Giảm giá voucher
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      color="success.main"
-                                    >
-                                      -{formatCurrency(voucherDiscount)}
-                                    </Typography>
-                                  </Box>
-                                )}
-                                <Divider />
-                                <Box
-                                  display="flex"
-                                  justifyContent="space-between"
-                                >
-                                  <Typography
-                                    variant="subtitle2"
-                                    fontWeight={700}
-                                  >
-                                    Tổng thanh toán
-                                  </Typography>
-                                  <Typography
-                                    variant="subtitle2"
-                                    fontWeight={700}
-                                    sx={{ color: "#ee4d2d" }}
-                                  >
-                                    {formatCurrency(grandTotal)}
-                                  </Typography>
-                                </Box>
-                                <Divider />
-                                <Box
-                                  display="flex"
-                                  justifyContent="space-between"
-                                  alignItems="center"
-                                  gap={1.5}
-                                >
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                    noWrap
-                                    sx={{ flexShrink: 0 }}
-                                  >
-                                    Phương thức thanh toán
-                                  </Typography>
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={600}
-                                    noWrap
-                                    sx={{ whiteSpace: "nowrap" }}
-                                  >
-                                    {paymentMethod
-                                      ? PAYMENT_METHOD_LABELS[paymentMethod]
-                                      : "—"}
-                                  </Typography>
-                                </Box>
-                              </Stack>
-                            </Paper>
+                                  Ngày xử lý:
+                                </Typography>
+                                <Typography variant="body2">
+                                  {formatDateVN(request.updatedAt)}
+                                </Typography>
+                              </Box>
+                            )}
                           </Stack>
-                        </Box>
+                        </Paper>
+
+                        {/* Cột Phải: Thông tin Hoàn tiền (Logic Động) */}
+                        <RefundInfoSection
+                          isRefundRequired={request?.isRefundRequired ?? false}
+                          refundAmount={request?.refundAmount ?? undefined}
+                          vnpTransactionNo={request?.vnpTransactionNo}
+                          refundBankName={request?.refundBankName}
+                          refundAccountName={request?.refundAccountName}
+                          refundAccountNumber={request?.refundAccountNumber}
+                          isRefunded={request?.isRefunded}
+                          status={request?.status}
+                        />
+                      </Box>
+
+                      {/* ═══════════════════════════════════════════════════════════
+                          Khu vực 3: Chi tiết Đơn hàng (Simplified Order Summary)
+                          ═══════════════════════════════════════════════════════════ */}
+                      {order && (
+                        <OrderItemsSummary
+                          items={order.orderDetails}
+                          shippingFee={order.shippingInfo?.shippingFee}
+                          totalAmount={order.totalAmount}
+                        />
                       )}
+
+                      {/* ═══════════════════════════════════════════════════════════
+                          Khu vực 4: Action Bar (Thao tác - Chỉ khách)
+                          ═══════════════════════════════════════════════════════════ */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          gap: 1.5,
+                        }}
+                      ></Box>
                     </Stack>
                   </Box>
                 </>
