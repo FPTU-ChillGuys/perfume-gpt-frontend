@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link as RouterLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link as RouterLink,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   Alert,
   Box,
@@ -29,7 +34,6 @@ import { reviewService } from "@/services/ai/reviewService";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
 import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
-import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { ReviewSection } from "@/components/review/ReviewSection";
 import {
   productDetailTabsContent,
@@ -221,28 +225,24 @@ const ProductDetailPage = () => {
           ? variants.find((variant) => variant.id === requestedVariantId)
           : undefined;
 
-        const firstAvailableVariant = variants.find(
-          (variant) => {
-            const stockQuantity = variant?.stockQuantity;
-            return typeof stockQuantity !== "number" || stockQuantity > 0;
-          },
-        );
+        const firstAvailableVariant = variants.find((variant) => {
+          const stockQuantity = variant?.stockQuantity;
+          return typeof stockQuantity !== "number" || stockQuantity > 0;
+        });
 
-        setSelectedVariantId(
-          (current) => {
-            const currentVariantStillValid = current
-              ? variants.some((variant) => variant.id === current)
-              : false;
+        setSelectedVariantId((current) => {
+          const currentVariantStillValid = current
+            ? variants.some((variant) => variant.id === current)
+            : false;
 
-            return (
-              requestedVariant?.id ||
-              (currentVariantStillValid ? current : null) ||
-              firstAvailableVariant?.id ||
-              variants[0]?.id ||
-              null
-            );
-          },
-        );
+          return (
+            requestedVariant?.id ||
+            (currentVariantStillValid ? current : null) ||
+            firstAvailableVariant?.id ||
+            variants[0]?.id ||
+            null
+          );
+        });
       };
 
       try {
@@ -289,7 +289,10 @@ const ProductDetailPage = () => {
   }, [productId, requestedVariantId]);
 
   useEffect(() => {
-    if (!selectedVariantId || searchParams.get("variantId") === selectedVariantId) {
+    if (
+      !selectedVariantId ||
+      searchParams.get("variantId") === selectedVariantId
+    ) {
       return;
     }
 
@@ -1063,7 +1066,11 @@ const ProductDetailPage = () => {
 
     return (
       <>
-        <Grid container spacing={{ xs: 2, md: 4 }} sx={{ width: "100%", margin: 0 }}>
+        <Grid
+          container
+          spacing={{ xs: 2, md: 4 }}
+          sx={{ width: "100%", margin: 0 }}
+        >
           <Grid size={{ xs: 12, md: 6 }} sx={{ minWidth: 0 }}>
             {/* Main image — fixed height so no-image placeholder is same size */}
             <Box
@@ -1929,25 +1936,16 @@ const ProductDetailPage = () => {
         </Container>
       </Box>
 
-      <Box 
+      <Box
         py={{ xs: 3, md: 6 }}
-        sx={{ 
-          width: "100%", 
-          maxWidth: "100%", 
-          overflowX: "hidden" 
+        sx={{
+          width: "100%",
+          maxWidth: "100%",
+          overflowX: "hidden",
         }}
       >
         <Container maxWidth="lg">{renderContent()}</Container>
       </Box>
-
-      <ReviewEditorDialog
-        open={isReviewDialogOpen}
-        mode={reviewDialogMode}
-        target={reviewDialogTarget}
-        initialReview={selectedReview}
-        onClose={handleReviewDialogClose}
-        onSuccess={handleReviewSuccess}
-      />
     </MainLayout>
   );
 };

@@ -95,7 +95,6 @@ import {
 } from "@/utils/cancelOrderReason";
 import { formatDateTimeCompactVN, formatDateVN } from "@/utils/dateTime";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
-import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
@@ -3586,27 +3585,6 @@ export const MyOrderDetailPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <ReviewEditorDialog
-        open={isReviewDialogOpen}
-        mode={reviewDialogMode}
-        target={reviewDialogTarget}
-        initialReview={selectedReview}
-        onClose={() => {
-          setIsReviewDialogOpen(false);
-          setReviewDialogTarget(null);
-          setSelectedReview(null);
-        }}
-        onSuccess={() => {
-          setIsReviewDialogOpen(false);
-          setReviewDialogTarget(null);
-          setSelectedReview(null);
-          void productReviewService
-            .getMyReviews()
-            .then(setMyReviews)
-            .catch(console.error);
-        }}
-      />
     </MainLayout>
   );
 };

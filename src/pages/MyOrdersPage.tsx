@@ -67,7 +67,6 @@ import {
   mapCancelReasonInputToEnum,
 } from "@/utils/cancelOrderReason";
 import { formatDateTimeCompactVN } from "@/utils/dateTime";
-import { ReviewEditorDialog } from "@/components/review/ReviewEditorDialog";
 import { UserProfileSidebar } from "@/components/profile/UserProfileSidebar";
 import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
@@ -263,8 +262,9 @@ export const MyOrdersPage = () => {
     useState<Record<string, ReturnRequestStatus>>({});
   const [cancelRequestStatusByOrderId, setCancelRequestStatusByOrderId] =
     useState<Record<string, string>>({});
-  const [reviewedOrderDetailIds, setReviewedOrderDetailIds] =
-    useState<Set<string>>(new Set());
+  const [reviewedOrderDetailIds, setReviewedOrderDetailIds] = useState<
+    Set<string>
+  >(new Set());
 
   const loadOrders = useCallback(async () => {
     setIsLoading(true);
@@ -303,9 +303,7 @@ export const MyOrdersPage = () => {
             SortOrder: "desc",
           })
           .catch(() => ({ items: [] as OrderCancelRequest[] })),
-        productReviewService
-          .getMyReviews()
-          .catch(() => []),
+        productReviewService.getMyReviews().catch(() => []),
       ]);
 
       const latestStatusByOrderId: Record<string, ReturnRequestStatus> = {};
@@ -1236,7 +1234,11 @@ export const MyOrdersPage = () => {
                               {order.status === "Delivered" && (
                                 <Button
                                   size="small"
-                                  variant={getOrderReviewStatus(order) === "fully" ? "outlined" : "contained"}
+                                  variant={
+                                    getOrderReviewStatus(order) === "fully"
+                                      ? "outlined"
+                                      : "contained"
+                                  }
                                   onClick={() => handleOpenDetail(order.id)}
                                   sx={{
                                     ...(getOrderReviewStatus(order) === "fully"
@@ -1333,15 +1335,6 @@ export const MyOrdersPage = () => {
           </Paper>
         </Container>
       </Box>
-
-      <ReviewEditorDialog
-        open={isReviewDialogOpen}
-        mode={reviewDialogMode}
-        target={reviewDialogTarget}
-        initialReview={selectedReview}
-        onClose={handleReviewDialogClose}
-        onSuccess={handleReviewSuccess}
-      />
 
       <Dialog
         open={Boolean(cancelOrderId)}
