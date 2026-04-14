@@ -830,9 +830,6 @@ const ReceiveImportStock: React.FC = () => {
                                 <span className="font-semibold text-gray-900">
                                   {product.quantity}
                                 </span>
-                                <span className="text-sm text-gray-500 ml-1">
-                                  units
-                                </span>
                               </div>
                               <div className="col-span-2 flex items-center justify-center">
                                 <span

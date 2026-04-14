@@ -1853,6 +1853,329 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/banners/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    position?: components["schemas"]["BannerPosition"];
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfBannerResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfBannerResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfBannerResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/banners": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    SearchTerm?: string;
+                    Position?: components["schemas"]["BannerPosition"];
+                    IsActive?: boolean;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBannerResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBannerResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBannerResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateBannerRequest"];
+                    "text/json": components["schemas"]["CreateBannerRequest"];
+                    "application/*+json": components["schemas"]["CreateBannerRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/banners/{bannerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    bannerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBannerResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBannerResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBannerResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBannerResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBannerResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBannerResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    bannerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateBannerRequest"];
+                    "text/json": components["schemas"]["UpdateBannerRequest"];
+                    "application/*+json": components["schemas"]["UpdateBannerRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    bannerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/banners/images/temporary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/x-www-form-urlencoded": {
+                        Images?: components["schemas"]["IFormFile"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/batches": {
         parameters: {
             query?: never;
@@ -12760,6 +13083,34 @@ export interface components {
             /** Format: int32 */
             maxUsagePerUser?: null | number;
         };
+        /** @enum {string} */
+        BannerLinkType: "Campaign" | "Product" | "ProductVariant" | "Brand";
+        /** @enum {string} */
+        BannerPosition: "HomeHeroSlider" | "HomeSubBanner" | "Popup" | "CategoryTop";
+        BannerResponse: {
+            /** Format: uuid */
+            id?: string;
+            title: string;
+            imageUrl: string;
+            imagePublicId?: null | string;
+            mobileImageUrl?: null | string;
+            mobileImagePublicId?: null | string;
+            altText?: null | string;
+            position?: components["schemas"]["BannerPosition"];
+            /** Format: int32 */
+            displayOrder?: number;
+            isActive?: boolean;
+            /** Format: date-time */
+            startDate?: null | string;
+            /** Format: date-time */
+            endDate?: null | string;
+            linkType?: components["schemas"]["BannerLinkType"];
+            linkTarget?: null | string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: null | string;
+        };
         BaseResponseOfAddressLevel4Response: {
             payload?: null | components["schemas"]["AddressLevel4Response"];
             success?: boolean;
@@ -12776,6 +13127,13 @@ export interface components {
         };
         BaseResponseOfAdminDashboardOverviewResponse: {
             payload?: null | components["schemas"]["AdminDashboardOverviewResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfBannerResponse: {
+            payload?: null | components["schemas"]["BannerResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -12930,6 +13288,13 @@ export interface components {
         };
         BaseResponseOfListOfAttributeValueLookupItem: {
             payload?: null | components["schemas"]["AttributeValueLookupItem"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfListOfBannerResponse: {
+            payload?: null | components["schemas"]["BannerResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -13182,6 +13547,13 @@ export interface components {
         };
         BaseResponseOfPagedResultOfAvailableVoucherResponse: {
             payload?: null | components["schemas"]["PagedResultOfAvailableVoucherResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfPagedResultOfBannerResponse: {
+            payload?: null | components["schemas"]["PagedResultOfBannerResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -13713,6 +14085,24 @@ export interface components {
         };
         CreateAttributeValueRequest: {
             value: string;
+        };
+        CreateBannerRequest: {
+            title: string;
+            /** Format: uuid */
+            temporaryImageId: string;
+            /** Format: uuid */
+            temporaryMobileImageId?: null | string;
+            altText?: null | string;
+            position: components["schemas"]["BannerPosition"];
+            /** Format: int32 */
+            displayOrder?: number;
+            isActive?: boolean;
+            /** Format: date-time */
+            startDate?: null | string;
+            /** Format: date-time */
+            endDate?: null | string;
+            linkType: components["schemas"]["BannerLinkType"];
+            linkTarget: string;
         };
         CreateBatchRequest: {
             batchCode: string;
@@ -14407,6 +14797,12 @@ export interface components {
             /** Format: decimal */
             unitPrice?: number;
             /** Format: decimal */
+            campaignDiscount?: number;
+            /** Format: decimal */
+            campaignPrice?: number;
+            /** Format: decimal */
+            voucherDiscount?: number;
+            /** Format: decimal */
             refundableAmount?: number;
         };
         OrderReturnRequestResponse: {
@@ -14432,6 +14828,8 @@ export interface components {
             /** Format: decimal */
             requestedRefundAmount?: number;
             /** Format: decimal */
+            refundedShippingFee?: number;
+            /** Format: decimal */
             approvedRefundAmount?: null | number;
             isRefunded?: boolean;
             isRefundOnly?: boolean;
@@ -14454,6 +14852,19 @@ export interface components {
         OrderType: "Online" | "Offline";
         PagedResultOfAvailableVoucherResponse: {
             items: components["schemas"]["AvailableVoucherResponse"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
+        PagedResultOfBannerResponse: {
+            items: components["schemas"]["BannerResponse"][];
             /** Format: int32 */
             pageNumber: number;
             /** Format: int32 */
@@ -15608,6 +16019,24 @@ export interface components {
         };
         UpdateAttributeValueRequest: {
             value: string;
+        };
+        UpdateBannerRequest: {
+            title: string;
+            /** Format: uuid */
+            temporaryImageId?: null | string;
+            /** Format: uuid */
+            temporaryMobileImageId?: null | string;
+            altText?: null | string;
+            position: components["schemas"]["BannerPosition"];
+            /** Format: int32 */
+            displayOrder: number;
+            isActive: boolean;
+            /** Format: date-time */
+            startDate?: null | string;
+            /** Format: date-time */
+            endDate?: null | string;
+            linkType: components["schemas"]["BannerLinkType"];
+            linkTarget: string;
         };
         UpdateBrandRequest: {
             name: string;

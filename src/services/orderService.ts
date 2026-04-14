@@ -161,6 +161,9 @@ export interface ReturnRequestDetail {
   variantId?: string;
   requestedQuantity?: number;
   unitPrice?: number;
+  campaignPrice?: number;
+  campaignDiscount?: number;
+  voucherDiscount?: number;
   refundableAmount?: number;
 }
 
@@ -181,6 +184,7 @@ export interface OrderReturnRequest {
   inspectionNote?: string | null;
   status?: ReturnRequestStatus;
   requestedRefundAmount?: number;
+  refundedShippingFee?: number;
   approvedRefundAmount?: number;
   isRefunded?: boolean;
   isRefundOnly?: boolean | null;
@@ -367,6 +371,12 @@ class OrderService {
           "ApprovedRefundAmount",
         ]) ?? 0,
       ),
+      refundedShippingFee: Number(
+        this.getValue<number>(item, [
+          "refundedShippingFee",
+          "RefundedShippingFee",
+        ]) ?? 0,
+      ),
       isRefunded: Boolean(
         this.getValue<boolean>(item, ["isRefunded", "IsRefunded"]),
       ),
@@ -397,6 +407,24 @@ class OrderService {
         ),
         unitPrice: Number(
           this.getValue<number>(detail, ["unitPrice", "UnitPrice"]) ?? 0,
+        ),
+        campaignPrice: Number(
+          this.getValue<number>(detail, [
+            "campaignPrice",
+            "CampaignPrice",
+          ]) ?? 0,
+        ),
+        campaignDiscount: Number(
+          this.getValue<number>(detail, [
+            "campaignDiscount",
+            "CampaignDiscount",
+          ]) ?? 0,
+        ),
+        voucherDiscount: Number(
+          this.getValue<number>(detail, [
+            "voucherDiscount",
+            "VoucherDiscount",
+          ]) ?? 0,
         ),
         refundableAmount: Number(
           this.getValue<number>(detail, [

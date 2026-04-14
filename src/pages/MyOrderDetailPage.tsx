@@ -1829,8 +1829,8 @@ export const MyOrderDetailPage = () => {
       return;
     }
 
-    if (!returnVideoFiles.length) {
-      setReturnFormError("Vui lòng tải lên ít nhất 1 video");
+    if (!returnImageFiles.length && !returnVideoFiles.length) {
+      setReturnFormError("Vui lòng tải lên ít nhất 1 ảnh hoặc 1 video");
       return;
     }
 
@@ -3141,8 +3141,11 @@ export const MyOrderDetailPage = () => {
             </Paper>
 
             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-              <Typography variant="subtitle2" fontWeight={700} mb={1}>
+              <Typography variant="subtitle2" fontWeight={700} mb={0.5}>
                 4. Mô tả thêm và bằng chứng (ảnh/video)
+              </Typography>
+              <Typography variant="caption" color="text.secondary" mb={1} display="block">
+                Vui lòng tải lên ít nhất 1 ảnh hoặc 1 video làm bằng chứng
               </Typography>
               <Stack spacing={1.25}>
                 <TextField

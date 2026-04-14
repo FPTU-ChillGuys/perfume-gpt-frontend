@@ -52,6 +52,7 @@ const shippingStatusLabel = (status?: string | null) => {
   if (!status) return "-";
 
   if (status === "Pending") return "Chờ lấy hàng";
+  if (status === "ReadyToPick") return "Chờ lấy hàng";
   if (status === "Confirmed") return "Đã xác nhận";
   if (status === "PickedUp") return "Đã lấy hàng";
   if (status === "InTransit") return "Đang vận chuyển";
@@ -452,6 +453,10 @@ export const MyReturnRequestDetailPage = () => {
           imageUrl: item.imageUrl || null,
           quantity,
           unitPrice,
+          campaignPrice: 0,
+          campaignDiscount: 0,
+          voucherDiscount: 0,
+          refundableAmount: unitPrice * quantity,
           totalItem: unitPrice * quantity,
         };
       });
@@ -468,6 +473,10 @@ export const MyReturnRequestDetailPage = () => {
       const unitPrice = toNumber(
         detail.unitPrice ?? matchedOrderDetail?.unitPrice,
       );
+      const campaignPrice = toNumber(detail.campaignPrice ?? 0);
+      const campaignDiscount = toNumber(detail.campaignDiscount ?? 0);
+      const voucherDiscount = toNumber(detail.voucherDiscount ?? 0);
+      const refundableAmount = toNumber(detail.refundableAmount);
 
       return {
         key:
@@ -481,10 +490,29 @@ export const MyReturnRequestDetailPage = () => {
         imageUrl: matchedOrderDetail?.imageUrl || null,
         quantity,
         unitPrice,
+        campaignPrice,
+        campaignDiscount,
+        voucherDiscount,
+        refundableAmount,
         totalItem: unitPrice * quantity,
       };
     });
   }, [order?.orderDetails, request?.returnDetails]);
+
+  const refundSummary = useMemo(() => {
+    const totalRefundableAmount = requestItems.reduce(
+      (sum, item) => sum + toNumber(item.refundableAmount),
+      0,
+    );
+    const refundedShippingFee = toNumber(request?.refundedShippingFee ?? 0);
+    const totalAmount = toNumber(request?.requestedRefundAmount);
+
+    return {
+      totalRefundableAmount,
+      refundedShippingFee,
+      totalAmount,
+    };
+  }, [requestItems, request]);
 
   return (
     <MainLayout>
@@ -895,38 +923,39 @@ export const MyReturnRequestDetailPage = () => {
                       )}
 
                     <Paper variant="outlined" sx={{ p: 2 }}>
-                      <Typography variant="subtitle2" fontWeight={700} mb={1.5}>
-                        Sản phẩm trong đơn
+                      <Typography variant="subtitle2" fontWeight={700} mb={2}>
+                        Bảng đối soát hoàn tiền
                       </Typography>
-                      <Stack spacing={0} divider={<Divider />}>
+
+                      {/* Mobile/Tablet View */}
+                      <Stack
+                        spacing={2}
+                        divider={<Divider />}
+                        sx={{ display: { xs: "flex", md: "none" } }}
+                      >
                         {requestItems.map((item) => {
-                          const {
-                            key,
-                            quantity,
-                            unitPrice,
-                            name,
-                            imageUrl,
-                            totalItem,
-                          } = item;
+                          const campaignDiscountAmount =
+                            (toNumber(item.unitPrice) -
+                              toNumber(item.campaignPrice)) *
+                            toNumber(item.quantity);
+                          const voucherDiscountAmount = toNumber(
+                            item.voucherDiscount,
+                          );
+                          const totalDiscount =
+                            campaignDiscountAmount + voucherDiscountAmount;
 
                           return (
-                            <Box key={key} sx={{ py: 1.5 }}>
-                              <Box
-                                sx={{
-                                  display: "flex",
-                                  alignItems: "flex-start",
-                                  gap: 2,
-                                }}
-                              >
-                                {imageUrl ? (
+                            <Box key={item.key} sx={{ py: 1 }}>
+                              <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+                                {item.imageUrl ? (
                                   <Box
                                     component="img"
-                                    src={imageUrl}
-                                    alt={name}
+                                    src={item.imageUrl}
+                                    alt={item.name}
                                     sx={{
-                                      width: 72,
-                                      height: 72,
-                                      borderRadius: 1.5,
+                                      width: 64,
+                                      height: 64,
+                                      borderRadius: 1,
                                       objectFit: "cover",
                                       border: "1px solid",
                                       borderColor: "divider",
@@ -936,9 +965,9 @@ export const MyReturnRequestDetailPage = () => {
                                 ) : (
                                   <Box
                                     sx={{
-                                      width: 72,
-                                      height: 72,
-                                      borderRadius: 1.5,
+                                      width: 64,
+                                      height: 64,
+                                      borderRadius: 1,
                                       bgcolor: "grey.100",
                                       display: "flex",
                                       alignItems: "center",
@@ -949,47 +978,389 @@ export const MyReturnRequestDetailPage = () => {
                                     }}
                                   >
                                     <ImageIcon
-                                      sx={{ color: "grey.400", fontSize: 28 }}
+                                      sx={{ color: "grey.400", fontSize: 24 }}
                                     />
                                   </Box>
                                 )}
-
-                                <Box flex={1} minWidth={0}>
+                                <Box flex={1}>
                                   <Typography variant="body2" fontWeight={600}>
-                                    {name}
+                                    {item.name}
                                   </Typography>
                                   <Typography
                                     variant="caption"
                                     color="text.secondary"
                                   >
-                                    Số lượng: {quantity}
+                                    Số lượng: {item.quantity}
                                   </Typography>
-                                  {unitPrice > 0 && (
+                                </Box>
+                              </Box>
+
+                              <Stack
+                                spacing={0.5}
+                                sx={{
+                                  bgcolor: "grey.50",
+                                  p: 1.5,
+                                  borderRadius: 1,
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                  }}
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    Đơn giá gốc:
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    fontWeight={600}
+                                  >
+                                    {formatCurrency(item.unitPrice)}
+                                  </Typography>
+                                </Box>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                  }}
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    Chiết khấu:
+                                  </Typography>
+                                  {totalDiscount > 0 ? (
                                     <Typography
                                       variant="caption"
-                                      color="text.secondary"
-                                      display="block"
+                                      color="error.main"
+                                      fontWeight={600}
                                     >
-                                      Đơn giá: {formatCurrency(unitPrice)}
+                                      -{formatCurrency(totalDiscount)}
+                                    </Typography>
+                                  ) : (
+                                    <Typography
+                                      variant="caption"
+                                      color="text.disabled"
+                                    >
+                                      -
                                     </Typography>
                                   )}
                                 </Box>
-
-                                {totalItem > 0 && (
-                                  <Typography
-                                    variant="body1"
-                                    fontWeight={700}
-                                    color="#ee4d2d"
-                                    sx={{ flexShrink: 0, whiteSpace: "nowrap" }}
-                                  >
-                                    {formatCurrency(totalItem)}
+                                <Divider sx={{ my: 0.5 }} />
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                  }}
+                                >
+                                  <Typography variant="body2" fontWeight={700}>
+                                    Thực trả / Hoàn tiền:
                                   </Typography>
-                                )}
-                              </Box>
+                                  <Typography
+                                    variant="body2"
+                                    fontWeight={700}
+                                    color="primary.main"
+                                  >
+                                    {formatCurrency(item.refundableAmount)}
+                                  </Typography>
+                                </Box>
+                              </Stack>
                             </Box>
                           );
                         })}
                       </Stack>
+
+                      {/* Desktop Table View */}
+                      <Box
+                        sx={{
+                          display: { xs: "none", md: "block" },
+                          overflowX: "auto",
+                        }}
+                      >
+                        <table
+                          style={{ width: "100%", borderCollapse: "collapse" }}
+                        >
+                          <thead>
+                            <tr
+                              style={{
+                                borderBottom: "2px solid #e0e0e0",
+                              }}
+                            >
+                              <th
+                                style={{
+                                  textAlign: "left",
+                                  padding: "12px 8px",
+                                  fontWeight: 600,
+                                  fontSize: "0.875rem",
+                                  color: "#666",
+                                }}
+                              >
+                                Sản phẩm
+                              </th>
+                              <th
+                                style={{
+                                  textAlign: "right",
+                                  padding: "12px 8px",
+                                  fontWeight: 600,
+                                  fontSize: "0.875rem",
+                                  color: "#666",
+                                  minWidth: "100px",
+                                }}
+                              >
+                                Đơn giá gốc
+                              </th>
+                              <th
+                                style={{
+                                  textAlign: "right",
+                                  padding: "12px 8px",
+                                  fontWeight: 600,
+                                  fontSize: "0.875rem",
+                                  color: "#666",
+                                  minWidth: "100px",
+                                }}
+                              >
+                                Chiết khấu
+                              </th>
+                              <th
+                                style={{
+                                  textAlign: "right",
+                                  padding: "12px 8px",
+                                  fontWeight: 600,
+                                  fontSize: "0.875rem",
+                                  color: "#666",
+                                  minWidth: "120px",
+                                }}
+                              >
+                                Thực trả / Hoàn tiền
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {requestItems.map((item) => {
+                              const campaignDiscountAmount =
+                                (toNumber(item.unitPrice) -
+                                  toNumber(item.campaignPrice)) *
+                                toNumber(item.quantity);
+                              const voucherDiscountAmount = toNumber(
+                                item.voucherDiscount,
+                              );
+                              const totalDiscount =
+                                campaignDiscountAmount + voucherDiscountAmount;
+
+                              return (
+                                <tr
+                                  key={item.key}
+                                  style={{
+                                    borderBottom: "1px solid #f0f0f0",
+                                  }}
+                                >
+                                  <td style={{ padding: "16px 8px" }}>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 2,
+                                      }}
+                                    >
+                                      {item.imageUrl ? (
+                                        <Box
+                                          component="img"
+                                          src={item.imageUrl}
+                                          alt={item.name}
+                                          sx={{
+                                            width: 60,
+                                            height: 60,
+                                            borderRadius: 1,
+                                            objectFit: "cover",
+                                            border: "1px solid",
+                                            borderColor: "divider",
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      ) : (
+                                        <Box
+                                          sx={{
+                                            width: 60,
+                                            height: 60,
+                                            borderRadius: 1,
+                                            bgcolor: "grey.100",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            border: "1px solid",
+                                            borderColor: "divider",
+                                            flexShrink: 0,
+                                          }}
+                                        >
+                                          <ImageIcon
+                                            sx={{
+                                              color: "grey.400",
+                                              fontSize: 24,
+                                            }}
+                                          />
+                                        </Box>
+                                      )}
+                                      <Box>
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight={600}
+                                        >
+                                          {item.name}
+                                        </Typography>
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                        >
+                                          Số lượng: {item.quantity}
+                                        </Typography>
+                                      </Box>
+                                    </Box>
+                                  </td>
+                                  <td
+                                    style={{
+                                      textAlign: "right",
+                                      padding: "16px 8px",
+                                    }}
+                                  >
+                                    <Typography variant="body2">
+                                      {formatCurrency(item.unitPrice)}
+                                    </Typography>
+                                  </td>
+                                  <td
+                                    style={{
+                                      textAlign: "right",
+                                      padding: "16px 8px",
+                                    }}
+                                  >
+                                    {totalDiscount > 0 ? (
+                                      <Typography
+                                        variant="body2"
+                                        color="error.main"
+                                        fontWeight={600}
+                                      >
+                                        -{formatCurrency(totalDiscount)}
+                                      </Typography>
+                                    ) : (
+                                      <Typography
+                                        variant="body2"
+                                        color="text.disabled"
+                                      >
+                                        -
+                                      </Typography>
+                                    )}
+                                  </td>
+                                  <td
+                                    style={{
+                                      textAlign: "right",
+                                      padding: "16px 8px",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={700}
+                                      color="primary.main"
+                                    >
+                                      {formatCurrency(item.refundableAmount)}
+                                    </Typography>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </Box>
+
+                      {/* Refund Summary */}
+                      <Box
+                        sx={{
+                          mt: 3,
+                          pt: 2,
+                          borderTop: "2px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Stack
+                          spacing={1}
+                          sx={{
+                            maxWidth: { xs: "100%", md: "400px" },
+                            ml: "auto",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Typography variant="body2" color="text.secondary">
+                              Tiền hàng hoàn lại:
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {formatCurrency(
+                                refundSummary.totalRefundableAmount,
+                              )}
+                            </Typography>
+                          </Box>
+
+                          {refundSummary.refundedShippingFee > 0 && (
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Phí vận chuyển hoàn lại:
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                color="success.main"
+                              >
+                                {formatCurrency(
+                                  refundSummary.refundedShippingFee,
+                                )}
+                              </Typography>
+                            </Box>
+                          )}
+
+                          <Divider sx={{ my: 1 }} />
+
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Typography
+                              variant="h6"
+                              fontWeight={700}
+                              sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+                            >
+                              TỔNG TIỀN HOÀN:
+                            </Typography>
+                            <Typography
+                              variant="h6"
+                              fontWeight={700}
+                              color="error.main"
+                              sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+                            >
+                              {formatCurrency(refundSummary.totalAmount)}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </Box>
                     </Paper>
 
                     {request.proofImages && request.proofImages.length > 0 && (
