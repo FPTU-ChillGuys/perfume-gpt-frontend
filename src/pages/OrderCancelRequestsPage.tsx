@@ -67,7 +67,7 @@ const statusColor = (
 };
 
 const statusLabel = (s?: string) => {
-  if (s === "Pending") return "Chờ xử lý";
+  if (s === "Pending") return "Chờ duyệt";
   if (s === "Approved") return "Đã duyệt";
   if (s === "Rejected") return "Từ chối";
   return s || "—";
@@ -554,7 +554,7 @@ export const OrderCancelRequestsPage = () => {
                     invisible={pendingCount <= 0}
                   >
                     <Box component="span" sx={{ pr: 1 }}>
-                      Chờ xử lý
+                      Chờ duyệt
                     </Box>
                   </Badge>
                 }

@@ -1,5 +1,5 @@
-import { Box, Stepper, Step, StepLabel, Typography, Stack } from "@mui/material";
-import { CheckCircle, HourglassEmpty } from "@mui/icons-material";
+import { Box, Stepper, Step, StepLabel } from "@mui/material";
+import ErrorIcon from "@mui/icons-material/Error";
 import type { CancelRequestStatus } from "@/services/orderService";
 
 interface CancelStatusStepperProps {
@@ -11,65 +11,63 @@ export const CancelStatusStepper = ({
   status,
   isRefunded,
 }: CancelStatusStepperProps) => {
-  const getActiveStep = () => {
-    if (status === "Pending") return 1;
-    if (status === "Approved" || status === "Rejected") return 2;
-    return 2;
-  };
-
-  const getStepColor = (stepIndex: number) => {
-    if (stepIndex <= getActiveStep()) {
-      if (stepIndex === 2 && status === "Rejected") {
-        return "error";
-      }
-      if (stepIndex === 2 && status === "Approved" && isRefunded) {
-        return "success";
-      }
-      return "inherit";
-    }
-    return "disabled";
-  };
-
-  const stepLabels = [
-    "Yêu cầu hủy",
-    status === "Rejected"
-      ? "Từ chối"
-      : status === "Pending"
-        ? "Đang xử lý"
-        : "Đã duyệt",
-    status === "Approved" && isRefunded ? "Đã hoàn tiền" : "Hoàn tất",
-  ];
-
   return (
-    <Box sx={{ py: 2 }}>
-      <Stepper activeStep={getActiveStep()} alternativeLabel>
-        {stepLabels.map((label, index) => (
-          <Step
-            key={index}
-            completed={index < getActiveStep()}
-            sx={{
-              "& .MuiStepLabel-root .Mui-completed": {
-                color: getStepColor(index),
+    <Box
+      sx={
+        status === "Approved" || status === "Rejected"
+          ? {
+              "& .MuiStepConnector-root": {
+                borderTopColor: "#d32f2f !important",
+                borderTopWidth: 2,
               },
-              "& .MuiStepLabel-label.Mui-completed": {
-                color: getStepColor(index),
+              "& .MuiStepIcon-root.Mui-completed": {
+                color: "#d32f2f !important",
               },
-            }}
+            }
+          : {}
+      }
+    >
+      <Stepper alternativeLabel>
+        <Step completed>
+          <StepLabel>Yêu cầu hủy</StepLabel>
+        </Step>
+        <Step
+          completed={status !== "Pending"}
+          sx={
+            status === "Pending"
+              ? {
+                  "& .MuiStepIcon-root": {
+                    color: "#d32f2f",
+                  },
+                  "& .MuiStepConnector-root": {
+                    borderTopColor: "#d32f2f !important",
+                    borderTopWidth: 3,
+                  },
+                }
+              : {}
+          }
+        >
+          <StepLabel>
+            {status === "Pending" || status === "Rejected"
+              ? "Đang xử lý"
+              : "Đã duyệt"}
+          </StepLabel>
+        </Step>
+        <Step completed={status === "Approved"}>
+          <StepLabel
+            icon={
+              status === "Rejected" ? (
+                <ErrorIcon sx={{ color: "#d32f2f", fontSize: "1.5rem" }} />
+              ) : undefined
+            }
           >
-            <StepLabel
-              sx={{
-                "& .MuiStepIcon-root": {
-                  color: getStepColor(index),
-                },
-                "& .MuiStepIcon-text": {
-                  fill: "white",
-                },
-              }}
-            >
-              {label}
-            </StepLabel>
-          </Step>
-        ))}
+            {status === "Rejected"
+              ? "Từ chối"
+              : status === "Approved" && isRefunded
+                ? "Đã hoàn tiền"
+                : "Hoàn tất"}
+          </StepLabel>
+        </Step>
       </Stepper>
     </Box>
   );

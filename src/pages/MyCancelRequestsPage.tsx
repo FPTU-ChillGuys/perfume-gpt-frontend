@@ -34,13 +34,13 @@ type CancelRequestStatus = "Pending" | "Approved" | "Rejected";
 
 const STATUS_TABS: { label: string; value: CancelRequestStatus | "All" }[] = [
   { label: "Tất cả", value: "All" },
-  { label: "Chờ xử lý", value: "Pending" },
+  { label: "Chờ duyệt", value: "Pending" },
   { label: "Đã duyệt", value: "Approved" },
   { label: "Từ chối", value: "Rejected" },
 ];
 
 const statusLabel = (status?: string) => {
-  if (status === "Pending") return "Chờ xử lý";
+  if (status === "Pending") return "Chờ duyệt";
   if (status === "Approved") return "Đã duyệt";
   if (status === "Rejected") return "Từ chối";
   return status || "-";

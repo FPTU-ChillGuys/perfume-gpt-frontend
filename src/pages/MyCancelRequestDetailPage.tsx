@@ -34,7 +34,7 @@ type CancelRequestStatus = "Pending" | "Approved" | "Rejected";
 const getStatusLabel = (status: CancelRequestStatus): string => {
   switch (status) {
     case "Pending":
-      return "Chờ xử lí";
+      return "Chờ duyệt";
     case "Approved":
       return "Đã duyệt";
     case "Rejected":
