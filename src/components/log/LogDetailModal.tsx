@@ -35,7 +35,7 @@ export const LogDetailModal = ({ open, onClose, selectedLog }: LogDetailModalPro
                 </Typography>
 
                 <Typography variant="subtitle1" gutterBottom>
-                    <strong>Loai su kien:</strong> {eventTypeLabel}
+                    <strong>Loại sự kiện:</strong> {eventTypeLabel}
                 </Typography>
 
                 <Typography variant="subtitle1" gutterBottom>

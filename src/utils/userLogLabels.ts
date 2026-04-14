@@ -3,7 +3,7 @@ import type { UserLog } from "@/types/log";
 const EVENT_TYPE_LABELS: Record<string, string> = {
   message: "Tin nhan",
   search: "Tim kiem",
-  quiz: "Quiz",
+  survey: "Survey",
   product: "Sản phẩm",
 };
 

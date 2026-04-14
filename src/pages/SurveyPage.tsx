@@ -16,41 +16,78 @@ import {
     NavigateNext as NextIcon,
 } from "@mui/icons-material";
 import { AuthContext } from "@/contexts/AuthContextType";
-import { quizService } from "@/services/ai/quizService";
+import { surveyService } from "@/services/ai/surveyService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { getOrCreateGuestUserId } from "@/utils/guestUserId";
-import type { QuizQuestion, QuizQuesAnsDetailRequest } from "@/types/quiz";
+import type { SurveyQuestion, SurveyQuesAnsDetailRequest } from "@/types/survey";
 import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
-import QuizQuestionCard from "@/components/quiz/user/QuizQuestionCard";
-import QuizResultView from "@/components/quiz/user/QuizResultView";
+import SurveyQuestionCard from "@/components/survey/user/SurveyQuestionCard";
+import SurveyResultView from "@/components/survey/user/SurveyResultView";
+import { dexieCache } from "@/utils/dexieCache";
+import { CACHE_KEYS, CACHE_TTL } from "@/constants/cache";
+
+interface CachedSurveyResult {
+    result: AssistantPayload | null;
+    selections: Array<{ questionId: string; answerIds: string[] }>;
+    currentStep: number;
+}
+
+const serializeSelections = (source: Map<string, Set<string>>) =>
+    Array.from(source.entries()).map(([questionId, answerIds]) => ({
+        questionId,
+        answerIds: Array.from(answerIds),
+    }));
+
+const deserializeSelections = (
+    source?: Array<{ questionId: string; answerIds: string[] }>,
+) => {
+    const restored = new Map<string, Set<string>>();
+    if (!source?.length) {
+        return restored;
+    }
+
+    source.forEach(({ questionId, answerIds }) => {
+        restored.set(questionId, new Set(answerIds));
+    });
+
+    return restored;
+};
 
 // ── Parse AI response string ────────────────────────────────────
 function parseAiResponse(raw: string): AssistantPayload {
     try {
-        return JSON.parse(raw) as AssistantPayload;
+        const parsed = JSON.parse(raw);
+        return {
+            message: parsed.message || "",
+            products: parsed.products || [],
+            suggestedQuestions: parsed.suggestedQuestions || [],
+        };
     } catch {
-        return { message: raw, products: [] };
+        return { message: raw, products: [], suggestedQuestions: [] };
     }
 }
 
 // ── Page ────────────────────────────────────────────────────────
-export default function QuizPage() {
+export default function SurveyPage() {
     const authCtx = useContext(AuthContext);
     const userId = authCtx?.user?.id ?? getOrCreateGuestUserId();
 
-    const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+    const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
     const [loading, setLoading] = useState(true);
     const [selections, setSelections] = useState<Map<string, Set<string>>>(new Map());
     const [currentStep, setCurrentStep] = useState(0);
     const [submitting, setSubmitting] = useState(false);
     const [result, setResult] = useState<AssistantPayload | null>(null);
+    const [lastResult, setLastResult] = useState<AssistantPayload | null>(null);
+    const [hydrated, setHydrated] = useState(false);
+    const surveyResultCacheKey = `${CACHE_KEYS.SURVEY_RESULT}_${userId}`;
 
     // ── Fetch ─────────────────────────────────────────────────────
     const fetchQuestions = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await quizService.getQuestions();
+            const res = await surveyService.getQuestions();
             setQuestions([...res.data].reverse());
         } catch {
             // show empty state
@@ -60,6 +97,70 @@ export default function QuizPage() {
     }, []);
 
     useEffect(() => { fetchQuestions(); }, [fetchQuestions]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const restoreSurveyResult = async () => {
+            const cached = await dexieCache.get<CachedSurveyResult>(surveyResultCacheKey);
+            if (!isMounted) {
+                return;
+            }
+
+            if (!cached) {
+                setHydrated(true);
+                return;
+            }
+
+            const restoredSelections = deserializeSelections(cached.selections);
+            if (restoredSelections.size > 0) {
+                setSelections(restoredSelections);
+            }
+
+            if (typeof cached.currentStep === "number" && cached.currentStep >= 0) {
+                setCurrentStep(cached.currentStep);
+            }
+
+            if (cached.result) {
+                setLastResult(cached.result);
+                setResult(cached.result);
+            }
+
+            setHydrated(true);
+        };
+
+        void restoreSurveyResult();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [surveyResultCacheKey]);
+
+    useEffect(() => {
+        if (!hydrated) {
+            return;
+        }
+
+        const payload: CachedSurveyResult = {
+            result: lastResult,
+            selections: serializeSelections(selections),
+            currentStep,
+        };
+
+        void dexieCache.set<CachedSurveyResult>(
+            surveyResultCacheKey,
+            payload,
+            CACHE_TTL.ONE_DAY,
+        );
+    }, [currentStep, hydrated, lastResult, surveyResultCacheKey, selections]);
+
+    useEffect(() => {
+        if (!questions.length) {
+            return;
+        }
+
+        setCurrentStep((prev) => Math.min(prev, questions.length - 1));
+    }, [questions.length]);
 
     // ── Selection handlers ────────────────────────────────────────
     const handleSingleSelect = useCallback((questionId: string, answerId: string) => {
@@ -91,7 +192,7 @@ export default function QuizPage() {
 
     // ── Submit ────────────────────────────────────────────────────
     const handleSubmit = useCallback(async () => {
-        const payload: QuizQuesAnsDetailRequest[] = [];
+        const payload: SurveyQuesAnsDetailRequest[] = [];
         for (const [questionId, answerIds] of selections.entries()) {
             for (const answerId of answerIds) {
                 payload.push({ questionId, answerId });
@@ -99,25 +200,67 @@ export default function QuizPage() {
         }
         setSubmitting(true);
         try {
-            const res = await quizService.submitQuizV2(userId, payload);
+            const res = await surveyService.submitSurveyV2(userId, payload);
             const parsedRes = parseAiResponse(res.data);
             setResult(parsedRes);
+            setLastResult(parsedRes);
+            await dexieCache.set<CachedSurveyResult>(
+                surveyResultCacheKey,
+                {
+                    result: parsedRes,
+                    selections: serializeSelections(selections),
+                    currentStep,
+                },
+                CACHE_TTL.ONE_DAY,
+            );
         } catch (err) {
-            console.error("Quiz submit error:", err);
-            setResult({ message: "Đã xảy ra lỗi khi lấy gợi ý. Vui lòng thử lại.", products: [] });
+            console.error("Survey submit error:", err);
+            const fallbackResult: AssistantPayload = {
+                message: "Đã xảy ra lỗi khi lấy gợi ý. Vui lòng thử lại.",
+                products: [],
+                suggestedQuestions: [],
+            };
+            setResult(fallbackResult);
+            setLastResult(fallbackResult);
+            await dexieCache.set<CachedSurveyResult>(
+                surveyResultCacheKey,
+                {
+                    result: fallbackResult,
+                    selections: serializeSelections(selections),
+                    currentStep,
+                },
+                CACHE_TTL.ONE_DAY,
+            );
         } finally {
             setSubmitting(false);
         }
-    }, [userId, selections]);
+    }, [userId, selections, currentStep, surveyResultCacheKey]);
 
-    const handleRestart = () => {
+    const handleReviewAnswers = useCallback(() => {
+        setResult(null);
+        setCurrentStep(0);
+    }, []);
+
+    const handleReanalyze = useCallback(async () => {
+        await handleSubmit();
+    }, [handleSubmit]);
+
+    const handleViewLastResult = useCallback(() => {
+        if (lastResult) {
+            setResult(lastResult);
+        }
+    }, [lastResult]);
+
+    const handleRestart = useCallback(() => {
         setSelections(new Map());
         setCurrentStep(0);
         setResult(null);
-    };
+        setLastResult(null);
+        void dexieCache.delete(surveyResultCacheKey);
+    }, [surveyResultCacheKey]);
 
     // ── Loading ───────────────────────────────────────────────────
-    if (loading) {
+    if (loading && !result) {
         return (
             <>
                 <Header />
@@ -134,7 +277,7 @@ export default function QuizPage() {
                 <Header />
                 <Container maxWidth="md" sx={{ mt: 10, textAlign: "center" }}>
                     <Typography variant="h6" color="text.secondary">
-                        Hiện chưa có câu hỏi quiz. Vui lòng quay lại sau!
+                        Hiện chưa có câu hỏi survey. Vui lòng quay lại sau!
                     </Typography>
                 </Container>
             </>
@@ -147,13 +290,20 @@ export default function QuizPage() {
             <>
                 <Header />
                 <Container maxWidth="md" sx={{ py: 6 }}>
-                    <QuizResultView result={result} userId={userId} onRestart={handleRestart} />
+                    <SurveyResultView
+                        result={result}
+                        userId={userId}
+                        onReviewAnswers={handleReviewAnswers}
+                        onReanalyze={handleReanalyze}
+                        onRestart={handleRestart}
+                        isSubmitting={submitting}
+                    />
                 </Container>
             </>
         );
     }
 
-    // ── Quiz ──────────────────────────────────────────────────────
+    // ── Survey ──────────────────────────────────────────────────────
     return (
         <>
             <Header />
@@ -167,6 +317,16 @@ export default function QuizPage() {
                     <Typography variant="body1" color="text.secondary">
                         Trả lời {questions.length} câu hỏi ngắn để nhận gợi ý cá nhân hóa từ AI.
                     </Typography>
+                    {lastResult && (
+                        <Button
+                            variant="text"
+                            size="small"
+                            onClick={handleViewLastResult}
+                            sx={{ mt: 1.25, textTransform: "none" }}
+                        >
+                            Xem lại kết quả survey gần nhất
+                        </Button>
+                    )}
                 </Box>
 
                 {/* Progress bar */}
@@ -199,7 +359,7 @@ export default function QuizPage() {
 
                 {/* Question card */}
                 {currentQ && (
-                    <QuizQuestionCard
+                    <SurveyQuestionCard
                         question={currentQ}
                         selectedIds={selectedIds}
                         onSingleSelect={handleSingleSelect}

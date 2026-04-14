@@ -1,4 +1,5 @@
 import { apiInstance } from "@/lib/api";
+import { aiApiInstance } from '../lib/api';
 import type {
   Supplier,
   ProductVariant,
@@ -159,8 +160,8 @@ class ProductService {
   ): Promise<PagedProductListWithVariants> {
     try {
       // Endpoint not in generated OpenAPI spec — bypass strict path typing
-      const response = await (apiInstance as any).GET(
-        "/api/products/search/semantic",
+      const response = await (aiApiInstance as any).GET(
+        "/products/search/v3",
         { params: { query } },
       );
 

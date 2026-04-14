@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { importStockService } from "../../services/importStockService";
 import { productService } from "../../services/productService";
 import type { Supplier, VariantLookupItem } from "@/types/product";
@@ -22,6 +23,7 @@ interface ImportStockItem {
 const getTodayIsoDate = () => new Date().toISOString().split("T")[0];
 
 export const CreateImportStockTab: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<ImportStockItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -41,6 +43,8 @@ export const CreateImportStockTab: React.FC = () => {
   const [downloadingTemplate, setDownloadingTemplate] =
     useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [hasProcessedImportData, setHasProcessedImportData] =
+    useState<boolean>(false);
 
   const showToast = (
     message: string,
@@ -52,6 +56,58 @@ export const CreateImportStockTab: React.FC = () => {
   const handleCloseToast = () => {
     setToast({ ...toast, open: false });
   };
+
+  // Parse import data from URL query params (from restock suggestions)
+  useEffect(() => {
+    const importDataParam = searchParams.get("importData");
+    const tabParam = searchParams.get("tab");
+
+    if (importDataParam && !hasProcessedImportData) {
+      try {
+        // Decode base64 and parse JSON
+        const decodedData = atob(importDataParam);
+        const importItems = JSON.parse(decodedData) as Array<{
+          variantId: string;
+          quantity: number;
+          price: number;
+        }>;
+
+        if (importItems && importItems.length > 0) {
+          // Set items from restock suggestions
+          setItems(importItems);
+
+          // Clear the importData param from URL after processing
+          const newParams = new URLSearchParams(searchParams.toString());
+          newParams.delete("importData");
+          setSearchParams(newParams);
+
+          // Set hasProcessed flag to avoid re-processing
+          setHasProcessedImportData(true);
+
+          // Show success toast
+          showToast(
+            `Đã tải ${importItems.length} sản phẩm từ gợi ý nhập hàng. Bạn có thể chỉnh sửa trước khi tạo đơn.`,
+            "success"
+          );
+        }
+      } catch (error) {
+        console.error("Failed to parse import data from URL:", error);
+        showToast(
+          "Dữ liệu nhập hàng không hợp lệ. Vui lòng nhập thủ công.",
+          "warning"
+        );
+      }
+    }
+
+    // Handle tab navigation if specified
+    if (tabParam) {
+      const tabValue = parseInt(tabParam, 10);
+      if (!isNaN(tabValue)) {
+        // This will be handled by parent component's tab state
+        // We just need to ensure the tab is active
+      }
+    }
+  }, [searchParams, hasProcessedImportData, showToast, setSearchParams]);
 
   // Load suppliers on mount
   useEffect(() => {

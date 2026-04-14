@@ -567,11 +567,11 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
             </>
           )}
 
-          {/* Quiz AI */}
+          {/* Survey AI */}
           <Button
             color="inherit"
             component={RouterLink}
-            to="/quiz"
+            to="/survey"
             size="small"
             sx={{
               fontWeight: 500,

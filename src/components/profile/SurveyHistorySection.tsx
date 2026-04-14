@@ -9,31 +9,31 @@ import {
   Chip,
   alpha,
 } from "@mui/material";
-import QuizIcon from "@mui/icons-material/Quiz";
+import SurveyIcon from "@mui/icons-material/Quiz";
 import QuestionAnswerIcon from "@mui/icons-material/QuestionAnswer";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import { quizService } from "@/services/ai/quizService";
+import { surveyService } from "@/services/ai/surveyService";
 import { useAuth } from "@/hooks/useAuth";
-import type { UserQuizRecord } from "@/types/quiz";
+import type { UserSurveyRecord } from "@/types/survey";
 
-export const QuizHistorySection = () => {
+export const SurveyHistorySection = () => {
   const { user } = useAuth();
-  const [record, setRecord] = useState<UserQuizRecord | null>(null);
+  const [record, setRecord] = useState<UserSurveyRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user?.id) return;
-    loadQuizHistory();
+    loadSurveyHistory();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const loadQuizHistory = async () => {
+  const loadSurveyHistory = async () => {
     setIsLoading(true);
     setError("");
     try {
-      const res = await quizService.getUserQuizRecord(user!.id);
+      const res = await surveyService.getUserSurveyRecord(user!.id);
       setRecord(res.data);
     } catch (err: any) {
       if (err?.message?.includes("not found") || err?.message?.includes("404")) {
@@ -82,7 +82,7 @@ export const QuizHistorySection = () => {
             bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1),
           }}
         >
-          <QuizIcon color="primary" />
+          <SurveyIcon color="primary" />
         </Box>
         <Typography variant="h6" fontWeight="bold">
           Lịch sử khảo sát hương
@@ -117,7 +117,7 @@ export const QuizHistorySection = () => {
             borderRadius: 3,
           }}
         >
-          <QuizIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
+          <SurveyIcon sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
           <Typography color="text.secondary" fontWeight={500}>
             Bạn chưa thực hiện khảo sát nào.
           </Typography>

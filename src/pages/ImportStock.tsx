@@ -1,15 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Box, Tabs, Tab } from "@mui/material";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { ImportHistoryTab } from "../components/shipment/ImportHistoryTab";
 import { CreateImportStockTab } from "../components/shipment/CreateImportStockTab";
 
 const ImportStock: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(0);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
+
+  // Auto-switch tab when importData param is present
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      const tabValue = parseInt(tabParam, 10);
+      if (!isNaN(tabValue) && tabValue !== activeTab) {
+        setActiveTab(tabValue);
+        // Clear the tab param after processing
+        const newParams = new URLSearchParams(searchParams.toString());
+        newParams.delete("tab");
+        setSearchParams(newParams);
+      }
+    }
+  }, [searchParams, activeTab, setSearchParams]);
 
   return (
     <AdminLayout>
