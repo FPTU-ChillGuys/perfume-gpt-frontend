@@ -7173,95 +7173,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/orders/{orderId}/address": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    orderId: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["UpdateOrderAddressRequest"];
-                    "text/json": components["schemas"]["UpdateOrderAddressRequest"];
-                    "application/*+json": components["schemas"]["UpdateOrderAddressRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-            };
-        };
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/orders/{orderId}/picklist": {
         parameters: {
             query?: never;
@@ -7923,6 +7834,118 @@ export interface paths {
             };
         };
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/policies/{policyCode}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    policyCode: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    policyCode: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SystemPolicyUpdateRequest"];
+                    "text/json": components["schemas"]["SystemPolicyUpdateRequest"];
+                    "application/*+json": components["schemas"]["SystemPolicyUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                    };
+                };
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;
@@ -13295,6 +13318,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfSystemPolicyResponse: {
+            payload?: null | components["schemas"]["SystemPolicyResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfTokenResponse: {
             payload?: null | components["schemas"]["TokenResponse"];
             success?: boolean;
@@ -14112,6 +14142,14 @@ export interface components {
             /** Format: decimal */
             unitPrice?: number;
             /** Format: decimal */
+            campaignDiscount?: number;
+            /** Format: decimal */
+            campaignPrice?: number;
+            /** Format: decimal */
+            voucherDiscount?: number;
+            /** Format: decimal */
+            itemTotal?: number;
+            /** Format: decimal */
             refunablePrice?: number;
             /** Format: decimal */
             total?: number;
@@ -14161,9 +14199,16 @@ export interface components {
             paymentStatus?: components["schemas"]["PaymentStatus"];
             /** Format: decimal */
             totalAmount?: number;
+            /** Format: decimal */
+            subTotal?: number;
+            /** Format: decimal */
+            shippingFee?: number;
             /** Format: uuid */
             voucherId?: null | string;
             voucherCode?: null | string;
+            voucherType?: null | components["schemas"]["VoucherType"];
+            /** Format: decimal */
+            voucherDiscountTotal?: number;
             /** Format: date-time */
             paymentExpiresAt?: null | string;
             /** Format: date-time */
@@ -14534,6 +14579,10 @@ export interface components {
             /** Format: decimal */
             totalPaymentAmount?: number;
             /** Format: decimal */
+            totalShippingFeeDeductedPerOrder?: number;
+            /** Format: decimal */
+            totalPaymentAmountExcludingShipping?: number;
+            /** Format: decimal */
             totalRefundAmount?: number;
         };
         PickListBatchInfo: {
@@ -14595,11 +14644,14 @@ export interface components {
             /** Format: uuid */
             customerId?: null | string;
             sessionId?: null | string;
+            recipient?: null | components["schemas"]["ContactAddressInformation"];
         };
         PreviewPosOrderResponse: {
             items?: components["schemas"]["PosOrderDetailListItem"][];
             /** Format: decimal */
             subTotal?: number;
+            /** Format: decimal */
+            shippingFee?: number;
             /** Format: decimal */
             discount?: number;
             /** Format: decimal */
@@ -14883,6 +14935,8 @@ export interface components {
             items: components["schemas"]["ReceiptItemDto"][];
             /** Format: decimal */
             subtotal?: number;
+            /** Format: decimal */
+            shippingFee?: number;
             /** Format: decimal */
             discount?: number;
             /** Format: decimal */
@@ -15291,6 +15345,17 @@ export interface components {
             expiryDate?: string;
             message: string;
         };
+        SystemPolicyResponse: {
+            policyCode: string;
+            title: string;
+            htmlContent: string;
+            /** Format: date-time */
+            lastUpdated?: string;
+        };
+        SystemPolicyUpdateRequest: {
+            title: string;
+            htmlContent: string;
+        };
         TemporaryMediaResponse: {
             /** Format: uuid */
             id?: string;
@@ -15431,11 +15496,6 @@ export interface components {
         UpdateOlfactoryFamilyRequest: {
             name: string;
         };
-        UpdateOrderAddressRequest: {
-            /** Format: uuid */
-            savedAddressId?: null | string;
-            recipientInformation?: null | components["schemas"]["ContactAddressInformation"];
-        };
         UpdateProductRequest: {
             name: string;
             /** Format: int32 */
@@ -15562,7 +15622,14 @@ export interface components {
             paymentStatus?: components["schemas"]["PaymentStatus"];
             /** Format: decimal */
             totalAmount?: number;
+            /** Format: decimal */
+            subTotal?: number;
+            /** Format: decimal */
+            shippingFee?: number;
             voucherCode?: null | string;
+            voucherType?: null | components["schemas"]["VoucherType"];
+            /** Format: decimal */
+            voucherDiscountTotal?: number;
             /** Format: date-time */
             paymentExpiresAt?: null | string;
             /** Format: date-time */

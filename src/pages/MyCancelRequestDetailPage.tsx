@@ -199,8 +199,8 @@ export const MyCancelRequestDetailPage = () => {
                       size="small"
                       startIcon={<ArrowBackIcon />}
                       onClick={handleBack}
-                      sx={{ 
-                        color: "text.secondary", 
+                      sx={{
+                        color: "text.secondary",
                         textTransform: "none",
                         fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         px: { xs: 1, sm: 2 },
@@ -219,7 +219,7 @@ export const MyCancelRequestDetailPage = () => {
                       <Typography
                         variant="body2"
                         color="text.secondary"
-                        sx={{ 
+                        sx={{
                           letterSpacing: 0.5,
                           fontSize: { xs: "0.7rem", sm: "0.875rem" },
                           display: { xs: "none", sm: "block" },
@@ -234,12 +234,16 @@ export const MyCancelRequestDetailPage = () => {
                           ).toUpperCase()}
                         </b>
                       </Typography>
-                      <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                      <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={{ display: { xs: "none", sm: "block" } }}
+                      />
                       <Typography
                         variant="body2"
                         fontWeight={700}
-                        sx={{ 
-                          color: "#ee4d2d", 
+                        sx={{
+                          color: "#ee4d2d",
                           textTransform: "uppercase",
                           fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         }}
@@ -498,7 +502,7 @@ export const MyCancelRequestDetailPage = () => {
                                     variant="body2"
                                     color="text.secondary"
                                   >
-                                    Tổng tiền hàng
+                                    Tạm tính
                                   </Typography>
                                   <Typography variant="body2">
                                     {formatCurrency(orderSubtotal)}
@@ -519,7 +523,11 @@ export const MyCancelRequestDetailPage = () => {
                                     color="success.main"
                                     fontWeight={500}
                                   >
-                                    FREE
+                                    {order.shippingInfo?.shippingFee
+                                      ? formatCurrency(
+                                          order.shippingInfo.shippingFee,
+                                        )
+                                      : "-"}
                                   </Typography>
                                 </Box>
                                 {voucherDiscount > 0 && (

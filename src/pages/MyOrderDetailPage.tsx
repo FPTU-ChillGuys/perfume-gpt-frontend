@@ -616,6 +616,168 @@ const OrderStepper = ({
   );
 };
 
+// ─── Sub-components ─────────────────────────────────────────────────────────
+
+interface OrderPriceCellProps {
+  unitPrice?: number | null;
+  campaignPrice?: number | null;
+  campaignDiscount?: number | null;
+}
+
+/** Hiển thị giá: chiến dịch (bold) + gạch ngang giá gốc */
+const OrderPriceCell = ({
+  unitPrice,
+  campaignPrice,
+  campaignDiscount,
+}: OrderPriceCellProps) => {
+  const hasCampaignDiscount =
+    campaignDiscount && campaignDiscount > 0 && campaignPrice;
+
+  if (hasCampaignDiscount) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="flex-end"
+        gap={0.5}
+      >
+        <Typography variant="body2" fontWeight={600} color="error.main">
+          {fmt(campaignPrice)}
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            textDecoration: "line-through",
+            color: "text.disabled",
+            fontSize: "0.875rem",
+          }}
+        >
+          {fmt(unitPrice)}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Typography variant="body2" fontWeight={500}>
+      {fmt(unitPrice)}
+    </Typography>
+  );
+};
+
+interface OrderVoucherTagProps {
+  voucherType?: string | null;
+  voucherCode?: string | null;
+  voucherDiscount?: number | null;
+  productDiscount?: number | null;
+}
+
+/** Tag hiển thị voucher sản phẩm nếu có */
+const OrderVoucherTag = ({
+  voucherType,
+  voucherCode,
+  voucherDiscount,
+  productDiscount,
+}: OrderVoucherTagProps) => {
+  // Chỉ hiển thị nếu là voucher sản phẩm và có discount
+  const isProductVoucher =
+    voucherType === "Product" && voucherDiscount && voucherDiscount > 0;
+
+  if (!isProductVoucher) return null;
+
+  return (
+    <Chip
+      label={`Giảm thêm từ mã ${voucherCode}: -${fmt(voucherDiscount)}`}
+      size="small"
+      sx={{
+        mt: 0.5,
+        height: 24,
+        fontSize: "0.80rem",
+        bgcolor: "success.superLight",
+        color: "success.dark",
+      }}
+    />
+  );
+};
+
+interface OrderSummaryProps {
+  order: OrderResponse | null;
+}
+
+/** Khu vực tóm tắt thanh toán */
+const OrderSummary = ({ order }: OrderSummaryProps) => {
+  if (!order) return null;
+
+  const getVoucherTypeLabel = (voucherType?: string | null): string => {
+    if (voucherType === "Product") return "Voucher sản phẩm";
+    if (voucherType === "Global") return "Voucher toàn sàn";
+    return "Khuyến mãi";
+  };
+
+  const showVoucherDiscount =
+    (order.voucherDiscountTotal ?? 0) > 0;
+
+  return (
+    <Stack spacing={1}>
+      <Box display="flex" justifyContent="space-between">
+        <Typography variant="body2" color="text.secondary">
+          Tổng tiền hàng
+        </Typography>
+        <Typography variant="body2">{fmt(order.subTotal ?? 0)}</Typography>
+      </Box>
+
+      <Box display="flex" justifyContent="space-between">
+        <Typography variant="body2" color="text.secondary">
+          Phí vận chuyển
+        </Typography>
+        <Typography variant="body2" fontWeight={500}>
+          {fmt(order.shippingFee ?? 0)}
+        </Typography>
+      </Box>
+
+      {showVoucherDiscount && (
+        <Box display="flex" justifyContent="space-between">
+          <Typography variant="body2" color="text.secondary">
+            {getVoucherTypeLabel(order.voucherType)}
+            {order.voucherCode && (
+              <Chip
+                label={order.voucherCode}
+                size="small"
+                sx={{
+                  ml: 1,
+                  fontSize: 11,
+                  fontWeight: 800,
+                  backgroundColor: "success.light",
+                  color: "success.dark",
+                  borderRadius: 1,
+                }}
+              />
+            )}
+          </Typography>
+          <Typography variant="body2" color="error.main" fontWeight={600}>
+            -{fmt(order.voucherDiscountTotal)}
+          </Typography>
+        </Box>
+      )}
+
+      <Divider />
+
+      <Box display="flex" justifyContent="space-between">
+        <Typography variant="subtitle1" fontWeight={700}>
+          Tổng thanh toán
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          fontWeight={700}
+          sx={{ color: "#ee4d2d", fontSize: "1.25rem" }}
+        >
+          {fmt(order.totalAmount ?? 0)}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+};
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export const MyOrderDetailPage = () => {
@@ -1859,7 +2021,11 @@ export const MyOrderDetailPage = () => {
                       gap: { xs: 1, sm: 0 },
                     }}
                   >
-                    <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }} alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={{ xs: 0.5, sm: 1 }}
+                      alignItems="center"
+                    >
                       <Button
                         size="small"
                         startIcon={<ArrowBack />}
@@ -1868,8 +2034,8 @@ export const MyOrderDetailPage = () => {
                             state: { status: backStatus },
                           })
                         }
-                        sx={{ 
-                          color: "text.secondary", 
+                        sx={{
+                          color: "text.secondary",
                           textTransform: "none",
                           fontSize: { xs: "0.75rem", sm: "0.875rem" },
                           px: { xs: 1, sm: 2 },
@@ -1908,7 +2074,7 @@ export const MyOrderDetailPage = () => {
                       <Typography
                         variant="body2"
                         color="text.secondary"
-                        sx={{ 
+                        sx={{
                           letterSpacing: 0.5,
                           fontSize: { xs: "0.7rem", sm: "0.875rem" },
                           display: { xs: "none", sm: "block" },
@@ -1924,12 +2090,16 @@ export const MyOrderDetailPage = () => {
                           ).toUpperCase()}
                         </b>
                       </Typography>
-                      <Divider orientation="vertical" flexItem sx={{ display: { xs: "none", sm: "block" } }} />
+                      <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={{ display: { xs: "none", sm: "block" } }}
+                      />
                       <Typography
                         variant="body2"
                         fontWeight={700}
-                        sx={{ 
-                          color: "#ee4d2d", 
+                        sx={{
+                          color: "#ee4d2d",
                           textTransform: "uppercase",
                           fontSize: { xs: "0.75rem", sm: "0.875rem" },
                         }}
@@ -2185,26 +2355,46 @@ export const MyOrderDetailPage = () => {
                                           }}
                                         />
                                       )}
-                                      <Typography
-                                        className="product-name"
-                                        variant="body2"
-                                        fontWeight={500}
+                                      <Box
+                                        display="flex"
+                                        flexDirection="column"
                                       >
-                                        {item.variantName}
-                                      </Typography>
+                                        <Typography
+                                          className="product-name"
+                                          variant="body2"
+                                          fontWeight={500}
+                                        >
+                                          {item.variantName}
+                                        </Typography>
+                                        {order.voucherType === "Product" &&
+                                          item.voucherDiscount &&
+                                          item.voucherDiscount > 0 && (
+                                            <OrderVoucherTag
+                                              voucherType={order.voucherType}
+                                              voucherCode={order.voucherCode}
+                                              voucherDiscount={
+                                                item.voucherDiscount
+                                              }
+                                            />
+                                          )}
+                                      </Box>
                                     </Box>
                                   </TableCell>
                                   <TableCell align="center">
                                     x{item.quantity}
                                   </TableCell>
                                   <TableCell align="right">
-                                    {fmt(item.unitPrice)}
+                                    <OrderPriceCell
+                                      unitPrice={item.unitPrice}
+                                      campaignPrice={item.campaignPrice}
+                                      campaignDiscount={item.campaignDiscount}
+                                    />
                                   </TableCell>
                                   <TableCell
                                     align="right"
                                     sx={{ fontWeight: 600 }}
                                   >
-                                    {fmt(item.total)}
+                                    {fmt(item.itemTotal ?? item.total)}
                                   </TableCell>
                                   {canReview && (
                                     <TableCell
@@ -2272,60 +2462,7 @@ export const MyOrderDetailPage = () => {
                       </Typography>
 
                       <Stack spacing={1}>
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="body2" color="text.secondary">
-                            Tổng tiền hàng
-                          </Typography>
-                          <Typography variant="body2">
-                            {fmt(subtotal)}
-                          </Typography>
-                        </Box>
-
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="body2" color="text.secondary">
-                            Phí vận chuyển
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            color="success.main"
-                            fontWeight={500}
-                          >
-                            FREE
-                          </Typography>
-                        </Box>
-
-                        {voucherDiscount > 0 && (
-                          <Box display="flex" justifyContent="space-between">
-                            <Typography variant="body2" color="text.secondary">
-                              Giảm giá voucher
-                              {order.voucherCode ? (
-                                <Chip
-                                  label={order.voucherCode}
-                                  size="small"
-                                  sx={{ ml: 1, fontSize: 11 }}
-                                />
-                              ) : null}
-                            </Typography>
-                            <Typography variant="body2" color="success.main">
-                              -{fmt(voucherDiscount)}
-                            </Typography>
-                          </Box>
-                        )}
-
-                        <Divider />
-
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="subtitle1" fontWeight={700}>
-                            Tổng thanh toán
-                          </Typography>
-                          <Typography
-                            variant="subtitle1"
-                            fontWeight={700}
-                            sx={{ color: "#ee4d2d" }}
-                          >
-                            {fmt(total)}
-                          </Typography>
-                        </Box>
+                        <OrderSummary order={order} />
 
                         <Divider />
 
@@ -2706,7 +2843,9 @@ export const MyOrderDetailPage = () => {
             <RadioGroup
               value={selectedRetryPaymentMethod}
               onChange={(e) =>
-                setSelectedRetryPaymentMethod(e.target.value as NonNullable<PaymentMethod>)
+                setSelectedRetryPaymentMethod(
+                  e.target.value as NonNullable<PaymentMethod>,
+                )
               }
             >
               {allowedRetryPaymentMethods.map((method) => (

@@ -155,6 +155,197 @@ const isSupportedPaymentMethod = (
   value === "ExternalBankTransfer" ||
   value === "PayOs";
 
+// ─── Sub-components ─────────────────────────────────────────────────────────
+
+interface OrderPriceCellProps {
+  unitPrice?: number | null;
+  campaignPrice?: number | null;
+  campaignDiscount?: number | null;
+}
+
+/** Hiển thị giá: chiến dịch (bold) + gạch ngang giá gốc */
+const OrderPriceCell = ({
+  unitPrice,
+  campaignPrice,
+  campaignDiscount,
+}: OrderPriceCellProps) => {
+  const hasCampaignDiscount =
+    campaignDiscount && campaignDiscount > 0 && campaignPrice;
+
+  if (hasCampaignDiscount) {
+    return (
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="flex-end"
+        gap={0.5}
+      >
+        <Typography variant="body2" fontWeight={600} color="error.main">
+          {fmt(campaignPrice)}
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            textDecoration: "line-through",
+            color: "text.disabled",
+            fontSize: "0.875rem",
+          }}
+        >
+          {fmt(unitPrice)}
+        </Typography>
+      </Box>
+    );
+  }
+
+  return (
+    <Typography variant="body2" fontWeight={500}>
+      {fmt(unitPrice)}
+    </Typography>
+  );
+};
+
+interface OrderPriceChipsProps {
+  campaignDiscount?: number | null;
+  voucherCode?: string | null;
+  voucherDiscount?: number | null;
+  voucherType?: string | null;
+}
+
+/** Chips hiển thị flashsale và voucher */
+const OrderPriceChips = ({
+  campaignDiscount,
+  voucherCode,
+  voucherDiscount,
+  voucherType,
+}: OrderPriceChipsProps) => {
+  const chips: React.ReactNode[] = [];
+
+  // Flashsale chip
+  if (campaignDiscount && campaignDiscount > 0) {
+    chips.push(
+      <Chip
+        key="flashsale"
+        label={`Flashsale: -${fmt(campaignDiscount)}`}
+        size="small"
+        sx={{
+          height: 24,
+          fontSize: "0.75rem",
+          bgcolor: "silver",
+          color: "warning.dark",
+          borderRadius: "3px",
+        }}
+      />,
+    );
+  }
+
+  // Voucher chip (Product voucher only)
+  if (
+    voucherType === "Product" &&
+    voucherDiscount &&
+    voucherDiscount > 0 &&
+    voucherCode
+  ) {
+    chips.push(
+      <Chip
+        key="voucher"
+        label={`Mã ${voucherCode}: -${fmt(voucherDiscount)}`}
+        size="small"
+        sx={{
+          height: 24,
+          fontSize: "0.75rem",
+          bgcolor: "success.light",
+          color: "success.dark",
+        }}
+      />,
+    );
+  }
+
+  if (chips.length === 0) return null;
+
+  return (
+    <Stack direction="row" spacing={0.5} mt={0.75}>
+      {chips}
+    </Stack>
+  );
+};
+
+interface OrderSummaryProps {
+  order: OrderResponse | null;
+}
+
+/** Khu vực tóm tắt thanh toán */
+const OrderSummaryBox = ({ order }: OrderSummaryProps) => {
+  if (!order) return null;
+
+  const getVoucherTypeLabel = (voucherType?: string | null): string => {
+    if (voucherType === "Product") return "Voucher sản phẩm";
+    if (voucherType === "Global") return "Voucher toàn sàn";
+    return "Khuyến mãi";
+  };
+
+  const showVoucherDiscount = (order.voucherDiscountTotal ?? 0) > 0;
+
+  return (
+    <Stack spacing={1}>
+      <Box display="flex" justifyContent="space-between">
+        <Typography variant="body2" color="text.secondary">
+          Tổng tiền hàng
+        </Typography>
+        <Typography variant="body2">{fmt(order.subTotal ?? 0)}</Typography>
+      </Box>
+
+      <Box display="flex" justifyContent="space-between">
+        <Typography variant="body2" color="text.secondary">
+          Phí vận chuyển
+        </Typography>
+        <Typography variant="body2" fontWeight={500}>
+          {fmt(order.shippingFee ?? 0)}
+        </Typography>
+      </Box>
+
+      {showVoucherDiscount && (
+        <Box display="flex" justifyContent="space-between">
+          <Typography variant="body2" color="text.secondary">
+            {getVoucherTypeLabel(order.voucherType)}
+            {order.voucherCode && (
+              <Chip
+                label={order.voucherCode}
+                size="small"
+                sx={{
+                  ml: 1,
+                  fontSize: 11,
+                  borderRadius: 1,
+                  fontWeight: 800,
+                  bgcolor: "success.light",
+                  color: "success.dark",
+                }}
+              />
+            )}
+          </Typography>
+          <Typography variant="body2" color="error.main" fontWeight={600}>
+            -{fmt(order.voucherDiscountTotal)}
+          </Typography>
+        </Box>
+      )}
+
+      <Divider />
+
+      <Box display="flex" justifyContent="space-between">
+        <Typography variant="subtitle1" fontWeight={700}>
+          Tổng thanh toán
+        </Typography>
+        <Typography
+          variant="subtitle1"
+          fontWeight={700}
+          sx={{ color: "#ee4d2d", fontSize: "1.25rem" }}
+        >
+          {fmt(order.totalAmount ?? 0)}
+        </Typography>
+      </Box>
+    </Stack>
+  );
+};
+
 interface StepperProps {
   status: OrderStatus;
   createdAt?: string | null;
@@ -502,7 +693,7 @@ export const OrderManagementDetailPage = () => {
     !!order?.status && STAFF_CANCELABLE_STATUSES.includes(order.status);
   const hasBlockingCancelRequest = Boolean(
     orderCancelRequest?.id &&
-      CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
+    CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
   );
 
   const selectedCancelReasonLabel = useMemo(() => {
@@ -1261,22 +1452,68 @@ export const OrderManagementDetailPage = () => {
                 }}
               >
                 <Stack spacing={3}>
-                  {(order.recipientInfo || order.shippingInfo) && (
-                    <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
-                      <Typography
-                        variant="subtitle1"
-                        fontWeight={700}
-                        mb={2}
-                        color="#ee4d2d"
-                      >
-                        Địa chỉ nhận hàng
-                      </Typography>
-                      <Box
-                        display="grid"
-                        gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }}
-                        gap={2}
-                      >
-                        {order.recipientInfo && (
+                  <Paper variant="outlined" sx={{ p: 2.5, borderRadius: 2 }}>
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      mb={2}
+                      color="#ee4d2d"
+                    >
+                      Thông tin liên hệ
+                    </Typography>
+                    <Box
+                      display="grid"
+                      gridTemplateColumns={{
+                        xs: "1fr",
+                        sm: "1fr 1fr",
+                        md: "1fr 1fr 1fr",
+                      }}
+                      gap={3}
+                    >
+                      {/* Cột 1: Người đặt hàng (Customer Info) */}
+                      <Stack spacing={1.5}>
+                        <Typography
+                          variant="caption"
+                          fontWeight={700}
+                          color="text.secondary"
+                          textTransform="uppercase"
+                        >
+                          Người đặt hàng
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {order.customerName || "N/A"}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {order.customerEmail || "N/A"}
+                        </Typography>
+                        <Stack direction="row" spacing={0.75} flexWrap="wrap">
+                          {order.staffName && (
+                            <Chip
+                              label={`Tạo bởi: ${order.staffName}`}
+                              size="small"
+                              variant="outlined"
+                              sx={{
+                                height: 24,
+                                fontSize: "0.75rem",
+                                borderColor: "primary.main",
+                                color: "primary.main",
+                              }}
+                            />
+                          )}
+                        </Stack>
+                      </Stack>
+
+                      {/* Cột 2: Người nhận hàng (Recipient Info) */}
+                      <Stack spacing={1.5}>
+                        <Typography
+                          variant="caption"
+                          fontWeight={700}
+                          color="text.secondary"
+                          textTransform="uppercase"
+                        >
+                          Người nhận hàng
+                        </Typography>
+                        {order.recipientInfo ? (
                           <Stack spacing={1}>
                             <Box display="flex" alignItems="center" gap={1}>
                               <Person
@@ -1292,16 +1529,20 @@ export const OrderManagementDetailPage = () => {
                                 fontSize="small"
                                 sx={{ color: "text.secondary" }}
                               />
-                              <Typography variant="body2">
+                              <Typography variant="caption">
                                 {order.recipientInfo.recipientPhoneNumber}
                               </Typography>
                             </Box>
                             <Box display="flex" alignItems="flex-start" gap={1}>
                               <LocationOn
                                 fontSize="small"
-                                sx={{ color: "text.secondary", mt: 0.2 }}
+                                sx={{
+                                  color: "text.secondary",
+                                  mt: 0.25,
+                                  flexShrink: 0,
+                                }}
                               />
-                              <Typography variant="body2">
+                              <Typography variant="caption" lineHeight={1.4}>
                                 {order.recipientInfo.fullAddress},{" "}
                                 {order.recipientInfo.wardName},{" "}
                                 {order.recipientInfo.districtName},{" "}
@@ -1309,51 +1550,95 @@ export const OrderManagementDetailPage = () => {
                               </Typography>
                             </Box>
                           </Stack>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            N/A
+                          </Typography>
                         )}
+                      </Stack>
 
-                        {order.shippingInfo && (
+                      {/* Cột 3: Thông tin vận chuyển (Shipping Info) */}
+                      <Stack spacing={1.5}>
+                        <Typography
+                          variant="caption"
+                          fontWeight={700}
+                          color="text.secondary"
+                          textTransform="uppercase"
+                        >
+                          Vận chuyển
+                        </Typography>
+                        {order.shippingInfo ? (
                           <Stack spacing={1}>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              fontWeight={600}
-                            >
-                              Đơn vị vận chuyển
-                            </Typography>
-                            <Typography variant="body2" fontWeight={600}>
-                              {order.shippingInfo.carrierName
-                                ? (CARRIER_LABELS[
-                                    order.shippingInfo.carrierName
-                                  ] ?? order.shippingInfo.carrierName)
-                                : "N/A"}
-                            </Typography>
-                            {order.shippingInfo.trackingNumber && (
+                            <Box>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                                mb={0.5}
+                              >
+                                Đơn vị
+                              </Typography>
+                              <Typography variant="body2" fontWeight={600}>
+                                {order.shippingInfo.carrierName
+                                  ? (CARRIER_LABELS[
+                                      order.shippingInfo.carrierName
+                                    ] ?? order.shippingInfo.carrierName)
+                                  : "N/A"}
+                              </Typography>
+                            </Box>
+                            <Box>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                display="block"
+                                mb={0.5}
+                              >
+                                Mã vận đơn
+                              </Typography>
                               <Typography
                                 variant="body2"
-                                color="text.secondary"
+                                fontWeight={600}
+                                color={
+                                  order.shippingInfo.trackingNumber
+                                    ? "text.primary"
+                                    : "text.secondary"
+                                }
                               >
-                                Mã vận đơn:{" "}
-                                <b>{order.shippingInfo.trackingNumber}</b>
+                                {order.shippingInfo.trackingNumber ||
+                                  "Chưa có mã vận đơn"}
                               </Typography>
-                            )}
+                            </Box>
                             {order.status === "Delivering" &&
                               order.shippingInfo.estimatedDeliveryDate && (
-                                <Typography
-                                  variant="body2"
-                                  color="info.main"
-                                  fontWeight={600}
-                                >
-                                  Dự kiến nhận hàng:{" "}
-                                  {fmtDateShort(
-                                    order.shippingInfo.estimatedDeliveryDate,
-                                  )}
-                                </Typography>
+                                <Box>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                    display="block"
+                                    mb={0.5}
+                                  >
+                                    Dự kiến nhận
+                                  </Typography>
+                                  <Typography
+                                    variant="body2"
+                                    color="info.main"
+                                    fontWeight={600}
+                                  >
+                                    {fmtDateShort(
+                                      order.shippingInfo.estimatedDeliveryDate,
+                                    )}
+                                  </Typography>
+                                </Box>
                               )}
                           </Stack>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">
+                            N/A
+                          </Typography>
                         )}
-                      </Box>
-                    </Paper>
-                  )}
+                      </Stack>
+                    </Box>
+                  </Paper>
 
                   <Paper variant="outlined" sx={{ borderRadius: 2 }}>
                     <Box
@@ -1400,7 +1685,7 @@ export const OrderManagementDetailPage = () => {
                                   <TableCell>
                                     <Box
                                       display="flex"
-                                      alignItems="center"
+                                      alignItems="flex-start"
                                       gap={1.5}
                                     >
                                       {item.imageUrl ? (
@@ -1429,25 +1714,39 @@ export const OrderManagementDetailPage = () => {
                                           }}
                                         />
                                       )}
-                                      <Typography
-                                        variant="body2"
-                                        fontWeight={500}
-                                      >
-                                        {item.variantName}
-                                      </Typography>
+                                      <Stack spacing={0.75} flex={1}>
+                                        <Typography
+                                          variant="body2"
+                                          fontWeight={600}
+                                        >
+                                          {item.variantName}
+                                        </Typography>
+                                        <OrderPriceChips
+                                          campaignDiscount={
+                                            item.campaignDiscount
+                                          }
+                                          voucherCode={order.voucherCode}
+                                          voucherDiscount={item.voucherDiscount}
+                                          voucherType={order.voucherType}
+                                        />
+                                      </Stack>
                                     </Box>
                                   </TableCell>
                                   <TableCell align="center">
                                     x{item.quantity}
                                   </TableCell>
                                   <TableCell align="right">
-                                    {fmt(item.unitPrice)}
+                                    <OrderPriceCell
+                                      unitPrice={item.unitPrice}
+                                      campaignPrice={item.campaignPrice}
+                                      campaignDiscount={item.campaignDiscount}
+                                    />
                                   </TableCell>
                                   <TableCell
                                     align="right"
                                     sx={{ fontWeight: 600 }}
                                   >
-                                    {fmt(item.total)}
+                                    {fmt(item.itemTotal ?? item.total)}
                                   </TableCell>
                                   <TableCell align="center">
                                     {batches.length === 0 ? (
@@ -1983,80 +2282,20 @@ export const OrderManagementDetailPage = () => {
                     <Typography variant="subtitle1" fontWeight={700} mb={2}>
                       Chi tiết thanh toán
                     </Typography>
-
-                    <Stack spacing={1}>
-                      <Box display="flex" justifyContent="space-between">
-                        <Typography variant="body2" color="text.secondary">
-                          Tổng tiền hàng
-                        </Typography>
-                        <Typography variant="body2">{fmt(subtotal)}</Typography>
-                      </Box>
-
-                      <Box display="flex" justifyContent="space-between">
-                        <Typography variant="body2" color="text.secondary">
-                          Phí vận chuyển
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="success.main"
-                          fontWeight={500}
-                        >
-                          FREE
-                        </Typography>
-                      </Box>
-
-                      {voucherDiscount > 0 && (
-                        <Box display="flex" justifyContent="space-between">
-                          <Typography variant="body2" color="text.secondary">
-                            Giảm giá voucher
-                            {order.voucherCode ? (
-                              <Chip
-                                label={order.voucherCode}
-                                size="small"
-                                sx={{ ml: 1, fontSize: 11 }}
-                              />
-                            ) : null}
-                          </Typography>
-                          <Typography variant="body2" color="success.main">
-                            -{fmt(voucherDiscount)}
-                          </Typography>
-                        </Box>
-                      )}
-
-                      <Divider />
-
-                      <Box display="flex" justifyContent="space-between">
-                        <Typography variant="subtitle1" fontWeight={700}>
-                          Tổng thanh toán
-                        </Typography>
-                        <Typography
-                          variant="subtitle1"
-                          fontWeight={700}
-                          sx={{ color: "#ee4d2d" }}
-                        >
-                          {fmt(total)}
-                        </Typography>
-                      </Box>
-
-                      <Divider />
-
-                      <Box
-                        display="flex"
-                        justifyContent="space-between"
-                        gap={2}
+                    <OrderSummaryBox order={order} />
+                    <Divider sx={{ my: 2 }} />
+                    <Box display="flex" justifyContent="space-between" gap={2}>
+                      <Typography variant="body2" color="text.secondary">
+                        Phương thức thanh toán
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        textAlign="right"
                       >
-                        <Typography variant="body2" color="text.secondary">
-                          Phương thức thanh toán
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          fontWeight={600}
-                          textAlign="right"
-                        >
-                          {paymentMethodLabel}
-                        </Typography>
-                      </Box>
-                    </Stack>
+                        {paymentMethodLabel}
+                      </Typography>
+                    </Box>
                   </Paper>
                 </Stack>
               </Box>

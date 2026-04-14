@@ -72,7 +72,9 @@ export const CartPage = () => {
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
-  const [myVoucherList, setMyVoucherList] = useState<AvailableVoucherResponse[]>([]);
+  const [myVoucherList, setMyVoucherList] = useState<
+    AvailableVoucherResponse[]
+  >([]);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   const roundCheckboxSx = {
@@ -947,7 +949,13 @@ export const CartPage = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           Chọn voucher
           <IconButton onClick={() => setVoucherPickerOpen(false)} size="small">
             <CloseIcon />
@@ -981,7 +989,10 @@ export const CartPage = () => {
                     setIsApplyingVoucher(true);
                     setVoucherError(null);
                     try {
-                      const updatedTotals = await loadTotals(selectedCartItemIds, code);
+                      const updatedTotals = await loadTotals(
+                        selectedCartItemIds,
+                        code,
+                      );
                       if (!updatedTotals) {
                         setAppliedVoucher(null);
                         setVoucherError("Không thể áp dụng voucher này.");
@@ -1004,7 +1015,10 @@ export const CartPage = () => {
                   }}
                 >
                   <Typography fontWeight={600}>
-                    <LocalOffer fontSize="small" sx={{ mr: 0.5, verticalAlign: "middle" }} />
+                    <LocalOffer
+                      fontSize="small"
+                      sx={{ mr: 0.5, verticalAlign: "middle" }}
+                    />
                     {v.code}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">

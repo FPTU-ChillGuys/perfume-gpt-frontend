@@ -183,7 +183,9 @@ export const CheckoutPage = () => {
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
-  const [myVoucherList, setMyVoucherList] = useState<AvailableVoucherResponse[]>([]);
+  const [myVoucherList, setMyVoucherList] = useState<
+    AvailableVoucherResponse[]
+  >([]);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   useEffect(() => {
@@ -226,7 +228,14 @@ export const CheckoutPage = () => {
       updateTotalsWithAddress();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPickupInStore, selectedCartItemIds]);
+  }, [
+    isPickupInStore,
+    selectedCartItemIds,
+    selectedAddressId,
+    useNewAddress,
+    newAddress.districtId,
+    newAddress.wardCode,
+  ]);
 
   // Auto-apply voucher from cart or sessionStorage
   useEffect(() => {
@@ -391,12 +400,32 @@ export const CheckoutPage = () => {
           : false,
       );
 
-      const totalsData = shouldQuerySelectedItems(
+      // Set default address if exists (before fetching totals so we can pass address info to API)
+      const defaultAddr = addressList.find((addr) => addr.isDefault);
+      const defaultAddressId = defaultAddr?.id || "";
+
+      // Build address params for initial totals fetch
+      const addressParams = {
+        savedAddressId:
+          defaultAddr && defaultAddressId ? defaultAddressId : undefined,
+        districtId: undefined as number | undefined,
+        wardCode: undefined as string | undefined,
+      };
+
+      const itemIdsForQuery = shouldQuerySelectedItems(
         allItemIds,
         effectiveSelectedIds,
       )
-        ? await cartService.getTotals(undefined, effectiveSelectedIds)
-        : await cartService.getTotals();
+        ? effectiveSelectedIds
+        : undefined;
+
+      const totalsData = await cartService.getTotals(
+        undefined,
+        itemIdsForQuery,
+        addressParams.districtId,
+        addressParams.wardCode,
+        addressParams.savedAddressId,
+      );
 
       setAddresses(addressList);
       setAllCartItemIds(allItemIds);
@@ -404,10 +433,9 @@ export const CheckoutPage = () => {
       setSelectedCartItemIds(effectiveSelectedIds);
       setTotals(totalsData);
 
-      // Set default address if exists
-      const defaultAddr = addressList.find((addr) => addr.isDefault);
-      if (defaultAddr?.id) {
-        setSelectedAddressId(defaultAddr.id);
+      // Set default address
+      if (defaultAddressId) {
+        setSelectedAddressId(defaultAddressId);
       }
     } catch (error) {
       showToast("Không thể tải dữ liệu. Vui lòng thử lại.", "error");
@@ -416,7 +444,7 @@ export const CheckoutPage = () => {
     }
   };
 
-  // Update totals bằng /api/cart/total; shipping đang free nên không cần query theo địa chỉ
+  // Update totals bằng /api/cart/total; gửi thông tin địa chỉ để tính shipping fee
   const updateTotalsWithAddress = async (
     voucherCodeOverride?: string | null,
   ): Promise<CartTotals | null> => {
@@ -438,9 +466,38 @@ export const CheckoutPage = () => {
         ? selectedCartItemIds
         : undefined;
 
+      // Xác định tham số địa chỉ dựa trên phương thức giao hàng
+      const addressParams = !isPickupInStore
+        ? useNewAddress
+          ? {
+              savedAddressId: undefined,
+              districtId: newAddress.districtId,
+              wardCode: newAddress.wardCode,
+            }
+          : selectedAddressId
+            ? {
+                savedAddressId: selectedAddressId,
+                districtId: undefined,
+                wardCode: undefined,
+              }
+            : {
+                savedAddressId: undefined,
+                districtId: undefined,
+                wardCode: undefined,
+              }
+        : {
+            // Nếu isPickupInStore = true, không gửi address info
+            savedAddressId: undefined,
+            districtId: undefined,
+            wardCode: undefined,
+          };
+
       const totalsData = await cartService.getTotals(
         activeVoucher,
         itemIdsForQuery,
+        addressParams.districtId,
+        addressParams.wardCode,
+        addressParams.savedAddressId,
       );
       setTotals(totalsData);
       setTotalsWarningMessage(totalsData.warningMessage || null);
@@ -1266,7 +1323,7 @@ export const CheckoutPage = () => {
               <Box display="flex" justifyContent="space-between" mb={1}>
                 <Typography>Phí vận chuyển</Typography>
                 <Typography fontWeight={500} color="success.main">
-                  FREE
+                  {formatCurrency(totals.shippingFee)}
                 </Typography>
               </Box>
               <Divider sx={{ my: 1.5 }} />
@@ -1302,7 +1359,13 @@ export const CheckoutPage = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Box display="flex" alignItems="center" gap={1}>
             <LocalOffer color="primary" />
             Chọn voucher
@@ -1353,9 +1416,12 @@ export const CheckoutPage = () => {
                       setVoucherError(null);
                       setIsApplyingVoucher(true);
                       try {
-                        const updatedTotals = await updateTotalsWithAddress(code);
+                        const updatedTotals =
+                          await updateTotalsWithAddress(code);
                         if (!updatedTotals) {
-                          setVoucherError("Voucher không hợp lệ cho đơn hàng này");
+                          setVoucherError(
+                            "Voucher không hợp lệ cho đơn hàng này",
+                          );
                           return;
                         }
                         setAppliedVoucher({
@@ -1367,26 +1433,42 @@ export const CheckoutPage = () => {
                         sessionStorage.setItem("appliedVoucherCode", code);
                       } catch (err: any) {
                         setVoucherError(
-                          err?.message || "Voucher không hợp lệ cho đơn hàng này",
+                          err?.message ||
+                            "Voucher không hợp lệ cho đơn hàng này",
                         );
                       } finally {
                         setIsApplyingVoucher(false);
                       }
                     }}
                   >
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
                       <Box>
-                        <Typography variant="subtitle2" fontWeight={700} fontFamily="monospace">
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight={700}
+                          fontFamily="monospace"
+                        >
                           {v.code}
                         </Typography>
-                        <Typography variant="body2" color="primary.main" fontWeight={600}>
+                        <Typography
+                          variant="body2"
+                          color="primary.main"
+                          fontWeight={600}
+                        >
                           Giảm {discountLabel}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {v.minOrderValue
                             ? `Đơn tối thiểu: ${formatCurrency(v.minOrderValue)}`
                             : "Không giới hạn đơn tối thiểu"}
-                          {" · "}HSD: {v.expiryDate ? new Date(v.expiryDate).toLocaleDateString("vi-VN") : "—"}
+                          {" · "}HSD:{" "}
+                          {v.expiryDate
+                            ? new Date(v.expiryDate).toLocaleDateString("vi-VN")
+                            : "—"}
                         </Typography>
                       </Box>
                       <Button variant="text" size="small" color="primary">

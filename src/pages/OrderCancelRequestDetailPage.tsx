@@ -829,7 +829,9 @@ export const OrderCancelRequestDetailPage = () => {
                               color="success.main"
                               fontWeight={500}
                             >
-                              FREE
+                              {formatCurrency(
+                                selectedOrder.shippingInfo?.shippingFee,
+                              ) || "-"}
                             </Typography>
                           </Box>
                           {voucherDiscount > 0 && (
@@ -838,7 +840,7 @@ export const OrderCancelRequestDetailPage = () => {
                                 variant="body2"
                                 color="text.secondary"
                               >
-                                Giảm giá voucher
+                                Giảm giá
                               </Typography>
                               <Typography variant="body2" color="success.main">
                                 -{formatCurrency(voucherDiscount)}
