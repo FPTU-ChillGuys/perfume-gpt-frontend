@@ -296,15 +296,17 @@ const ProductDetailPage = () => {
   useEffect(() => {
     if (!selectedVariantId) return;
 
-    const currentVariantInUrl = searchParams.get("variantId");
+    // Read directly from window.location to get the actual current URL
+    const currentUrlParams = new URLSearchParams(window.location.search);
+    const currentVariantInUrl = currentUrlParams.get("variantId");
+    
     if (currentVariantInUrl === selectedVariantId) return;
 
-    // Use window.history to avoid triggering React Router re-renders
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("variantId", selectedVariantId);
-    const newUrl = `${window.location.pathname}?${nextParams.toString()}`;
+    // Update URL without triggering React Router re-renders
+    currentUrlParams.set("variantId", selectedVariantId);
+    const newUrl = `${window.location.pathname}?${currentUrlParams.toString()}`;
     window.history.replaceState(null, "", newUrl);
-  }, [selectedVariantId, searchParams]);
+  }, [selectedVariantId]);
 
   const displayVariants = useMemo(() => {
     return (productDetail?.variants || []).map((variant) => ({
