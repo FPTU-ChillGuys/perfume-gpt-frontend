@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://mustached-gibingly-brigitte.ngrok-free.dev/api/$1"
+      "destination": "https://backend-sep490.vqnofficial.win/$1"
     },
     {
       "source": "/trends/(.*)",
-      "destination": "https://mustached-gibingly-brigitte.ngrok-free.dev/trends/$1"
+      "destination": "https://ai-backend-sep490.vqnofficial.win/trends/$1"
     },
     {
       "source": "/(.*)",

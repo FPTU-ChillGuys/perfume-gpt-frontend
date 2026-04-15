@@ -213,7 +213,7 @@ const menuGroups: SidebarMenuGroup[] = [
         roles: ["admin"],
       },
       {
-        text: "Chiến lược khuyến mãi",
+        text: "Chiến dịch khuyến mãi",
         icon: <CampaignIcon />,
         path: "/admin/campaigns",
         roles: ["admin"],
@@ -425,9 +425,9 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
         >
           <ListItemIcon sx={{ minWidth: collapsed ? "auto" : 40 }}>
             {item.text === "Đợt nhập hàng" &&
-              user?.role === "staff" &&
-              pendingCount > 0 &&
-              collapsed ? (
+            user?.role === "staff" &&
+            pendingCount > 0 &&
+            collapsed ? (
               <Badge badgeContent={pendingCount} color="error" max={99}>
                 {item.icon}
               </Badge>

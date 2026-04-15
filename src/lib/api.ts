@@ -63,21 +63,12 @@ const middleware: Middleware = {
 
     try {
       const url = new URL(request.url);
-      const isNgrokHost =
-        url.hostname.includes("ngrok.io") ||
-        url.hostname.includes("ngrok-free.app") ||
-        url.hostname.includes("ngrok-free.dev");
 
       const isApiLikePath =
         url.pathname.startsWith("/api/") ||
         url.pathname === "/api" ||
         url.pathname.startsWith("/trends/") ||
         url.pathname === "/trends";
-
-      // Forward this header for API-like requests so ngrok does not return browser warning HTML.
-      if (isNgrokHost || isApiLikePath) {
-        request.headers.set("ngrok-skip-browser-warning", "true");
-      }
     } catch {
       // Ignore URL parsing errors and continue request flow.
     }
@@ -106,7 +97,7 @@ const middleware: Middleware = {
 
       if (isApiLikePath && contentType.toLowerCase().includes("text/html")) {
         throw new Error(
-          "API trả về HTML thay vì JSON. Kiểm tra Vercel rewrite hoặc ngrok tunnel.",
+          "API trả về HTML thay vì JSON. Kiểm tra Vercel rewrite.",
         );
       }
     } catch (error) {

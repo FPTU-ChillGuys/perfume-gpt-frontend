@@ -9838,6 +9838,209 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/productvariants/{variantId}/suppliers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    variantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateVariantSupplierRequest"];
+                    "text/json": components["schemas"]["CreateVariantSupplierRequest"];
+                    "application/*+json": components["schemas"]["CreateVariantSupplierRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/productvariants/{variantId}/suppliers/{supplierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    variantId: string;
+                    supplierId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateVariantSupplierRequest"];
+                    "text/json": components["schemas"]["UpdateVariantSupplierRequest"];
+                    "application/*+json": components["schemas"]["UpdateVariantSupplierRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    variantId: string;
+                    supplierId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/productvariants/{variantId}/images": {
         parameters: {
             query?: never;
@@ -14300,10 +14503,20 @@ export interface components {
             /** Format: decimal */
             retailPrice?: null | number;
             status?: components["schemas"]["VariantStatus"];
+            restockPolicy?: components["schemas"]["ReplenishmentPolicy"];
             /** Format: int32 */
             lowStockThreshold?: number;
             attributes?: null | components["schemas"]["ProductAttributeDto"][];
             temporaryMediaIds?: null | string[];
+        };
+        CreateVariantSupplierRequest: {
+            /** Format: int32 */
+            supplierId?: number;
+            /** Format: decimal */
+            negotiatedPrice?: number;
+            /** Format: int32 */
+            estimatedLeadTimeDays?: number;
+            isPrimary?: boolean;
         };
         CreateVoucherRequest: {
             code: string;
@@ -15451,6 +15664,7 @@ export interface components {
             /** Format: decimal */
             discountedPrice?: null | number;
             attributes?: null | components["schemas"]["ProductAttributeResponse"][];
+            suppliers?: null | components["schemas"]["VariantSupplierResponse"][];
         };
         ProfileResponse: {
             /** Format: date-time */
@@ -15611,6 +15825,8 @@ export interface components {
         RejectInspectionDto: {
             note: string;
         };
+        /** @enum {string} */
+        ReplenishmentPolicy: "AutoRestock" | "ManualOnly" | "DoNotRestock";
         ReservedBatchResponse: {
             /** Format: uuid */
             batchId?: string;
@@ -16193,6 +16409,7 @@ export interface components {
             /** Format: decimal */
             retailPrice?: null | number;
             status?: components["schemas"]["VariantStatus"];
+            restockPolicy?: components["schemas"]["ReplenishmentPolicy"];
             /** Format: int32 */
             sillage?: number;
             /** Format: int32 */
@@ -16200,6 +16417,13 @@ export interface components {
             mediaIdsToDelete?: null | string[];
             temporaryMediaIdsToAdd?: null | string[];
             attributes?: null | components["schemas"]["ProductAttributeDto"][];
+        };
+        UpdateVariantSupplierRequest: {
+            /** Format: decimal */
+            negotiatedPrice?: number;
+            /** Format: int32 */
+            estimatedLeadTimeDays?: number;
+            isPrimary?: boolean;
         };
         UpdateVoucherRequest: {
             code: string;
@@ -16361,6 +16585,16 @@ export interface components {
         };
         /** @enum {string} */
         VariantStatus: "Active" | "Inactive" | "Discontinued";
+        VariantSupplierResponse: {
+            /** Format: int32 */
+            supplierId?: number;
+            supplierName: string;
+            /** Format: decimal */
+            negotiatedPrice?: number;
+            /** Format: int32 */
+            estimatedLeadTimeDays?: number;
+            isPrimary?: boolean;
+        };
         /** @enum {string} */
         VariantType: "Standard" | "FullBox" | "Tester" | "Mini";
         VerifyImportDetailRequest: {
