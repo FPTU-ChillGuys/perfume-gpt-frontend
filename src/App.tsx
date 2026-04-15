@@ -198,6 +198,11 @@ const OrderReturnRequestDetailPage = lazy(() =>
 const SuppliersPage = lazy(() =>
   import("./pages/SuppliersPage").then((m) => ({ default: m.SuppliersPage })),
 );
+const SupplierCatalogRoute = lazy(() =>
+  import("./pages/SupplierCatalogRoute").then((m) => ({
+    default: m.SupplierCatalogRoute,
+  })),
+);
 const LoyaltyTransactionsPage = lazy(() =>
   import("./pages/LoyaltyTransactionsPage").then((m) => ({
     default: m.LoyaltyTransactionsPage,
@@ -619,6 +624,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <SuppliersPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/suppliers/:supplierId/catalog"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <SupplierCatalogRoute />
                           </RoleBasedRoute>
                         }
                       />

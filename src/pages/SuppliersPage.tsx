@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -22,7 +23,7 @@ import {
   Alert,
   Tooltip,
 } from "@mui/material";
-import { Search, Add, Edit, Delete } from "@mui/icons-material";
+import { Search, Add, Edit, Delete, Inventory } from "@mui/icons-material";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
   supplierService,
@@ -42,6 +43,7 @@ const defaultForm: CreateSupplierRequest = {
 
 export const SuppliersPage = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const [suppliers, setSuppliers] = useState<SupplierDetail[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -53,7 +55,9 @@ export const SuppliersPage = () => {
   const [error, setError] = useState("");
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<SupplierDetail | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<SupplierDetail | null>(
+    null,
+  );
   const [form, setForm] = useState<CreateSupplierRequest>(defaultForm);
   const [isSaving, setIsSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -135,33 +139,68 @@ export const SuppliersPage = () => {
     <AdminLayout>
       <Box>
         <Paper sx={{ p: 3, mb: 3 }}>
-          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", md: "1fr auto" }, alignItems: "center" }}>
+          <Box
+            sx={{
+              display: "grid",
+              gap: 2,
+              gridTemplateColumns: { xs: "1fr", md: "1fr auto" },
+              alignItems: "center",
+            }}
+          >
             <TextField
               placeholder="Tìm theo tên..."
               size="small"
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
               inputProps={{ "aria-label": "Tìm kiếm nhà cung cấp" }}
-              InputProps={{ startAdornment: <InputAdornment position="start"><Search /></InputAdornment> }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search />
+                  </InputAdornment>
+                ),
+              }}
               fullWidth
             />
-            <Button variant="contained" startIcon={<Add />} onClick={openCreate} sx={{ height: 40 }}>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={openCreate}
+              sx={{ height: 40 }}
+            >
               Thêm nhà cung cấp
             </Button>
           </Box>
         </Paper>
 
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
         <TableContainer component={Paper}>
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell><strong>Tên nhà cung cấp</strong></TableCell>
-                <TableCell><strong>Email</strong></TableCell>
-                <TableCell><strong>Số điện thoại</strong></TableCell>
-                <TableCell><strong>Địa chỉ</strong></TableCell>
-                <TableCell align="center"><strong>Thao tác</strong></TableCell>
+                <TableCell>
+                  <strong>Tên nhà cung cấp</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Email</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Số điện thoại</strong>
+                </TableCell>
+                <TableCell>
+                  <strong>Địa chỉ</strong>
+                </TableCell>
+                <TableCell align="center">
+                  <strong>Thao tác</strong>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -173,25 +212,52 @@ export const SuppliersPage = () => {
                 </TableRow>
               ) : suppliers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4, color: "text.secondary" }}>
+                  <TableCell
+                    colSpan={5}
+                    align="center"
+                    sx={{ py: 4, color: "text.secondary" }}
+                  >
                     Không có nhà cung cấp nào
                   </TableCell>
                 </TableRow>
               ) : (
                 suppliers.map((s) => (
                   <TableRow key={s.id} hover>
-                    <TableCell><strong>{s.name}</strong></TableCell>
+                    <TableCell>
+                      <strong>{s.name}</strong>
+                    </TableCell>
                     <TableCell>{s.contactEmail || "—"}</TableCell>
                     <TableCell>{s.contactPhone || "—"}</TableCell>
                     <TableCell>{s.address || "—"}</TableCell>
                     <TableCell align="center">
+                      <Tooltip title="Xem Danh mục">
+                        <IconButton
+                          size="small"
+                          aria-label="Xem danh mục sản phẩm"
+                          color="primary"
+                          onClick={() =>
+                            navigate(`/admin/suppliers/${s.id}/catalog`)
+                          }
+                        >
+                          <Inventory fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Sửa">
-                        <IconButton size="small" aria-label="Sửa nhà cung cấp" onClick={() => openEdit(s)}>
+                        <IconButton
+                          size="small"
+                          aria-label="Sửa nhà cung cấp"
+                          onClick={() => openEdit(s)}
+                        >
                           <Edit fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Xóa">
-                        <IconButton size="small" aria-label="Xóa nhà cung cấp" color="error" onClick={() => setConfirmDeleteId(s.id!)}>
+                        <IconButton
+                          size="small"
+                          aria-label="Xóa nhà cung cấp"
+                          color="error"
+                          onClick={() => setConfirmDeleteId(s.id!)}
+                        >
                           <Delete fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -207,15 +273,25 @@ export const SuppliersPage = () => {
             page={page}
             onPageChange={(_, p) => setPage(p)}
             rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value)); setPage(0); }}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value));
+              setPage(0);
+            }}
             labelRowsPerPage="Số hàng:"
-            labelDisplayedRows={({ from, to, count }) => `${from}-${to} / ${count}`}
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} / ${count}`
+            }
           />
         </TableContainer>
       </Box>
 
       {/* Create / Edit Dialog */}
-      <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>
           {editingSupplier ? "Sửa nhà cung cấp" : "Thêm nhà cung cấp"}
         </DialogTitle>
@@ -232,14 +308,18 @@ export const SuppliersPage = () => {
               label="Email liên hệ"
               type="email"
               value={form.contactEmail}
-              onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, contactEmail: e.target.value })
+              }
               size="small"
               fullWidth
             />
             <TextField
               label="Số điện thoại"
               value={form.contactPhone}
-              onChange={(e) => setForm({ ...form, contactPhone: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, contactPhone: e.target.value })
+              }
               size="small"
               fullWidth
             />
@@ -255,7 +335,9 @@ export const SuppliersPage = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDialogOpen(false)} disabled={isSaving}>Hủy</Button>
+          <Button onClick={() => setDialogOpen(false)} disabled={isSaving}>
+            Hủy
+          </Button>
           <Button variant="contained" onClick={handleSave} disabled={isSaving}>
             {isSaving ? <CircularProgress size={20} color="inherit" /> : "Lưu"}
           </Button>
@@ -268,7 +350,9 @@ export const SuppliersPage = () => {
         title="Xóa nhà cung cấp"
         description="Bạn có chắc muốn xóa nhà cung cấp này không?"
         confirmText="Xóa"
-        onConfirm={() => confirmDeleteId != null && handleDelete(confirmDeleteId)}
+        onConfirm={() =>
+          confirmDeleteId != null && handleDelete(confirmDeleteId)
+        }
         onClose={() => setConfirmDeleteId(null)}
       />
     </AdminLayout>
