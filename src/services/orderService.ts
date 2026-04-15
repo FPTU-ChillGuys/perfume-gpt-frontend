@@ -1957,12 +1957,14 @@ class OrderService {
     paymentId: string,
     isSuccess: boolean,
     failureReason?: string,
+    posSessionId?: string,
     debugCallId?: string,
   ): Promise<boolean> {
     try {
       const confirmPayload = {
         isSuccess,
         failureReason,
+        posSessionId: posSessionId || null,
       };
 
       const response = await apiInstance.PUT(
@@ -1992,13 +1994,16 @@ class OrderService {
     }
   }
 
-  async deliverInStoreOrder(orderId: string): Promise<string> {
+  async deliverInStoreOrder(orderId: string, posSessionId?: string): Promise<string> {
     try {
       const response = await apiInstance.PUT(
         "/api/orders/{orderId}/deliver-in-store",
         {
           params: {
             path: { orderId },
+          },
+          body: {
+            posSessionId: posSessionId || null,
           },
         },
       );

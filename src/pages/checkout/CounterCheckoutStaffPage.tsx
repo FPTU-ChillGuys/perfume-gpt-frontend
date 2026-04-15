@@ -527,7 +527,7 @@ export const CounterCheckoutStaffPage = () => {
           paymentIdFromRetryUrl ||
           failedPaymentAction.paymentId;
 
-        await orderService.confirmPayment(paymentIdForRetry, true, undefined);
+        await orderService.confirmPayment(paymentIdForRetry, true, undefined, POS_SESSION_ID);
 
         // Clear payment failed states
         paymentQrUrlRef.current = null;
@@ -580,7 +580,7 @@ export const CounterCheckoutStaffPage = () => {
         return;
       }
 
-      await orderService.confirmPayment(paymentIdForConfirm, true);
+      await orderService.confirmPayment(paymentIdForConfirm, true, undefined, POS_SESSION_ID);
 
       // Mở success dialog với orderId để in hóa đơn
       showToast("Thanh toán tiền mặt thành công!", "success");
@@ -759,7 +759,11 @@ export const CounterCheckoutStaffPage = () => {
     }
 
     // Mở Success Dialog thay vì clear cart ngay
-    void openSuccessDialogRef.current(rawOrderId);
+    // Bỏ qua nếu backend gửi về GUID rỗng (xảy ra khi confirm payment kích hoạt
+    // PaymentCompleted event nhưng chưa gắn orderId thực)
+    if (rawOrderId && rawOrderId !== EMPTY_GUID) {
+      void openSuccessDialogRef.current(rawOrderId);
+    }
   }, [paymentCompletedData]);
 
   const openStaffCancelDialog = () => {
@@ -1448,7 +1452,7 @@ export const CounterCheckoutStaffPage = () => {
         }
 
         if (requiresCashConfirm) {
-          await orderService.confirmPayment(paymentIdForRetry, true, undefined);
+          await orderService.confirmPayment(paymentIdForRetry, true, undefined, POS_SESSION_ID);
 
           // Clear payment failed states - để SignalR event tự động mở success dialog
           paymentQrUrlRef.current = null;

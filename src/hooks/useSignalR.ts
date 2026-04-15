@@ -23,6 +23,32 @@ export type PosPaymentLinkPayload = {
   paymentUrl: string;
 };
 
+export type BopisOrderDetail = {
+  variantId?: string;
+  variantName?: string;
+  imageUrl?: string;
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  finalTotal: number;
+};
+
+export type BopisOnlineOrderPayload = {
+  orderId?: string;
+  code: string;
+  orderDetails: BopisOrderDetail[];
+  subTotal: number;
+  discount: number;
+  totalPrice: number;
+  paymentStatus: string;
+};
+
+export type OrderDeliveredPayload = {
+  orderId: string;
+  code?: string;
+  status?: string;
+};
+
 const resolvePosHubUrl = () => {
   const explicitHubUrl = (
     (import.meta.env.VITE_POS_HUB_URL as string | undefined) ||
@@ -184,6 +210,10 @@ export const useSignalR = <T = unknown>({
     useState<PosPaymentCompletedPayload | null>(null);
   const [paymentLinkUpdatedData, setPaymentLinkUpdatedData] =
     useState<PosPaymentLinkPayload | null>(null);
+  const [onlineOrderData, setOnlineOrderData] =
+    useState<BopisOnlineOrderPayload | null>(null);
+  const [orderDeliveredData, setOrderDeliveredData] =
+    useState<OrderDeliveredPayload | null>(null);
 
   const connectionRef = useRef<signalR.HubConnection | null>(null);
   const startPromiseRef = useRef<Promise<void> | null>(null);
@@ -476,6 +506,24 @@ export const useSignalR = <T = unknown>({
             },
           );
 
+          connection.on(
+            "ReceiveOnlineOrder",
+            (payload: BopisOnlineOrderPayload) => {
+              if (!isMounted) return;
+              setOnlineOrderData(payload);
+              setLastEvent("received-online-order");
+            },
+          );
+
+          connection.on(
+            "OrderDelivered",
+            (payload: OrderDeliveredPayload) => {
+              if (!isMounted) return;
+              setOrderDeliveredData(payload);
+              setLastEvent("received-order-delivered");
+            },
+          );
+
           connection.onclose((closeError) => {
             if (isMounted) {
               setIsConnected(false);
@@ -674,6 +722,8 @@ export const useSignalR = <T = unknown>({
     paymentCompletedData,
     paymentFailedData,
     paymentLinkUpdatedData,
+    onlineOrderData,
+    orderDeliveredData,
     isConnected,
     connectionState,
     lastEvent,

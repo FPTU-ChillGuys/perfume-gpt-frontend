@@ -682,7 +682,6 @@ export const OrderManagementDetailPage = () => {
     };
 
     void loadPickList();
-    // `showToast` can be unstable across renders; avoid reloading picklist unnecessarily.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.id, order?.status]);
 
@@ -1489,7 +1488,7 @@ export const OrderManagementDetailPage = () => {
                         <Stack direction="row" spacing={0.75} flexWrap="wrap">
                           {order.staffName && (
                             <Chip
-                              label={`Tạo bởi: ${order.staffName}`}
+                              label={`Xác nhận bởi: ${order.staffName}`}
                               size="small"
                               variant="outlined"
                               sx={{

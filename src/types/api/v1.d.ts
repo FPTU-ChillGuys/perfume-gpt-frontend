@@ -6921,67 +6921,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/orders/order-code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    orderCode?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/orders/my-orders/{orderId}/invoice": {
         parameters: {
             query?: never;
@@ -7092,6 +7031,78 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
                         "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/order-code/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    code: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
                     };
                 };
             };
@@ -7784,7 +7795,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeliverInStoreRequest"];
+                    "text/json": components["schemas"]["DeliverInStoreRequest"];
+                    "application/*+json": components["schemas"]["DeliverInStoreRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -14373,6 +14390,7 @@ export interface components {
         ConfirmPaymentRequest: {
             isSuccess: boolean;
             failureReason?: null | string;
+            posSessionId?: null | string;
         };
         ContactAddressInformation: {
             contactName: string;
@@ -14686,6 +14704,9 @@ export interface components {
             noteId?: number;
             noteName: string;
             noteType?: components["schemas"]["NoteType"];
+        };
+        DeliverInStoreRequest: {
+            posSessionId?: null | string;
         };
         /** @enum {string} */
         DeliveryMethod: "Delivery" | "PickupInStore";
