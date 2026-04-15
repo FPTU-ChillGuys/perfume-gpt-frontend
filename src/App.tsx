@@ -150,6 +150,11 @@ const InventoryLedgerPage = lazy(() =>
     default: m.InventoryLedgerPage,
   })),
 );
+const CashFlowLedgerPage = lazy(() =>
+  import("./pages/CashFlowLedgerPage").then((m) => ({
+    default: m.CashFlowLedgerPage,
+  })),
+);
 const AIAcceptancePage = lazy(() =>
   import("./pages/AIAcceptancePage").then((m) => ({
     default: m.AIAcceptancePage,
@@ -544,6 +549,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <InventoryLedgerPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/cash-flow"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <CashFlowLedgerPage />
                           </RoleBasedRoute>
                         }
                       />

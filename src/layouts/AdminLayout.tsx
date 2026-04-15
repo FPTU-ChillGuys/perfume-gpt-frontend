@@ -181,6 +181,12 @@ const menuGroups: SidebarMenuGroup[] = [
         roles: ["admin"],
       },
       {
+        text: "Sổ dòng tiền",
+        icon: <AccountBalanceWalletIcon />,
+        path: "/admin/cash-flow",
+        roles: ["admin"],
+      },
+      {
         text: "Quản lý kho",
         icon: <InventoryIcon />,
         path: "/staff/inventory",

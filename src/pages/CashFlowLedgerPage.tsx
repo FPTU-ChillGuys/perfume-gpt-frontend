@@ -33,47 +33,70 @@ import {
   Clear as ClearIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  SwapVert as SwapVertIcon,
-  Inventory as InventoryIcon,
-  LocalShipping as ImportIcon,
-  ShoppingCart as SalesIcon,
-  Build as AdjustmentIcon,
+  AccountBalanceWallet as WalletIcon,
+  ArrowUpward as InIcon,
+  ArrowDownward as OutIcon,
+  Payment as PaymentIcon,
+  Replay as RefundIcon,
+  LocalShipping as ShippingIcon,
+  Store as SupplierIcon,
   CalendarToday as CalendarIcon,
+  Receipt as ReceiptIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { ledgerService } from "@/services/ledgerService";
-import { productService } from "@/services/productService";
 import type {
-  InventoryLedgerEntry,
-  InventoryLedgerParams,
-  InventoryLedgerType,
+  CashFlowCategory,
+  CashFlowEntry,
+  CashFlowParams,
+  CashFlowType,
 } from "@/types/ledger";
-import type { VariantLookupItem } from "@/types/product";
 
 /* ────────────── helpers ────────────── */
 
-const TYPE_CONFIG: Record<
-  InventoryLedgerType,
-  {
-    label: string;
-    color: "success" | "error" | "warning";
-    icon: React.ReactElement;
-  }
+const FLOW_TYPE_CONFIG: Record<
+  CashFlowType,
+  { label: string; color: "success" | "error"; icon: React.ReactElement }
 > = {
-  Import: {
-    label: "Nhập hàng",
+  In: {
+    label: "Thu vào",
     color: "success",
-    icon: <ImportIcon fontSize="small" />,
+    icon: <InIcon fontSize="small" />,
   },
-  Sales: {
-    label: "Bán hàng",
+  Out: {
+    label: "Chi ra",
     color: "error",
-    icon: <SalesIcon fontSize="small" />,
+    icon: <OutIcon fontSize="small" />,
   },
-  Adjustment: {
-    label: "Điều chỉnh",
-    color: "warning",
-    icon: <AdjustmentIcon fontSize="small" />,
+};
+
+const CATEGORY_CONFIG: Record<
+  CashFlowCategory,
+  { label: string; color: string; bgColor: string; icon: React.ReactElement }
+> = {
+  OrderPayment: {
+    label: "Thanh toán đơn hàng",
+    color: "#1565c0",
+    bgColor: "#e3f2fd",
+    icon: <PaymentIcon fontSize="small" />,
+  },
+  Refund: {
+    label: "Hoàn tiền",
+    color: "#c62828",
+    bgColor: "#ffebee",
+    icon: <RefundIcon fontSize="small" />,
+  },
+  ShippingFeeToGHN: {
+    label: "Phí vận chuyển GHN",
+    color: "#e65100",
+    bgColor: "#fff3e0",
+    icon: <ShippingIcon fontSize="small" />,
+  },
+  SupplierPayment: {
+    label: "Thanh toán nhà cung cấp",
+    color: "#4a148c",
+    bgColor: "#f3e5f5",
+    icon: <SupplierIcon fontSize="small" />,
   },
 };
 
@@ -89,10 +112,8 @@ const formatDateTime = (iso: string) => {
   });
 };
 
-const formatQuantityChange = (qty: number) => {
-  if (qty > 0) return `+${qty}`;
-  return String(qty);
-};
+const formatCurrency = (amount: number) =>
+  amount.toLocaleString("vi-VN") + " ₫";
 
 /* ────────────── summary card ────────────── */
 
@@ -146,7 +167,7 @@ const SummaryCard = ({
       </Box>
     </Stack>
     {loading ? (
-      <Skeleton variant="text" width={80} height={40} />
+      <Skeleton variant="text" width={120} height={40} />
     ) : (
       <Typography variant="h5" fontWeight={700}>
         {value}
@@ -162,8 +183,8 @@ const SummaryCard = ({
 
 /* ────────────── main page ────────────── */
 
-export const InventoryLedgerPage = () => {
-  const [entries, setEntries] = useState<InventoryLedgerEntry[]>([]);
+export const CashFlowLedgerPage = () => {
+  const [entries, setEntries] = useState<CashFlowEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
@@ -171,87 +192,78 @@ export const InventoryLedgerPage = () => {
   const [rowsPerPage, setRowsPerPage] = useState(15);
 
   // Filters
-  const [typeFilter, setTypeFilter] = useState<InventoryLedgerType | "">("");
-  const [variantFilter, setVariantFilter] = useState("");
+  const [flowTypeFilter, setFlowTypeFilter] = useState<CashFlowType | "">("");
+  const [categoryFilter, setCategoryFilter] = useState<
+    CashFlowCategory | ""
+  >("");
+  const [refCodeFilter, setRefCodeFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Variant name map
-  const [variantMap, setVariantMap] = useState<Map<string, VariantLookupItem>>(
-    new Map(),
-  );
-
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const items = await productService.getProductVariants();
-        const map = new Map<string, VariantLookupItem>();
-        for (const item of items) {
-          if (item.id) map.set(item.id, item);
-        }
-        setVariantMap(map);
-      } catch {
-        // silently fail
-      }
-    };
-    load();
-  }, []);
-
-  const fetchLedger = useCallback(async () => {
+  const fetchCashFlow = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const params: InventoryLedgerParams = {
+      const params: CashFlowParams = {
         PageNumber: page + 1,
         PageSize: rowsPerPage,
         IsDescending: true,
-        SortBy: "CreatedAt",
+        SortBy: "TransactionDate",
         SortOrder: "desc",
       };
-      if (typeFilter) params.Type = typeFilter;
-      if (variantFilter.trim()) params.VariantId = variantFilter.trim();
+      if (flowTypeFilter) params.FlowType = flowTypeFilter;
+      if (categoryFilter) params.Category = categoryFilter;
+      if (refCodeFilter.trim()) params.ReferenceCode = refCodeFilter.trim();
       if (fromDate) params.FromDate = new Date(fromDate).toISOString();
       if (toDate) params.ToDate = new Date(toDate).toISOString();
 
-      const data = await ledgerService.getInventoryLedger(params);
+      const data = await ledgerService.getCashFlowLedger(params);
       setEntries(data.items);
       setTotalCount(data.totalCount);
     } catch (err: unknown) {
       const msg =
-        err instanceof Error ? err.message : "Không thể tải dữ liệu sổ kho";
+        err instanceof Error
+          ? err.message
+          : "Không thể tải dữ liệu dòng tiền";
       setError(msg);
     } finally {
       setLoading(false);
     }
-  }, [page, rowsPerPage, typeFilter, variantFilter, fromDate, toDate]);
+  }, [page, rowsPerPage, flowTypeFilter, categoryFilter, refCodeFilter, fromDate, toDate]);
 
   useEffect(() => {
-    fetchLedger();
-  }, [fetchLedger]);
+    fetchCashFlow();
+  }, [fetchCashFlow]);
 
   const stats = useMemo(() => {
-    let imports = 0;
-    let sales = 0;
-    let adjustments = 0;
+    let totalIn = 0;
+    let totalOut = 0;
+    let countIn = 0;
+    let countOut = 0;
     for (const e of entries) {
-      if (e.type === "Import") imports += e.quantityChange;
-      else if (e.type === "Sales") sales += Math.abs(e.quantityChange);
-      else adjustments += e.quantityChange;
+      if (e.flowType === "In") {
+        totalIn += Math.abs(e.amount);
+        countIn++;
+      } else {
+        totalOut += Math.abs(e.amount);
+        countOut++;
+      }
     }
-    return { imports, sales, adjustments };
+    return { totalIn, totalOut, net: totalIn - totalOut, countIn, countOut };
   }, [entries]);
 
   const handleClearFilters = () => {
-    setTypeFilter("");
-    setVariantFilter("");
+    setFlowTypeFilter("");
+    setCategoryFilter("");
+    setRefCodeFilter("");
     setFromDate("");
     setToDate("");
     setPage(0);
   };
 
   const hasActiveFilters = Boolean(
-    typeFilter || variantFilter || fromDate || toDate,
+    flowTypeFilter || categoryFilter || refCodeFilter || fromDate || toDate,
   );
 
   return (
@@ -275,19 +287,19 @@ export const InventoryLedgerPage = () => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  bgcolor: "primary.main",
+                  bgcolor: "#6366f1",
                   color: "white",
                 }}
               >
-                <InventoryIcon />
+                <WalletIcon />
               </Box>
               <Box>
                 <Typography variant="h5" fontWeight={700}>
-                  Sổ kho – Lịch sử biến động
+                  Sổ dòng tiền
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Theo dõi mọi thay đổi số lượng khi nhập hàng, bán hàng và
-                  điều chỉnh tồn kho
+                  Theo dõi thu chi từ thanh toán đơn hàng, hoàn tiền, vận
+                  chuyển và nhà cung cấp
                 </Typography>
               </Box>
             </Stack>
@@ -310,7 +322,7 @@ export const InventoryLedgerPage = () => {
               )}
             </Button>
             <Tooltip title="Tải lại">
-              <IconButton onClick={fetchLedger} disabled={loading}>
+              <IconButton onClick={fetchCashFlow} disabled={loading}>
                 <RefreshIcon />
               </IconButton>
             </Tooltip>
@@ -321,19 +333,19 @@ export const InventoryLedgerPage = () => {
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid size={{ xs: 6, md: 3 }}>
             <SummaryCard
-              title="Tổng bản ghi"
+              title="Tổng giao dịch"
               value={totalCount.toLocaleString("vi-VN")}
-              subtitle={`Trang hiện tại: ${entries.length} mục`}
-              icon={<SwapVertIcon fontSize="small" />}
+              subtitle={`Thu: ${stats.countIn} · Chi: ${stats.countOut}`}
+              icon={<ReceiptIcon fontSize="small" />}
               color="#6366f1"
               loading={loading}
             />
           </Grid>
           <Grid size={{ xs: 6, md: 3 }}>
             <SummaryCard
-              title="Nhập hàng"
-              value={`+${stats.imports.toLocaleString("vi-VN")}`}
-              subtitle="Tổng SL nhập"
+              title="Tổng thu "
+              value={formatCurrency(stats.totalIn)}
+              subtitle={`${stats.countIn} giao dịch thu`}
               icon={<TrendingUpIcon fontSize="small" />}
               color="#16a34a"
               loading={loading}
@@ -341,9 +353,9 @@ export const InventoryLedgerPage = () => {
           </Grid>
           <Grid size={{ xs: 6, md: 3 }}>
             <SummaryCard
-              title="Bán hàng"
-              value={`-${stats.sales.toLocaleString("vi-VN")}`}
-              subtitle="Tổng SL bán"
+              title="Tổng chi"
+              value={formatCurrency(stats.totalOut)}
+              subtitle={`${stats.countOut} giao dịch chi`}
               icon={<TrendingDownIcon fontSize="small" />}
               color="#dc2626"
               loading={loading}
@@ -351,11 +363,13 @@ export const InventoryLedgerPage = () => {
           </Grid>
           <Grid size={{ xs: 6, md: 3 }}>
             <SummaryCard
-              title="Điều chỉnh"
-              value={stats.adjustments.toLocaleString("vi-VN")}
-              subtitle="Tổng SL điều chỉnh"
-              icon={<AdjustmentIcon fontSize="small" />}
-              color="#ea580c"
+              title="Chênh lệch"
+              value={
+                (stats.net >= 0 ? "+" : "") + formatCurrency(stats.net)
+              }
+              subtitle={stats.net >= 0 ? "Dương — thu > chi" : "Âm — chi > thu"}
+              icon={<WalletIcon fontSize="small" />}
+              color={stats.net >= 0 ? "#0891b2" : "#e11d48"}
               loading={loading}
             />
           </Grid>
@@ -393,35 +407,55 @@ export const InventoryLedgerPage = () => {
               )}
             </Stack>
             <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Loại biến động</InputLabel>
+                  <InputLabel>Loại dòng tiền</InputLabel>
                   <Select
-                    label="Loại biến động"
-                    value={typeFilter}
+                    label="Loại dòng tiền"
+                    value={flowTypeFilter}
                     onChange={(e) => {
-                      setTypeFilter(
-                        e.target.value as InventoryLedgerType | "",
+                      setFlowTypeFilter(
+                        e.target.value as CashFlowType | "",
                       );
                       setPage(0);
                     }}
                   >
                     <MenuItem value="">Tất cả</MenuItem>
-                    <MenuItem value="Import">Nhập hàng</MenuItem>
-                    <MenuItem value="Sales">Bán hàng</MenuItem>
-                    <MenuItem value="Adjustment">Điều chỉnh</MenuItem>
+                    <MenuItem value="In">Thu vào</MenuItem>
+                    <MenuItem value="Out">Chi ra</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Danh mục</InputLabel>
+                  <Select
+                    label="Danh mục"
+                    value={categoryFilter}
+                    onChange={(e) => {
+                      setCategoryFilter(
+                        e.target.value as CashFlowCategory | "",
+                      );
+                      setPage(0);
+                    }}
+                  >
+                    <MenuItem value="">Tất cả</MenuItem>
+                    <MenuItem value="OrderPayment">Thanh toán đơn hàng</MenuItem>
+                    <MenuItem value="Refund">Hoàn tiền</MenuItem>
+                    <MenuItem value="ShippingFeeToGHN">Phí vận chuyển GHN</MenuItem>
+                    <MenuItem value="SupplierPayment">Thanh toán NCC</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
                 <TextField
-                  label="Variant ID"
-                  placeholder="Nhập variant ID…"
+                  label="Mã tham chiếu"
+                  placeholder="Nhập mã đơn hàng…"
                   size="small"
                   fullWidth
-                  value={variantFilter}
+                  value={refCodeFilter}
                   onChange={(e) => {
-                    setVariantFilter(e.target.value);
+                    setRefCodeFilter(e.target.value);
                     setPage(0);
                   }}
                   slotProps={{
@@ -435,7 +469,7 @@ export const InventoryLedgerPage = () => {
                   }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
                 <TextField
                   label="Từ ngày"
                   type="datetime-local"
@@ -458,7 +492,7 @@ export const InventoryLedgerPage = () => {
                   }}
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+              <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
                 <TextField
                   label="Đến ngày"
                   type="datetime-local"
@@ -491,7 +525,7 @@ export const InventoryLedgerPage = () => {
             severity="error"
             sx={{ mb: 2, borderRadius: 2 }}
             action={
-              <Button color="inherit" size="small" onClick={fetchLedger}>
+              <Button color="inherit" size="small" onClick={fetchCashFlow}>
                 Thử lại
               </Button>
             }
@@ -527,12 +561,10 @@ export const InventoryLedgerPage = () => {
                 >
                   <TableCell>Thời gian</TableCell>
                   <TableCell>Loại</TableCell>
-                  <TableCell>Sản phẩm</TableCell>
-                  <TableCell>SKU</TableCell>
-                  <TableCell>Batch ID</TableCell>
-                  <TableCell align="right">Thay đổi</TableCell>
-                  <TableCell align="right">Tồn sau</TableCell>
+                  <TableCell>Danh mục</TableCell>
+                  <TableCell align="right">Số tiền</TableCell>
                   <TableCell>Mô tả</TableCell>
+                  <TableCell>Mã tham chiếu</TableCell>
                   <TableCell>Ref ID</TableCell>
                 </TableRow>
               </TableHead>
@@ -540,7 +572,7 @@ export const InventoryLedgerPage = () => {
                 {loading && entries.length === 0
                   ? Array.from({ length: 8 }).map((_, i) => (
                       <TableRow key={`skel-${i}`}>
-                        {Array.from({ length: 9 }).map((__, j) => (
+                        {Array.from({ length: 7 }).map((__, j) => (
                           <TableCell key={j}>
                             <Skeleton variant="text" />
                           </TableCell>
@@ -548,9 +580,9 @@ export const InventoryLedgerPage = () => {
                       </TableRow>
                     ))
                   : entries.map((entry) => {
-                      const config = TYPE_CONFIG[entry.type];
-                      const isPositive = entry.quantityChange > 0;
-                      const variant = variantMap.get(entry.variantId);
+                      const flowConfig = FLOW_TYPE_CONFIG[entry.flowType];
+                      const catConfig = CATEGORY_CONFIG[entry.category];
+                      const isIn = entry.flowType === "In";
 
                       return (
                         <TableRow
@@ -564,124 +596,60 @@ export const InventoryLedgerPage = () => {
                           {/* Timestamp */}
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
                             <Typography variant="body2" fontSize="0.82rem">
-                              {formatDateTime(entry.createdAt)}
+                              {formatDateTime(entry.transactionDate)}
                             </Typography>
                           </TableCell>
 
-                          {/* Type chip */}
+                          {/* Flow type */}
                           <TableCell>
                             <Chip
-                              icon={config.icon}
-                              label={config.label}
+                              icon={flowConfig.icon}
+                              label={flowConfig.label}
                               size="small"
-                              color={config.color}
+                              color={flowConfig.color}
                               variant="outlined"
                               sx={{ fontWeight: 600, fontSize: "0.75rem" }}
                             />
                           </TableCell>
 
-                          {/* Variant info */}
+                          {/* Category */}
                           <TableCell>
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                            >
-                              {variant?.primaryImageUrl && (
-                                <Box
-                                  component="img"
-                                  src={variant.primaryImageUrl}
-                                  alt={variant.displayName}
-                                  sx={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 1,
-                                    objectFit: "cover",
-                                    flexShrink: 0,
-                                  }}
-                                />
-                              )}
-                              <Box>
-                                <Typography
-                                  variant="body2"
-                                  fontWeight={600}
-                                  fontSize="0.82rem"
-                                >
-                                  {variant?.displayName || entry.variantId}
-                                </Typography>
-                                {variant?.concentrationName && (
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    component="div"
-                                  >
-                                    {variant.concentrationName}
-                                    {variant.volumeMl
-                                      ? ` · ${variant.volumeMl}ml`
-                                      : ""}
-                                  </Typography>
-                                )}
-                              </Box>
-                            </Stack>
-                          </TableCell>
-
-                          {/* SKU */}
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              fontSize="0.82rem"
-                              sx={{ fontFamily: "monospace" }}
-                            >
-                              {variant?.sku || "—"}
-                            </Typography>
-                          </TableCell>
-
-                          {/* Batch */}
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              fontSize="0.82rem"
+                            <Chip
+                              icon={catConfig.icon}
+                              label={catConfig.label}
+                              size="small"
                               sx={{
-                                fontFamily: "monospace",
-                                color: "text.secondary",
+                                fontWeight: 600,
+                                fontSize: "0.73rem",
+                                bgcolor: catConfig.bgColor,
+                                color: catConfig.color,
+                                border: "none",
+                                "& .MuiChip-icon": {
+                                  color: catConfig.color,
+                                },
                               }}
-                            >
-                              {entry.batchId}
-                            </Typography>
+                            />
                           </TableCell>
 
-                          {/* Quantity change */}
+                          {/* Amount */}
                           <TableCell align="right">
                             <Chip
-                              label={formatQuantityChange(
-                                entry.quantityChange,
-                              )}
+                              label={
+                                (isIn ? "+" : "-") +
+                                formatCurrency(Math.abs(entry.amount))
+                              }
                               size="small"
                               sx={{
                                 fontWeight: 700,
                                 fontSize: "0.82rem",
                                 fontFamily: "monospace",
-                                bgcolor: isPositive ? "#dcfce7" : "#fee2e2",
-                                color: isPositive ? "#166534" : "#991b1b",
+                                bgcolor: isIn ? "#dcfce7" : "#fee2e2",
+                                color: isIn ? "#166534" : "#991b1b",
                                 border: "1px solid",
-                                borderColor: isPositive
-                                  ? "#bbf7d0"
-                                  : "#fecaca",
-                                minWidth: 56,
+                                borderColor: isIn ? "#bbf7d0" : "#fecaca",
+                                minWidth: 100,
                               }}
                             />
-                          </TableCell>
-
-                          {/* Balance after */}
-                          <TableCell align="right">
-                            <Typography
-                              variant="body2"
-                              fontWeight={600}
-                              fontFamily="monospace"
-                              fontSize="0.85rem"
-                            >
-                              {entry.balanceAfter.toLocaleString("vi-VN")}
-                            </Typography>
                           </TableCell>
 
                           {/* Description */}
@@ -695,7 +663,32 @@ export const InventoryLedgerPage = () => {
                             </Typography>
                           </TableCell>
 
-                          {/* Reference */}
+                          {/* Reference Code */}
+                          <TableCell>
+                            {entry.referenceCode ? (
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                fontSize="0.82rem"
+                                sx={{
+                                  fontFamily: "monospace",
+                                  color: "primary.main",
+                                }}
+                              >
+                                {entry.referenceCode}
+                              </Typography>
+                            ) : (
+                              <Typography
+                                variant="body2"
+                                color="text.disabled"
+                                fontSize="0.82rem"
+                              >
+                                —
+                              </Typography>
+                            )}
+                          </TableCell>
+
+                          {/* Reference ID */}
                           <TableCell>
                             {entry.referenceId ? (
                               <Typography
@@ -703,7 +696,7 @@ export const InventoryLedgerPage = () => {
                                 fontSize="0.82rem"
                                 sx={{
                                   fontFamily: "monospace",
-                                  color: "primary.main",
+                                  color: "text.secondary",
                                 }}
                               >
                                 {entry.referenceId}
@@ -725,17 +718,17 @@ export const InventoryLedgerPage = () => {
                 {/* Empty state */}
                 {!loading && entries.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} sx={{ py: 8, textAlign: "center" }}>
-                      <InventoryIcon
+                    <TableCell colSpan={7} sx={{ py: 8, textAlign: "center" }}>
+                      <WalletIcon
                         sx={{ fontSize: 48, color: "grey.300", mb: 1 }}
                       />
                       <Typography variant="body1" color="text.secondary">
-                        Chưa có bản ghi nào
+                        Chưa có giao dịch nào
                       </Typography>
                       <Typography variant="body2" color="text.disabled">
                         {hasActiveFilters
                           ? "Thử thay đổi bộ lọc để tìm kết quả khác"
-                          : "Dữ liệu sổ kho sẽ xuất hiện khi có nhập/xuất hàng"}
+                          : "Dữ liệu dòng tiền sẽ xuất hiện khi có giao dịch thu/chi"}
                       </Typography>
                     </TableCell>
                   </TableRow>
