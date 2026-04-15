@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://backend-sep490.vqnofficial.win/$1"
+      "destination": "https://backend-sep490.vqnofficial.win/api/$1"
     },
     {
       "source": "/trends/(.*)",
