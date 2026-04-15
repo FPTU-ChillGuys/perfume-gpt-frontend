@@ -6,6 +6,8 @@ import {
   Button,
   Grid,
   IconButton,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { bannerService } from "@/services/bannerService";
@@ -16,10 +18,9 @@ type HeroSlide = {
   label: string;
   title: string[];
   description: string;
-  notes: string[];
   primaryCta: { label: string; href: string };
   secondaryCta: { label: string; href: string };
-  bottleImage: string;
+  mobileImage: string;
   backgroundImage: string;
 };
 
@@ -32,10 +33,9 @@ const heroSlides: readonly HeroSlide[] = [
     title: ["ELIXIR", "ABSOLU"],
     description:
       "Khơi gợi những nốt hương quyến rũ với hoa hồng, vani và xạ hương chuẩn haute couture.",
-    notes: ["Rose", "Vanilla", "White Musk"],
-    primaryCta: { label: "Mua ngay", href: "/products/elixir-absolu" },
-    secondaryCta: { label: "Chi tiết", href: "/collections/exclusive" },
-    bottleImage:
+    primaryCta: { label: "Mua ngay", href: "/products" },
+    secondaryCta: { label: "Chi tiết", href: "/products" },
+    mobileImage:
       "https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=900&q=80",
     backgroundImage:
       "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80",
@@ -46,10 +46,9 @@ const heroSlides: readonly HeroSlide[] = [
     title: ["GRIS", "DIOR"],
     description:
       "Bản phối 2026 mang sắc xám biểu tượng cùng hoa hồng Grasse và patchouli đầy cá tính.",
-    notes: ["Rose", "Patchouli", "Cedar"],
-    primaryCta: { label: "Đặt giữ chỗ", href: "/products/gris-dior" },
-    secondaryCta: { label: "Trải nghiệm thử", href: "/booking" },
-    bottleImage:
+    primaryCta: { label: "Đặt giữ chỗ", href: "/products" },
+    secondaryCta: { label: "Trải nghiệm thử", href: "/products" },
+    mobileImage:
       "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=900&q=80",
     backgroundImage:
       "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?auto=format&fit=crop&w=1600&q=80",
@@ -60,10 +59,9 @@ const heroSlides: readonly HeroSlide[] = [
     title: ["SAFFRON", "VEIL"],
     description:
       "Định nghĩa lại mùi hương tiệc đêm với nghệ tây Ma-rốc, gỗ tuyết tùng và hổ phách.",
-    notes: ["Saffron", "Cedar", "Amber"],
-    primaryCta: { label: "Khám phá", href: "/collections/night" },
-    secondaryCta: { label: "Tư vấn cá nhân", href: "/concierge" },
-    bottleImage:
+    primaryCta: { label: "Khám phá", href: "/products" },
+    secondaryCta: { label: "Tư vấn cá nhân", href: "/products" },
+    mobileImage:
       "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=900&q=80",
     backgroundImage:
       "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=80",
@@ -73,7 +71,7 @@ const heroSlides: readonly HeroSlide[] = [
 const FALLBACK_PRIMARY_CTA = { label: "Khám phá ngay", href: "/products" };
 const FALLBACK_SECONDARY_CTA = {
   label: "Xem bộ sưu tập",
-  href: "/collections",
+  href: "/products",
 };
 const FALLBACK_HERO_IMAGE =
   "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80";
@@ -108,45 +106,50 @@ const ensureMinimumSlides = (candidate: HeroSlide[]): HeroSlide[] => {
   return extended;
 };
 
+const resolveBannerLink = (banner: Banner): string => {
+  if (!banner.linkTarget) return "/products";
+  switch (banner.linkType) {
+    case "Product":
+      return `/products/${banner.linkTarget}`;
+    case "ProductVariant":
+      return `/products/${banner.linkTarget}`;
+    case "Brand":
+      return `/products?brand=${banner.linkTarget}`;
+    case "Campaign":
+    default:
+      return banner.linkTarget.startsWith("/")
+        ? banner.linkTarget
+        : `/${banner.linkTarget}`;
+  }
+};
+
 const mapBannerToSlide = (banner: Banner): HeroSlide => {
-  const defaultSlide = heroSlides[0] || {
-    id: "default-slide",
-    label: "Featured Release",
-    title: ["PerfumeGPT"],
-    description: "Khám phá bộ sưu tập mùi hương nổi bật.",
-    notes: ["Best Seller"],
-    primaryCta: FALLBACK_PRIMARY_CTA,
-    secondaryCta: FALLBACK_SECONDARY_CTA,
-    bottleImage: FALLBACK_HERO_IMAGE,
-    backgroundImage: FALLBACK_HERO_IMAGE,
-  };
-  const normalizedTitle = (banner.name || "PerfumeGPT")
+  const normalizedTitle = (banner.title || "PerfumeGPT")
     .split(/\n|\|/)
     .map((segment) => segment.trim())
     .filter(Boolean);
+  const href = resolveBannerLink(banner);
   return {
     id: banner.id,
-    label: banner.tagline || "Featured Release",
+    label: banner.altText || banner.position,
     title: normalizedTitle.length
       ? normalizedTitle
-      : [banner.name || "PerfumeGPT"],
-    description:
-      banner.description ||
-      "Khám phá hương thơm được tuyển chọn dành riêng cho bạn trong tuần này.",
-    notes:
-      banner.notes && banner.notes.length > 0 ? banner.notes : ["Best Seller"],
+      : [banner.title || "PerfumeGPT"],
+    description: banner.altText || "Khám phá hương thơm được tuyển chọn dành riêng cho bạn.",
     primaryCta: {
-      label: banner.ctaLabel || FALLBACK_PRIMARY_CTA.label,
-      href: banner.ctaHref || FALLBACK_PRIMARY_CTA.href,
+      label: FALLBACK_PRIMARY_CTA.label,
+      href,
     },
     secondaryCta: FALLBACK_SECONDARY_CTA,
-    bottleImage:
-      banner.mobileImageUrl || banner.heroImageUrl || defaultSlide.bottleImage,
-    backgroundImage: banner.heroImageUrl || defaultSlide.backgroundImage,
+    mobileImage:
+      banner.mobileImageUrl || banner.imageUrl || FALLBACK_HERO_IMAGE,
+    backgroundImage: banner.imageUrl || FALLBACK_HERO_IMAGE,
   };
 };
 
 export const HeroSection = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [activeIndex, setActiveIndex] = useState(0);
   const [slides, setSlides] = useState<HeroSlide[]>([...heroSlides]);
   const totalSlides = slides.length;
@@ -165,14 +168,10 @@ export const HeroSection = () => {
     let mounted = true;
     const loadBanners = async () => {
       try {
-        const data = await bannerService.getBanners();
-        const published = data.filter(
-          (banner) => banner.status === "published",
-        );
-        const featured = published.filter((banner) => banner.isHomeFeatured);
-        const source = featured.length > 0 ? featured : published;
-        if (mounted && source.length > 0) {
-          setSlides(ensureMinimumSlides(source.map(mapBannerToSlide)));
+        const data = await bannerService.getHomeBanners("HomeHeroSlider");
+        const activeBanners = data.filter((banner) => banner.isActive);
+        if (mounted && activeBanners.length > 0) {
+          setSlides(ensureMinimumSlides(activeBanners.map(mapBannerToSlide)));
           setActiveIndex(0);
         }
       } catch (error) {
@@ -202,6 +201,10 @@ export const HeroSection = () => {
     return null;
   }
 
+  const currentBg = isMobile
+    ? activeSlide.mobileImage
+    : activeSlide.backgroundImage;
+
   return (
     <Box
       sx={{
@@ -209,7 +212,7 @@ export const HeroSection = () => {
         minHeight: { xs: 520, md: 560 },
         overflow: "hidden",
         color: "white",
-        backgroundImage: `linear-gradient(135deg, rgba(15,23,42,0.96) 0%, rgba(15,23,42,0.88) 45%, rgba(15,23,42,0.65) 100%), url(${activeSlide.backgroundImage})`,
+        backgroundImage: `linear-gradient(135deg, rgba(15,23,42,0.72) 0%, rgba(15,23,42,0.55) 45%, rgba(15,23,42,0.35) 100%), url(${currentBg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         transition: "background-image 0.8s ease",
@@ -224,7 +227,7 @@ export const HeroSection = () => {
         }}
       >
         <Grid container spacing={6} sx={{ alignItems: "center" }}>
-          <Grid size={{ xs: 12, md: 6 }}>
+          <Grid size={{ xs: 12, md: 8 }}>
             <Typography
               variant="overline"
               sx={{
@@ -264,24 +267,6 @@ export const HeroSection = () => {
             >
               {activeSlide.description}
             </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, mb: 4 }}>
-              {activeSlide.notes.map((note) => (
-                <Box
-                  key={`${activeSlide.id}-${note}`}
-                  sx={{
-                    px: 2,
-                    py: 0.5,
-                    borderRadius: 999,
-                    border: "1px solid rgba(255,255,255,0.4)",
-                    fontSize: 12,
-                    letterSpacing: 1,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {note}
-                </Box>
-              ))}
-            </Box>
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
               <Button
                 variant="contained"
@@ -317,27 +302,6 @@ export const HeroSection = () => {
                 {activeSlide.secondaryCta.label}
               </Button>
             </Box>
-          </Grid>
-
-          <Grid
-            size={{ xs: 12, md: 6 }}
-            sx={{ display: "flex", justifyContent: "center" }}
-          >
-            <Box
-              component="figure"
-              sx={{
-                width: { xs: "100%", md: 360 },
-                height: { xs: 320, md: 420 },
-                borderRadius: 6,
-                backdropFilter: "blur(8px)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.02)), url(${activeSlide.bottleImage})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                boxShadow: "0 30px 120px rgba(15,23,42,0.45)",
-                transition: "background-image 0.8s ease",
-              }}
-            />
           </Grid>
         </Grid>
 

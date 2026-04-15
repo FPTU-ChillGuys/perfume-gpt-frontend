@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { MainLayout } from "../layouts/MainLayout";
 import { HeroSection } from "../components/home/HeroSection";
-import { CollectionBannerSection } from "../components/home/CollectionBannerSection";
 import { FeatureSection } from "../components/home/FeatureSection";
 import { ProductSection } from "../components/home/ProductSection";
 import { CampaignProductSection } from "../components/home/CampaignProductSection";
@@ -223,7 +222,6 @@ export const HomePage = () => {
   return (
     <MainLayout>
       <HeroSection />
-      <CollectionBannerSection />
 
       {/* Campaign product sections - Show active sales/promotions first */}
       {!isCampaignsLoading &&

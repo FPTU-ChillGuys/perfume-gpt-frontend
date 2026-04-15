@@ -36,7 +36,11 @@ import {
   Star as StarIcon,
   AutoAwesome as AutoAwesomeIcon,
 } from "@mui/icons-material";
-import type { Banner, BannerPayload } from "@/types/banner";
+import type {
+  Banner,
+  CreateBannerPayload,
+  UpdateBannerPayload,
+} from "@/types/banner";
 import type {
   MediaResponse,
   ProductDetail,
@@ -159,8 +163,8 @@ export const ContentManagementPage = () => {
   const loadBanners = useCallback(async () => {
     try {
       setBannersLoading(true);
-      const data = await bannerService.getBanners();
-      setBanners(data);
+      const data = await bannerService.getBanners({ PageSize: 50 });
+      setBanners(data.items);
     } catch (error) {
       console.error(error);
       showToast("Không thể tải banner", "error");
@@ -195,10 +199,20 @@ export const ContentManagementPage = () => {
     setBannerDialogOpen(true);
   };
 
-  const handleBannerSubmit = async (payload: BannerPayload) => {
+  const handleBannerSubmit = async (
+    payload: CreateBannerPayload | UpdateBannerPayload,
+    bannerId?: string,
+  ) => {
     try {
       setBannerSaving(true);
-      await bannerService.upsertBanner(payload);
+      if (bannerId) {
+        await bannerService.updateBanner(
+          bannerId,
+          payload as UpdateBannerPayload,
+        );
+      } else {
+        await bannerService.createBanner(payload as CreateBannerPayload);
+      }
       await loadBanners();
       showToast("Đã lưu banner", "success");
       setBannerDialogOpen(false);
@@ -239,7 +253,7 @@ export const ContentManagementPage = () => {
       { type: "deleteBanner", banner },
       {
         title: "Xóa banner",
-        description: `Bạn có chắc chắn muốn xóa banner "${banner.name}"?`,
+        description: `Bạn có chắc chắn muốn xóa banner "${banner.title}"?`,
         confirmText: "Xóa",
       },
     );
@@ -255,17 +269,30 @@ export const ContentManagementPage = () => {
       return;
     }
     try {
-      const reordered = [...banners];
-      const temp = reordered[currentIndex];
-      const swapValue = reordered[swapIndex];
-      if (!temp || !swapValue) {
+      const current = banners[currentIndex];
+      const swap = banners[swapIndex];
+      if (!current || !swap) {
         return;
       }
-      reordered[currentIndex] = swapValue;
-      reordered[swapIndex] = temp;
-      const orderedIds = reordered.map((banner) => banner.id);
-      const persisted = await bannerService.reorder(orderedIds);
-      setBanners(persisted);
+      await Promise.all([
+        bannerService.updateBanner(current.id, {
+          title: current.title,
+          position: current.position,
+          displayOrder: swap.displayOrder,
+          isActive: current.isActive,
+          linkType: current.linkType,
+          linkTarget: current.linkTarget || "",
+        }),
+        bannerService.updateBanner(swap.id, {
+          title: swap.title,
+          position: swap.position,
+          displayOrder: current.displayOrder,
+          isActive: swap.isActive,
+          linkType: swap.linkType,
+          linkTarget: swap.linkTarget || "",
+        }),
+      ]);
+      await loadBanners();
     } catch (error) {
       console.error(error);
       showToast("Không thể thay đổi thứ tự", "error");
@@ -513,46 +540,35 @@ export const ContentManagementPage = () => {
         (targetProduct.id === selectedProduct?.id
           ? productImages[0]?.url || selectedProduct?.primaryImage?.url
           : targetProduct.primaryImage?.url) || FALLBACK_BANNER_IMAGE;
-      const metadataNotes = [
-        targetProduct.brandName,
-        targetProduct.categoryName,
-      ];
 
-      if (targetProduct.id === selectedProduct?.id && productInformation) {
-        if (productInformation.scentGroup) {
-          metadataNotes.push(productInformation.scentGroup);
-        }
-        if (productInformation.productCode) {
-          metadataNotes.push(productInformation.productCode);
-        }
-        if (productInformation.releaseYear) {
-          metadataNotes.push(`Ra mắt ${productInformation.releaseYear}`);
-        }
+      // Upload the hero image as temporary banner image
+      const imageBlob = await fetch(heroImage).then((res) => res.blob());
+      const imageFile = new File(
+        [imageBlob],
+        `banner-${targetProduct.id}.jpg`,
+        { type: imageBlob.type || "image/jpeg" },
+      );
+      const uploaded =
+        await bannerService.uploadTemporaryImages([imageFile]);
+      const tempImage = uploaded[0];
+      if (!tempImage) {
+        throw new Error("Không thể tải hình ảnh tạm");
       }
 
-      const existing = banners.find(
-        (banner) => banner.productId === targetProduct.id,
-      );
-      const payload: BannerPayload = {
-        id: existing?.id,
-        name: targetProduct.name || "Best Seller Spotlight",
-        tagline: (targetProduct.brandName || "BEST SELLER").toUpperCase(),
-        description:
-          targetProduct.description ||
-          "Sản phẩm bán chạy nhất tuần này, được khách hàng yêu thích.",
-        heroImageUrl: heroImage,
-        mobileImageUrl: heroImage,
-        ctaLabel: "Khám phá ngay",
-        ctaHref: "/products",
-        priority: existing?.priority ?? 1,
-        status: "published",
-        productId: targetProduct.id,
-        isHomeFeatured: true,
-        notes: metadataNotes
-          .filter((text): text is string => Boolean(text))
-          .map((text) => String(text)),
+      const payload: CreateBannerPayload = {
+        title: targetProduct.name || "Best Seller Spotlight",
+        temporaryImageId: tempImage.id,
+        altText:
+          targetProduct.brandName && targetProduct.categoryName
+            ? `${targetProduct.brandName} - ${targetProduct.categoryName}`
+            : null,
+        position: "HomeHeroSlider",
+        displayOrder: 0,
+        isActive: true,
+        linkType: "Product",
+        linkTarget: targetProduct.id || "",
       };
-      await bannerService.upsertBanner(payload);
+      await bannerService.createBanner(payload);
       await loadBanners();
       showToast("Đã đẩy sản phẩm lên banner", "success");
     } catch (error) {
@@ -726,13 +742,13 @@ export const ContentManagementPage = () => {
                         sx={{
                           position: "relative",
                           pt: "60%",
-                          backgroundImage: `linear-gradient(120deg, rgba(15,23,42,0.6), rgba(15,23,42,0.3)), url(${banner.heroImageUrl})`,
+                          backgroundImage: `linear-gradient(120deg, rgba(15,23,42,0.6), rgba(15,23,42,0.3)), url(${banner.imageUrl})`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                         }}
                       >
                         <Chip
-                          label={banner.status}
+                          label={banner.isActive ? "Kích hoạt" : "Tắt"}
                           size="small"
                           sx={{
                             position: "absolute",
@@ -740,25 +756,35 @@ export const ContentManagementPage = () => {
                             left: 12,
                             textTransform: "capitalize",
                           }}
-                          color={
-                            banner.status === "published"
-                              ? "success"
-                              : banner.status === "scheduled"
-                                ? "warning"
-                                : "default"
-                          }
+                          color={banner.isActive ? "success" : "default"}
                         />
                         <Chip
-                          label={`#${banner.priority}`}
+                          label={`#${banner.displayOrder}`}
                           size="small"
                           sx={{ position: "absolute", top: 12, right: 12 }}
                         />
-                        {banner.isHomeFeatured && (
-                          <Chip
-                            label="Home banner"
-                            size="small"
-                            color="secondary"
-                            sx={{ position: "absolute", bottom: 12, left: 12 }}
+                        <Chip
+                          label={banner.position}
+                          size="small"
+                          color="secondary"
+                          sx={{ position: "absolute", bottom: 12, left: 12 }}
+                        />
+                        {banner.mobileImageUrl && (
+                          <Box
+                            component="img"
+                            src={banner.mobileImageUrl}
+                            alt="Mobile"
+                            sx={{
+                              position: "absolute",
+                              bottom: 8,
+                              right: 8,
+                              width: 48,
+                              height: 48,
+                              borderRadius: 1.5,
+                              objectFit: "cover",
+                              border: "2px solid white",
+                              boxShadow: 2,
+                            }}
                           />
                         )}
                       </Box>
@@ -775,32 +801,26 @@ export const ContentManagementPage = () => {
                           color="text.secondary"
                           fontWeight={600}
                         >
-                          {banner.tagline}
+                          {banner.linkType}
                         </Typography>
-                        <Typography variant="h6">{banner.name}</Typography>
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ flexGrow: 1, mt: 1 }}
-                        >
-                          {banner.description}
-                        </Typography>
-                        {banner.notes && banner.notes.length > 0 && (
-                          <Stack
-                            direction="row"
-                            flexWrap="wrap"
-                            spacing={1}
-                            sx={{ mt: 1 }}
+                        <Typography variant="h6">{banner.title}</Typography>
+                        {banner.altText && (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ flexGrow: 1, mt: 1 }}
                           >
-                            {banner.notes.map((note) => (
-                              <Chip
-                                key={`${banner.id}-${note}`}
-                                label={note}
-                                size="small"
-                                variant="outlined"
-                              />
-                            ))}
-                          </Stack>
+                            {banner.altText}
+                          </Typography>
+                        )}
+                        {banner.linkTarget && (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ mt: 0.5 }}
+                          >
+                            Target: {banner.linkTarget}
+                          </Typography>
                         )}
                         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                           <Tooltip title="Di chuyển lên">

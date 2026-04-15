@@ -1,187 +1,209 @@
-import type { Banner, BannerPayload, BannerStatus } from "@/types/banner";
+import { apiInstance, getApiBaseUrl } from "@/lib/api";
+import { getStoredAccessToken } from "@/utils/authStorage";
+import type {
+  Banner,
+  BannerListParams,
+  BannerPosition,
+  CreateBannerPayload,
+  PaginatedBannerResponse,
+  TemporaryBannerImage,
+  UpdateBannerPayload,
+} from "@/types/banner";
 
-const STORAGE_KEY = "perfume-gpt:banners";
-const FALLBACK_STATUS: BannerStatus = "published";
-const nowIso = () => new Date().toISOString();
-
-const seedBanners: Banner[] = [
-  {
-    id: "elixir-absolu",
-    name: "Elixir Absolu",
-    tagline: "Exclusive Release",
-    description:
-      "Khơi gợi những nốt hương quyến rũ với hoa hồng, vani và xạ hương chuẩn haute couture.",
-    heroImageUrl:
-      "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80",
-    mobileImageUrl:
-      "https://images.unsplash.com/photo-1615634260167-c8cdede054de?auto=format&fit=crop&w=900&q=80",
-    ctaLabel: "Mua ngay",
-    ctaHref: "/products/elixir-absolu",
-    notes: ["Rose", "Vanilla", "White Musk"],
-    isHomeFeatured: true,
-    priority: 1,
-    status: "published",
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  },
-  {
-    id: "gris-dior",
-    name: "Gris Dior",
-    tagline: "Limited Re-Edition",
-    description:
-      "Bản phối 2026 mang sắc xám biểu tượng cùng hoa hồng Grasse và patchouli đầy cá tính.",
-    heroImageUrl:
-      "https://images.unsplash.com/photo-1508057198894-247b23fe5ade?auto=format&fit=crop&w=1600&q=80",
-    mobileImageUrl:
-      "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=900&q=80",
-    ctaLabel: "Đặt giữ chỗ",
-    ctaHref: "/products/gris-dior",
-    notes: ["Patchouli", "Grasse Rose"],
-    priority: 2,
-    status: "scheduled",
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  },
-  {
-    id: "saffron-veil",
-    name: "Saffron Veil",
-    tagline: "Boutique Drop",
-    description:
-      "Định nghĩa lại mùi hương tiệc đêm với nghệ tây Ma-rốc, gỗ tuyết tùng và hổ phách.",
-    heroImageUrl:
-      "https://images.unsplash.com/photo-1500534623283-312aade485b7?auto=format&fit=crop&w=1600&q=80",
-    mobileImageUrl:
-      "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=900&q=80",
-    ctaLabel: "Khám phá",
-    ctaHref: "/collections/night",
-    notes: ["Saffron", "Amber"],
-    priority: 3,
-    status: "draft",
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-  },
-];
-
-const hasWindow = typeof window !== "undefined";
-const createBannerId = () => {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `banner-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-};
-
-const parseBanners = (raw: string | null): Banner[] => {
-  if (!raw) {
-    return seedBanners;
-  }
-  try {
-    const parsed = JSON.parse(raw) as Banner[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : seedBanners;
-  } catch (error) {
-    console.warn("Failed to parse banners from storage", error);
-    return seedBanners;
-  }
-};
+interface ApiResponse<T> {
+  payload: T;
+  success: boolean;
+  message: string;
+  errors: string[];
+  errorType: string;
+}
 
 class BannerService {
-  private read(): Banner[] {
-    if (!hasWindow) {
-      return seedBanners;
-    }
-    return parseBanners(window.localStorage.getItem(STORAGE_KEY));
-  }
-
-  private persist(banners: Banner[]): void {
-    if (!hasWindow) {
-      return;
-    }
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(banners));
-  }
-
-  private simulateLatency<T>(value: T, delay = 250): Promise<T> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(value), delay);
+  async getHomeBanners(
+    position?: BannerPosition,
+  ): Promise<Banner[]> {
+    const response = await apiInstance.GET("/api/banners/home" as any, {
+      params: { query: position ? { position } : undefined },
     });
-  }
 
-  async getBanners(): Promise<Banner[]> {
-    const banners = this.read().sort((a, b) => a.priority - b.priority);
-    return this.simulateLatency(banners);
-  }
-
-  async upsertBanner(payload: BannerPayload): Promise<Banner> {
-    let banners = this.read();
-    const timestamp = nowIso();
-
-    if (payload.isHomeFeatured) {
-      banners = banners.map((banner) => ({
-        ...banner,
-        isHomeFeatured: false,
-      }));
+    const data = response.data as unknown as ApiResponse<Banner[]>;
+    if (!data?.success) {
+      throw new Error(data?.message || "Không thể tải banner trang chủ");
     }
 
-    if (payload.id) {
-      const next = banners.map((banner) =>
-        banner.id === payload.id
-          ? {
-              ...banner,
-              ...payload,
-              status: payload.status ?? banner.status ?? FALLBACK_STATUS,
-              isHomeFeatured:
-                payload.isHomeFeatured ?? banner.isHomeFeatured ?? false,
-              notes: payload.notes ?? banner.notes,
-              updatedAt: timestamp,
-            }
-          : banner,
-      );
-      this.persist(next);
-      const updated = next.find((item) => item.id === payload.id)!;
-      return this.simulateLatency(updated);
+    return data.payload || [];
+  }
+
+  async getBanners(
+    params?: BannerListParams,
+  ): Promise<PaginatedBannerResponse> {
+    const response = await apiInstance.GET("/api/banners" as any, {
+      params: { query: params as any },
+    });
+
+    const data = response.data as unknown as ApiResponse<PaginatedBannerResponse>;
+    if (!data?.success) {
+      throw new Error(data?.message || "Không thể tải danh sách banner");
     }
 
-    const banner: Banner = {
-      id: createBannerId(),
-      name: payload.name,
-      tagline: payload.tagline,
-      description: payload.description,
-      heroImageUrl: payload.heroImageUrl,
-      mobileImageUrl: payload.mobileImageUrl,
-      ctaLabel: payload.ctaLabel,
-      ctaHref: payload.ctaHref,
-      notes: payload.notes,
-      productId: payload.productId,
-      isHomeFeatured: payload.isHomeFeatured ?? false,
-      priority: payload.priority ?? banners.length + 1,
-      status: payload.status ?? FALLBACK_STATUS,
-      createdAt: timestamp,
-      updatedAt: timestamp,
+    return (
+      data.payload || {
+        items: [],
+        pageNumber: 1,
+        pageSize: 10,
+        totalCount: 0,
+        totalPages: 0,
+        hasPreviousPage: false,
+        hasNextPage: false,
+      }
+    );
+  }
+
+  async getBannerById(bannerId: string): Promise<Banner> {
+    const response = await apiInstance.GET(
+      "/api/banners/{bannerId}" as any,
+      {
+        params: { path: { bannerId } },
+      },
+    );
+
+    const data = response.data as unknown as ApiResponse<Banner>;
+    if (!data?.success) {
+      throw new Error(data?.message || "Không thể tải banner");
+    }
+
+    return data.payload;
+  }
+
+  async createBanner(payload: CreateBannerPayload): Promise<void> {
+    const response = await apiInstance.POST("/api/banners" as any, {
+      body: payload as any,
+    });
+
+    const data = response.data as unknown as ApiResponse<null>;
+    if (!data?.success) {
+      throw new Error(data?.message || "Không thể tạo banner");
+    }
+  }
+
+  async updateBanner(
+    bannerId: string,
+    payload: UpdateBannerPayload,
+  ): Promise<void> {
+    const response = await apiInstance.PUT(
+      "/api/banners/{bannerId}" as any,
+      {
+        params: { path: { bannerId } },
+        body: payload as any,
+      },
+    );
+
+    const data = response.data as unknown as ApiResponse<null>;
+    if (!data?.success) {
+      throw new Error(data?.message || "Không thể cập nhật banner");
+    }
+  }
+
+  async deleteBanner(bannerId: string): Promise<void> {
+    const response = await apiInstance.DELETE(
+      "/api/banners/{bannerId}" as any,
+      {
+        params: { path: { bannerId } },
+      },
+    );
+
+    const data = response.data as unknown as ApiResponse<null>;
+    if (!data?.success) {
+      throw new Error(data?.message || "Không thể xóa banner");
+    }
+  }
+
+  async uploadTemporaryImages(
+    files: File[],
+  ): Promise<TemporaryBannerImage[]> {
+    if (!files.length) {
+      return [];
+    }
+
+    const accessToken = getStoredAccessToken();
+    const baseUrl = getApiBaseUrl();
+    const endpoint = `${baseUrl}/api/banners/images/temporary`;
+
+    let lastErrorMessage = "Không thể tải hình ảnh tạm";
+
+    const attemptUpload = async (
+      buildFormData: (fileList: File[]) => FormData,
+    ): Promise<TemporaryBannerImage[] | null> => {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: accessToken
+          ? { Authorization: `Bearer ${accessToken}` }
+          : undefined,
+        body: buildFormData(files),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        lastErrorMessage =
+          data?.message ||
+          (Array.isArray(data?.errors) ? data.errors.join("; ") : "") ||
+          lastErrorMessage;
+        return null;
+      }
+
+      const payload = data.payload as
+        | { data: TemporaryBannerImage[]; metadata: any }
+        | TemporaryBannerImage[]
+        | null;
+
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+
+      return payload?.data || [];
     };
-    const next = [...banners, banner];
-    this.persist(next);
-    return this.simulateLatency(banner);
-  }
 
-  async deleteBanner(id: string): Promise<void> {
-    const next = this.read().filter((banner) => banner.id !== id);
-    this.persist(next);
-    await this.simulateLatency(undefined);
-  }
+    // Strategy A: repeated "Images" key
+    const strategyA = await attemptUpload((fileList) => {
+      const formData = new FormData();
+      fileList.forEach((file) => {
+        formData.append("Images", file);
+      });
+      return formData;
+    });
 
-  async reorder(bannerIdsInOrder: string[]): Promise<Banner[]> {
-    const dictionary = new Map(this.read().map((banner) => [banner.id, banner] as const));
-    const ordered: Banner[] = bannerIdsInOrder
-      .map((id, index) => {
-        const banner = dictionary.get(id);
-        if (!banner) {
-          return undefined;
-        }
-        return { ...banner, priority: index + 1, updatedAt: nowIso() };
-      })
-      .filter(Boolean) as Banner[];
-    const leftover = this.read().filter((banner) => !dictionary.has(banner.id));
-    const result = [...ordered, ...leftover];
-    this.persist(result);
-    return this.simulateLatency(result);
+    if (strategyA) {
+      return strategyA;
+    }
+
+    // Strategy B: indexed "Images[i]"
+    const strategyB = await attemptUpload((fileList) => {
+      const formData = new FormData();
+      fileList.forEach((file, index) => {
+        formData.append(`Images[${index}]`, file);
+      });
+      return formData;
+    });
+
+    if (strategyB) {
+      return strategyB;
+    }
+
+    // Strategy C: indexed "Images[i].ImageFile"
+    const strategyC = await attemptUpload((fileList) => {
+      const formData = new FormData();
+      fileList.forEach((file, index) => {
+        formData.append(`Images[${index}].ImageFile`, file);
+      });
+      return formData;
+    });
+
+    if (strategyC) {
+      return strategyC;
+    }
+
+    throw new Error(lastErrorMessage);
   }
 }
 
