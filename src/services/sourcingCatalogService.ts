@@ -6,9 +6,11 @@ export interface CatalogItem {
   supplierId?: number;
   supplierName: string;
   variantSku: string;
+  variantName: string;
   negotiatedPrice?: number;
   estimatedLeadTimeDays?: number;
   isPrimary?: boolean;
+  primaryImageUrl?: string | null;
   createdAt?: string;
   updatedAt?: string | null;
 }

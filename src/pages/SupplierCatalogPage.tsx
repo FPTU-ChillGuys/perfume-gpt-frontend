@@ -339,7 +339,10 @@ export const SupplierCatalogPage = ({
           <Table size="small">
             <TableHead>
               <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell>
+                <TableCell sx={{ width: 60 }}>
+                  <strong>Hình</strong>
+                </TableCell>
+                <TableCell sx={{ width: 140 }}>
                   <strong>SKU</strong>
                 </TableCell>
                 <TableCell>
@@ -351,10 +354,10 @@ export const SupplierCatalogPage = ({
                 <TableCell align="center" sx={{ width: 180 }}>
                   <strong>Thời gian giao (ngày)</strong>
                 </TableCell>
-                <TableCell align="center">
+                <TableCell align="center" sx={{ width: 100 }}>
                   <strong>Ưu tiên</strong>
                 </TableCell>
-                <TableCell align="center">
+                <TableCell align="center" sx={{ width: 80 }}>
                   <strong>Thao tác</strong>
                 </TableCell>
               </TableRow>
@@ -387,14 +390,53 @@ export const SupplierCatalogPage = ({
 
                   return (
                     <TableRow key={item.id} hover>
-                      <TableCell>
+                      {/* Image Cell */}
+                      <TableCell sx={{ width: 60 }}>
+                        {item.primaryImageUrl ? (
+                          <Box
+                            component="img"
+                            src={item.primaryImageUrl}
+                            alt={item.variantName || item.variantSku}
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 1,
+                              border: "1px solid",
+                              borderColor: "divider",
+                              objectFit: "cover",
+                            }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 1,
+                              border: "1px dashed",
+                              borderColor: "divider",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: 10,
+                              color: "text.disabled",
+                            }}
+                          >
+                            No Img
+                          </Box>
+                        )}
+                      </TableCell>
+
+                      {/* SKU Cell */}
+                      <TableCell sx={{ width: 140 }}>
                         <Typography variant="body2" fontFamily="monospace">
                           {item.variantSku}
                         </Typography>
                       </TableCell>
+
+                      {/* Name Cell */}
                       <TableCell>
                         <Typography variant="body2">
-                          {item.variantSku}
+                          {item.variantName || item.variantSku}
                         </Typography>
                       </TableCell>
 

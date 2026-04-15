@@ -14338,6 +14338,8 @@ export interface components {
             supplierId?: number;
             supplierName: string;
             variantSku: string;
+            variantName: string;
+            primaryImageUrl?: null | string;
             /** Format: decimal */
             negotiatedPrice?: number;
             /** Format: int32 */

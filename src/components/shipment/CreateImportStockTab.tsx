@@ -1,8 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { importStockService } from "../../services/importStockService";
 import { productService } from "../../services/productService";
-import type { Supplier, VariantLookupItem } from "@/types/product";
+import {
+  sourcingCatalogService,
+  type CatalogItem,
+} from "../../services/sourcingCatalogService";
+import type { Supplier } from "@/types/product";
 import {
   Inventory2,
   Add,
@@ -31,7 +35,7 @@ export const CreateImportStockTab: React.FC = () => {
   const [expectedArrivalDate, setExpectedArrivalDate] = useState<string>(
     () => getTodayIsoDate()!,
   );
-  const [variants, setVariants] = useState<VariantLookupItem[]>([]);
+  const [variants, setVariants] = useState<CatalogItem[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState<boolean>(true);
   const [loadingVariants, setLoadingVariants] = useState<boolean>(false);
   const [toast, setToast] = useState<{
@@ -46,12 +50,15 @@ export const CreateImportStockTab: React.FC = () => {
   const [hasProcessedImportData, setHasProcessedImportData] =
     useState<boolean>(false);
 
-  const showToast = (
-    message: string,
-    severity: "success" | "error" | "warning" | "info" = "info",
-  ) => {
-    setToast({ open: true, message, severity });
-  };
+  const showToast = useCallback(
+    (
+      message: string,
+      severity: "success" | "error" | "warning" | "info" = "info",
+    ) => {
+      setToast({ open: true, message, severity });
+    },
+    [],
+  );
 
   const handleCloseToast = () => {
     setToast({ ...toast, open: false });
@@ -87,14 +94,14 @@ export const CreateImportStockTab: React.FC = () => {
           // Show success toast
           showToast(
             `Đã tải ${importItems.length} sản phẩm từ gợi ý nhập hàng. Bạn có thể chỉnh sửa trước khi tạo đơn.`,
-            "success"
+            "success",
           );
         }
       } catch (error) {
         console.error("Failed to parse import data from URL:", error);
         showToast(
           "Dữ liệu nhập hàng không hợp lệ. Vui lòng nhập thủ công.",
-          "warning"
+          "warning",
         );
       }
     }
@@ -130,25 +137,35 @@ export const CreateImportStockTab: React.FC = () => {
     };
 
     loadSuppliers();
-  }, []);
+  }, [showToast]);
 
-  // Load product variants on supplier change
+  // Load catalog items when supplier changes
   useEffect(() => {
-    const loadVariants = async () => {
+    const loadCatalog = async () => {
+      if (!selectedSupplierId) {
+        setVariants([]);
+        return;
+      }
+
       try {
         setLoadingVariants(true);
-        const variantList = await productService.getProductVariants();
-        setVariants(variantList);
+        const catalogItems =
+          await sourcingCatalogService.getCatalog(selectedSupplierId);
+        setVariants(catalogItems);
       } catch (err: any) {
-        console.error("Failed to load variants:", err);
+        console.error("Failed to load catalog:", err);
+        showToast(
+          err.message || "Không thể tải danh mục sản phẩm của nhà cung cấp",
+          "error",
+        );
         setVariants([]);
       } finally {
         setLoadingVariants(false);
       }
     };
 
-    loadVariants();
-  }, [selectedSupplierId]);
+    loadCatalog();
+  }, [selectedSupplierId, showToast]);
 
   const triggerExcelPicker = () => {
     fileInputRef.current?.click();
@@ -518,7 +535,8 @@ export const CreateImportStockTab: React.FC = () => {
                               <img
                                 src={imageUrl}
                                 alt={
-                                  selectedVariant?.displayName ||
+                                  selectedVariant?.variantName ||
+                                  selectedVariant?.variantSku ||
                                   "Variant image"
                                 }
                                 className="h-10 w-10 shrink-0 rounded-md border border-gray-200 object-cover"
@@ -561,7 +579,7 @@ export const CreateImportStockTab: React.FC = () => {
                                 handleItemChange(
                                   idx,
                                   "price",
-                                  selectedVariant.basePrice ?? 0,
+                                  selectedVariant.negotiatedPrice ?? 0,
                                 );
                               }
                             }}
@@ -571,16 +589,15 @@ export const CreateImportStockTab: React.FC = () => {
                             <option value="">
                               {loadingVariants
                                 ? "Đang tải..."
-                                : "Chọn sản phẩm..."}
+                                : variants.length === 0
+                                  ? "Chưa có sản phẩm trong catalog"
+                                  : "Chọn sản phẩm..."}
                             </option>
                             {variants.map((variant) => (
                               <option key={variant.id} value={variant.id}>
-                                {variant.displayName ||
-                                  variant.sku ||
+                                {variant.variantName ||
+                                  variant.variantSku ||
                                   "Variant"}
-                                {typeof variant.volumeMl === "number"
-                                  ? ` (${variant.volumeMl}ml)`
-                                  : ""}
                               </option>
                             ))}
                           </select>
