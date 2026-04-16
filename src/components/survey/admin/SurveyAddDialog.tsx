@@ -111,13 +111,14 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
                 const subGroups = res.data.subGroups || [];
 
                 // If sub-groups exist (attribute type), store them all and use first one by default
-                if (subGroups.length > 0) {
+                if (subGroups.length > 0 && subGroups[0]) {
+                    const firstGroup = subGroups[0];
                     const subGroupNames = subGroups.map(g => g.attributeName);
                     return {
                         ...f,
                         availableSubGroups: subGroupNames,
-                        availableValues: subGroups[0].values,
-                        selectedSubGroup: subGroups[0].attributeName
+                        availableValues: firstGroup.values,
+                        selectedSubGroup: firstGroup.attributeName
                     };
                 }
                 return { ...f, availableSubGroups: [], availableValues: values };
@@ -204,11 +205,12 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
         setForms(prev => prev.map(f => (f.id === formId ? { ...f, budgetRanges: [...f.budgetRanges, { label: "", min: undefined, max: undefined }] } : f)));
     };
 
-    const updateBudgetRange = (formId: string, idx: number, field: string, value: any) => {
+    const updateBudgetRange = (formId: string, idx: number, field: "label" | "min" | "max", value: any) => {
         setForms(prev => prev.map(f => {
             if (f.id !== formId) return f;
             const ranges = [...f.budgetRanges];
-            ranges[idx] = { ...ranges[idx], [field]: value };
+            const updatedRange = { ...ranges[idx], [field]: value };
+            ranges[idx] = updatedRange as { label: string; min?: number; max?: number };
             return { ...f, budgetRanges: ranges };
         }));
     };
