@@ -398,12 +398,8 @@ export const PaymentFailurePage = () => {
             width: "100%",
           }}
         >
-          <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={{ xs: 2, md: 3 }}
-            alignItems={{ xs: "stretch", md: "flex-start" }}
-          >
-            <Box sx={{ flex: 1.05 }}>
+          <Stack spacing={2}>
+            <Box>
               <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
                 <Box
                   sx={{
@@ -516,7 +512,7 @@ export const PaymentFailurePage = () => {
               )}
             </Box>
 
-            <Box sx={{ flex: 0.95 }}>
+            <Box>
               {!isInStoreOrder && paymentId && (
                 <Box
                   sx={{

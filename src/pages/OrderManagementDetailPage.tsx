@@ -39,6 +39,7 @@ import {
   ArrowBack,
   AssignmentReturn,
   CancelOutlined,
+  Email,
   ExpandLess,
   ExpandMore,
   HighlightOff,
@@ -1479,12 +1480,47 @@ export const OrderManagementDetailPage = () => {
                         >
                           Người đặt hàng
                         </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {order.customerName || "N/A"}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {order.customerEmail || "N/A"}
-                        </Typography>
+                        {order.customerName && order.customerEmail && order.customerPhoneNumber ? (
+                          <Stack spacing={1}>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Person
+                                fontSize="small"
+                                sx={{ color: "text.secondary" }}
+                              />
+                              <Typography variant="body2" fontWeight={600}>
+                                {order.customerName}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Email
+                                fontSize="small"
+                                sx={{ color: "text.secondary" }}
+                              />
+                              <Typography variant="caption" color="text.secondary">
+                                {order.customerEmail}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Phone
+                                fontSize="small"
+                                sx={{ color: "text.secondary" }}
+                              />
+                              <Typography variant="caption">
+                                {order.customerPhoneNumber}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        ) : (
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Person
+                              fontSize="small"
+                              sx={{ color: "text.secondary" }}
+                            />
+                            <Typography variant="body2" fontWeight={600}>
+                              Khách lẻ
+                            </Typography>
+                          </Box>
+                        )}
                         <Stack direction="row" spacing={0.75} flexWrap="wrap">
                           {order.staffName && (
                             <Chip

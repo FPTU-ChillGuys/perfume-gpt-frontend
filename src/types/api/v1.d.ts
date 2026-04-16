@@ -15111,6 +15111,7 @@ export interface components {
             customerId?: null | string;
             customerName?: null | string;
             customerEmail?: null | string;
+            customerPhoneNumber?: null | string;
             /** Format: uuid */
             staffId?: null | string;
             staffName?: null | string;
