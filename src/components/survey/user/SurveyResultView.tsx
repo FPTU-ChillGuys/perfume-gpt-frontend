@@ -24,10 +24,11 @@ interface Props {
     onReviewAnswers: () => void;
     onReanalyze: () => void;
     onRestart: () => void;
+    onOpenHistory?: () => void; // Thêm prop này
     isSubmitting?: boolean;
 }
 
-export default function SurveyResultView({ result, userId, onReviewAnswers, onReanalyze, onRestart, isSubmitting }: Props) {
+export default function SurveyResultView({ result, userId, onReviewAnswers, onReanalyze, onRestart, onOpenHistory, isSubmitting }: Props) {
     return (
         <Box>
             {/* Header */}
@@ -89,7 +90,7 @@ export default function SurveyResultView({ result, userId, onReviewAnswers, onRe
                 </>
             )}
 
-            {/* Restart */}
+            {/* Actions */}
             <Box
                 sx={{
                     mt: 4,
@@ -107,6 +108,16 @@ export default function SurveyResultView({ result, userId, onReviewAnswers, onRe
                 >
                     Xem lại đáp án
                 </Button>
+
+                {onOpenHistory && (
+                    <Button
+                        variant="outlined"
+                        onClick={onOpenHistory}
+                        sx={{ borderRadius: 5, px: 3 }}
+                    >
+                        Lịch sử khảo sát
+                    </Button>
+                )}
 
                 <Button
                     variant="outlined"
