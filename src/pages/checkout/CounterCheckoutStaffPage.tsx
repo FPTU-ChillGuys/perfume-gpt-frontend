@@ -1672,7 +1672,12 @@ export const CounterCheckoutStaffPage = () => {
     handledPaymentFailedEventRef.current = failedEventKey;
 
     // Cập nhật bopisActivePaymentId từ SignalR realtime
-    if (activeTab === 1 && bopisOrder && rawOrderId === bopisOrder.id && rawPaymentId) {
+    if (
+      activeTab === 1 &&
+      bopisOrder &&
+      rawOrderId === bopisOrder.id &&
+      rawPaymentId
+    ) {
       setBopisActivePaymentId(rawPaymentId);
     }
 
@@ -1747,7 +1752,12 @@ export const CounterCheckoutStaffPage = () => {
     latestRetryPaymentIdRef.current = rawPaymentId;
 
     // Cập nhật bopisActivePaymentId từ SignalR realtime
-    if (activeTab === 1 && bopisOrder && rawOrderId === bopisOrder.id && rawPaymentId) {
+    if (
+      activeTab === 1 &&
+      bopisOrder &&
+      rawOrderId === bopisOrder.id &&
+      rawPaymentId
+    ) {
       setBopisActivePaymentId(rawPaymentId);
     }
 
@@ -2261,6 +2271,9 @@ export const CounterCheckoutStaffPage = () => {
         setPaymentQrUrl(null);
         paymentQrUrlRef.current = null;
         void openSuccessDialog(orderId);
+
+        // Cực kỳ quan trọng: Xóa event SignalR sau khi đã xử lý xong
+        clearPaymentSignalREvents();
       } catch (error) {
         showToast(
           error instanceof Error
@@ -2268,7 +2281,7 @@ export const CounterCheckoutStaffPage = () => {
             : "Thanh toán QR thành công nhưng không thể giao hàng tự động",
           "error",
         );
-      } finally {
+        // Nếu lỗi thật sự thì mới mở khóa cho phép thử lại
         bopisAutoDeliverRef.current = false;
       }
     })();
@@ -2278,6 +2291,7 @@ export const CounterCheckoutStaffPage = () => {
     bopisOrder,
     openSuccessDialog,
     showToast,
+    clearPaymentSignalREvents,
   ]);
 
   return (
@@ -3218,28 +3232,6 @@ export const CounterCheckoutStaffPage = () => {
                       >
                         <QRCodeSVG value={paymentQrUrl} size={200} />
                       </Box>
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        mt={1.5}
-                      >
-                        QR sẽ tự hiển thị popup ở màn hình khách.
-                      </Typography>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<OpenInNew />}
-                        sx={{ mt: 1.5 }}
-                        onClick={() =>
-                          window.open(
-                            paymentQrUrl,
-                            "_blank",
-                            "noopener,noreferrer",
-                          )
-                        }
-                      >
-                        Mở link thanh toán
-                      </Button>
                     </Box>
                   )}
                 </Box>
@@ -3518,6 +3510,41 @@ export const CounterCheckoutStaffPage = () => {
                               ? "Đang tạo mã..."
                               : "Tạo mã QR thanh toán"}
                           </Button>
+                        )}
+                        {paymentQrUrl && (
+                          <Box
+                            display="flex"
+                            flexDirection="column"
+                            alignItems="center"
+                            sx={{
+                              mt: 2.5,
+                              p: 3,
+                              borderRadius: 3,
+                              bgcolor: "white",
+                              border: "1px solid",
+                              borderColor: "divider",
+                            }}
+                          >
+                            <Typography
+                              variant="subtitle2"
+                              fontWeight={700}
+                              color="primary.main"
+                              mb={2}
+                            >
+                              Quét mã QR để thanh toán
+                            </Typography>
+                            <Box
+                              sx={{
+                                borderRadius: 3,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                p: 1.5,
+                                bgcolor: "white",
+                              }}
+                            >
+                              <QRCodeSVG value={paymentQrUrl} size={200} />
+                            </Box>
+                          </Box>
                         )}
                       </>
                     )}
