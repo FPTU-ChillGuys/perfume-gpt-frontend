@@ -9,6 +9,7 @@ import type {
     SurveyQuesAnsDetailRequest,
     SubmitSurveyResponse,
     UserSurveyRecordResponse,
+    UserSurveyHistoryResponse,
     QuestionType,
     SurveyAttributeTypeInfo,
     SurveyAttributeValuesResponse,
@@ -167,6 +168,21 @@ class SurveyService {
         } catch (error: any) {
             console.error("Error fetching user survey record:", error);
             throw new Error(error.response?.data?.error || error.message || "Failed to fetch user survey record");
+        }
+    }
+
+    // 8.1 GET /surveys/user/{userId}/history
+    async getUserSurveyHistory(userId: string): Promise<UserSurveyHistoryResponse> {
+        try {
+            const response = await aiApiInstance.GET(`/surveys/user/${userId}/history` as any, {});
+
+            if (!response.data?.success) {
+                throw new Error(response.data?.error || "Failed to fetch user survey history");
+            }
+            return response.data as UserSurveyHistoryResponse;
+        } catch (error: any) {
+            console.error("Error fetching user survey history:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to fetch user survey history");
         }
     }
 

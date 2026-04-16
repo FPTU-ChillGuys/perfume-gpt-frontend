@@ -24,6 +24,7 @@ import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
 import SurveyQuestionCard from "@/components/survey/user/SurveyQuestionCard";
 import SurveyResultView from "@/components/survey/user/SurveyResultView";
+import SurveyHistoryDrawer from "@/components/survey/user/SurveyHistoryDrawer";
 import { dexieCache } from "@/utils/dexieCache";
 import { CACHE_KEYS, CACHE_TTL } from "@/constants/cache";
 
@@ -81,6 +82,7 @@ export default function SurveyPage() {
     const [result, setResult] = useState<AssistantPayload | null>(null);
     const [lastResult, setLastResult] = useState<AssistantPayload | null>(null);
     const [hydrated, setHydrated] = useState(false);
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const surveyResultCacheKey = `${CACHE_KEYS.SURVEY_RESULT}_${userId}`;
 
     // ── Fetch ─────────────────────────────────────────────────────
@@ -296,9 +298,11 @@ export default function SurveyPage() {
                         onReviewAnswers={handleReviewAnswers}
                         onReanalyze={handleReanalyze}
                         onRestart={handleRestart}
+                        onOpenHistory={() => setIsHistoryOpen(true)}
                         isSubmitting={submitting}
                     />
                 </Container>
+                <SurveyHistoryDrawer open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} userId={userId} />
             </>
         );
     }
@@ -317,16 +321,27 @@ export default function SurveyPage() {
                     <Typography variant="body1" color="text.secondary">
                         Trả lời {questions.length} câu hỏi ngắn để nhận gợi ý cá nhân hóa từ AI.
                     </Typography>
-                    {lastResult && (
+                    
+                    <Box sx={{ mt: 2, display: "flex", justifyContent: "center", gap: 2, flexWrap: "wrap" }}>
                         <Button
-                            variant="text"
+                            variant="outlined"
                             size="small"
-                            onClick={handleViewLastResult}
-                            sx={{ mt: 1.25, textTransform: "none" }}
+                            onClick={() => setIsHistoryOpen(true)}
+                            sx={{ textTransform: "none", borderRadius: 4 }}
                         >
-                            Xem lại kết quả survey gần nhất
+                            Xem lịch sử khảo sát
                         </Button>
-                    )}
+                        {lastResult && (
+                            <Button
+                                variant="text"
+                                size="small"
+                                onClick={handleViewLastResult}
+                                sx={{ textTransform: "none" }}
+                            >
+                                Xem lại kết quả survey gần nhất
+                            </Button>
+                        )}
+                    </Box>
                 </Box>
 
                 {/* Progress bar */}
@@ -408,6 +423,7 @@ export default function SurveyPage() {
                     </Typography>
                 )}
             </Container>
+            <SurveyHistoryDrawer open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} userId={userId} />
         </>
     );
 }

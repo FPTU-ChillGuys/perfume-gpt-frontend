@@ -64,14 +64,16 @@ export interface SurveyQuesAnsDetailRequest {
     answerId: string;
 }
 
-export interface UserSurveyDetail {
-    id: string;
-    createdAt: string;
-    updatedAt: string;
-    questionId: string;
-    question: string;
+export interface UserSurveyAnswerDetail {
+    detailId: string;
     answerId: string;
     answer: string;
+}
+
+export interface UserSurveyDetail {
+    questionId: string;
+    question: string;
+    answers: UserSurveyAnswerDetail[];
 }
 
 export interface UserSurveyRecord {
@@ -92,6 +94,12 @@ export interface UserSurveyRecordResponse {
     success: boolean;
     error: string | null;
     data: UserSurveyRecord;
+}
+
+export interface UserSurveyHistoryResponse {
+    success: boolean;
+    error: string | null;
+    data: UserSurveyRecord[];
 }
 
 // ============ AI Output Schemas & Parsers ============

@@ -16,6 +16,7 @@ import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import { surveyService } from "@/services/ai/surveyService";
 import { useAuth } from "@/hooks/useAuth";
 import type { UserSurveyRecord } from "@/types/survey";
+import { getAnswerDisplayText } from "@/types/survey";
 
 export const SurveyHistorySection = () => {
   const { user } = useAuth();
@@ -158,7 +159,7 @@ export const SurveyHistorySection = () => {
           <Stack spacing={0}>
             {record.details.map((detail, index) => (
               <Paper
-                key={detail.id}
+                key={detail.questionId}
                 variant="outlined"
                 sx={{
                   p: 2,
@@ -217,29 +218,18 @@ export const SurveyHistorySection = () => {
                       </Typography>
                     </Stack>
 
-                    {/* Answer */}
-                    <Stack
-                      direction="row"
-                      alignItems="flex-start"
-                      spacing={0.75}
-                      mt={0.75}
-                    >
-                      <CheckCircleOutlineIcon
-                        sx={{
-                          fontSize: 16,
-                          color: "success.main",
-                          mt: 0.25,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <Typography
-                        variant="body2"
-                        fontWeight={600}
-                        color="text.primary"
-                      >
-                        {detail.answer}
-                      </Typography>
-                    </Stack>
+                      <Stack direction="row" flexWrap="wrap" gap={0.5} mt={0.5}>
+                        {detail.answers.map((ans) => (
+                          <Chip
+                            key={ans.detailId}
+                            label={getAnswerDisplayText(ans.answer)}
+                            size="small"
+                            variant="outlined"
+                            color="primary"
+                            sx={{ borderRadius: 1 }}
+                          />
+                        ))}
+                      </Stack>
                   </Box>
                 </Stack>
               </Paper>
