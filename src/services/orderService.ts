@@ -1553,6 +1553,33 @@ class OrderService {
     }
   }
 
+  async getOrderByCode(code: string): Promise<OrderResponse> {
+    try {
+      const response = await apiInstance.GET("/api/orders/order-code/{code}", {
+        params: {
+          path: { code },
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(
+          (response.error as any)?.message ||
+            response.data?.message ||
+            "Failed to fetch order details",
+        );
+      }
+
+      return this.normalizeOrderResponse(response.data.payload);
+    } catch (error: any) {
+      console.error("Error fetching order by code:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch order details",
+      );
+    }
+  }
+
   async getMyOrderById(orderId: string): Promise<OrderResponse> {
     try {
       const response = await apiInstance.GET(

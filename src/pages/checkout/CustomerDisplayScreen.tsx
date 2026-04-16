@@ -64,7 +64,9 @@ export const CustomerDisplayScreen = () => {
     sessionId: "COUNTER_01",
     requireAuth: false,
   });
-  const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
+  const [checkoutSuccessType, setCheckoutSuccessType] = useState<
+    "PAYMENT" | "DELIVERY" | null
+  >(null);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
   const lastFailedOrderIdRef = useRef("");
@@ -74,7 +76,9 @@ export const CustomerDisplayScreen = () => {
   // Refs to avoid re-triggering SignalR effects when state changes
   const itemsCountRef = useRef(0);
   const displayPaymentUrlRef = useRef("");
-  const displayModeRef = useRef<"IDLE" | "OFFLINE_CART" | "ONLINE_ORDER">("IDLE");
+  const displayModeRef = useRef<"IDLE" | "OFFLINE_CART" | "ONLINE_ORDER">(
+    "IDLE",
+  );
 
   const items = useMemo<DisplayItem[]>(() => {
     const rawItems = readProp<unknown[]>(customerDisplayData, "items", "Items");
@@ -223,7 +227,7 @@ export const CustomerDisplayScreen = () => {
     if (!displayPaymentUrl) return;
 
     const frameId = window.requestAnimationFrame(() => {
-      setShowCheckoutSuccess(false);
+      setCheckoutSuccessType(null);
     });
 
     return () => {
@@ -232,17 +236,17 @@ export const CustomerDisplayScreen = () => {
   }, [displayPaymentUrl]);
 
   useEffect(() => {
-    if (!showCheckoutSuccess) return;
+    if (!checkoutSuccessType) return;
 
     const timerId = window.setTimeout(() => {
-      setShowCheckoutSuccess(false);
+      setCheckoutSuccessType(null);
       setSuccessOrderId(null);
     }, 3200);
 
     return () => {
       window.clearTimeout(timerId);
     };
-  }, [showCheckoutSuccess]);
+  }, [checkoutSuccessType]);
 
   useEffect(() => {
     if (!paymentCompletedData) return;
@@ -286,7 +290,7 @@ export const CustomerDisplayScreen = () => {
     const frameId = window.requestAnimationFrame(() => {
       setActivePaymentUrl("");
       setSuccessOrderId(rawOrderId || null);
-      setShowCheckoutSuccess(true); // Nhảy tick xanh cho khách xem
+      setCheckoutSuccessType("PAYMENT");
     });
 
     return () => {
@@ -376,7 +380,7 @@ export const CustomerDisplayScreen = () => {
 
     const frameId = window.requestAnimationFrame(() => {
       setActivePaymentUrl(link);
-      setShowCheckoutSuccess(false);
+      setCheckoutSuccessType(null);
     });
 
     return () => {
@@ -402,7 +406,7 @@ export const CustomerDisplayScreen = () => {
     const frameId = window.requestAnimationFrame(() => {
       setActivePaymentUrl("");
       setSuccessOrderId(rawOrderId || null);
-      setShowCheckoutSuccess(true);
+      setCheckoutSuccessType("DELIVERY");
     });
 
     return () => {
@@ -417,29 +421,33 @@ export const CustomerDisplayScreen = () => {
       {displayPaymentUrl &&
         (displayMode !== "ONLINE_ORDER" ||
           onlineOrderData?.paymentStatus !== "Paid") && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]">
-          <div className="mx-4 w-full max-w-md rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl">
-            <p className="text-2xl font-black text-sky-700">
-              Vui lòng quét mã để thanh toán
-            </p>
-            <div className="mx-auto mt-4 w-fit rounded-2xl border border-slate-200 bg-white p-2">
-              <QRCodeSVG value={displayPaymentUrl} size={240} />
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]">
+            <div className="mx-4 w-full max-w-md rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl">
+              <p className="text-2xl font-black text-sky-700">
+                Vui lòng quét mã để thanh toán
+              </p>
+              <div className="mx-auto mt-4 w-fit rounded-2xl border border-slate-200 bg-white p-2">
+                <QRCodeSVG value={displayPaymentUrl} size={240} />
+              </div>
+              <button
+                type="button"
+                className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                onClick={() =>
+                  window.open(
+                    displayPaymentUrl,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                <OpenInNew fontSize="small" />
+                Mở link thanh toán (test)
+              </button>
             </div>
-            <button
-              type="button"
-              className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-              onClick={() =>
-                window.open(displayPaymentUrl, "_blank", "noopener,noreferrer")
-              }
-            >
-              <OpenInNew fontSize="small" />
-              Mở link thanh toán (test)
-            </button>
           </div>
-        </div>
-      )}
+        )}
 
-      {showCheckoutSuccess && (
+      {checkoutSuccessType && (
         <div
           className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
           style={{
@@ -480,7 +488,9 @@ export const CustomerDisplayScreen = () => {
               </div>
             </div>
             <p className="mt-1.5 text-2xl font-extrabold text-slate-900">
-              Thanh toán thành công
+              {checkoutSuccessType === "DELIVERY"
+                ? "Cảm ơn quý khách!"
+                : "Thanh toán thành công"}
             </p>
             {successOrderId && (
               <p className="mt-2 text-sm text-slate-500">
@@ -671,16 +681,7 @@ export const CustomerDisplayScreen = () => {
                         CHƯA THANH TOÁN
                       </span>
                     </div>
-                    {displayPaymentUrl ? (
-                      <div className="flex flex-col items-center rounded-xl border border-slate-200 bg-white p-4 text-center">
-                        <p className="mb-3 text-sm font-semibold text-sky-700">
-                          Vui lòng quét mã để thanh toán
-                        </p>
-                        <div className="rounded-xl border border-slate-200 bg-white p-2">
-                          <QRCodeSVG value={displayPaymentUrl} size={160} />
-                        </div>
-                      </div>
-                    ) : (
+                    {!displayPaymentUrl && (
                       <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500">
                         Vui lòng thanh toán tại quầy.
                       </p>

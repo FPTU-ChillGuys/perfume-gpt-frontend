@@ -120,6 +120,26 @@ const normalizeHubCandidate = (value?: string | null) => {
   }
 };
 
+const mapOrderToBopisPayload = (order: any): BopisOnlineOrderPayload => ({
+  orderId: order.id,
+  code: order.code,
+  orderDetails: (order.orderDetails ?? []).map(
+    (d: any): BopisOrderDetail => ({
+      variantId: d.variantId,
+      variantName: d.variantName,
+      imageUrl: d.imageUrl ?? undefined,
+      quantity: d.quantity ?? 0,
+      unitPrice: d.unitPrice ?? 0,
+      discount: (d.campaignDiscount ?? 0) + (d.voucherDiscount ?? 0),
+      finalTotal: d.total ?? 0,
+    }),
+  ),
+  subTotal: order.subTotal ?? 0,
+  discount: order.voucherDiscountTotal ?? 0,
+  totalPrice: order.totalAmount ?? 0,
+  paymentStatus: order.paymentStatus ?? "Unpaid",
+});
+
 const addCandidate = (set: Set<string>, value?: string | null) => {
   const normalized = normalizeHubCandidate(value);
   if (!normalized) return;
@@ -285,6 +305,29 @@ export const useSignalR = <T = unknown>({
       await invokeSyncToCustomer(cartData);
     },
     [invokeSyncToCustomer, publishLocalSync],
+  );
+
+  const syncOnlineOrderToCustomer = useCallback(
+    async (orderData: any) => {
+      // Đổi thành any
+      const connection = connectionRef.current;
+      if (
+        !connection ||
+        connection.state !== signalR.HubConnectionState.Connected
+      ) {
+        return;
+      }
+      try {
+        await connection.invoke(
+          "SyncOnlineOrderToCustomerDisplay",
+          sessionId,
+          orderData, // Gửi nguyên cục data
+        );
+      } catch (invokeError) {
+        console.error("Lỗi đồng bộ BOPIS:", invokeError);
+      }
+    },
+    [sessionId],
   );
 
   const notifyPaymentSuccess = useCallback(
@@ -476,6 +519,15 @@ export const useSignalR = <T = unknown>({
           connection.on("UpdateCustomerDisplay", (data: T) => {
             if (!isMounted) return;
             setCustomerDisplayData(data);
+            // Chỉ clear onlineOrderData khi cart thực sự trống (tín hiệu clear)
+            const cartData = data as { items?: unknown[] } | null;
+            if (
+              !cartData ||
+              !Array.isArray(cartData.items) ||
+              cartData.items.length === 0
+            ) {
+              setOnlineOrderData(null);
+            }
             setLastEvent("received-update-customer-display");
           });
 
@@ -506,23 +558,26 @@ export const useSignalR = <T = unknown>({
             },
           );
 
-          connection.on(
-            "ReceiveOnlineOrder",
-            (payload: BopisOnlineOrderPayload) => {
-              if (!isMounted) return;
-              setOnlineOrderData(payload);
-              setLastEvent("received-online-order");
-            },
-          );
+          connection.on("ReceiveOnlineOrder", (rawOrderData: any) => {
+            // Nhận data gốc từ C#
+            if (!isMounted) return;
 
-          connection.on(
-            "OrderDelivered",
-            (payload: OrderDeliveredPayload) => {
-              if (!isMounted) return;
-              setOrderDeliveredData(payload);
-              setLastEvent("received-order-delivered");
-            },
-          );
+            if (!rawOrderData) {
+              setOnlineOrderData(null);
+            } else {
+              // Map data gốc thành format cho màn hình hiển thị
+              const mappedPayload = mapOrderToBopisPayload(rawOrderData);
+              setOnlineOrderData(mappedPayload);
+            }
+
+            setLastEvent("received-online-order");
+          });
+
+          connection.on("OrderDelivered", (payload: OrderDeliveredPayload) => {
+            if (!isMounted) return;
+            setOrderDeliveredData(payload);
+            setLastEvent("received-order-delivered");
+          });
 
           connection.onclose((closeError) => {
             if (isMounted) {
@@ -729,6 +784,7 @@ export const useSignalR = <T = unknown>({
     lastEvent,
     error,
     syncCartToCustomer,
+    syncOnlineOrderToCustomer,
     notifyPaymentSuccess,
     clearPaymentSignalREvents,
   };

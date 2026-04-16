@@ -13,6 +13,7 @@ import {
 import {
   Alert,
   Autocomplete,
+  Avatar,
   Box,
   Button,
   Chip,
@@ -34,6 +35,8 @@ import {
   RadioGroup,
   Paper,
   Stack,
+  Tab,
+  Tabs,
   TextField,
   Tooltip,
   Typography,
@@ -43,7 +46,12 @@ import { BatchSelectionModal } from "@/components/checkout/BatchSelectionModal";
 import { ReceiptTemplate } from "@/components/checkout/ReceiptTemplate";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useGlobalBarcodeScanner } from "@/hooks/useGlobalBarcodeScanner";
-import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
+import {
+  POS_HUB_URL,
+  useSignalR,
+  type BopisOnlineOrderPayload,
+  type BopisOrderDetail,
+} from "@/hooks/useSignalR";
 import { useToast } from "@/hooks/useToast";
 import { MainLayout } from "@/layouts/MainLayout";
 import {
@@ -57,6 +65,7 @@ import {
 } from "@/services/posService";
 
 import { orderService, type OrderInvoice } from "@/services/orderService";
+import type { OrderResponse } from "@/types/order";
 import { addressService } from "@/services/addressService";
 import type {
   CreateInStoreOrderRequest,
@@ -110,14 +119,15 @@ const PAYMENT_METHOD_LABEL: Record<NonNullable<PaymentMethod>, string> = {
   PayOs: "PayOS",
 };
 
-const PAYMENT_METHOD_ICON: Partial<Record<NonNullable<PaymentMethod>, string>> = {
-  CashInStore: storeIcon,
-  CashOnDelivery: codIcon,
-  VnPay: vnpayIcon,
-  Momo: momoIcon,
-  ExternalBankTransfer: transferIcon,
-  PayOs: payOsIcon,
-};
+const PAYMENT_METHOD_ICON: Partial<Record<NonNullable<PaymentMethod>, string>> =
+  {
+    CashInStore: storeIcon,
+    CashOnDelivery: codIcon,
+    VnPay: vnpayIcon,
+    Momo: momoIcon,
+    ExternalBankTransfer: transferIcon,
+    PayOs: payOsIcon,
+  };
 
 interface PosCartItem {
   key: string;
@@ -228,6 +238,7 @@ export const CounterCheckoutStaffPage = () => {
   const { showToast } = useToast();
   const {
     syncCartToCustomer,
+    syncOnlineOrderToCustomer,
     paymentCompletedData,
     paymentFailedData,
     paymentLinkUpdatedData,
@@ -303,6 +314,7 @@ export const CounterCheckoutStaffPage = () => {
   // Flag to prevent processing failed events during retry operation
   const isRetryInProgressRef = useRef(false);
   const syncCartToCustomerRef = useRef(syncCartToCustomer);
+  const syncOnlineOrderToCustomerRef = useRef(syncOnlineOrderToCustomer);
   const [failedPaymentAction, setFailedPaymentAction] =
     useState<FailedPaymentAction | null>(null);
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
@@ -310,6 +322,22 @@ export const CounterCheckoutStaffPage = () => {
   const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
   const [cancelNote, setCancelNote] = useState("");
   const [isCancellingOrder, setIsCancellingOrder] = useState(false);
+
+  // BOPIS Tab states
+  const [activeTab, setActiveTab] = useState(0);
+  const [bopisSearchCode, setBopisSearchCode] = useState("");
+  const [isSearchingBopis, setIsSearchingBopis] = useState(false);
+  const [bopisOrder, setBopisOrder] = useState<OrderResponse | null>(null);
+  const [bopisPaymentMethod, setBopisPaymentMethod] =
+    useState<NonNullable<PaymentMethod>>("CashInStore");
+  const [isProcessingBopis, setIsProcessingBopis] = useState(false);
+  const bopisAutoDeliverRef = useRef(false);
+  const [bopisActivePaymentId, setBopisActivePaymentId] = useState<
+    string | null
+  >(null);
+  const [isBopisCashDialogOpen, setIsBopisCashDialogOpen] = useState(false);
+  const [isBopisQrConfirmOpen, setIsBopisQrConfirmOpen] = useState(false);
+  const [bopisCashReceived, setBopisCashReceived] = useState("");
 
   // Cash Payment Dialog states
   const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
@@ -469,6 +497,15 @@ export const CounterCheckoutStaffPage = () => {
     setSuccessOrderId(null);
     setOrderInvoice(null);
 
+    // Clear BOPIS states
+    setBopisOrder(null);
+    setBopisSearchCode("");
+    bopisAutoDeliverRef.current = false;
+    setBopisActivePaymentId(null);
+    setIsBopisCashDialogOpen(false);
+    setIsBopisQrConfirmOpen(false);
+    setBopisCashReceived("");
+
     // Clear payment states
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
@@ -527,7 +564,12 @@ export const CounterCheckoutStaffPage = () => {
           paymentIdFromRetryUrl ||
           failedPaymentAction.paymentId;
 
-        await orderService.confirmPayment(paymentIdForRetry, true, undefined, POS_SESSION_ID);
+        await orderService.confirmPayment(
+          paymentIdForRetry,
+          true,
+          undefined,
+          POS_SESSION_ID,
+        );
 
         // Clear payment failed states
         paymentQrUrlRef.current = null;
@@ -580,7 +622,12 @@ export const CounterCheckoutStaffPage = () => {
         return;
       }
 
-      await orderService.confirmPayment(paymentIdForConfirm, true, undefined, POS_SESSION_ID);
+      await orderService.confirmPayment(
+        paymentIdForConfirm,
+        true,
+        undefined,
+        POS_SESSION_ID,
+      );
 
       // Mở success dialog với orderId để in hóa đơn
       showToast("Thanh toán tiền mặt thành công!", "success");
@@ -638,6 +685,10 @@ export const CounterCheckoutStaffPage = () => {
   }, [syncCartToCustomer]);
 
   useEffect(() => {
+    syncOnlineOrderToCustomerRef.current = syncOnlineOrderToCustomer;
+  }, [syncOnlineOrderToCustomer]);
+
+  useEffect(() => {
     if (!paymentCompletedData) return;
 
     // Hỗ trợ cả camelCase lẫn PascalCase từ backend C#
@@ -682,80 +733,83 @@ export const CounterCheckoutStaffPage = () => {
     const preview = previewDataRef.current;
     const currentCartItems = cartItemsRef.current;
 
-    if (preview) {
-      const mappedItems = currentCartItems.map((cartItem) => {
-        const matchedPreviewItem = preview.items?.find(
-          (previewItem) =>
-            previewItem.batchCode === cartItem.batchCode &&
-            (previewItem.variantId === cartItem.variantId ||
-              previewItem.variantName === cartItem.variantName),
+    // Chỉ sync cart offline lên customer display khi đang ở Tab 0
+    if (activeTab === 0) {
+      if (preview) {
+        const mappedItems = currentCartItems.map((cartItem) => {
+          const matchedPreviewItem = preview.items?.find(
+            (previewItem) =>
+              previewItem.batchCode === cartItem.batchCode &&
+              (previewItem.variantId === cartItem.variantId ||
+                previewItem.variantName === cartItem.variantName),
+          );
+
+          const unitPrice = toSafeNumber(
+            matchedPreviewItem?.unitPrice ?? cartItem.unitPrice,
+          );
+          const subTotal = toSafeNumber(
+            matchedPreviewItem?.subTotal ?? unitPrice * cartItem.quantity,
+          );
+          const discount = toSafeNumber(matchedPreviewItem?.discount ?? 0);
+          const finalTotal = toSafeNumber(
+            matchedPreviewItem?.finalTotal ?? subTotal - discount,
+          );
+
+          return {
+            variantId: toGuidOrEmpty(cartItem.variantId),
+            batchId: toGuidOrEmpty(cartItem.batchId),
+            variantName: cartItem.variantName,
+            batchCode: cartItem.batchCode,
+            imageUrl: cartItem.imageUrl || "",
+            quantity: Math.max(0, Number(cartItem.quantity || 0)),
+            unitPrice,
+            subTotal,
+            discount,
+            finalTotal,
+          };
+        });
+
+        void syncCartToCustomerRef.current({
+          items: mappedItems,
+          subTotal: toSafeNumber(preview.subTotal),
+          discount: toSafeNumber(preview.discount),
+          totalPrice: toSafeNumber(preview.totalPrice),
+          paymentUrl: null, // Clear QR
+        });
+      } else {
+        const mappedItems = currentCartItems.map((item) => {
+          const subTotal = toSafeNumber(item.unitPrice * item.quantity);
+          return {
+            variantId: toGuidOrEmpty(item.variantId),
+            batchId: toGuidOrEmpty(item.batchId),
+            variantName: item.variantName,
+            batchCode: item.batchCode,
+            imageUrl: item.imageUrl || "",
+            quantity: Math.max(0, Number(item.quantity || 0)),
+            unitPrice: toSafeNumber(item.unitPrice),
+            subTotal,
+            discount: 0,
+            finalTotal: subTotal,
+          };
+        });
+
+        const fallbackSubTotal = mappedItems.reduce(
+          (sum, item) => sum + item.subTotal,
+          0,
+        );
+        const fallbackTotal = mappedItems.reduce(
+          (sum, item) => sum + item.finalTotal,
+          0,
         );
 
-        const unitPrice = toSafeNumber(
-          matchedPreviewItem?.unitPrice ?? cartItem.unitPrice,
-        );
-        const subTotal = toSafeNumber(
-          matchedPreviewItem?.subTotal ?? unitPrice * cartItem.quantity,
-        );
-        const discount = toSafeNumber(matchedPreviewItem?.discount ?? 0);
-        const finalTotal = toSafeNumber(
-          matchedPreviewItem?.finalTotal ?? subTotal - discount,
-        );
-
-        return {
-          variantId: toGuidOrEmpty(cartItem.variantId),
-          batchId: toGuidOrEmpty(cartItem.batchId),
-          variantName: cartItem.variantName,
-          batchCode: cartItem.batchCode,
-          imageUrl: cartItem.imageUrl || "",
-          quantity: Math.max(0, Number(cartItem.quantity || 0)),
-          unitPrice,
-          subTotal,
-          discount,
-          finalTotal,
-        };
-      });
-
-      void syncCartToCustomerRef.current({
-        items: mappedItems,
-        subTotal: toSafeNumber(preview.subTotal),
-        discount: toSafeNumber(preview.discount),
-        totalPrice: toSafeNumber(preview.totalPrice),
-        paymentUrl: null, // Clear QR
-      });
-    } else {
-      const mappedItems = currentCartItems.map((item) => {
-        const subTotal = toSafeNumber(item.unitPrice * item.quantity);
-        return {
-          variantId: toGuidOrEmpty(item.variantId),
-          batchId: toGuidOrEmpty(item.batchId),
-          variantName: item.variantName,
-          batchCode: item.batchCode,
-          imageUrl: item.imageUrl || "",
-          quantity: Math.max(0, Number(item.quantity || 0)),
-          unitPrice: toSafeNumber(item.unitPrice),
-          subTotal,
+        void syncCartToCustomerRef.current({
+          items: mappedItems,
+          subTotal: toSafeNumber(fallbackSubTotal),
           discount: 0,
-          finalTotal: subTotal,
-        };
-      });
-
-      const fallbackSubTotal = mappedItems.reduce(
-        (sum, item) => sum + item.subTotal,
-        0,
-      );
-      const fallbackTotal = mappedItems.reduce(
-        (sum, item) => sum + item.finalTotal,
-        0,
-      );
-
-      void syncCartToCustomerRef.current({
-        items: mappedItems,
-        subTotal: toSafeNumber(fallbackSubTotal),
-        discount: 0,
-        totalPrice: toSafeNumber(fallbackTotal),
-        paymentUrl: null,
-      });
+          totalPrice: toSafeNumber(fallbackTotal),
+          paymentUrl: null,
+        });
+      }
     }
 
     // Mở Success Dialog thay vì clear cart ngay
@@ -764,7 +818,7 @@ export const CounterCheckoutStaffPage = () => {
     if (rawOrderId && rawOrderId !== EMPTY_GUID) {
       void openSuccessDialogRef.current(rawOrderId);
     }
-  }, [paymentCompletedData]);
+  }, [activeTab, paymentCompletedData]);
 
   const openStaffCancelDialog = () => {
     if (!failedPaymentAction?.orderId) {
@@ -1452,7 +1506,12 @@ export const CounterCheckoutStaffPage = () => {
         }
 
         if (requiresCashConfirm) {
-          await orderService.confirmPayment(paymentIdForRetry, true, undefined, POS_SESSION_ID);
+          await orderService.confirmPayment(
+            paymentIdForRetry,
+            true,
+            undefined,
+            POS_SESSION_ID,
+          );
 
           // Clear payment failed states - để SignalR event tự động mở success dialog
           paymentQrUrlRef.current = null;
@@ -1612,6 +1671,11 @@ export const CounterCheckoutStaffPage = () => {
 
     handledPaymentFailedEventRef.current = failedEventKey;
 
+    // Cập nhật bopisActivePaymentId từ SignalR realtime
+    if (activeTab === 1 && bopisOrder && rawOrderId === bopisOrder.id && rawPaymentId) {
+      setBopisActivePaymentId(rawPaymentId);
+    }
+
     paymentQrUrlRef.current = null;
     setPaymentQrUrl(null);
 
@@ -1639,18 +1703,21 @@ export const CounterCheckoutStaffPage = () => {
 
     // Use refs to access current preview data and callbacks
     // This prevents effect re-runs when cart changes
-    const currentPreview = previewDataRef.current;
-    if (currentPreview) {
-      void syncCartToCustomerRef.current(
-        toCartDisplaySyncPayloadRef.current(currentPreview),
-      );
-    } else {
-      void syncCartToCustomerRef.current({
-        ...toFallbackCartDisplaySyncPayloadRef.current(),
-        paymentUrl: null,
-      });
+    // Chỉ sync cart offline lên customer display khi đang ở Tab 0
+    if (activeTab === 0) {
+      const currentPreview = previewDataRef.current;
+      if (currentPreview) {
+        void syncCartToCustomerRef.current(
+          toCartDisplaySyncPayloadRef.current(currentPreview),
+        );
+      } else {
+        void syncCartToCustomerRef.current({
+          ...toFallbackCartDisplaySyncPayloadRef.current(),
+          paymentUrl: null,
+        });
+      }
     }
-  }, [paymentFailedData, showToast]);
+  }, [activeTab, bopisOrder, paymentFailedData, showToast]);
 
   useEffect(() => {
     if (!paymentLinkUpdatedData) return;
@@ -1679,6 +1746,11 @@ export const CounterCheckoutStaffPage = () => {
     latestRetryOrderIdRef.current = rawOrderId;
     latestRetryPaymentIdRef.current = rawPaymentId;
 
+    // Cập nhật bopisActivePaymentId từ SignalR realtime
+    if (activeTab === 1 && bopisOrder && rawOrderId === bopisOrder.id && rawPaymentId) {
+      setBopisActivePaymentId(rawPaymentId);
+    }
+
     paymentQrUrlRef.current = rawPaymentUrl;
     setPaymentQrUrl(rawPaymentUrl);
 
@@ -1696,16 +1768,19 @@ export const CounterCheckoutStaffPage = () => {
 
     // Use refs to access current preview data and callbacks
     // This prevents effect re-runs when cart changes
-    const currentPreview = previewDataRef.current;
-    const currentPayload = currentPreview
-      ? toCartDisplaySyncPayloadRef.current(currentPreview)
-      : toFallbackCartDisplaySyncPayloadRef.current();
+    // Chỉ sync cart offline lên customer display khi đang ở Tab 0
+    if (activeTab === 0) {
+      const currentPreview = previewDataRef.current;
+      const currentPayload = currentPreview
+        ? toCartDisplaySyncPayloadRef.current(currentPreview)
+        : toFallbackCartDisplaySyncPayloadRef.current();
 
-    void syncCartToCustomerRef.current({
-      ...currentPayload,
-      paymentUrl: rawPaymentUrl,
-    });
-  }, [paymentLinkUpdatedData]);
+      void syncCartToCustomerRef.current({
+        ...currentPayload,
+        paymentUrl: rawPaymentUrl,
+      });
+    }
+  }, [activeTab, bopisOrder, paymentLinkUpdatedData]);
 
   useEffect(() => {
     if (debouncedPreviewPayload.scannedItems.length === 0) {
@@ -2051,948 +2126,1407 @@ export const CounterCheckoutStaffPage = () => {
     }
   };
 
+  const handleSearchBopis = useCallback(async () => {
+    const code = bopisSearchCode.trim();
+    if (!code) return;
+    setIsSearchingBopis(true);
+    setBopisOrder(null);
+    setPaymentQrUrl(null);
+    paymentQrUrlRef.current = null;
+    try {
+      const order = await orderService.getOrderByCode(code);
+      setBopisOrder(order);
+      // Find latest valid (Pending/Failed) transaction, fallback to last one
+      const validTx = order.paymentTransactions
+        ?.slice()
+        .reverse()
+        .find((tx) => tx.status === "Pending" || tx.status === "Failed");
+      const initialPaymentId =
+        validTx?.id || order.paymentTransactions?.[0]?.id;
+      setBopisActivePaymentId(initialPaymentId || null);
+      await syncOnlineOrderToCustomer(order);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể tải đơn hàng",
+        "error",
+      );
+    } finally {
+      setIsSearchingBopis(false);
+    }
+  }, [bopisSearchCode, showToast, syncOnlineOrderToCustomer]);
+
+  const handleDeliverBopisOrder = useCallback(async () => {
+    if (!bopisOrder?.id) return;
+    setIsProcessingBopis(true);
+    try {
+      await orderService.deliverInStoreOrder(bopisOrder.id, POS_SESSION_ID);
+      void openSuccessDialog(bopisOrder.id);
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể xác nhận giao hàng",
+        "error",
+      );
+    } finally {
+      setIsProcessingBopis(false);
+    }
+  }, [bopisOrder, openSuccessDialog, showToast]);
+
+  const handleConfirmBopisCash = useCallback(async () => {
+    if (!bopisOrder?.id) return;
+
+    const total = bopisOrder.totalAmount ?? 0;
+    const received = Number(bopisCashReceived) || 0;
+    if (received < total) {
+      showToast("Số tiền nhận chưa đủ", "warning");
+      return;
+    }
+
+    setIsProcessingBopis(true);
+    setIsBopisCashDialogOpen(false);
+    try {
+      await orderService.deliverInStoreOrder(bopisOrder.id, POS_SESSION_ID);
+      void openSuccessDialog(bopisOrder.id);
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể xác nhận thanh toán tiền mặt",
+        "error",
+      );
+    } finally {
+      setIsProcessingBopis(false);
+      setBopisCashReceived("");
+    }
+  }, [bopisOrder, bopisCashReceived, openSuccessDialog, showToast]);
+
+  const handleGenerateBopisQR = useCallback(async () => {
+    if (!bopisOrder?.id) return;
+    const paymentId = bopisActivePaymentId;
+    if (!paymentId) {
+      showToast("Không tìm thấy thông tin thanh toán", "error");
+      return;
+    }
+    setIsProcessingBopis(true);
+    try {
+      const result = await orderService.retryPayment(
+        paymentId,
+        bopisPaymentMethod,
+        POS_SESSION_ID,
+      );
+      if (result.paymentId) {
+        setBopisActivePaymentId(result.paymentId);
+      }
+      if (result.url) {
+        setPaymentQrUrl(result.url);
+        paymentQrUrlRef.current = result.url;
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể tạo mã QR",
+        "error",
+      );
+    } finally {
+      setIsProcessingBopis(false);
+    }
+  }, [bopisActivePaymentId, bopisOrder, bopisPaymentMethod, showToast]);
+
+  // Auto-deliver BOPIS order after QR payment completed via SignalR
+  useEffect(() => {
+    if (activeTab !== 1) return;
+    if (!paymentCompletedData || !bopisOrder?.id) return;
+
+    const rawStatus =
+      paymentCompletedData.status ||
+      (paymentCompletedData as { Status?: string }).Status ||
+      "";
+    const rawOrderId =
+      paymentCompletedData.orderId ||
+      (paymentCompletedData as { OrderId?: string }).OrderId ||
+      "";
+
+    if (!rawOrderId || rawOrderId !== bopisOrder.id) return;
+
+    const status = rawStatus.toLowerCase();
+    if (status !== "success" && status !== "paid" && status !== "completed")
+      return;
+
+    // Prevent double invocation
+    if (bopisAutoDeliverRef.current) return;
+    bopisAutoDeliverRef.current = true;
+
+    (async () => {
+      try {
+        const orderId = bopisOrder.id!;
+        await orderService.deliverInStoreOrder(orderId, POS_SESSION_ID);
+        setPaymentQrUrl(null);
+        paymentQrUrlRef.current = null;
+        void openSuccessDialog(orderId);
+      } catch (error) {
+        showToast(
+          error instanceof Error
+            ? error.message
+            : "Thanh toán QR thành công nhưng không thể giao hàng tự động",
+          "error",
+        );
+      } finally {
+        bopisAutoDeliverRef.current = false;
+      }
+    })();
+  }, [
+    activeTab,
+    paymentCompletedData,
+    bopisOrder,
+    openSuccessDialog,
+    showToast,
+  ]);
+
   return (
     <MainLayout>
       <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 4 } }}>
-        <Typography variant="h4" fontWeight={800} mb={4}>
+        <Typography variant="h4" fontWeight={800} mb={3}>
           Tính tiền tại quầy (POS)
         </Typography>
-        <Stack
-          direction={{ xs: "column", lg: "row" }}
-          spacing={2.5}
-          alignItems={{ xs: "stretch", lg: "stretch" }}
+        <Tabs
+          value={activeTab}
+          onChange={(_, v: number) => setActiveTab(v)}
+          sx={{ mb: 3, borderBottom: 1, borderColor: "divider" }}
         >
-          <Box flex={1} width="100%" display="flex" flexDirection="column">
-            <Paper
-              sx={{
-                ...panelSx,
-                display: "flex",
-                flexDirection: "column",
-                flex: 1,
-              }}
-            >
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                mb={2}
-              >
-                <Typography variant="h6" fontWeight={700}>
-                  Giỏ hàng tại quầy
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {groupedCartItems.length} sản phẩm
-                </Typography>
-              </Stack>
-
-              <Box
+          <Tab label="Bán hàng tại quầy" />
+          <Tab label="Nhận hàng BOPIS" />
+        </Tabs>
+        {activeTab === 0 && (
+          <Stack
+            direction={{ xs: "column", lg: "row" }}
+            spacing={2.5}
+            alignItems={{ xs: "stretch", lg: "stretch" }}
+          >
+            <Box flex={1} width="100%" display="flex" flexDirection="column">
+              <Paper
                 sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  px: 2,
-                  py: 1.5,
-                  bgcolor: "grey.50",
+                  ...panelSx,
+                  display: "flex",
+                  flexDirection: "column",
                   flex: 1,
-                  minHeight: 180,
-                  overflow: "auto",
                 }}
               >
-                {cartItems.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    Chưa có sản phẩm trong giỏ. Hãy thêm sản phẩm từ cột tìm
-                    kiếm/quét mã.
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  mb={2}
+                >
+                  <Typography variant="h6" fontWeight={700}>
+                    Giỏ hàng tại quầy
                   </Typography>
-                ) : (
-                  <List
-                    disablePadding
-                    sx={{ maxHeight: "100%", overflowY: "auto" }}
-                  >
-                    {groupedCartItems.map((group, groupIndex) => (
-                      <Box key={group.groupKey}>
-                        <Tooltip
-                          title={previewHoverMessage}
-                          arrow
-                          disableHoverListener={!previewHoverMessage}
-                        >
-                          <ListItem
-                            disableGutters
-                            sx={{ py: 1.25, alignItems: "flex-start" }}
+                  <Typography variant="body2" color="text.secondary">
+                    {groupedCartItems.length} sản phẩm
+                  </Typography>
+                </Stack>
+
+                <Box
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    px: 2,
+                    py: 1.5,
+                    bgcolor: "grey.50",
+                    flex: 1,
+                    minHeight: 180,
+                    overflow: "auto",
+                  }}
+                >
+                  {cartItems.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Chưa có sản phẩm trong giỏ. Hãy thêm sản phẩm từ cột tìm
+                      kiếm/quét mã.
+                    </Typography>
+                  ) : (
+                    <List
+                      disablePadding
+                      sx={{ maxHeight: "100%", overflowY: "auto" }}
+                    >
+                      {groupedCartItems.map((group, groupIndex) => (
+                        <Box key={group.groupKey}>
+                          <Tooltip
+                            title={previewHoverMessage}
+                            arrow
+                            disableHoverListener={!previewHoverMessage}
                           >
-                            <ListItemAvatar sx={{ minWidth: 56 }}>
-                              {group.imageUrl ? (
-                                <Box
-                                  component="img"
-                                  src={group.imageUrl}
-                                  alt={group.variantName}
-                                  sx={{
-                                    width: 44,
-                                    height: 44,
-                                    borderRadius: 1.5,
-                                    objectFit: "cover",
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                  }}
-                                />
-                              ) : (
-                                <Box
-                                  sx={{
-                                    width: 44,
-                                    height: 44,
-                                    borderRadius: 1.5,
-                                    bgcolor: "grey.100",
-                                    border: "1px solid",
-                                    borderColor: "divider",
-                                  }}
-                                />
-                              )}
-                            </ListItemAvatar>
-
-                            <ListItemText
-                              primary={
-                                <Typography fontWeight={700}>
-                                  {group.variantName}
-                                </Typography>
-                              }
-                              secondaryTypographyProps={{ component: "div" }}
-                              secondary={
-                                <Stack
-                                  direction="row"
-                                  alignItems="center"
-                                  spacing={1}
-                                  flexWrap="wrap"
-                                >
-                                  <Typography
-                                    variant="body2"
-                                    color="text.secondary"
-                                  >
-                                    SKU: {group.sku} | Tổng SL:{" "}
-                                    {group.totalQuantity}
-                                  </Typography>
-                                  <Button
-                                    size="small"
-                                    variant="outlined"
-                                    onClick={() =>
-                                      handleAddAnotherBatchInCart(group)
-                                    }
-                                    sx={{ py: 0, minHeight: 24 }}
-                                  >
-                                    + Batch khác
-                                  </Button>
-                                </Stack>
-                              }
-                            />
-
-                            {(() => {
-                              const discountInfo = variantDiscountMap.get(
-                                group.variantId,
-                              );
-                              const hasDiscount =
-                                discountInfo && discountInfo.discount > 0;
-
-                              return hasDiscount ? (
-                                <Stack alignItems="flex-end" spacing={0.25}>
-                                  <Typography
-                                    variant="body2"
+                            <ListItem
+                              disableGutters
+                              sx={{ py: 1.25, alignItems: "flex-start" }}
+                            >
+                              <ListItemAvatar sx={{ minWidth: 56 }}>
+                                {group.imageUrl ? (
+                                  <Box
+                                    component="img"
+                                    src={group.imageUrl}
+                                    alt={group.variantName}
                                     sx={{
-                                      textDecoration: "line-through",
-                                      color: "text.disabled",
+                                      width: 44,
+                                      height: 44,
+                                      borderRadius: 1.5,
+                                      objectFit: "cover",
+                                      border: "1px solid",
+                                      borderColor: "divider",
                                     }}
+                                  />
+                                ) : (
+                                  <Box
+                                    sx={{
+                                      width: 44,
+                                      height: 44,
+                                      borderRadius: 1.5,
+                                      bgcolor: "grey.100",
+                                      border: "1px solid",
+                                      borderColor: "divider",
+                                    }}
+                                  />
+                                )}
+                              </ListItemAvatar>
+
+                              <ListItemText
+                                primary={
+                                  <Typography fontWeight={700}>
+                                    {group.variantName}
+                                  </Typography>
+                                }
+                                secondaryTypographyProps={{ component: "div" }}
+                                secondary={
+                                  <Stack
+                                    direction="row"
+                                    alignItems="center"
+                                    spacing={1}
+                                    flexWrap="wrap"
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                    >
+                                      SKU: {group.sku} | Tổng SL:{" "}
+                                      {group.totalQuantity}
+                                    </Typography>
+                                    <Button
+                                      size="small"
+                                      variant="outlined"
+                                      onClick={() =>
+                                        handleAddAnotherBatchInCart(group)
+                                      }
+                                      sx={{ py: 0, minHeight: 24 }}
+                                    >
+                                      + Batch khác
+                                    </Button>
+                                  </Stack>
+                                }
+                              />
+
+                              {(() => {
+                                const discountInfo = variantDiscountMap.get(
+                                  group.variantId,
+                                );
+                                const hasDiscount =
+                                  discountInfo && discountInfo.discount > 0;
+
+                                return hasDiscount ? (
+                                  <Stack alignItems="flex-end" spacing={0.25}>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        textDecoration: "line-through",
+                                        color: "text.disabled",
+                                      }}
+                                    >
+                                      {formatCurrency(
+                                        group.unitPrice * group.totalQuantity,
+                                      )}
+                                    </Typography>
+                                    <Typography
+                                      fontWeight={800}
+                                      color="error.main"
+                                    >
+                                      {formatCurrency(discountInfo.finalTotal)}
+                                    </Typography>
+                                    <Chip
+                                      label={`-${formatCurrency(discountInfo.discount)}`}
+                                      size="small"
+                                      color="error"
+                                      variant="outlined"
+                                      sx={{
+                                        height: 20,
+                                        fontSize: "0.7rem",
+                                        fontWeight: 700,
+                                      }}
+                                    />
+                                  </Stack>
+                                ) : (
+                                  <Typography
+                                    fontWeight={800}
+                                    color="text.primary"
                                   >
                                     {formatCurrency(
                                       group.unitPrice * group.totalQuantity,
                                     )}
                                   </Typography>
-                                  <Typography
-                                    fontWeight={800}
-                                    color="error.main"
+                                );
+                              })()}
+                            </ListItem>
+                          </Tooltip>
+
+                          <Stack spacing={1} sx={{ mb: 1.25, ml: 7 }}>
+                            {group.batchItems.map((item) => (
+                              <Stack
+                                key={item.key}
+                                direction="row"
+                                alignItems="center"
+                                justifyContent="space-between"
+                                spacing={1}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  Batch: {item.batchCode}
+                                  <Button
+                                    size="small"
+                                    variant="text"
+                                    onClick={() => handleEditBatchInCart(item)}
+                                    sx={{ ml: 1, minWidth: 0, px: 0.5 }}
                                   >
-                                    {formatCurrency(discountInfo.finalTotal)}
-                                  </Typography>
-                                  <Chip
-                                    label={`-${formatCurrency(discountInfo.discount)}`}
+                                    Đổi
+                                  </Button>
+                                </Typography>
+
+                                <Stack
+                                  direction="row"
+                                  spacing={0.5}
+                                  alignItems="center"
+                                  sx={{
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    borderRadius: 1.5,
+                                    px: 0.5,
+                                    py: 0.25,
+                                    bgcolor: "background.paper",
+                                  }}
+                                >
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      updateQuantity(
+                                        item.key,
+                                        item.quantity - 1,
+                                      )
+                                    }
+                                    disabled={item.quantity <= 1}
+                                  >
+                                    <Remove fontSize="small" />
+                                  </IconButton>
+                                  <TextField
+                                    size="small"
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => {
+                                      const value = Number(e.target.value);
+                                      if (Number.isFinite(value) && value > 0) {
+                                        updateQuantity(item.key, value);
+                                      }
+                                    }}
+                                    sx={{ width: 58 }}
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    onClick={() =>
+                                      updateQuantity(
+                                        item.key,
+                                        item.quantity + 1,
+                                      )
+                                    }
+                                  >
+                                    <Add fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
                                     size="small"
                                     color="error"
-                                    variant="outlined"
-                                    sx={{
-                                      height: 20,
-                                      fontSize: "0.7rem",
-                                      fontWeight: 700,
-                                    }}
-                                  />
+                                    onClick={() => removeCartItem(item.key)}
+                                  >
+                                    <Delete fontSize="small" />
+                                  </IconButton>
                                 </Stack>
-                              ) : (
-                                <Typography
-                                  fontWeight={800}
-                                  color="text.primary"
-                                >
-                                  {formatCurrency(
-                                    group.unitPrice * group.totalQuantity,
-                                  )}
-                                </Typography>
-                              );
-                            })()}
-                          </ListItem>
-                        </Tooltip>
-
-                        <Stack spacing={1} sx={{ mb: 1.25, ml: 7 }}>
-                          {group.batchItems.map((item) => (
-                            <Stack
-                              key={item.key}
-                              direction="row"
-                              alignItems="center"
-                              justifyContent="space-between"
-                              spacing={1}
-                            >
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                Batch: {item.batchCode}
-                                <Button
-                                  size="small"
-                                  variant="text"
-                                  onClick={() => handleEditBatchInCart(item)}
-                                  sx={{ ml: 1, minWidth: 0, px: 0.5 }}
-                                >
-                                  Đổi
-                                </Button>
-                              </Typography>
-
-                              <Stack
-                                direction="row"
-                                spacing={0.5}
-                                alignItems="center"
-                                sx={{
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                  borderRadius: 1.5,
-                                  px: 0.5,
-                                  py: 0.25,
-                                  bgcolor: "background.paper",
-                                }}
-                              >
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    updateQuantity(item.key, item.quantity - 1)
-                                  }
-                                  disabled={item.quantity <= 1}
-                                >
-                                  <Remove fontSize="small" />
-                                </IconButton>
-                                <TextField
-                                  size="small"
-                                  type="number"
-                                  value={item.quantity}
-                                  onChange={(e) => {
-                                    const value = Number(e.target.value);
-                                    if (Number.isFinite(value) && value > 0) {
-                                      updateQuantity(item.key, value);
-                                    }
-                                  }}
-                                  sx={{ width: 58 }}
-                                />
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    updateQuantity(item.key, item.quantity + 1)
-                                  }
-                                >
-                                  <Add fontSize="small" />
-                                </IconButton>
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={() => removeCartItem(item.key)}
-                                >
-                                  <Delete fontSize="small" />
-                                </IconButton>
                               </Stack>
-                            </Stack>
-                          ))}
-                        </Stack>
+                            ))}
+                          </Stack>
 
-                        {groupIndex < groupedCartItems.length - 1 && (
-                          <Divider />
+                          {groupIndex < groupedCartItems.length - 1 && (
+                            <Divider />
+                          )}
+                        </Box>
+                      ))}
+                    </List>
+                  )}
+                </Box>
+
+                <Box sx={{ mt: 2 }}>
+                  <Stack direction="row" spacing={1.25} alignItems="flex-start">
+                    <TextField
+                      size="small"
+                      placeholder="Mã giảm giá"
+                      value={voucherInput}
+                      onChange={(e) => {
+                        setVoucherInput(e.target.value);
+                        if (voucherErrorText) {
+                          setVoucherErrorText("");
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === "Enter" &&
+                          voucherInput.trim() !== appliedVoucherCode.trim() &&
+                          !isValidatingVoucher &&
+                          cartItems.length > 0
+                        ) {
+                          void handleApplyVoucher();
+                        }
+                      }}
+                      disabled={isValidatingVoucher || cartItems.length === 0}
+                      error={Boolean(voucherErrorText)}
+                      helperText={
+                        voucherErrorText ||
+                        (cartItems.length === 0
+                          ? "Thêm sản phẩm vào giỏ để áp dụng voucher"
+                          : "")
+                      }
+                      fullWidth
+                    />
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={handleApplyVoucher}
+                      disabled={
+                        cartItems.length === 0 ||
+                        voucherInput.trim() === appliedVoucherCode.trim() ||
+                        isValidatingVoucher
+                      }
+                      startIcon={
+                        isValidatingVoucher ? (
+                          <CircularProgress size={16} color="inherit" />
+                        ) : undefined
+                      }
+                      sx={{ minWidth: 112, height: 40 }}
+                    >
+                      {isValidatingVoucher ? "Đang kiểm tra..." : "Áp dụng"}
+                    </Button>
+                  </Stack>
+
+                  {appliedVoucherCode && (
+                    <Box
+                      sx={{
+                        mt: 1.5,
+                        px: 1.5,
+                        py: 1,
+                        borderRadius: 2,
+                        border: "1.5px solid",
+                        borderColor: "success.light",
+                        bgcolor: "success.50",
+                        background:
+                          "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={1}>
+                        <VoucherIcon
+                          sx={{ fontSize: 18, color: "success.main" }}
+                        />
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            color="success.dark"
+                            fontWeight={600}
+                            display="block"
+                            lineHeight={1.2}
+                          >
+                            Mã giảm giá đã áp dụng
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            fontWeight={800}
+                            color="success.dark"
+                            letterSpacing={1}
+                          >
+                            {appliedVoucherCode}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <IconButton
+                        size="small"
+                        onClick={handleRemoveVoucher}
+                        sx={{
+                          color: "success.main",
+                          "&:hover": { color: "error.main" },
+                        }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  )}
+                </Box>
+
+                <Box
+                  sx={{
+                    mt: 2,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    p: 2,
+                    bgcolor: "background.default",
+                  }}
+                >
+                  <Stack spacing={1}>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography color="text.secondary">Tạm tính</Typography>
+                      <Typography>
+                        {formatCurrency(
+                          Number(previewData?.subTotal ?? localSubtotal),
                         )}
-                      </Box>
-                    ))}
-                  </List>
-                )}
-              </Box>
+                      </Typography>
+                    </Stack>
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography color="text.secondary">Giảm giá</Typography>
+                      <Typography>
+                        {formatCurrency(Number(previewData?.discount ?? 0))}
+                      </Typography>
+                    </Stack>
+                    <Divider sx={{ my: 0.5 }} />
+                    <Stack direction="row" justifyContent="space-between">
+                      <Typography fontWeight={800}>Tổng tiền</Typography>
+                      <Typography fontWeight={800} color="error.main">
+                        {formatCurrency(
+                          Number(
+                            previewData?.totalPrice ??
+                              previewData?.subTotal ??
+                              localSubtotal,
+                          ),
+                        )}
+                      </Typography>
+                    </Stack>
 
-              <Box sx={{ mt: 2 }}>
-                <Stack direction="row" spacing={1.25} alignItems="flex-start">
+                    {isPreviewLoading && (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <CircularProgress size={16} />
+                        <Typography variant="body2" color="text.secondary">
+                          Đang tính tổng tiền...
+                        </Typography>
+                      </Stack>
+                    )}
+
+                    {previewError && (
+                      <Alert severity="warning">{previewError}</Alert>
+                    )}
+                  </Stack>
+                </Box>
+              </Paper>
+            </Box>
+
+            <Box flex={1} width="100%">
+              <Paper
+                sx={{
+                  ...panelSx,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <Typography variant="h6" fontWeight={700} mb={2}>
+                  Tìm kiếm sản phẩm
+                </Typography>
+
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1.25}
+                  mb={2}
+                >
                   <TextField
-                    size="small"
-                    placeholder="Mã giảm giá"
-                    value={voucherInput}
-                    onChange={(e) => {
-                      setVoucherInput(e.target.value);
-                      if (voucherErrorText) {
-                        setVoucherErrorText("");
-                      }
-                    }}
+                    label="Quét mã vạch / Nhập SKU, barcode hoặc tên"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
                     onKeyDown={(e) => {
-                      if (
-                        e.key === "Enter" &&
-                        voucherInput.trim() !== appliedVoucherCode.trim() &&
-                        !isValidatingVoucher &&
-                        cartItems.length > 0
-                      ) {
-                        void handleApplyVoucher();
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearch();
                       }
                     }}
-                    disabled={isValidatingVoucher || cartItems.length === 0}
-                    error={Boolean(voucherErrorText)}
-                    helperText={
-                      voucherErrorText ||
-                      (cartItems.length === 0
-                        ? "Thêm sản phẩm vào giỏ để áp dụng voucher"
-                        : "")
-                    }
                     fullWidth
                   />
                   <Button
-                    size="small"
                     variant="contained"
-                    onClick={handleApplyVoucher}
-                    disabled={
-                      cartItems.length === 0 ||
-                      voucherInput.trim() === appliedVoucherCode.trim() ||
-                      isValidatingVoucher
-                    }
+                    aria-label="Tìm kiếm sản phẩm"
                     startIcon={
-                      isValidatingVoucher ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : undefined
+                      isSearching ? (
+                        <CircularProgress color="inherit" size={16} />
+                      ) : (
+                        <Search />
+                      )
                     }
-                    sx={{ minWidth: 112, height: 40 }}
-                  >
-                    {isValidatingVoucher ? "Đang kiểm tra..." : "Áp dụng"}
-                  </Button>
+                    onClick={() => handleSearch()}
+                    disabled={isSearching}
+                    sx={{ minWidth: 52, px: 1.5 }}
+                  ></Button>
                 </Stack>
 
-                {appliedVoucherCode && (
-                  <Box
-                    sx={{
-                      mt: 1.5,
-                      px: 1.5,
-                      py: 1,
-                      borderRadius: 2,
-                      border: "1.5px solid",
-                      borderColor: "success.light",
-                      bgcolor: "success.50",
-                      background:
-                        "linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <Stack direction="row" alignItems="center" spacing={1}>
-                      <VoucherIcon
-                        sx={{ fontSize: 18, color: "success.main" }}
-                      />
-                      <Box>
-                        <Typography
-                          variant="caption"
-                          color="success.dark"
-                          fontWeight={600}
-                          display="block"
-                          lineHeight={1.2}
-                        >
-                          Mã giảm giá đã áp dụng
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          fontWeight={800}
-                          color="success.dark"
-                          letterSpacing={1}
-                        >
-                          {appliedVoucherCode}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                    <IconButton
-                      size="small"
-                      onClick={handleRemoveVoucher}
-                      sx={{
-                        color: "success.main",
-                        "&:hover": { color: "error.main" },
-                      }}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </Box>
-                )}
-              </Box>
-
-              <Box
-                sx={{
-                  mt: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                  bgcolor: "background.default",
-                }}
-              >
-                <Stack spacing={1}>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography color="text.secondary">Tạm tính</Typography>
-                    <Typography>
-                      {formatCurrency(
-                        Number(previewData?.subTotal ?? localSubtotal),
-                      )}
-                    </Typography>
-                  </Stack>
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography color="text.secondary">Giảm giá</Typography>
-                    <Typography>
-                      {formatCurrency(Number(previewData?.discount ?? 0))}
-                    </Typography>
-                  </Stack>
-                  <Divider sx={{ my: 0.5 }} />
-                  <Stack direction="row" justifyContent="space-between">
-                    <Typography fontWeight={800}>Tổng tiền</Typography>
-                    <Typography fontWeight={800} color="error.main">
-                      {formatCurrency(
-                        Number(
-                          previewData?.totalPrice ??
-                            previewData?.subTotal ??
-                            localSubtotal,
-                        ),
-                      )}
-                    </Typography>
-                  </Stack>
-
-                  {isPreviewLoading && (
-                    <Stack direction="row" spacing={1} alignItems="center">
-                      <CircularProgress size={16} />
-                      <Typography variant="body2" color="text.secondary">
-                        Đang tính tổng tiền...
-                      </Typography>
-                    </Stack>
-                  )}
-
-                  {previewError && (
-                    <Alert severity="warning">{previewError}</Alert>
-                  )}
-                </Stack>
-              </Box>
-            </Paper>
-          </Box>
-
-          <Box flex={1} width="100%">
-            <Paper
-              sx={{
-                ...panelSx,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Typography variant="h6" fontWeight={700} mb={2}>
-                Tìm kiếm sản phẩm
-              </Typography>
-
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={1.25}
-                mb={2}
-              >
-                <TextField
-                  label="Quét mã vạch / Nhập SKU, barcode hoặc tên"
-                  value={searchKeyword}
-                  onChange={(e) => setSearchKeyword(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSearch();
-                    }
+                <Box
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    p: 2,
+                    mb: 2,
+                    minHeight: 120,
+                    bgcolor: "grey.50",
                   }}
-                  fullWidth
-                />
-                <Button
-                  variant="contained"
-                  aria-label="Tìm kiếm sản phẩm"
-                  startIcon={
-                    isSearching ? (
-                      <CircularProgress color="inherit" size={16} />
-                    ) : (
-                      <Search />
-                    )
-                  }
-                  onClick={() => handleSearch()}
-                  disabled={isSearching}
-                  sx={{ minWidth: 52, px: 1.5 }}
-                ></Button>
-              </Stack>
-
-              <Box
-                sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                  mb: 2,
-                  minHeight: 120,
-                  bgcolor: "grey.50",
-                }}
-              >
-                <Typography variant="subtitle1" fontWeight={700} mb={1}>
-                  Kết quả sản phẩm
-                </Typography>
-
-                {searchResults.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    Chưa có kết quả. Hãy nhập từ khoá hoặc quét mã vạch để tìm.
+                >
+                  <Typography variant="subtitle1" fontWeight={700} mb={1}>
+                    Kết quả sản phẩm
                   </Typography>
-                ) : (
-                  <List disablePadding>
-                    {searchResults.map((variant) => (
-                      <ListItem
-                        key={getVariantKey(variant)}
-                        disableGutters
-                        secondaryAction={
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            onClick={() => handleOpenBatchModal(variant)}
-                          >
-                            Add
-                          </Button>
-                        }
-                        sx={{ pr: 10 }}
-                      >
-                        <ListItemAvatar sx={{ minWidth: 56 }}>
-                          {variant.primaryImageUrl ? (
-                            <Box
-                              component="img"
-                              src={variant.primaryImageUrl}
-                              alt={variant.displayName || variant.name}
-                              sx={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 1.5,
-                                objectFit: "cover",
-                                border: "1px solid",
-                                borderColor: "divider",
-                              }}
-                            />
-                          ) : (
-                            <Box
-                              sx={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: 1.5,
-                                bgcolor: "grey.100",
-                                border: "1px solid",
-                                borderColor: "divider",
-                              }}
-                            />
-                          )}
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={
-                            <Typography fontWeight={700}>
-                              {variant.displayName || variant.name}
-                            </Typography>
-                          }
-                          secondaryTypographyProps={{ component: "div" }}
-                          secondary={
-                            <>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                SKU: {variant.sku}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                Giá:{" "}
-                                {formatCurrency(Number(variant.basePrice ?? 0))}
-                              </Typography>
-                            </>
-                          }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                )}
-              </Box>
-            </Paper>
 
-            <Paper
-              sx={{
-                ...panelSx,
-                mt: 2.5,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Box
+                  {searchResults.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      Chưa có kết quả. Hãy nhập từ khoá hoặc quét mã vạch để
+                      tìm.
+                    </Typography>
+                  ) : (
+                    <List disablePadding>
+                      {searchResults.map((variant) => (
+                        <ListItem
+                          key={getVariantKey(variant)}
+                          disableGutters
+                          secondaryAction={
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={() => handleOpenBatchModal(variant)}
+                            >
+                              Add
+                            </Button>
+                          }
+                          sx={{ pr: 10 }}
+                        >
+                          <ListItemAvatar sx={{ minWidth: 56 }}>
+                            {variant.primaryImageUrl ? (
+                              <Box
+                                component="img"
+                                src={variant.primaryImageUrl}
+                                alt={variant.displayName || variant.name}
+                                sx={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 1.5,
+                                  objectFit: "cover",
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              />
+                            ) : (
+                              <Box
+                                sx={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 1.5,
+                                  bgcolor: "grey.100",
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              />
+                            )}
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={
+                              <Typography fontWeight={700}>
+                                {variant.displayName || variant.name}
+                              </Typography>
+                            }
+                            secondaryTypographyProps={{ component: "div" }}
+                            secondary={
+                              <>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  SKU: {variant.sku}
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  Giá:{" "}
+                                  {formatCurrency(
+                                    Number(variant.basePrice ?? 0),
+                                  )}
+                                </Typography>
+                              </>
+                            }
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  )}
+                </Box>
+              </Paper>
+
+              <Paper
                 sx={{
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  p: 2,
-                  bgcolor: "background.paper",
+                  ...panelSx,
+                  mt: 2.5,
+                  display: "flex",
+                  flexDirection: "column",
                 }}
               >
-                <Typography fontWeight={700} mb={1.25}>
-                  Checkout tại quầy
-                </Typography>
+                <Box
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    p: 2,
+                    bgcolor: "background.paper",
+                  }}
+                >
+                  <Typography fontWeight={700} mb={1.25}>
+                    Checkout tại quầy
+                  </Typography>
 
-                {!failedPaymentAction && (
-                  <>
-                    <RadioGroup
-                      row
-                      value={isPickupInStore ? "pickup" : "delivery"}
-                      onChange={(e) =>
-                        setIsPickupInStore(e.target.value === "pickup")
-                      }
-                    >
-                      <FormControlLabel
-                        value="pickup"
-                        control={<Radio size="small" />}
-                        label="Khách lấy tại quầy"
-                      />
-                      <FormControlLabel
-                        value="delivery"
-                        control={<Radio size="small" />}
-                        label="Giao về địa chỉ khách"
-                      />
-                    </RadioGroup>
-
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      spacing={1}
-                      alignItems="stretch"
-                      sx={{ mt: 1.5 }}
-                    >
-                      <TextField
-                        label="SĐT khách hàng (nếu có tài khoản)"
-                        value={customerLookupKeyword}
+                  {!failedPaymentAction && (
+                    <>
+                      <RadioGroup
+                        row
+                        value={isPickupInStore ? "pickup" : "delivery"}
                         onChange={(e) =>
-                          setCustomerLookupKeyword(e.target.value)
+                          setIsPickupInStore(e.target.value === "pickup")
                         }
-                        fullWidth
-                      />
-                      <Button
-                        variant="outlined"
-                        onClick={handleLookupCustomer}
-                        disabled={isLookingUpCustomer}
-                        aria-label="Tìm khách hàng"
-                        sx={{
-                          minWidth: { xs: "100%", sm: 52 },
-                          width: { xs: "100%", sm: 52 },
-                          px: 0,
-                        }}
                       >
-                        {isLookingUpCustomer ? (
-                          <CircularProgress size={18} />
-                        ) : (
-                          <Search fontSize="small" />
-                        )}
-                      </Button>
-                    </Stack>
+                        <FormControlLabel
+                          value="pickup"
+                          control={<Radio size="small" />}
+                          label="Khách lấy tại quầy"
+                        />
+                        <FormControlLabel
+                          value="delivery"
+                          control={<Radio size="small" />}
+                          label="Giao về địa chỉ khách"
+                        />
+                      </RadioGroup>
 
-                    {customerLookupResults.length > 0 && (
-                      <Box
-                        sx={{
-                          mt: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                          borderRadius: 1.5,
-                          maxHeight: 160,
-                          overflowY: "auto",
-                          bgcolor: "grey.50",
-                        }}
-                      >
-                        {customerLookupResults.map((customer) => {
-                          const isSelected =
-                            selectedCustomer?.id === customer.id;
-                          return (
-                            <Button
-                              key={customer.id}
-                              fullWidth
-                              variant="text"
-                              onClick={() => handleSelectCustomer(customer)}
-                              sx={{
-                                justifyContent: "flex-start",
-                                textTransform: "none",
-                                px: 1.5,
-                                py: 1,
-                                borderRadius: 0,
-                                bgcolor: isSelected
-                                  ? "action.selected"
-                                  : "transparent",
-                                borderBottom: "1px solid",
-                                borderColor: "divider",
-                              }}
-                            >
-                              <Typography
-                                variant="body2"
-                                sx={{ textAlign: "left", width: "100%" }}
-                              >
-                                {customer.fullName} - {customer.phoneNumber}
-                              </Typography>
-                            </Button>
-                          );
-                        })}
-                      </Box>
-                    )}
-
-                    {selectedCustomer && (
                       <Stack
-                        direction="row"
-                        alignItems="center"
-                        justifyContent="space-between"
+                        direction={{ xs: "column", sm: "row" }}
                         spacing={1}
-                        sx={{ mt: 1 }}
+                        alignItems="stretch"
+                        sx={{ mt: 1.5 }}
                       >
-                        <Typography variant="body2" color="success.main">
-                          Khách hàng đã chọn: {selectedCustomer.fullName} -{" "}
-                          {selectedCustomer.phoneNumber}
-                        </Typography>
+                        <TextField
+                          label="SĐT khách hàng (nếu có tài khoản)"
+                          value={customerLookupKeyword}
+                          onChange={(e) =>
+                            setCustomerLookupKeyword(e.target.value)
+                          }
+                          fullWidth
+                        />
                         <Button
-                          size="small"
-                          variant="text"
-                          color="inherit"
-                          onClick={handleClearSelectedCustomer}
-                          sx={{ whiteSpace: "nowrap" }}
+                          variant="outlined"
+                          onClick={handleLookupCustomer}
+                          disabled={isLookingUpCustomer}
+                          aria-label="Tìm khách hàng"
+                          sx={{
+                            minWidth: { xs: "100%", sm: 52 },
+                            width: { xs: "100%", sm: 52 },
+                            px: 0,
+                          }}
                         >
-                          Bỏ chọn
+                          {isLookingUpCustomer ? (
+                            <CircularProgress size={18} />
+                          ) : (
+                            <Search fontSize="small" />
+                          )}
                         </Button>
                       </Stack>
-                    )}
 
-                    {!isPickupInStore && (
-                      <Stack spacing={1.25} sx={{ mt: 1.5 }}>
-                        <TextField
-                          label="Tên người nhận"
-                          value={recipientName}
-                          onChange={(e) => setRecipientName(e.target.value)}
-                          fullWidth
-                        />
-                        <TextField
-                          label="Số điện thoại người nhận"
-                          value={recipientPhone}
-                          onChange={(e) => setRecipientPhone(e.target.value)}
-                          fullWidth
-                        />
-                        <Autocomplete
-                          options={provinces}
-                          getOptionLabel={(option) => option.ProvinceName || ""}
-                          value={selectedProvince}
-                          onChange={(_, value) => {
-                            setSelectedProvince(value);
-                            setSelectedDistrict(null);
-                            setSelectedWard(null);
-                            setDistricts([]);
-                            setWards([]);
-                            if (value?.ProvinceID) {
-                              loadDistricts(value.ProvinceID);
-                            }
+                      {customerLookupResults.length > 0 && (
+                        <Box
+                          sx={{
+                            mt: 1,
+                            border: "1px solid",
+                            borderColor: "divider",
+                            borderRadius: 1.5,
+                            maxHeight: 160,
+                            overflowY: "auto",
+                            bgcolor: "grey.50",
                           }}
-                          loading={isLoadingProvinces}
-                          renderInput={(params) => (
-                            <TextField {...params} label="Tỉnh/Thành phố" />
-                          )}
-                        />
-                        <Autocomplete
-                          options={districts}
-                          getOptionLabel={(option) => option.DistrictName || ""}
-                          value={selectedDistrict}
-                          onChange={(_, value) => {
-                            setSelectedDistrict(value);
-                            setSelectedWard(null);
-                            setWards([]);
-                            if (value?.DistrictID) {
-                              loadWards(value.DistrictID);
+                        >
+                          {customerLookupResults.map((customer) => {
+                            const isSelected =
+                              selectedCustomer?.id === customer.id;
+                            return (
+                              <Button
+                                key={customer.id}
+                                fullWidth
+                                variant="text"
+                                onClick={() => handleSelectCustomer(customer)}
+                                sx={{
+                                  justifyContent: "flex-start",
+                                  textTransform: "none",
+                                  px: 1.5,
+                                  py: 1,
+                                  borderRadius: 0,
+                                  bgcolor: isSelected
+                                    ? "action.selected"
+                                    : "transparent",
+                                  borderBottom: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{ textAlign: "left", width: "100%" }}
+                                >
+                                  {customer.fullName} - {customer.phoneNumber}
+                                </Typography>
+                              </Button>
+                            );
+                          })}
+                        </Box>
+                      )}
+
+                      {selectedCustomer && (
+                        <Stack
+                          direction="row"
+                          alignItems="center"
+                          justifyContent="space-between"
+                          spacing={1}
+                          sx={{ mt: 1 }}
+                        >
+                          <Typography variant="body2" color="success.main">
+                            Khách hàng đã chọn: {selectedCustomer.fullName} -{" "}
+                            {selectedCustomer.phoneNumber}
+                          </Typography>
+                          <Button
+                            size="small"
+                            variant="text"
+                            color="inherit"
+                            onClick={handleClearSelectedCustomer}
+                            sx={{ whiteSpace: "nowrap" }}
+                          >
+                            Bỏ chọn
+                          </Button>
+                        </Stack>
+                      )}
+
+                      {!isPickupInStore && (
+                        <Stack spacing={1.25} sx={{ mt: 1.5 }}>
+                          <TextField
+                            label="Tên người nhận"
+                            value={recipientName}
+                            onChange={(e) => setRecipientName(e.target.value)}
+                            fullWidth
+                          />
+                          <TextField
+                            label="Số điện thoại người nhận"
+                            value={recipientPhone}
+                            onChange={(e) => setRecipientPhone(e.target.value)}
+                            fullWidth
+                          />
+                          <Autocomplete
+                            options={provinces}
+                            getOptionLabel={(option) =>
+                              option.ProvinceName || ""
                             }
-                          }}
-                          loading={isLoadingDistricts}
-                          disabled={!selectedProvince}
-                          renderInput={(params) => (
-                            <TextField {...params} label="Quận/Huyện" />
-                          )}
-                        />
-                        <Autocomplete
-                          options={wards}
-                          getOptionLabel={(option) => option.WardName || ""}
-                          value={selectedWard}
-                          onChange={(_, value) => setSelectedWard(value)}
-                          loading={isLoadingWards}
-                          disabled={!selectedDistrict}
-                          renderInput={(params) => (
-                            <TextField {...params} label="Phường/Xã" />
-                          )}
-                        />
-                        <TextField
-                          label="Địa chỉ cụ thể"
-                          value={streetAddress}
-                          onChange={(e) => setStreetAddress(e.target.value)}
-                          fullWidth
-                        />
-                      </Stack>
-                    )}
-                  </>
-                )}
+                            value={selectedProvince}
+                            onChange={(_, value) => {
+                              setSelectedProvince(value);
+                              setSelectedDistrict(null);
+                              setSelectedWard(null);
+                              setDistricts([]);
+                              setWards([]);
+                              if (value?.ProvinceID) {
+                                loadDistricts(value.ProvinceID);
+                              }
+                            }}
+                            loading={isLoadingProvinces}
+                            renderInput={(params) => (
+                              <TextField {...params} label="Tỉnh/Thành phố" />
+                            )}
+                          />
+                          <Autocomplete
+                            options={districts}
+                            getOptionLabel={(option) =>
+                              option.DistrictName || ""
+                            }
+                            value={selectedDistrict}
+                            onChange={(_, value) => {
+                              setSelectedDistrict(value);
+                              setSelectedWard(null);
+                              setWards([]);
+                              if (value?.DistrictID) {
+                                loadWards(value.DistrictID);
+                              }
+                            }}
+                            loading={isLoadingDistricts}
+                            disabled={!selectedProvince}
+                            renderInput={(params) => (
+                              <TextField {...params} label="Quận/Huyện" />
+                            )}
+                          />
+                          <Autocomplete
+                            options={wards}
+                            getOptionLabel={(option) => option.WardName || ""}
+                            value={selectedWard}
+                            onChange={(_, value) => setSelectedWard(value)}
+                            loading={isLoadingWards}
+                            disabled={!selectedDistrict}
+                            renderInput={(params) => (
+                              <TextField {...params} label="Phường/Xã" />
+                            )}
+                          />
+                          <TextField
+                            label="Địa chỉ cụ thể"
+                            value={streetAddress}
+                            onChange={(e) => setStreetAddress(e.target.value)}
+                            fullWidth
+                          />
+                        </Stack>
+                      )}
+                    </>
+                  )}
 
-                <TextField
-                  select
-                  fullWidth
-                  label="Phương thức thanh toán"
-                  value={paymentMethod}
-                  onChange={(e) =>
-                    setPaymentMethod(e.target.value as NonNullable<PaymentMethod>)
-                  }
-                  SelectProps={{
-                    renderValue: (selected) =>
-                      renderPaymentMethodOption(selected as NonNullable<PaymentMethod>),
-                  }}
-                  sx={{ mt: 1.5 }}
-                >
-                  {selectablePaymentMethods.map((method) => (
-                    <MenuItem key={method} value={method}>
-                      {renderPaymentMethodOption(method)}
-                    </MenuItem>
-                  ))}
-                </TextField>
-
-                {failedPaymentAction ? (
-                  <>
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ mt: 1 }}
-                    >
-                      Đơn {failedPaymentAction.orderId} thanh toán lỗi. Bạn có
-                      thể đổi phương thức và thử lại hoặc hủy đơn.
-                    </Typography>
-                    {!failedPaymentAction.paymentId && (
-                      <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ mt: 0.75, display: "block" }}
-                      >
-                        Chưa nhận được paymentId từ hub, vui lòng chờ sự kiện
-                        cập nhật.
-                      </Typography>
-                    )}
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      spacing={1.25}
-                      sx={{ mt: 1.5 }}
-                    >
-                      <Button
-                        variant="contained"
-                        size="large"
-                        fullWidth
-                        onClick={handleRetryFailedPayment}
-                        disabled={
-                          isRetryingPayment ||
-                          isCancellingOrder ||
-                          !failedPaymentAction.paymentId
-                        }
-                      >
-                        {isRetryingPayment
-                          ? "Đang thanh toán lại..."
-                          : " Thanh toán lại"}
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        size="large"
-                        fullWidth
-                        onClick={openStaffCancelDialog}
-                        disabled={isRetryingPayment || isCancellingOrder}
-                      >
-                        Hủy đơn
-                      </Button>
-                    </Stack>
-                  </>
-                ) : (
-                  <Button
-                    variant="contained"
-                    size="large"
+                  <TextField
+                    select
                     fullWidth
-                    sx={{ mt: 1.75 }}
-                    onClick={handleOpenCheckoutConfirm}
-                    disabled={isSubmittingCheckout || cartItems.length === 0}
-                  >
-                    {isSubmittingCheckout ? "Đang checkout..." : "Checkout"}
-                  </Button>
-                )}
-
-                {paymentQrUrl && (
-                  <Box
-                    sx={{
-                      mt: 1.5,
-                      border: "1px solid",
-                      borderColor: "divider",
-                      borderRadius: 2,
-                      p: 1.5,
-                      bgcolor: "grey.50",
+                    label="Phương thức thanh toán"
+                    value={paymentMethod}
+                    onChange={(e) =>
+                      setPaymentMethod(
+                        e.target.value as NonNullable<PaymentMethod>,
+                      )
+                    }
+                    SelectProps={{
+                      renderValue: (selected) =>
+                        renderPaymentMethodOption(
+                          selected as NonNullable<PaymentMethod>,
+                        ),
                     }}
+                    sx={{ mt: 1.5 }}
                   >
-                    <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                      Mã QR thanh toán (màn hình staff)
-                    </Typography>
-                    <Stack spacing={1.25} alignItems="center">
+                    {selectablePaymentMethods.map((method) => (
+                      <MenuItem key={method} value={method}>
+                        {renderPaymentMethodOption(method)}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  {failedPaymentAction ? (
+                    <>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 1 }}
+                      >
+                        Đơn {failedPaymentAction.orderId} thanh toán lỗi. Bạn có
+                        thể đổi phương thức và thử lại hoặc hủy đơn.
+                      </Typography>
+                      {!failedPaymentAction.paymentId && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ mt: 0.75, display: "block" }}
+                        >
+                          Chưa nhận được paymentId từ hub, vui lòng chờ sự kiện
+                          cập nhật.
+                        </Typography>
+                      )}
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1.25}
+                        sx={{ mt: 1.5 }}
+                      >
+                        <Button
+                          variant="contained"
+                          size="large"
+                          fullWidth
+                          onClick={handleRetryFailedPayment}
+                          disabled={
+                            isRetryingPayment ||
+                            isCancellingOrder ||
+                            !failedPaymentAction.paymentId
+                          }
+                        >
+                          {isRetryingPayment
+                            ? "Đang thanh toán lại..."
+                            : " Thanh toán lại"}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="large"
+                          fullWidth
+                          onClick={openStaffCancelDialog}
+                          disabled={isRetryingPayment || isCancellingOrder}
+                        >
+                          Hủy đơn
+                        </Button>
+                      </Stack>
+                    </>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      size="large"
+                      fullWidth
+                      sx={{ mt: 1.75 }}
+                      onClick={handleOpenCheckoutConfirm}
+                      disabled={isSubmittingCheckout || cartItems.length === 0}
+                    >
+                      {isSubmittingCheckout ? "Đang checkout..." : "Checkout"}
+                    </Button>
+                  )}
+
+                  {paymentQrUrl && (
+                    <Box
+                      display="flex"
+                      flexDirection="column"
+                      alignItems="center"
+                      sx={{
+                        mt: 2.5,
+                        p: 3,
+                        borderRadius: 3,
+                        bgcolor: "white",
+                        border: "1px solid",
+                        borderColor: "divider",
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle2"
+                        fontWeight={700}
+                        color="primary.main"
+                        mb={2}
+                      >
+                        Quét mã QR để thanh toán
+                      </Typography>
                       <Box
                         sx={{
+                          borderRadius: 3,
                           border: "1px solid",
                           borderColor: "divider",
-                          borderRadius: 2,
-                          p: 1,
+                          p: 1.5,
                           bgcolor: "white",
                         }}
                       >
                         <QRCodeSVG value={paymentQrUrl} size={200} />
                       </Box>
-
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        textAlign="center"
+                        mt={1.5}
                       >
-                        QR sẽ tự hiển thị popup ở màn hình khách khi checkout có
-                        link thanh toán.
+                        QR sẽ tự hiển thị popup ở màn hình khách.
                       </Typography>
-
-                      <Stack
-                        direction={{ xs: "column", sm: "row" }}
-                        spacing={1}
-                        width="100%"
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<OpenInNew />}
+                        sx={{ mt: 1.5 }}
+                        onClick={() =>
+                          window.open(
+                            paymentQrUrl,
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }
                       >
-                        <Button
-                          variant="outlined"
-                          startIcon={<OpenInNew />}
-                          fullWidth
-                          onClick={() =>
-                            window.open(
-                              paymentQrUrl,
-                              "_blank",
-                              "noopener,noreferrer",
-                            )
-                          }
-                        >
-                          Mở link thanh toán
-                        </Button>
+                        Mở link thanh toán
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+            </Box>
+          </Stack>
+        )}
+
+        {activeTab === 1 && (
+          <Box>
+            {/* Search bar */}
+            <Paper sx={{ ...panelSx, mb: 2.5 }}>
+              <Typography variant="h6" fontWeight={700} mb={2}>
+                Tìm đơn hàng BOPIS
+              </Typography>
+              <Stack direction="row" spacing={1.5}>
+                <TextField
+                  fullWidth
+                  size="small"
+                  label="Mã đơn hàng"
+                  value={bopisSearchCode}
+                  onChange={(e) => setBopisSearchCode(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleSearchBopis();
+                  }}
+                  placeholder="Nhập mã đơn hàng..."
+                />
+                <Button
+                  variant="contained"
+                  startIcon={
+                    isSearchingBopis ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : (
+                      <Search />
+                    )
+                  }
+                  onClick={() => void handleSearchBopis()}
+                  disabled={isSearchingBopis || !bopisSearchCode.trim()}
+                  sx={{ minWidth: 130 }}
+                >
+                  Tìm kiếm
+                </Button>
+              </Stack>
+            </Paper>
+
+            {/* Order details */}
+            {bopisOrder && (
+              <Stack
+                direction={{ xs: "column", lg: "row" }}
+                spacing={2.5}
+                alignItems={{ xs: "stretch", lg: "flex-start" }}
+              >
+                {/* Left: product list */}
+                <Box flex={1}>
+                  <Paper sx={panelSx}>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                      mb={2}
+                    >
+                      <Typography variant="h6" fontWeight={700}>
+                        Chi tiết đơn hàng
+                        <Chip
+                          label={bopisOrder.code}
+                          size="small"
+                          sx={{ ml: 1 }}
+                        />
+                      </Typography>
+                      {bopisOrder.customerName && (
+                        <Typography variant="body2" color="text.secondary">
+                          KH: {bopisOrder.customerName}
+                        </Typography>
+                      )}
+                    </Stack>
+                    <List disablePadding>
+                      {bopisOrder.orderDetails.map((detail, idx: number) => {
+                        const itemDiscount =
+                          (detail.campaignDiscount ?? 0) +
+                          (detail.voucherDiscount ?? 0);
+                        const actualTotal =
+                          (detail.unitPrice ?? 0) * (detail.quantity ?? 0) -
+                          itemDiscount;
+                        return (
+                          <ListItem key={idx} disableGutters sx={{ py: 1 }}>
+                            <ListItemAvatar>
+                              <Avatar
+                                src={detail.imageUrl ?? undefined}
+                                variant="rounded"
+                                sx={{ width: 56, height: 56, mr: 1 }}
+                              />
+                            </ListItemAvatar>
+                            <Box flex={1} minWidth={0}>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                noWrap
+                              >
+                                {detail.variantName}
+                              </Typography>
+                              <Stack
+                                direction="row"
+                                spacing={0.5}
+                                alignItems="center"
+                                mt={0.25}
+                              >
+                                {itemDiscount > 0 ? (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.disabled"
+                                    sx={{ textDecoration: "line-through" }}
+                                  >
+                                    {formatCurrency(detail.unitPrice)}
+                                  </Typography>
+                                ) : (
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {formatCurrency(detail.unitPrice)}
+                                  </Typography>
+                                )}
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  × {detail.quantity ?? 0}
+                                </Typography>
+                              </Stack>
+                              {itemDiscount > 0 && (
+                                <Chip
+                                  icon={<VoucherIcon sx={{ fontSize: 14 }} />}
+                                  label={`Giảm ${formatCurrency(itemDiscount)}`}
+                                  size="small"
+                                  color="error"
+                                  variant="outlined"
+                                  sx={{
+                                    mt: 0.5,
+                                    height: 22,
+                                    fontSize: "0.7rem",
+                                  }}
+                                />
+                              )}
+                            </Box>
+                            <Typography fontWeight={600}>
+                              {formatCurrency(
+                                itemDiscount > 0
+                                  ? actualTotal
+                                  : (detail.unitPrice ?? 0) *
+                                      (detail.quantity ?? 0),
+                              )}
+                            </Typography>
+                          </ListItem>
+                        );
+                      })}
+                    </List>
+                  </Paper>
+                </Box>
+
+                {/* Right: totals + payment actions */}
+                <Box width={{ xs: "100%", lg: 380 }} flexShrink={0}>
+                  <Paper sx={panelSx}>
+                    <Typography variant="h6" fontWeight={700} mb={2}>
+                      Thanh toán
+                    </Typography>
+                    <Stack spacing={1} mb={2}>
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography color="text.secondary">Tạm tính</Typography>
+                        <Typography>
+                          {formatCurrency(bopisOrder.subTotal)}
+                        </Typography>
+                      </Stack>
+                      {(bopisOrder.voucherDiscountTotal ?? 0) > 0 && (
+                        <Stack direction="row" justifyContent="space-between">
+                          <Typography color="text.secondary">
+                            Giảm giá
+                          </Typography>
+                          <Typography color="success.main">
+                            -{formatCurrency(bopisOrder.voucherDiscountTotal)}
+                          </Typography>
+                        </Stack>
+                      )}
+                      <Divider />
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography fontWeight={700}>Tổng cộng</Typography>
+                        <Typography fontWeight={700} color="primary.main">
+                          {formatCurrency(bopisOrder.totalAmount)}
+                        </Typography>
                       </Stack>
                     </Stack>
-                  </Box>
-                )}
-              </Box>
-            </Paper>
+
+                    {bopisOrder.paymentStatus === "Paid" ? (
+                      <>
+                        <Alert severity="success" sx={{ mb: 2 }}>
+                          Đã thanh toán
+                        </Alert>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          color="success"
+                          disabled={isProcessingBopis}
+                          startIcon={
+                            isProcessingBopis ? (
+                              <CircularProgress size={18} color="inherit" />
+                            ) : undefined
+                          }
+                          onClick={() => void handleDeliverBopisOrder()}
+                        >
+                          {isProcessingBopis
+                            ? "Đang xử lý..."
+                            : "Xác nhận giao hàng tại quầy"}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                          Chưa thanh toán
+                        </Alert>
+                        <RadioGroup
+                          value={bopisPaymentMethod}
+                          onChange={(e) =>
+                            setBopisPaymentMethod(
+                              e.target.value as NonNullable<PaymentMethod>,
+                            )
+                          }
+                          sx={{ mb: 2 }}
+                        >
+                          {(
+                            [
+                              "CashInStore",
+                              "VnPay",
+                              "Momo",
+                              "PayOs",
+                            ] as NonNullable<PaymentMethod>[]
+                          ).map((m) => (
+                            <FormControlLabel
+                              key={m}
+                              value={m}
+                              control={<Radio size="small" />}
+                              label={renderPaymentMethodOption(m)}
+                            />
+                          ))}
+                        </RadioGroup>
+                        {bopisPaymentMethod === "CashInStore" ? (
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            disabled={isProcessingBopis}
+                            startIcon={
+                              isProcessingBopis ? (
+                                <CircularProgress size={18} color="inherit" />
+                              ) : undefined
+                            }
+                            onClick={() => {
+                              setBopisCashReceived("");
+                              setIsBopisCashDialogOpen(true);
+                            }}
+                          >
+                            {isProcessingBopis
+                              ? "Đang xử lý..."
+                              : "Xác nhận tiền mặt"}
+                          </Button>
+                        ) : (
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            disabled={isProcessingBopis}
+                            startIcon={
+                              isProcessingBopis ? (
+                                <CircularProgress size={18} color="inherit" />
+                              ) : undefined
+                            }
+                            onClick={() => setIsBopisQrConfirmOpen(true)}
+                          >
+                            {isProcessingBopis
+                              ? "Đang tạo mã..."
+                              : "Tạo mã QR thanh toán"}
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </Paper>
+                </Box>
+              </Stack>
+            )}
           </Box>
-        </Stack>
+        )}
 
         <Dialog
           open={isCheckoutConfirmOpen}
@@ -3369,7 +3903,7 @@ export const CounterCheckoutStaffPage = () => {
           maxWidth="xs"
           fullWidth
         >
-          <DialogTitle>Thanh toán thành công!</DialogTitle>
+          <DialogTitle>Đơn hàng Thành Công!</DialogTitle>
           <DialogContent dividers>
             <Stack spacing={2} alignItems="center">
               <CheckCircleRounded
@@ -3400,6 +3934,258 @@ export const CounterCheckoutStaffPage = () => {
               onClick={handleStartNewCustomer}
             >
               Đóng &amp; Đón khách mới
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Dialog: BOPIS QR Confirm */}
+        <Dialog
+          open={isBopisQrConfirmOpen}
+          onClose={() => {
+            if (!isProcessingBopis) setIsBopisQrConfirmOpen(false);
+          }}
+          maxWidth="xs"
+          fullWidth
+        >
+          <DialogTitle>Xác nhận tạo mã QR thanh toán</DialogTitle>
+          <DialogContent>
+            <Stack spacing={1.5} mt={1}>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">
+                  Phương thức thanh toán
+                </Typography>
+                {renderPaymentMethodOption(bopisPaymentMethod)}
+              </Stack>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Tổng tiền</Typography>
+                <Typography fontWeight={700} color="primary.main">
+                  {formatCurrency(bopisOrder?.totalAmount ?? 0)}
+                </Typography>
+              </Stack>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => setIsBopisQrConfirmOpen(false)}
+              disabled={isProcessingBopis}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="contained"
+              disabled={isProcessingBopis}
+              startIcon={
+                isProcessingBopis ? (
+                  <CircularProgress size={18} color="inherit" />
+                ) : undefined
+              }
+              onClick={() => {
+                setIsBopisQrConfirmOpen(false);
+                void handleGenerateBopisQR();
+              }}
+            >
+              {isProcessingBopis ? "Đang tạo..." : "Xác nhận"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Dialog 3: BOPIS Cash Payment */}
+        <Dialog
+          open={isBopisCashDialogOpen}
+          onClose={() => {
+            if (!isProcessingBopis) {
+              setIsBopisCashDialogOpen(false);
+              setBopisCashReceived("");
+            }
+          }}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Xác nhận thanh toán tiền mặt (BOPIS)</DialogTitle>
+          <DialogContent dividers>
+            <Stack spacing={2}>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography color="text.secondary">Tổng tiền:</Typography>
+                <Typography fontWeight={700} fontSize="1.1rem">
+                  {formatCurrency(bopisOrder?.totalAmount ?? 0)}
+                </Typography>
+              </Stack>
+              {bopisCashReceived &&
+                Number(bopisCashReceived) >= (bopisOrder?.totalAmount ?? 0) && (
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Tiền thừa:</Typography>
+                    <Typography
+                      fontWeight={700}
+                      fontSize="1.1rem"
+                      color="error"
+                    >
+                      {formatCurrency(
+                        Math.max(
+                          0,
+                          Number(bopisCashReceived) -
+                            (bopisOrder?.totalAmount ?? 0),
+                        ),
+                      )}
+                    </Typography>
+                  </Stack>
+                )}
+              <Box>
+                <Typography variant="caption" color="text.secondary" mb={0.5}>
+                  Số tiền khách đưa
+                </Typography>
+                <Box
+                  sx={{
+                    border: 2,
+                    borderColor: "primary.main",
+                    borderRadius: 1,
+                    p: 2,
+                    bgcolor: "grey.50",
+                    textAlign: "right",
+                    minHeight: 56,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <Typography variant="h5" fontWeight={700} color="primary">
+                    {bopisCashReceived
+                      ? new Intl.NumberFormat("vi-VN").format(
+                          Number(bopisCashReceived),
+                        ) + "đ"
+                      : "0đ"}
+                  </Typography>
+                </Box>
+              </Box>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 1,
+                }}
+              >
+                {[
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7",
+                  "8",
+                  "9",
+                  "C",
+                  "0",
+                  "⌫",
+                ].map((key) => {
+                  const isC = key === "C";
+                  const isBackspace = key === "⌫";
+                  return (
+                    <Button
+                      key={key}
+                      variant={isC ? "outlined" : "contained"}
+                      size="large"
+                      onClick={() => {
+                        setBopisCashReceived((prev) => {
+                          if (key === "C") return "";
+                          if (key === "⌫") return prev.slice(0, -1);
+                          if (!/^\d+$/.test(key)) return prev;
+                          const next = prev + key;
+                          return next.length > 15 ? prev : next;
+                        });
+                      }}
+                      sx={{
+                        height: 56,
+                        fontSize: "1.25rem",
+                        fontWeight: 700,
+                        ...(isC && {
+                          color: "error.main",
+                          borderColor: "error.light",
+                          "&:hover": {
+                            borderColor: "error.main",
+                            bgcolor: "error.50",
+                          },
+                        }),
+                        ...(isBackspace && {
+                          bgcolor: "grey.200",
+                          color: "text.primary",
+                          boxShadow: "none",
+                          "&:hover": { bgcolor: "grey.300" },
+                        }),
+                        ...(!isC &&
+                          !isBackspace && {
+                            bgcolor: "grey.700",
+                            color: "#fff",
+                            boxShadow: "none",
+                            "&:hover": { bgcolor: "grey.800" },
+                          }),
+                      }}
+                    >
+                      {key}
+                    </Button>
+                  );
+                })}
+              </Box>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, 1fr)",
+                  gap: 1,
+                }}
+              >
+                {[
+                  { label: "+10K", value: 10000 },
+                  { label: "+50K", value: 50000 },
+                  { label: "+100K", value: 100000 },
+                  { label: "+200K", value: 200000 },
+                  { label: "+500K", value: 500000 },
+                  { label: "+1M", value: 1000000 },
+                ].map((shortcut) => (
+                  <Button
+                    key={shortcut.value}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      const current = Number(bopisCashReceived) || 0;
+                      setBopisCashReceived(String(current + shortcut.value));
+                    }}
+                    sx={{
+                      textTransform: "none",
+                      borderColor: "grey.400",
+                      color: "text.secondary",
+                      fontWeight: 600,
+                      "&:hover": {
+                        borderColor: "grey.600",
+                        bgcolor: "grey.100",
+                        color: "text.primary",
+                      },
+                    }}
+                  >
+                    {shortcut.label}
+                  </Button>
+                ))}
+              </Box>
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button
+              onClick={() => {
+                setIsBopisCashDialogOpen(false);
+                setBopisCashReceived("");
+              }}
+              disabled={isProcessingBopis}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => void handleConfirmBopisCash()}
+              disabled={
+                isProcessingBopis ||
+                !bopisCashReceived ||
+                Number(bopisCashReceived) < (bopisOrder?.totalAmount ?? 0)
+              }
+            >
+              {isProcessingBopis ? "Đang xử lý..." : "Xác nhận"}
             </Button>
           </DialogActions>
         </Dialog>
