@@ -38,6 +38,11 @@ const VOUCHER_APPLY_TYPE_OPTIONS: Array<{ value: VoucherType; label: string }> =
     { value: "Order", label: "Theo đơn hàng" },
   ];
 
+const DISCOUNT_TYPE_OPTIONS: Array<{ value: DiscountType; label: string }> = [
+  { value: "Percentage", label: "Phần trăm (%)" },
+  { value: "FixedAmount", label: "Số tiền cố định" },
+];
+
 const formatNumberVN = (value: string): string => {
   const digitsOnly = value.replace(/\D/g, "");
   if (!digitsOnly) return "";
@@ -127,7 +132,7 @@ export const VoucherForm = ({
             startIcon={<AddIcon />}
             onClick={addVoucher}
           >
-            Thêm voucher
+            Thêm Voucher
           </Button>
         </Stack>
 
@@ -159,6 +164,7 @@ export const VoucherForm = ({
                   Voucher #{index + 1}
                 </Typography>
 
+                {/* Hàng 1: 4 ô chính */}
                 <Box
                   sx={{
                     display: "grid",
@@ -168,6 +174,7 @@ export const VoucherForm = ({
                       md: "1fr 1fr 1fr 1fr",
                     },
                     gap: 2,
+                    mb: 2,
                   }}
                 >
                   <TextField
@@ -181,6 +188,27 @@ export const VoucherForm = ({
                     fullWidth
                   />
 
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>Kiểu giảm</InputLabel>
+                    <Select
+                      label="Kiểu giảm"
+                      value={voucher.discountType}
+                      onChange={(e) =>
+                        updateField(
+                          voucher.key,
+                          "discountType",
+                          e.target.value as DiscountType,
+                        )
+                      }
+                    >
+                      {DISCOUNT_TYPE_OPTIONS.map((option) => (
+                        <MenuItem key={option.value} value={option.value}>
+                          {option.label}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
                   <TextField
                     label="Giá trị giảm"
                     size="small"
@@ -192,7 +220,15 @@ export const VoucherForm = ({
                     onChange={(e) => {
                       const nextValue = e.target.value;
                       if (isPercentage) {
+                        // Validate percentage input
                         if (!/^\d*([.,]\d{0,2})?$/.test(nextValue)) return;
+
+                        // Check if value exceeds 100%
+                        const numValue = Number(nextValue.replace(",", "."));
+                        if (numValue > 100) {
+                          return; // Don't update if > 100%
+                        }
+
                         updateField(
                           voucher.key,
                           "discountValueInput",
@@ -204,27 +240,11 @@ export const VoucherForm = ({
                         updateField(voucher.key, "discountValueInput", parsed);
                       }
                     }}
-                    placeholder={isPercentage ? "%" : "VD: 500.000"}
+                    placeholder={isPercentage ? "VD: 20" : "VD: 500.000"}
                     InputProps={{
                       endAdornment: (
                         <InputAdornment position="end">
-                          <FormControl size="small" sx={{ minWidth: 50 }}>
-                            <Select
-                              value={voucher.discountType}
-                              variant="standard"
-                              sx={{ fontSize: "0.875rem" }}
-                              onChange={(e) =>
-                                updateField(
-                                  voucher.key,
-                                  "discountType",
-                                  e.target.value as DiscountType,
-                                )
-                              }
-                            >
-                              <MenuItem value="Percentage">%</MenuItem>
-                              <MenuItem value="FixedAmount">đ</MenuItem>
-                            </Select>
-                          </FormControl>
+                          {isPercentage ? "%" : "VND"}
                         </InputAdornment>
                       ),
                     }}
@@ -248,7 +268,21 @@ export const VoucherForm = ({
                     disabled={!isPercentage}
                     fullWidth
                   />
+                </Box>
 
+                {/* Hàng 2: 4 ô tiếp theo */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      sm: "1fr 1fr",
+                      md: "1fr 1fr 1fr 1fr",
+                    },
+                    gap: 2,
+                    mb: 2,
+                  }}
+                >
                   <TextField
                     label="Đơn tối thiểu (VND)"
                     size="small"
@@ -320,8 +354,21 @@ export const VoucherForm = ({
                       ))}
                     </Select>
                   </FormControl>
+                </Box>
 
-                  {/* isMemberOnly toggle */}
+                {/* Hàng 3: Switch và field bổ sung */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      sm: voucher.isMemberOnly ? "1fr 1fr" : "1fr",
+                      md: voucher.isMemberOnly ? "1fr 1fr" : "1fr",
+                    },
+                    gap: 2,
+                    alignItems: "center",
+                  }}
+                >
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <FormControlLabel
                       control={

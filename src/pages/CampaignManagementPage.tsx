@@ -150,6 +150,17 @@ const toLocalDateTime = (
   return `${year}-${month}-${day}T${hours}:${minutes}:00${withFraction ? ".00" : ""}`;
 };
 
+// Helper functions for number formatting
+const formatNumberVN = (value: string): string => {
+  const digitsOnly = value.replace(/\D/g, "");
+  if (!digitsOnly) return "";
+  return Number(digitsOnly).toLocaleString("vi-VN");
+};
+
+const parseNumberVN = (value: string): string => {
+  return value.replace(/\./g, "");
+};
+
 export const CampaignManagementPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -230,7 +241,7 @@ export const CampaignManagementPage = () => {
       const message =
         error instanceof Error
           ? error.message
-          : "Không thể tải danh sách chiến lược";
+          : "Không thể tải danh sách chiến dịch";
       setCampaignError(message);
       showToast(message, "error");
     } finally {
@@ -348,7 +359,7 @@ export const CampaignManagementPage = () => {
     );
 
     if (!name) {
-      showToast("Vui lòng nhập tên chiến lược", "warning");
+      showToast("Vui lòng nhập tên chiến dịch", "warning");
       return;
     }
 
@@ -577,12 +588,14 @@ export const CampaignManagementPage = () => {
     try {
       setCreateSubmitting(true);
       await campaignService.createCampaign(payload);
-      showToast("Tạo chiến lược khuyến mãi thành công", "success");
+      showToast("Tạo chiến dịch khuyến mãi thành công", "success");
       setPageView("list");
       void loadCampaigns();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Không thể tạo chiến lược";
+        error instanceof Error
+          ? error.message
+          : "Không thể tạo chiến dịch khuyến mãi";
       showToast(message, "error");
     } finally {
       setCreateSubmitting(false);
@@ -608,12 +621,12 @@ export const CampaignManagementPage = () => {
     setIsDeleting(true);
     try {
       await campaignService.deleteCampaign(deleteConfirmCampaign.id);
-      showToast("Đã xóa chiến lược", "success");
+      showToast("Đã xóa chiến dịch", "success");
       setDeleteConfirmCampaign(null);
       void loadCampaigns();
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : "Không thể xóa chiến lược",
+        error instanceof Error ? error.message : "Không thể xóa chiến dịch",
         "error",
       );
     } finally {
@@ -630,8 +643,8 @@ export const CampaignManagementPage = () => {
       await campaignService.updateCampaignStatus(campaign.id, newStatus);
       showToast(
         newStatus === "Paused"
-          ? "Đã tạm dừng chiến dịch"
-          : "Đã tiếp tục chiến dịch",
+          ? "Đã tạm dừng chiến dịch"
+          : "Đã tiếp tục chiến dịch",
         "success",
       );
       void loadCampaigns();
@@ -706,7 +719,7 @@ export const CampaignManagementPage = () => {
               >
                 <TextField
                   fullWidth
-                  label="Tìm theo tên chiến lược"
+                  label="Tìm theo tên chiến dịch"
                   value={campaignSearchInput}
                   onChange={(event) =>
                     setCampaignSearchInput(event.target.value)
@@ -725,7 +738,7 @@ export const CampaignManagementPage = () => {
                   onClick={handleOpenCreateDialog}
                   sx={{ height: 56 }}
                 >
-                  Tạo chiến lược
+                  Tạo chiến dịch
                 </Button>
               </Box>
             </Paper>
@@ -734,7 +747,7 @@ export const CampaignManagementPage = () => {
               <Table>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "grey.50" }}>
-                    <TableCell>Tên chiến lược</TableCell>
+                    <TableCell>Tên chiến dịch</TableCell>
                     <TableCell>Loại</TableCell>
                     <TableCell>Thời gian</TableCell>
                     <TableCell>Trạng thái</TableCell>
@@ -761,7 +774,7 @@ export const CampaignManagementPage = () => {
                     <TableRow>
                       <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                         <Typography variant="body2" color="text.secondary">
-                          Không có chiến lược phù hợp.
+                          Không có chiến dịch phù hợp.
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -852,7 +865,7 @@ export const CampaignManagementPage = () => {
                                 </IconButton>
                               </Tooltip>
                             )}
-                            <Tooltip title="Xóa chiến lược">
+                            <Tooltip title="Xóa chiến dịch">
                               <IconButton
                                 size="small"
                                 color="error"
@@ -899,7 +912,7 @@ export const CampaignManagementPage = () => {
               <DialogTitle>Xác nhận xóa</DialogTitle>
               <DialogContent>
                 <Typography>
-                  Bạn có chắc muốn xóa chiến lược{" "}
+                  Bạn có chắc muốn xóa chiến dịch{" "}
                   <strong>&ldquo;{deleteConfirmCampaign?.name}&rdquo;</strong>?
                 </Typography>
               </DialogContent>
@@ -931,10 +944,10 @@ export const CampaignManagementPage = () => {
               maxWidth="xs"
               fullWidth
             >
-              <DialogTitle>Đổi trạng thái chiến lược</DialogTitle>
+              <DialogTitle>Đổi trạng thái chiến dịch</DialogTitle>
               <DialogContent>
                 <Typography variant="body2" sx={{ mb: 2 }}>
-                  Chiến lược: <strong>{statusDialogCampaign?.name}</strong>
+                  Chiến dịch: <strong>{statusDialogCampaign?.name}</strong>
                 </Typography>
                 <FormControl fullWidth>
                   <InputLabel>Trạng thái mới</InputLabel>
@@ -1009,7 +1022,7 @@ export const CampaignManagementPage = () => {
                 gap: 2,
                 gridTemplateColumns: {
                   xs: "1fr",
-                  lg: "minmax(0, 0.85fr) minmax(0, 1.15fr)",
+                  lg: "minmax(400px, 1.2fr) minmax(300px, 0.8fr)",
                 },
                 alignItems: "start",
                 minHeight: 0,
@@ -1045,11 +1058,11 @@ export const CampaignManagementPage = () => {
               >
                 <Stack spacing={2}>
                   <Typography variant="subtitle1" fontWeight={700}>
-                    Thông tin chiến lược
+                    Thông tin chiến dịch
                   </Typography>
 
                   <TextField
-                    label="Tên chiến lược"
+                    label="Tên chiến dịch"
                     value={createForm.name}
                     onChange={(event) =>
                       setCreateForm((current) => ({
@@ -1076,10 +1089,10 @@ export const CampaignManagementPage = () => {
                   />
 
                   <FormControl fullWidth>
-                    <InputLabel>Loại chiến lược</InputLabel>
+                    <InputLabel>Loại chiến dịch</InputLabel>
                     <Select
                       value={createForm.type}
-                      label="Loại chiến lược"
+                      label="Loại chiến dịch"
                       onChange={(event) =>
                         setCreateForm((current) => ({
                           ...current,
@@ -1368,18 +1381,45 @@ export const CampaignManagementPage = () => {
                                     label="Giá trị giảm"
                                     size="small"
                                     required
-                                    value={item.discountValueInput}
-                                    onChange={(event) =>
-                                      handleSelectedItemFieldChange(
-                                        item.key,
-                                        "discountValueInput",
-                                        event.target.value,
-                                      )
+                                    value={
+                                      item.discountType === "Percentage"
+                                        ? item.discountValueInput
+                                        : formatNumberVN(
+                                            item.discountValueInput,
+                                          )
                                     }
+                                    onChange={(event) => {
+                                      const inputValue = event.target.value;
+
+                                      if (item.discountType === "Percentage") {
+                                        // For percentage, allow numbers and decimal point
+                                        if (
+                                          !/^\d*([.,]\d{0,2})?$/.test(
+                                            inputValue,
+                                          )
+                                        )
+                                          return;
+                                        handleSelectedItemFieldChange(
+                                          item.key,
+                                          "discountValueInput",
+                                          inputValue,
+                                        );
+                                      } else {
+                                        // For VND, parse and store clean digits
+                                        const parsed =
+                                          parseNumberVN(inputValue);
+                                        if (!/^\d*$/.test(parsed)) return;
+                                        handleSelectedItemFieldChange(
+                                          item.key,
+                                          "discountValueInput",
+                                          parsed,
+                                        );
+                                      }
+                                    }}
                                     placeholder={
                                       item.discountType === "Percentage"
                                         ? "VD: 20"
-                                        : "VD: 50000"
+                                        : "VD: 500.000"
                                     }
                                     InputProps={{
                                       endAdornment: (
@@ -1389,6 +1429,7 @@ export const CampaignManagementPage = () => {
                                             : "VND"}
                                         </InputAdornment>
                                       ),
+                                      style: { minWidth: "140px" },
                                     }}
                                     fullWidth
                                   />
@@ -1397,20 +1438,26 @@ export const CampaignManagementPage = () => {
                                     label="SL tối đa"
                                     size="small"
                                     required={!isBatchItem}
-                                    value={item.maxUsageInput}
+                                    value={formatNumberVN(item.maxUsageInput)}
                                     onChange={(event) => {
-                                      if (!/^\d*$/.test(event.target.value))
-                                        return;
+                                      const parsed = parseNumberVN(
+                                        event.target.value,
+                                      );
+                                      if (!/^\d*$/.test(parsed)) return;
+
                                       handleSelectedItemFieldChange(
                                         item.key,
                                         "maxUsageInput",
-                                        event.target.value,
+                                        parsed,
                                       );
                                     }}
                                     disabled={isBatchItem}
                                     placeholder={
                                       isBatchItem ? "null" : "Bắt buộc > 0"
                                     }
+                                    InputProps={{
+                                      style: { minWidth: "120px" },
+                                    }}
                                     fullWidth
                                   />
                                 </Box>
@@ -1451,7 +1498,7 @@ export const CampaignManagementPage = () => {
                 onClick={handleCreateCampaign}
                 disabled={createSubmitting}
               >
-                {createSubmitting ? "Đang tạo..." : "Tạo chiến lược"}
+                {createSubmitting ? "Đang tạo..." : "Tạo chiến dịch"}
               </Button>
             </Box>
           </Box>

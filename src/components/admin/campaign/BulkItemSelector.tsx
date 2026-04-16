@@ -467,7 +467,7 @@ export const BulkItemSelector = ({
   return (
     <Stack spacing={2} sx={{ minHeight: 0, flex: 1 }}>
       <Typography variant="subtitle1" fontWeight={700}>
-        Chọn hàng / lô để thêm vào chiến lược khuyến mãi
+        Chọn hàng / lô để thêm vào chiến dịch khuyến mãi
       </Typography>
 
       {/* Category tabs */}
@@ -622,15 +622,15 @@ export const BulkItemSelector = ({
                 />
               </TableCell>
               <TableCell sx={{ width: 56, minWidth: 56 }}>Ảnh</TableCell>
-              <TableCell sx={{ minWidth: 160 }}>Sản phẩm</TableCell>
-              <TableCell sx={{ minWidth: 120 }}>SKU</TableCell>
-              <TableCell align="right" sx={{ minWidth: 100 }}>
+              <TableCell sx={{ minWidth: 220 }}>Sản phẩm</TableCell>
+              <TableCell sx={{ minWidth: 140 }}>SKU</TableCell>
+              <TableCell align="right" sx={{ minWidth: 120 }}>
                 Giá
               </TableCell>
-              <TableCell align="right" sx={{ minWidth: 70 }}>
+              <TableCell align="right" sx={{ minWidth: 90 }}>
                 Khả dụng
               </TableCell>
-              <TableCell align="center" sx={{ minWidth: 90 }}>
+              <TableCell align="center" sx={{ minWidth: 110 }}>
                 Trạng thái
               </TableCell>
             </TableRow>

@@ -167,12 +167,13 @@ export const BulkConfigModal = ({
 
           <TextField
             label="SL tối đa (maxUsage)"
-            value={config.maxUsage}
+            value={formatNumberVN(config.maxUsage)}
             onChange={(e) => {
-              if (!/^\d*$/.test(e.target.value)) return;
-              setConfig((c) => ({ ...c, maxUsage: e.target.value }));
+              const parsed = parseNumberVN(e.target.value);
+              if (!/^\d*$/.test(parsed)) return;
+              setConfig((c) => ({ ...c, maxUsage: parsed }));
             }}
-            placeholder="VD: 1"
+            placeholder="VD: 1.000"
             helperText="Áp dụng cho item không chọn lô. Item theo lô sẽ là null."
             fullWidth
           />
