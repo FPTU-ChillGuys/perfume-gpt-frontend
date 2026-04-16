@@ -9,7 +9,7 @@ import {
     Typography,
 } from "@mui/material";
 import type { SurveyQuestion } from "@/types/survey";
-import { QuestionType } from "@/types/survey";
+import { QuestionType, getAnswerDisplayText } from "@/types/survey";
 
 interface Props {
     question: SurveyQuestion;
@@ -73,7 +73,7 @@ export default function SurveyQuestionCard({
                                     <FormControlLabel
                                         value={ans.id}
                                         control={<Radio size="small" sx={{ pointerEvents: "none" }} />}
-                                        label={<Typography variant="body1">{ans.answer}</Typography>}
+                                        label={<Typography variant="body1">{getAnswerDisplayText(ans.answer)}</Typography>}
                                         sx={{ m: 0, width: "100%", pointerEvents: "none" }}
                                     />
                                 </Paper>
@@ -113,7 +113,7 @@ export default function SurveyQuestionCard({
                                             sx={{ pointerEvents: "none" }}
                                         />
                                     }
-                                    label={<Typography variant="body1">{ans.answer}</Typography>}
+                                    label={<Typography variant="body1">{getAnswerDisplayText(ans.answer)}</Typography>}
                                     sx={{ m: 0, width: "100%", pointerEvents: "none" }}
                                 />
                             </Paper>

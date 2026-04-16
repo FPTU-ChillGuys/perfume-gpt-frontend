@@ -200,7 +200,7 @@ export default function SurveyPage() {
         }
         setSubmitting(true);
         try {
-            const res = await surveyService.submitSurveyV2(userId, payload);
+            const res = await surveyService.submitSurveyV4(userId, payload);
             const parsedRes = parseAiResponse(res.data);
             setResult(parsedRes);
             setLastResult(parsedRes);

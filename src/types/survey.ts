@@ -120,3 +120,65 @@ export const convertSurveyOutputToResult = (output: unknown): SurveyOutputItem |
         return null;
     }
 };
+
+// ============ Survey V4 — Query-based Types ============
+
+export type SurveyAttributeType =
+    | 'gender' | 'origin' | 'brand' | 'category'
+    | 'concentration' | 'note' | 'family' | 'attribute' | 'budget';
+
+export interface SurveyAttributeTypeInfo {
+    type: SurveyAttributeType;
+    label: string;
+    description: string;
+}
+
+export interface QueryFragment {
+    type: SurveyAttributeType;
+    match?: string;
+    attributeName?: string;
+    min?: number;
+    max?: number;
+}
+
+export interface SurveyAttributeValueItem {
+    displayText: string;
+    queryFragment: QueryFragment;
+}
+
+export interface SurveyAttributeValuesResponse {
+    type: SurveyAttributeType;
+    label: string;
+    values?: SurveyAttributeValueItem[];
+    subGroups?: {
+        attributeName: string;
+        values: SurveyAttributeValueItem[];
+    }[];
+}
+
+export interface CreateQuestionFromAttributeRequest {
+    question: string;
+    questionType: 'single' | 'multiple';
+    attributeType: SurveyAttributeType;
+    attributeName?: string;
+    selectedValues?: string[];
+    budgetRanges?: { label: string; min?: number; max?: number }[];
+}
+
+/** Parse answer text nếu nó chứa JSON query payload */
+export function tryParseQueryAnswer(answerText: string): { displayText: string; queryFragment: QueryFragment } | null {
+    try {
+        const parsed = JSON.parse(answerText);
+        if (parsed?.displayText && parsed?.queryFragment) return parsed;
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+/** Lấy displayText từ answer. Nếu answer là JSON query sẽ parse lấy displayText, nếu không trả về nguyên text */
+export function getAnswerDisplayText(answerText: string): string {
+    const parsed = tryParseQueryAnswer(answerText);
+    return parsed ? parsed.displayText : answerText;
+}
+
