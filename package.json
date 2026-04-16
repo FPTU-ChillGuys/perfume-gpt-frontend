@@ -21,6 +21,7 @@
     "@mui/icons-material": "^7.3.7",
     "@mui/material": "^7.3.7",
     "@react-oauth/google": "^0.13.4",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.19",
     "dexie": "^4.3.0",
     "html5-qrcode": "^2.3.8",

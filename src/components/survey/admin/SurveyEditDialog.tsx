@@ -23,7 +23,7 @@ import {
     RemoveCircleOutline as RemoveAnswerIcon,
     Save as SaveIcon,
 } from "@mui/icons-material";
-import { QuestionType } from "@/types/survey";
+import { QuestionType, getAnswerDisplayText, tryParseQueryAnswer } from "@/types/survey";
 import type { SurveyQuestion } from "@/types/survey";
 
 interface SubmitPayload {
@@ -143,22 +143,28 @@ export default function SurveyEditDialog({ open, isSaving, initialData, onClose,
                     </Button>
                 </Box>
 
-                {answers.map((ans, idx) => (
+                {answers.map((ans, idx) => {
+                    const isQuery = tryParseQueryAnswer(ans) !== null;
+                    return (
                     <Box key={idx} sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
                         <Chip label={idx + 1} size="small" color="primary" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
                         <TextField
                             fullWidth
                             size="small"
                             placeholder={`Đáp án ${idx + 1}...`}
-                            value={ans}
-                            onChange={(e) => handleAnswerChange(idx, e.target.value)}
-                            disabled={isSaving}
+                            value={isQuery ? getAnswerDisplayText(ans) : ans}
+                            onChange={(e) => handleAnswerChange(idx, isQuery ? ans : e.target.value)}
+                            disabled={isSaving || isQuery}
+                            InputProps={{
+                                endAdornment: isQuery ? <Chip label="Query" size="small" color="info" variant="outlined" sx={{ height: 22, fontSize: "0.7rem" }} /> : undefined,
+                            }}
                         />
                         <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(idx)} disabled={answers.length <= 2 || isSaving}>
                             <RemoveAnswerIcon />
                         </IconButton>
                     </Box>
-                ))}
+                    );
+                })}
 
                 {filledCount < 2 && (
                     <Alert severity="warning" sx={{ mt: 1 }}>Cần ít nhất 2 đáp án hợp lệ</Alert>

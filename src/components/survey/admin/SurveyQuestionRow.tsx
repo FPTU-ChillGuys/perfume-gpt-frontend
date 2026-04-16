@@ -18,7 +18,7 @@ import {
     ExpandLess as ExpandLessIcon,
     ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
-import { QuestionType } from "@/types/survey";
+import { QuestionType, getAnswerDisplayText, tryParseQueryAnswer } from "@/types/survey";
 import type { SurveyQuestion } from "@/types/survey";
 import dayjs from "dayjs";
 
@@ -119,17 +119,25 @@ function SurveyQuestionRow({ item, isExpanded, onToggle, onEdit, onDelete }: Pro
                                 Danh sách đáp án:
                             </Typography>
                             <List dense disablePadding>
-                                {item.answers.map((ans, idx) => (
+                                {item.answers.map((ans, idx) => {
+                                    const isQuery = tryParseQueryAnswer(ans.answer) !== null;
+                                    return (
                                     <ListItem key={ans.id} disablePadding sx={{ py: 0.25 }}>
                                         <ListItemText
                                             primary={
-                                                <Typography variant="body2" color="text.primary">
-                                                    {idx + 1}. {ans.answer}
-                                                </Typography>
+                                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                                    <Typography variant="body2" color="text.primary">
+                                                        {idx + 1}. {getAnswerDisplayText(ans.answer)}
+                                                    </Typography>
+                                                    {isQuery && (
+                                                        <Chip label="Query" size="small" color="info" variant="outlined" sx={{ height: 20, fontSize: "0.7rem" }} />
+                                                    )}
+                                                </Box>
                                             }
                                         />
                                     </ListItem>
-                                ))}
+                                    );
+                                })}
                             </List>
                         </Box>
                     </Collapse>

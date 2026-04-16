@@ -9,7 +9,11 @@ import type {
     SurveyQuesAnsDetailRequest,
     SubmitSurveyResponse,
     UserSurveyRecordResponse,
-    QuestionType
+    UserSurveyHistoryResponse,
+    QuestionType,
+    SurveyAttributeTypeInfo,
+    SurveyAttributeValuesResponse,
+    CreateQuestionFromAttributeRequest,
 } from "@/types/survey";
 
 
@@ -132,7 +136,7 @@ class SurveyService {
         }
     }
 
-    // 7. POST /surveys/user/v2?userId={userId}
+    // 7. POST /surveys/user/v3?userId={userId}
     async submitSurveyV2(userId: string, answers: SurveyQuesAnsDetailRequest[]): Promise<SubmitSurveyResponse> {
         try {
             const response = await aiApiInstance.POST("/surveys/user/v3", {
@@ -167,6 +171,21 @@ class SurveyService {
         }
     }
 
+    // 8.1 GET /surveys/user/{userId}/history
+    async getUserSurveyHistory(userId: string): Promise<UserSurveyHistoryResponse> {
+        try {
+            const response = await aiApiInstance.GET(`/surveys/user/${userId}/history` as any, {});
+
+            if (!response.data?.success) {
+                throw new Error(response.data?.error || "Failed to fetch user survey history");
+            }
+            return response.data as UserSurveyHistoryResponse;
+        } catch (error: any) {
+            console.error("Error fetching user survey history:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to fetch user survey history");
+        }
+    }
+
     // 9. DELETE /surveys/questions/{id} (soft delete)
     async deleteQuestion(id: string): Promise<{ success: boolean; error: string | null; data: boolean }> {
         try {
@@ -181,6 +200,72 @@ class SurveyService {
             throw new Error(error.response?.data?.error || error.message || "Failed to delete survey question");
         }
     }
+
+    // ============ Survey V4 — Query-based APIs ============
+
+    // 10. GET /surveys/attributes — lấy danh sách loại thuộc tính
+    async getAttributeTypes(): Promise<{ success: boolean; data: SurveyAttributeTypeInfo[] }> {
+        try {
+            const response = await aiApiInstance.GET("/surveys/attributes", {});
+            if (!response.data?.success) {
+                throw new Error(response.data?.error || "Failed to fetch attribute types");
+            }
+            return response.data as { success: boolean; data: SurveyAttributeTypeInfo[] };
+        } catch (error: any) {
+            console.error("Error fetching attribute types:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to fetch attribute types");
+        }
+    }
+
+    // 11. GET /surveys/attributes/:type/values — lấy giá trị của 1 loại thuộc tính
+    async getAttributeValues(type: string): Promise<{ success: boolean; data: SurveyAttributeValuesResponse }> {
+        try {
+            const response = await aiApiInstance.GET(`/surveys/attributes/${type}/values`, {});
+            if (!response.data?.success) {
+                throw new Error(response.data?.error || "Failed to fetch attribute values");
+            }
+            return response.data as { success: boolean; data: SurveyAttributeValuesResponse };
+        } catch (error: any) {
+            console.error("Error fetching attribute values:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to fetch attribute values");
+        }
+    }
+
+    // 12. POST /surveys/questions/from-attribute — tạo câu hỏi từ thuộc tính
+    async createQuestionFromAttribute(data: CreateQuestionFromAttributeRequest): Promise<CreateSurveyQuestionResponse> {
+        try {
+            const response = await aiApiInstance.POST("/surveys/questions/from-attribute", {
+                body: data
+            });
+            if (!response.data?.success) {
+                throw new Error(response.data?.error || "Failed to create question from attribute");
+            }
+            return response.data as CreateSurveyQuestionResponse;
+        } catch (error: any) {
+            console.error("Error creating question from attribute:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to create question from attribute");
+        }
+    }
+
+    // 13. POST /surveys/user/v4?userId={userId} — submit survey V4 (query-based)
+    async submitSurveyV4(userId: string, answers: SurveyQuesAnsDetailRequest[]): Promise<SubmitSurveyResponse> {
+        try {
+            const response = await aiApiInstance.POST("/surveys/user/v4", {
+                params: {
+                    query: { userId }
+                },
+                body: answers
+            });
+            if (!response.data?.success) {
+                throw new Error(response.data?.error || "Failed to submit survey V4");
+            }
+            return response.data as SubmitSurveyResponse;
+        } catch (error: any) {
+            console.error("Error submitting survey V4:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to submit survey V4");
+        }
+    }
 }
 
 export const surveyService = new SurveyService();
+
