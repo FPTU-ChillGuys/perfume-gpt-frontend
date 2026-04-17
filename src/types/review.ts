@@ -14,17 +14,17 @@ export interface ReviewSummarySentiment {
 }
 
 export interface ReviewLog extends BaseEntity {
-  content: string;
-  rating: number;
-  platform: string;
+  reviewLog: string;
+  variantId: string;
+  typeReview?: string;
+  rating?: number;
+  platform?: string;
 }
 
 // Response type aliases — use ApiResponse<T> generics instead of repeating the shape
 export type ReviewSummaryStructuredResponse =
   ApiResponse<ReviewSummarySentiment>;
 export type ReviewSummaryResponse = ApiResponse<string>;
-export type ReviewSummaryJobResponse = ApiResponse<{ jobId: string }>;
-export type ReviewSummaryJobResultResponse = ApiResponse<any>;
 export type ReviewSummaryAllResponse = ApiResponse<ReviewSummaryBase[]>;
 export type ReviewLogResponse = ApiResponse<ReviewLog>;
 export type ReviewLogListResponse = ApiResponse<ReviewLog[]>;

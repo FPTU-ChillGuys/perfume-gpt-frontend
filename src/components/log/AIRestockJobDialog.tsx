@@ -14,7 +14,7 @@ import {
     Alert,
     Tooltip,
 } from "@mui/material";
-import { 
+import {
     AutoGraph as AutoGraphIcon,
     Refresh as RefreshIcon,
 } from "@mui/icons-material";
@@ -98,14 +98,14 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                             console.log("=== DEBUG RESTOCK JOB DATA ===");
                             console.log("jobData.data:", jobData.data);
                             console.log("Type:", typeof jobData.data);
-                            
+
                             let parsedData: RestockAIPredictionData;
-                            
+
                             // Check if jobData.data is already an object or a string
                             if (typeof jobData.data === 'object' && !Array.isArray(jobData.data)) {
                                 // It's already an object
                                 console.log("✓ jobData.data is already an object");
-                                
+
                                 // Check if it's wrapped in ApiResponse format
                                 if ((jobData.data as any).success && (jobData.data as any).data) {
                                     parsedData = (jobData.data as any).data as RestockAIPredictionData;
@@ -120,7 +120,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                                 // It's a JSON string, need to parse
                                 console.log("✓ jobData.data is a string, parsing...");
                                 const rawParsed = JSON.parse(jobData.data);
-                                
+
                                 if (rawParsed.success && rawParsed.data) {
                                     parsedData = rawParsed.data as RestockAIPredictionData;
                                     console.log("✓ Unwrapped from ApiResponse wrapper (string)");
@@ -133,10 +133,10 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                             } else {
                                 throw new Error("Unexpected data type: " + typeof jobData.data);
                             }
-                            
+
                             console.log("Final parsed data:", parsedData);
                             console.log("=== END DEBUG ===");
-                            
+
                             // Small delay to let user see "Success" alert briefly
                             setTimeout(() => {
                                 onJobSuccess(parsedData);
@@ -185,6 +185,9 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
 
         try {
             const res = await inventoryService.createRestockJob(forceRefresh);
+            if (!res.data) {
+                throw new Error("Không nhận được dữ liệu phản hồi từ AI.");
+            }
             setJobId(res.data.jobId); // This will trigger polling via useEffect
             restart(new Date(res.data.expirationTime), true);
         } catch (err: any) {
@@ -298,7 +301,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
             </DialogContent>
             <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
                 {phase === "idle" && (
-                    <Button variant="contained" startIcon={<AutoGraphIcon />} onClick={ () => void handleStart() }>
+                    <Button variant="contained" startIcon={<AutoGraphIcon />} onClick={() => void handleStart()}>
                         Bắt đầu phân tích
                     </Button>
                 )}
