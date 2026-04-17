@@ -3,8 +3,6 @@ import type {
     ReviewSummaryAllResponse,
     ReviewSummaryResponse,
     ReviewSummaryStructuredResponse,
-    ReviewSummaryJobResponse,
-    ReviewSummaryJobResultResponse,
     ReviewLogListResponse,
     ReviewLogResponse,
     CreateReviewLogDto
@@ -15,68 +13,20 @@ class ReviewService {
     // Summary Methods
     // ----------------------
 
-    /**
-     * Khởi tạo job để tóm tắt đánh giá theo variant ID
-     */
-    async createReviewSummaryJob(variantId: string): Promise<ReviewSummaryJobResponse> {
-        return this.handleResponse(
-            await (aiApiInstance as any).GET("/reviews/summary/job/{variantId}", {
-                params: { path: { variantId } }
-            })
-        );
-    }
 
     /**
-     * Kiểm tra trạng thái hoàn thành của job tóm tắt đánh giá
-     */
-    async getReviewSummaryJobResult(jobId: string, variantId: string): Promise<ReviewSummaryJobResultResponse> {
-        return this.handleResponse(
-            await (aiApiInstance as any).GET("/reviews/summary/job/result/{jobId}", {
-                params: {
-                    path: { jobId },
-                    query: { variantId }
-                }
-            })
-        );
-    }
-
-    /**
-     * Hàm tiện ích tích hợp vòng lặp polling tự động (Giống Trend Service)
+     * Lấy tóm tắt review mới nhất trực tiếp (Thay thế polling job cũ)
      */
     async fetchReviewSummaryWithPolling(variantId: string): Promise<string> {
         try {
-            // 1. Tạo Job
-            const jobResponse = await this.createReviewSummaryJob(variantId);
-            if (!jobResponse.data || !jobResponse.data.jobId) {
-                throw new Error("Không thể khởi tạo job tóm tắt đánh giá.");
-            }
-
-            const jobId = jobResponse.data.jobId;
-
-            // 2. Polling kết quả
-            let retries = 0;
-            const maxRetries = 1; // Thử 20 lần x 3s = 60s
-
-            while (retries < maxRetries) {
-                // await new Promise(resolve => setTimeout(resolve, 3000)); // Đợi 3s mỗi mốc
-
-                const resultResponse = await this.getReviewSummaryJobResult(jobId, variantId);
-                const jobInfo = resultResponse.data;
-
-                if (jobInfo?.status === "completed") {
-                    return jobInfo.data || "Không có nội dung đánh giá.";
-                } else if (jobInfo?.status === "failed" || jobInfo?.status === "error") {
-                    throw new Error("Quá trình tóm tắt bị lỗi tại máy chủ.");
-                }
-
-                // Nếu pending hoặc processing thì lặp lại
-                retries++;
-            }
-
-            throw new Error("Hiện tại chưa có review bằng AI, bạn có thể chờ hoặc thử lại sau!");
-
+            const response = await this.getLatestReviewLogByVariant(variantId);
+            return response.payload?.reviewLog || response.data?.reviewLog || "Không có nội dung đánh giá.";
         } catch (error: any) {
             console.error("Lỗi fetchReviewSummaryWithPolling:", error);
+            // Nếu là lỗi 404 hoặc không tìm thấy, trả về thông báo thân thiện thay vì ném lỗi
+            if (error.message?.includes("404") || error.message?.includes("không tìm thấy")) {
+                return "Hiện tại chưa có đánh giá nào cho phiên bản này.";
+            }
             throw new Error(error.message || "Lỗi tải tóm tắt đánh giá.");
         }
     }
@@ -129,6 +79,14 @@ class ReviewService {
         return this.handleResponse(
             await aiApiInstance.GET("/reviews/logs/{id}", {
                 params: { path: { id } }
+            })
+        );
+    }
+
+    async getLatestReviewLogByVariant(variantId: string): Promise<ReviewLogResponse> {
+        return this.handleResponse(
+            await aiApiInstance.GET("/reviews/logs/latest/variant/{variantId}", {
+                params: { path: { variantId } }
             })
         );
     }

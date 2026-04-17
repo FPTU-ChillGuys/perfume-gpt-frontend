@@ -15,7 +15,8 @@ export interface BaseEntity {
  */
 export interface ApiResponse<T = unknown> {
     success: boolean;
-    data: T;
+    data?: T;
+    payload?: T;
     __httpStatusCode?: number;
 }
 
