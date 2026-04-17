@@ -23,7 +23,6 @@ import {
   voucherService,
   type UserVoucherResponse,
   type RedeemableVoucherResponse,
-  type AvailableVoucherResponse,
 } from "@/services/voucherService";
 import { useToast } from "@/hooks/useToast";
 
@@ -153,10 +152,7 @@ const RedeemableCard = ({
   balance,
 }: RedeemableCardProps) => {
   const required = voucher.requiredPoints ?? 0;
-  const canRedeem =
-    balance >= required &&
-    (voucher.remainingQuantity ?? 1) > 0 &&
-    !voucher.isExpired;
+  const canRedeem = balance >= required && !voucher.isExpired;
 
   return (
     <Paper
@@ -209,11 +205,9 @@ const RedeemableCard = ({
               color="error"
               variant="outlined"
             />
-          ) : (voucher.remainingQuantity ?? 1) <= 0 ? (
-            <Chip label="Hết voucher" size="small" color="default" />
           ) : (
             <Chip
-              label={`Còn ${voucher.remainingQuantity ?? "∞"}`}
+              label={`Tối đa ${voucher.maxUsagePerUser ?? "∞"} lần/người`}
               size="small"
               color="info"
               variant="outlined"
@@ -286,141 +280,12 @@ const RedeemableCard = ({
   );
 };
 
-const formatAvailableDiscount = (item: AvailableVoucherResponse) => {
-  const val = Number(item.discountValue ?? 0);
-  if (item.discountType === "Percentage") return `${val}%`;
-  return `${val.toLocaleString("vi-VN")}đ`;
-};
-
-interface AvailableCardProps {
-  voucher: AvailableVoucherResponse;
-  onRedeem: (id: string) => void;
-  redeeming: boolean;
-}
-
-const AvailableCard = ({
-  voucher,
-  onRedeem,
-  redeeming,
-}: AvailableCardProps) => {
-  const hasStock = (voucher.remainingQuantity ?? 1) > 0;
-
-  return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 2,
-        borderRadius: 2,
-        borderColor: hasStock ? "primary.main" : "divider",
-        borderWidth: hasStock ? 1.5 : 1,
-        position: "relative",
-        overflow: "hidden",
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: 6,
-          height: "100%",
-          bgcolor: hasStock ? "primary.main" : "grey.400",
-          borderRadius: "4px 0 0 4px",
-        },
-      }}
-    >
-      <Box sx={{ pl: 1 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            mb: 1,
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <LocalOffer
-              fontSize="small"
-              color={hasStock ? "primary" : "disabled"}
-            />
-            <Typography
-              variant="subtitle2"
-              fontWeight={700}
-              fontFamily="monospace"
-            >
-              {voucher.code}
-            </Typography>
-          </Box>
-          {!hasStock ? (
-            <Chip label="Hết voucher" size="small" color="default" />
-          ) : (
-            <Chip label="Miễn phí" size="small" color="success" />
-          )}
-        </Box>
-
-        <Typography
-          variant="h6"
-          fontWeight={700}
-          color={hasStock ? "primary.main" : "text.disabled"}
-        >
-          Giảm {formatAvailableDiscount(voucher)}
-        </Typography>
-
-        {voucher.maxDiscountAmount != null &&
-          voucher.discountType === "Percentage" && (
-            <Typography variant="caption" color="text.secondary">
-              Tối đa:{" "}
-              {Number(voucher.maxDiscountAmount).toLocaleString("vi-VN")}đ
-            </Typography>
-          )}
-
-        <Typography variant="caption" color="text.secondary" display="block">
-          Đơn tối thiểu:{" "}
-          {voucher.minOrderValue
-            ? `${Number(voucher.minOrderValue).toLocaleString("vi-VN")}đ`
-            : "Không giới hạn"}
-        </Typography>
-
-        <Divider sx={{ my: 1 }} />
-
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="caption" color="text.secondary">
-            HSD: {formatDate(voucher.expiryDate)}
-          </Typography>
-          <Button
-            size="small"
-            variant="contained"
-            startIcon={
-              redeeming ? (
-                <CircularProgress size={14} color="inherit" />
-              ) : (
-                <Redeem />
-              )
-            }
-            disabled={!hasStock || redeeming}
-            onClick={() => voucher.id && onRedeem(voucher.id)}
-          >
-            Nhận ngay
-          </Button>
-        </Box>
-      </Box>
-    </Paper>
-  );
-};
-
 export const VoucherSection = () => {
   const { showToast } = useToast();
   const [tab, setTab] = useState(0);
   const [myVouchers, setMyVouchers] = useState<UserVoucherResponse[]>([]);
   const [redeemableVouchers, setRedeemableVouchers] = useState<
     RedeemableVoucherResponse[]
-  >([]);
-  const [availableVouchers, setAvailableVouchers] = useState<
-    AvailableVoucherResponse[]
   >([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -444,14 +309,12 @@ export const VoucherSection = () => {
     setLoading(true);
     setError("");
     try {
-      const [redeemData, availData] = await Promise.all([
-        voucherService.getRedeemableList(),
-        voucherService.getAvailable({ PageSize: 50 }),
-      ]);
-      setRedeemableVouchers(redeemData);
-      // Filter out available vouchers that are already in redeemable list
-      const redeemIds = new Set(redeemData.map((v) => v.id));
-      setAvailableVouchers(availData.items.filter((v) => !redeemIds.has(v.id)));
+      const redeemData = await voucherService.getRedeemableList();
+      // Chỉ hiển thị voucher phải đổi điểm (không miễn phí)
+      const paidVouchers = redeemData.filter(
+        (v) => (v.requiredPoints ?? 0) > 0,
+      );
+      setRedeemableVouchers(paidVouchers);
     } catch (err: any) {
       setError(err.message || "Không thể tải danh sách voucher khả dụng");
     } finally {
@@ -595,31 +458,7 @@ export const VoucherSection = () => {
         </>
       ) : (
         <>
-          {availableVouchers.length > 0 && (
-            <Box mb={3}>
-              <Typography
-                variant="subtitle2"
-                color="primary.main"
-                fontWeight={600}
-                mb={1.5}
-              >
-                Voucher miễn phí ({availableVouchers.length})
-              </Typography>
-              <Grid container spacing={2}>
-                {availableVouchers.map((v) => (
-                  <Grid size={{ xs: 12, sm: 6 }} key={v.id}>
-                    <AvailableCard
-                      voucher={v}
-                      onRedeem={handleRedeem}
-                      redeeming={redeemingId === v.id}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-            </Box>
-          )}
-
-          {redeemableVouchers.length > 0 && (
+          {redeemableVouchers.length > 0 ? (
             <Box mb={3}>
               <Typography
                 variant="subtitle2"
@@ -627,7 +466,7 @@ export const VoucherSection = () => {
                 fontWeight={600}
                 mb={1.5}
               >
-                Đổi điểm ({redeemableVouchers.length})
+                Đổi điểm lấy voucher ({redeemableVouchers.length})
               </Typography>
               <Grid container spacing={2}>
                 {redeemableVouchers.map((v) => (
@@ -642,17 +481,14 @@ export const VoucherSection = () => {
                 ))}
               </Grid>
             </Box>
+          ) : (
+            <Box py={6} textAlign="center">
+              <Redeem sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
+              <Typography color="text.secondary">
+                Chưa có voucher nào để đổi.
+              </Typography>
+            </Box>
           )}
-
-          {availableVouchers.length === 0 &&
-            redeemableVouchers.length === 0 && (
-              <Box py={6} textAlign="center">
-                <Redeem sx={{ fontSize: 48, color: "text.disabled", mb: 1 }} />
-                <Typography color="text.secondary">
-                  Chưa có voucher nào để đổi.
-                </Typography>
-              </Box>
-            )}
         </>
       )}
     </Box>

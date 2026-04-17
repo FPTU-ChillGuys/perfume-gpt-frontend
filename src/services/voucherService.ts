@@ -11,6 +11,10 @@ type VoucherListResponse =
 export type UserVoucherResponse = components["schemas"]["UserVoucherResponse"];
 export type RedeemableVoucherResponse =
   components["schemas"]["RedeemableVoucherResponse"];
+export type ApplicableVoucherResponse =
+  components["schemas"]["ApplicableVoucherResponse"];
+export type ApplicableVoucherCartItemRequest =
+  components["schemas"]["ApplicableVoucherCartItemRequest"];
 
 export interface CreateVoucherRequest {
   code: string;
@@ -223,6 +227,33 @@ class VoucherService {
     if (Array.isArray(payload)) return payload;
     if (payload?.items && Array.isArray(payload.items)) return payload.items;
     return [];
+  }
+
+  async getApplicableVouchers(
+    cartItems: ApplicableVoucherCartItemRequest[],
+  ): Promise<ApplicableVoucherResponse[]> {
+    try {
+      const response = await apiInstance.POST("/api/vouchers/applicable", {
+        body: {
+          cartItems,
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to fetch applicable vouchers",
+        );
+      }
+
+      return response.data.payload || [];
+    } catch (error: any) {
+      console.error("Error fetching applicable vouchers:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch applicable vouchers",
+      );
+    }
   }
 
   async getAvailable(params?: {

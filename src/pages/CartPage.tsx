@@ -40,7 +40,9 @@ import { useCart } from "@/hooks/useCart";
 import {
   voucherService,
   type AvailableVoucherResponse,
+  type ApplicableVoucherCartItemRequest,
 } from "@/services/voucherService";
+import { VoucherPickerDialog } from "@/components/common/VoucherPickerDialog";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -219,7 +221,7 @@ export const CartPage = () => {
     if (savedVoucher && savedVoucher === voucherCode && items.length > 0) {
       // Auto apply voucher from session
       setTimeout(() => {
-        void applyVoucher();
+        void applyVoucher(voucherCode);
       }, 500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -232,8 +234,18 @@ export const CartPage = () => {
     void loadTotals(selectedCartItemIds);
   }, [hasInitializedSelection, loadTotals, selectedCartItemIds]);
 
-  const applyVoucher = async () => {
-    const normalizedVoucher = voucherCode.trim();
+  const getCartItemsForVoucher = (): ApplicableVoucherCartItemRequest[] => {
+    return items
+      .filter((item) => selectedCartItemIds.includes(item.cartItemId!))
+      .map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        price: item.variantPrice,
+      }));
+  };
+
+  const applyVoucher = async (code: string) => {
+    const normalizedVoucher = code.trim();
 
     if (!normalizedVoucher) {
       return;
@@ -265,7 +277,7 @@ export const CartPage = () => {
         voucherCode: normalizedVoucher,
         discountAmount: updatedTotals?.discount ?? 0,
         finalAmount: updatedTotals?.totalPrice ?? 0,
-        message: updatedTotals?.responseMessage || "Đã áp dụng mã giảm giá",
+        message: "", // No message to avoid display
       });
       setVoucherCode(normalizedVoucher);
       // Save to sessionStorage for sync with checkout
@@ -731,12 +743,6 @@ export const CartPage = () => {
                   Tóm tắt đơn hàng
                 </Typography>
 
-                {totalsWarningMessage && (
-                  <Alert severity="info" sx={{ mb: 2 }}>
-                    {totalsWarningMessage}
-                  </Alert>
-                )}
-
                 {/* Voucher */}
                 <Box mb={2}>
                   <Box display="flex" gap={1} alignItems="stretch">
@@ -756,7 +762,7 @@ export const CartPage = () => {
                       <Button
                         variant="contained"
                         size="small"
-                        onClick={applyVoucher}
+                        onClick={() => applyVoucher(voucherCode)}
                         disabled={isApplyingVoucher || !voucherCode.trim()}
                         sx={{
                           minWidth: 110,
@@ -939,100 +945,13 @@ export const CartPage = () => {
       />
 
       {/* Voucher picker dialog */}
-      <Dialog
+      <VoucherPickerDialog
         open={voucherPickerOpen}
         onClose={() => setVoucherPickerOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          Chọn voucher
-          <IconButton onClick={() => setVoucherPickerOpen(false)} size="small">
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {loadingMyVouchers ? (
-            <Box display="flex" justifyContent="center" py={4}>
-              <CircularProgress />
-            </Box>
-          ) : myVoucherList.length === 0 ? (
-            <Typography color="text.secondary" textAlign="center" py={4}>
-              Bạn chưa có voucher nào.
-            </Typography>
-          ) : (
-            <Stack spacing={1.5}>
-              {myVoucherList.map((v) => (
-                <Paper
-                  key={v.id}
-                  variant="outlined"
-                  sx={{
-                    p: 2,
-                    cursor: "pointer",
-                    "&:hover": { bgcolor: "action.hover" },
-                  }}
-                  onClick={async () => {
-                    const code = v.code ?? "";
-                    if (!code) return;
-                    setVoucherPickerOpen(false);
-                    setVoucherCode(code);
-                    setIsApplyingVoucher(true);
-                    setVoucherError(null);
-                    try {
-                      const updatedTotals = await loadTotals(
-                        selectedCartItemIds,
-                        code,
-                      );
-                      if (!updatedTotals) {
-                        setAppliedVoucher(null);
-                        setVoucherError("Không thể áp dụng voucher này.");
-                        return;
-                      }
-                      setAppliedVoucher({
-                        voucherCode: code,
-                        discountAmount: updatedTotals.discount ?? 0,
-                        finalAmount: updatedTotals.totalPrice ?? 0,
-                        message: "Đã áp dụng mã giảm giá",
-                      });
-                      sessionStorage.setItem("appliedVoucherCode", code);
-                    } catch {
-                      setVoucherError("Không thể áp dụng voucher này.");
-                      setAppliedVoucher(null);
-                      sessionStorage.removeItem("appliedVoucherCode");
-                    } finally {
-                      setIsApplyingVoucher(false);
-                    }
-                  }}
-                >
-                  <Typography fontWeight={600}>
-                    <LocalOffer
-                      fontSize="small"
-                      sx={{ mr: 0.5, verticalAlign: "middle" }}
-                    />
-                    {v.code}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {v.discountType === "Percentage"
-                      ? `Giảm ${v.discountValue}%`
-                      : `Giảm ${formatCurrency(v.discountValue)}`}
-                  </Typography>
-                  {v.minOrderValue ? (
-                    <Typography variant="caption" color="text.secondary">
-                      Đơn tối thiểu: {formatCurrency(v.minOrderValue)}
-                    </Typography>
-                  ) : null}
-                </Paper>
-              ))}
-            </Stack>
-          )}
-        </DialogContent>
-      </Dialog>
+        onApplyVoucher={applyVoucher}
+        cartItems={getCartItemsForVoucher()}
+        isApplying={isApplyingVoucher}
+      />
     </MainLayout>
   );
 };

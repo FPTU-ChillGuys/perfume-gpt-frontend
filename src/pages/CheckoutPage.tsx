@@ -45,7 +45,9 @@ import { useAuth } from "@/hooks/useAuth";
 import {
   voucherService,
   type AvailableVoucherResponse,
+  type ApplicableVoucherCartItemRequest,
 } from "@/services/voucherService";
+import { VoucherPickerDialog } from "@/components/common/VoucherPickerDialog";
 import type {
   AddressResponse,
   ProvinceResponse,
@@ -514,8 +516,18 @@ export const CheckoutPage = () => {
     }
   };
 
-  const applyVoucher = async () => {
-    const normalizedVoucher = voucherCode.trim();
+  const getCartItemsForVoucher = (): ApplicableVoucherCartItemRequest[] => {
+    return items
+      .filter((item) => selectedCartItemIds.includes(item.cartItemId!))
+      .map((item) => ({
+        variantId: item.variantId,
+        quantity: item.quantity,
+        price: item.variantPrice,
+      }));
+  };
+
+  const applyVoucher = async (code?: string) => {
+    const normalizedVoucher = (code || voucherCode).trim();
 
     if (!normalizedVoucher) {
       return;
@@ -544,7 +556,7 @@ export const CheckoutPage = () => {
         voucherCode: normalizedVoucher,
         discountAmount: updatedTotals?.discount ?? 0,
         finalAmount: updatedTotals?.totalPrice ?? 0,
-        message: updatedTotals?.responseMessage || "Đã áp dụng mã giảm giá",
+        message: "", // No message to avoid display
       });
       setVoucherCode(normalizedVoucher);
       // Save to sessionStorage for sync with cart
@@ -1094,12 +1106,6 @@ export const CheckoutPage = () => {
                 Đơn hàng
               </Typography>
 
-              {totalsWarningMessage && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  {totalsWarningMessage}
-                </Alert>
-              )}
-
               {/* Items */}
               <Box mb={2}>
                 {items.map((item) => {
@@ -1212,7 +1218,7 @@ export const CheckoutPage = () => {
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={applyVoucher}
+                      onClick={() => applyVoucher()}
                       disabled={isApplyingVoucher || !voucherCode.trim()}
                       sx={{
                         minWidth: 110,
@@ -1286,15 +1292,6 @@ export const CheckoutPage = () => {
                           </Typography>
                         )}
                       </Box>
-                      {appliedVoucher.message && (
-                        <Typography
-                          variant="caption"
-                          color="success.main"
-                          sx={{ opacity: 0.8 }}
-                        >
-                          {appliedVoucher.message}
-                        </Typography>
-                      )}
                     </Box>
                     <Button
                       size="small"
@@ -1360,137 +1357,13 @@ export const CheckoutPage = () => {
       </Container>
 
       {/* Voucher Picker Dialog */}
-      <Dialog
+      <VoucherPickerDialog
         open={voucherPickerOpen}
         onClose={() => setVoucherPickerOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Box display="flex" alignItems="center" gap={1}>
-            <LocalOffer color="primary" />
-            Chọn voucher
-          </Box>
-          <IconButton size="small" onClick={() => setVoucherPickerOpen(false)}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
-          {loadingMyVouchers ? (
-            <Box display="flex" justifyContent="center" py={4}>
-              <CircularProgress />
-            </Box>
-          ) : myVoucherList.length === 0 ? (
-            <Box py={4} textAlign="center">
-              <Typography color="text.secondary">
-                Bạn chưa có voucher nào khả dụng.
-              </Typography>
-            </Box>
-          ) : (
-            <Stack spacing={1.5}>
-              {myVoucherList.map((v) => {
-                const discountLabel =
-                  v.discountType === "Percentage"
-                    ? `${v.discountValue}%`
-                    : formatCurrency(v.discountValue);
-                return (
-                  <Paper
-                    key={v.id}
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      cursor: "pointer",
-                      borderColor: "primary.main",
-                      borderWidth: 1,
-                      borderRadius: 2,
-                      transition: "all 0.15s",
-                      "&:hover": {
-                        bgcolor: "primary.50",
-                        borderWidth: 2,
-                        boxShadow: 1,
-                      },
-                    }}
-                    onClick={async () => {
-                      setVoucherPickerOpen(false);
-                      const code = v.code.trim().toUpperCase();
-                      setVoucherCode(code);
-                      setVoucherError(null);
-                      setIsApplyingVoucher(true);
-                      try {
-                        const updatedTotals =
-                          await updateTotalsWithAddress(code);
-                        if (!updatedTotals) {
-                          setVoucherError(
-                            "Voucher không hợp lệ cho đơn hàng này",
-                          );
-                          return;
-                        }
-                        setAppliedVoucher({
-                          voucherCode: code,
-                          discountAmount: updatedTotals.discount ?? 0,
-                          finalAmount: updatedTotals.totalPrice ?? 0,
-                          message:
-                            updatedTotals.responseMessage ||
-                            "Áp dụng voucher thành công",
-                        });
-                        sessionStorage.setItem("appliedVoucherCode", code);
-                      } catch (err: any) {
-                        setVoucherError(
-                          err?.message ||
-                            "Voucher không hợp lệ cho đơn hàng này",
-                        );
-                      } finally {
-                        setIsApplyingVoucher(false);
-                      }
-                    }}
-                  >
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      alignItems="center"
-                    >
-                      <Box>
-                        <Typography
-                          variant="subtitle2"
-                          fontWeight={700}
-                          fontFamily="monospace"
-                        >
-                          {v.code}
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          color="primary.main"
-                          fontWeight={600}
-                        >
-                          Giảm {discountLabel}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {v.minOrderValue
-                            ? `Đơn tối thiểu: ${formatCurrency(v.minOrderValue)}`
-                            : "Không giới hạn đơn tối thiểu"}
-                          {" · "}HSD:{" "}
-                          {v.expiryDate
-                            ? new Date(v.expiryDate).toLocaleDateString("vi-VN")
-                            : "—"}
-                        </Typography>
-                      </Box>
-                      <Button variant="text" size="small" color="primary">
-                        Dùng
-                      </Button>
-                    </Box>
-                  </Paper>
-                );
-              })}
-            </Stack>
-          )}
-        </DialogContent>
-      </Dialog>
+        onApplyVoucher={applyVoucher}
+        cartItems={getCartItemsForVoucher()}
+        isApplying={isApplyingVoucher}
+      />
     </MainLayout>
   );
 };
