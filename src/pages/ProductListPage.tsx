@@ -493,6 +493,7 @@ export const ProductListPage = () => {
             sourceItems.map((product) => ({
               ...mapProductToCard(product),
               isNew: source === "new-arrivals",
+              isTrending: source === "trending",
             })),
           );
           setTotalCount(sourceItems.length);
@@ -579,6 +580,7 @@ export const ProductListPage = () => {
             sourceItems.map((product) => ({
               ...mapProductToCard(product, variantRecord[product.id]),
               isNew: source === "new-arrivals",
+              isTrending: source === "trending",
             })),
           );
           return;
