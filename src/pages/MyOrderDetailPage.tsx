@@ -72,6 +72,7 @@ import { productService } from "@/services/productService";
 import { userService } from "@/services/userService";
 import { addressService } from "@/services/addressService";
 import { useToast } from "@/hooks/useToast";
+import ReviewDialog from "@/components/review/ReviewDialog";
 import type { UserCredentials } from "@/services/userService";
 import type { PaymentMethod } from "@/types/checkout";
 import type { OrderResponse, CarrierName, OrderStatus } from "@/types/order";
@@ -1055,10 +1056,17 @@ export const MyOrderDetailPage = () => {
     existing?: ReviewResponse | null,
   ) => {
     if (!orderDetailId || !variantId) return;
+
     if (existing) {
-      return;
+      // Edit existing review
+      setReviewDialogMode("edit");
+      setSelectedReview(existing);
+    } else {
+      // Create new review
+      setReviewDialogMode("create");
+      setSelectedReview(null);
     }
-    setReviewDialogMode("create");
+
     setReviewDialogTarget({
       orderDetailId,
       variantId,
@@ -1066,7 +1074,7 @@ export const MyOrderDetailPage = () => {
       productName: variantName,
       thumbnailUrl: imageUrl ?? null,
     });
-    setSelectedReview(null);
+
     setIsReviewDialogOpen(true);
   };
 
@@ -1958,6 +1966,32 @@ export const MyOrderDetailPage = () => {
       );
     } finally {
       setIsSubmittingReturnRequest(false);
+    }
+  };
+
+  const handleReviewDialogClose = () => {
+    setIsReviewDialogOpen(false);
+    setReviewDialogTarget(null);
+    setSelectedReview(null);
+  };
+
+  const handleReviewSuccess = async () => {
+    // Refresh reviews after successful review creation
+    if (!orderId) return;
+
+    try {
+      const [orderResponse, reviewsResponse] = await Promise.all([
+        orderService.getMyOrderById(orderId),
+        productReviewService.getMyReviews(),
+      ]);
+
+      if (orderResponse) {
+        setOrder(orderResponse);
+      }
+
+      setMyReviews(reviewsResponse || []);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
     }
   };
 
@@ -3144,7 +3178,12 @@ export const MyOrderDetailPage = () => {
               <Typography variant="subtitle2" fontWeight={700} mb={0.5}>
                 4. Mô tả thêm và bằng chứng (ảnh/video)
               </Typography>
-              <Typography variant="caption" color="text.secondary" mb={1} display="block">
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                mb={1}
+                display="block"
+              >
                 Vui lòng tải lên ít nhất 1 ảnh hoặc 1 video làm bằng chứng
               </Typography>
               <Stack spacing={1.25}>
@@ -3588,6 +3627,16 @@ export const MyOrderDetailPage = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Review Dialog */}
+      <ReviewDialog
+        open={isReviewDialogOpen}
+        mode={reviewDialogMode}
+        target={reviewDialogTarget}
+        existingReview={selectedReview}
+        onClose={handleReviewDialogClose}
+        onSuccess={handleReviewSuccess}
+      />
     </MainLayout>
   );
 };
