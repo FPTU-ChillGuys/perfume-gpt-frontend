@@ -14,7 +14,7 @@ import {
     Alert,
     Tooltip,
 } from "@mui/material";
-import { 
+import {
     AutoAwesome as AutoAwesomeIcon,
     Fullscreen as FullscreenIcon,
     FullscreenExit as FullscreenExitIcon,
@@ -90,8 +90,8 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
         let jobId: string;
         try {
             const res = await inventoryService.createInventoryReportJob(forceRefresh);
-            jobId = res.data.jobId;
-            restart(new Date(res.data.expirationTime), true);
+            jobId = res.data!.jobId;
+            restart(new Date(res.data!.expirationTime), true);
         } catch (err: any) {
             setPhase("error");
             setErrorMsg(err?.message ?? "Không thể khởi tạo job.");
@@ -192,8 +192,8 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
                 </Box>
             </DialogTitle>
             <Divider />
-            <DialogContent sx={{ 
-                minHeight: isFullscreen ? "calc(100vh - 200px)" : 200, 
+            <DialogContent sx={{
+                minHeight: isFullscreen ? "calc(100vh - 200px)" : 200,
                 pt: 3,
                 display: "flex",
                 flexDirection: "column",
@@ -329,8 +329,8 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
                         <Button variant="contained" onClick={handleForceRefresh} color="warning">
                             Force Refresh
                         </Button>
-                        <Button 
-                            onClick={() => { onSuccess?.(); handleDialogClose(); }} 
+                        <Button
+                            onClick={() => { onSuccess?.(); handleDialogClose(); }}
                             variant="contained"
                             color="success"
                         >
