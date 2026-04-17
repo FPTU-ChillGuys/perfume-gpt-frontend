@@ -3,13 +3,14 @@ import type { components } from "@/types/api/v1";
 import type { ApplyVoucherRequest, ApplyVoucherResponse } from "@/types/cart";
 
 export type VoucherResponse = components["schemas"]["VoucherResponse"];
-export type AvailableVoucherResponse = components["schemas"]["AvailableVoucherResponse"];
+export type AvailableVoucherResponse =
+  components["schemas"]["AvailableVoucherResponse"];
 type VoucherListResponse =
   components["schemas"]["PagedResultOfVoucherResponse"];
 
-
 export type UserVoucherResponse = components["schemas"]["UserVoucherResponse"];
-export type RedeemableVoucherResponse = components["schemas"]["RedeemableVoucherResponse"];
+export type RedeemableVoucherResponse =
+  components["schemas"]["RedeemableVoucherResponse"];
 
 export interface CreateVoucherRequest {
   code: string;
@@ -132,7 +133,10 @@ class VoucherService {
     if (!response.data?.success) {
       throw new Error(response.data?.message || "Failed to load vouchers");
     }
-    const payload = response.data.payload as VoucherListResponse | null | undefined;
+    const payload = response.data.payload as
+      | VoucherListResponse
+      | null
+      | undefined;
     return {
       items: payload?.items ?? [],
       totalCount: payload?.totalCount ?? 0,
@@ -154,9 +158,12 @@ class VoucherService {
   }
 
   async create(body: CreateVoucherRequest): Promise<VoucherResponse> {
-    const response = await apiInstance.POST(this.BASE_ENDPOINT as any, {
-      body,
-    } as any);
+    const response = await apiInstance.POST(
+      this.BASE_ENDPOINT as any,
+      {
+        body,
+      } as any,
+    );
     if (!response.data?.success) {
       throw new Error(response.data?.message || "Failed to create voucher");
     }
@@ -195,7 +202,7 @@ class VoucherService {
     PageNumber?: number;
     PageSize?: number;
   }): Promise<UserVoucherResponse[]> {
-    const response = await apiInstance.GET("/api/vouchers/me", {
+    const response = await apiInstance.GET("/api/user-vouchers/me", {
       params: { query: params },
     } as any);
     if (!response.data?.success) {
@@ -206,9 +213,11 @@ class VoucherService {
   }
 
   async getRedeemableList(): Promise<RedeemableVoucherResponse[]> {
-    const response = await apiInstance.GET("/api/vouchers/redeemable-list");
+    const response = await apiInstance.GET("/api/vouchers/redeemable");
     if (!response.data?.success) {
-      throw new Error(response.data?.message || "Failed to load redeemable vouchers");
+      throw new Error(
+        response.data?.message || "Failed to load redeemable vouchers",
+      );
     }
     const payload = response.data.payload as any;
     if (Array.isArray(payload)) return payload;
@@ -246,4 +255,3 @@ class VoucherService {
 }
 
 export const voucherService = new VoucherService();
-

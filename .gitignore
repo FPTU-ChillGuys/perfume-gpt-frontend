@@ -39,3 +39,6 @@ tsc_output.txt
 temp_logs.json
 
 filetemp 
+
+
+vercel.json

@@ -13091,7 +13091,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/vouchers/redeemable-list": {
+    "/api/vouchers/redeemable": {
         parameters: {
             query?: never;
             header?: never;
@@ -13275,7 +13275,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/vouchers/me": {
+    "/api/user-vouchers/me": {
         parameters: {
             query?: never;
             header?: never;
@@ -13334,6 +13334,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vouchers/applicable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["GetApplicableVouchersRequest"];
+                    "text/json": components["schemas"]["GetApplicableVouchersRequest"];
+                    "application/*+json": components["schemas"]["GetApplicableVouchersRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -13364,6 +13418,24 @@ export interface components {
         };
         AnswerReviewRequest: {
             staffFeedbackComment: string;
+        };
+        ApplicableVoucherCartItemRequest: {
+            /** Format: uuid */
+            variantId?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: decimal */
+            price?: number;
+        };
+        ApplicableVoucherResponse: {
+            /** Format: uuid */
+            voucherId?: string;
+            code: string;
+            /** Format: decimal */
+            discountValue?: number;
+            discountType?: components["schemas"]["DiscountType"];
+            isApplicable?: boolean;
+            ineligibleReason?: null | string;
         };
         AttributeLookupItem: {
             /** Format: int32 */
@@ -13594,6 +13666,13 @@ export interface components {
         };
         BaseResponseOfListOfAddressResponse: {
             payload?: null | components["schemas"]["AddressResponse"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfListOfApplicableVoucherResponse: {
+            payload?: null | components["schemas"]["ApplicableVoucherResponse"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -14770,6 +14849,11 @@ export interface components {
         };
         /** @enum {string} */
         Gender: "Male" | "Female" | "Unisex";
+        GetApplicableVouchersRequest: {
+            /** Format: uuid */
+            customerId?: null | string;
+            cartItems: components["schemas"]["ApplicableVoucherCartItemRequest"][];
+        };
         GetCartItemResponse: {
             /** Format: uuid */
             cartItemId?: string;
