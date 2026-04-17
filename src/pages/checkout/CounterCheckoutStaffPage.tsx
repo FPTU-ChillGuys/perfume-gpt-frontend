@@ -2301,9 +2301,9 @@ export const CounterCheckoutStaffPage = () => {
   return (
     <MainLayout>
       <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 4 } }}>
-        <Typography variant="h4" fontWeight={800} mb={3}>
+        {/* <Typography variant="h4" fontWeight={800} mb={3}>
           Tính tiền tại quầy (POS)
-        </Typography>
+        </Typography> */}
         <Tabs
           value={activeTab}
           onChange={(_, v: number) => setActiveTab(v)}

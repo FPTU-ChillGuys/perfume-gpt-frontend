@@ -221,6 +221,7 @@ export const LoginPage = () => {
                 disabled={isLoading}
                 error={!!emailError}
                 helperText={emailError}
+                autoComplete="username"
               />
             </Box>
 
@@ -264,6 +265,7 @@ export const LoginPage = () => {
                 disabled={isLoading}
                 error={!!passwordError}
                 helperText={passwordError}
+                autoComplete="current-password"
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
