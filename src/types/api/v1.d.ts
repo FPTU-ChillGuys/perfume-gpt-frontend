@@ -4694,8 +4694,6 @@ export interface paths {
                 content: {
                     "application/x-www-form-urlencoded": {
                         ExcelFile?: components["schemas"]["IFormFile"];
-                        /** Format: int32 */
-                        SupplierId?: number;
                         /** Format: date-time */
                         ExpectedArrivalDate?: string;
                     };
@@ -4754,7 +4752,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/importtickets/excel-template": {
+    "/api/importtickets/excel-template/{supplierId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4765,7 +4763,9 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    supplierId: number;
+                };
                 cookie?: never;
             };
             requestBody?: never;
@@ -16343,6 +16343,8 @@ export interface components {
             variantSku: string;
             productName: string;
             variantImageUrl: string;
+            replenishmentPolicy: components["schemas"]["ReplenishmentPolicy"];
+            variantStatus: components["schemas"]["VariantStatus"];
             /** Format: int32 */
             volumeMl?: number;
             concentrationName: string;

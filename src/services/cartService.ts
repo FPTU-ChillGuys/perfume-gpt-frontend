@@ -14,6 +14,7 @@ const DEFAULT_TOTALS: CartTotals = {
   shippingFee: 0,
   discount: 0,
   totalPrice: 0,
+  responseMessage: undefined,
 };
 
 const PROMOTION_WARNING_REGEX =
@@ -111,6 +112,13 @@ class CartService {
         params: query ? { query } : undefined,
       });
 
+      // OpenAPI-fetch: Check for HTTP errors (400, 500, etc.)
+      if (response.error) {
+        // Extract message from error response (for 400 Bad Request, etc.)
+        const errorMessage = (response.error as any)?.message || "Failed to fetch cart totals";
+        throw new Error(errorMessage);
+      }
+
       const payload = response.data?.payload;
       const rawMessage = (response.data?.message || "").trim();
       const warningMessage = PROMOTION_WARNING_REGEX.test(rawMessage)
@@ -132,6 +140,7 @@ class CartService {
               0,
           ),
           warningMessage,
+          responseMessage: rawMessage || undefined,
         };
       }
 
@@ -144,10 +153,21 @@ class CartService {
       return DEFAULT_TOTALS;
     } catch (error: any) {
       console.error("Error fetching cart totals:", error);
+      console.error("Error response structure:", {
+        response: error.response,
+        data: error.data,
+        message: error.message,
+        fullError: error
+      });
+      // Ưu tiên message từ response 400 cho voucher errors
+      const serverMessage = 
+        error.response?.data?.message || 
+        error.data?.message || 
+        (error.response && typeof error.response === 'object' && error.response.message) ||
+        error.message;
+      
       throw new Error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch cart totals",
+        serverMessage || "Failed to fetch cart totals"
       );
     }
   }

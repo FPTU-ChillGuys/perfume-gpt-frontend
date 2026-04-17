@@ -505,6 +505,10 @@ export const CheckoutPage = () => {
     } catch (error) {
       console.error("Error updating totals with address:", error);
       setTotalsWarningMessage(null);
+      // Đối với voucher error, throw lại để preserve message từ server
+      if (voucherCodeOverride !== undefined) {
+        throw error;
+      }
       // Không hiển thị toast để tránh spam khi user đang nhập
       return null;
     }
@@ -532,9 +536,7 @@ export const CheckoutPage = () => {
 
       if (!updatedTotals) {
         setAppliedVoucher(null);
-        setVoucherError(
-          "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại.",
-        );
+        setVoucherError("Mã giảm giá không khả dụng. Vui lòng thử lại.");
         return;
       }
 
@@ -542,7 +544,7 @@ export const CheckoutPage = () => {
         voucherCode: normalizedVoucher,
         discountAmount: updatedTotals?.discount ?? 0,
         finalAmount: updatedTotals?.totalPrice ?? 0,
-        message: "Đã áp dụng mã giảm giá",
+        message: updatedTotals?.responseMessage || "Đã áp dụng mã giảm giá",
       });
       setVoucherCode(normalizedVoucher);
       // Save to sessionStorage for sync with cart
@@ -550,13 +552,7 @@ export const CheckoutPage = () => {
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : "Mã giảm giá không hợp lệ";
-      setVoucherError(
-        msg.toLowerCase().includes("not found") ||
-          msg.toLowerCase().includes("404") ||
-          msg.toLowerCase().includes("failed to apply")
-          ? "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại."
-          : msg,
-      );
+      setVoucherError(msg || "Mã giảm giá không khả dụng. Vui lòng thử lại.");
     } finally {
       setIsApplyingVoucher(false);
     }
@@ -1275,17 +1271,28 @@ export const CheckoutPage = () => {
                       justifyContent: "space-between",
                     }}
                   >
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Typography
-                        variant="body2"
-                        color="success.main"
-                        fontWeight={600}
-                      >
-                        ✓ {appliedVoucher.voucherCode}
-                      </Typography>
-                      {totals.discount > 0 && (
-                        <Typography variant="caption" color="success.main">
-                          -{formatCurrency(totals.discount)}
+                    <Box display="flex" flexDirection="column" gap={0.5}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography
+                          variant="body2"
+                          color="success.main"
+                          fontWeight={600}
+                        >
+                          ✓ {appliedVoucher.voucherCode}
+                        </Typography>
+                        {totals.discount > 0 && (
+                          <Typography variant="caption" color="success.main">
+                            -{formatCurrency(totals.discount)}
+                          </Typography>
+                        )}
+                      </Box>
+                      {appliedVoucher.message && (
+                        <Typography
+                          variant="caption"
+                          color="success.main"
+                          sx={{ opacity: 0.8 }}
+                        >
+                          {appliedVoucher.message}
                         </Typography>
                       )}
                     </Box>
@@ -1428,7 +1435,9 @@ export const CheckoutPage = () => {
                           voucherCode: code,
                           discountAmount: updatedTotals.discount ?? 0,
                           finalAmount: updatedTotals.totalPrice ?? 0,
-                          message: "Áp dụng voucher thành công",
+                          message:
+                            updatedTotals.responseMessage ||
+                            "Áp dụng voucher thành công",
                         });
                         sessionStorage.setItem("appliedVoucherCode", code);
                       } catch (err: any) {

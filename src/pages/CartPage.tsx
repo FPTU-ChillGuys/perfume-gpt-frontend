@@ -128,6 +128,10 @@ export const CartPage = () => {
       } catch (error) {
         console.error("Error loading cart totals:", error);
         setTotalsWarningMessage(null);
+        // Đối với voucher error, throw lại để preserve message từ server
+        if (voucherCodeOverride) {
+          throw error;
+        }
         return null;
       }
     },
@@ -253,9 +257,7 @@ export const CartPage = () => {
 
       if (!updatedTotals) {
         setAppliedVoucher(null);
-        setVoucherError(
-          "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại.",
-        );
+        setVoucherError("Mã giảm giá không khả dụng. Vui lòng thử lại.");
         return;
       }
 
@@ -263,7 +265,7 @@ export const CartPage = () => {
         voucherCode: normalizedVoucher,
         discountAmount: updatedTotals?.discount ?? 0,
         finalAmount: updatedTotals?.totalPrice ?? 0,
-        message: "Đã áp dụng mã giảm giá",
+        message: updatedTotals?.responseMessage || "Đã áp dụng mã giảm giá",
       });
       setVoucherCode(normalizedVoucher);
       // Save to sessionStorage for sync with checkout
@@ -271,13 +273,7 @@ export const CartPage = () => {
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : "Mã giảm giá không hợp lệ";
-      setVoucherError(
-        msg.toLowerCase().includes("not found") ||
-          msg.toLowerCase().includes("404") ||
-          msg.toLowerCase().includes("failed to apply")
-          ? "Mã giảm giá không tồn tại hoặc đã hết hạn. Vui lòng thử lại."
-          : msg,
-      );
+      setVoucherError(msg || "Mã giảm giá không khả dụng. Vui lòng thử lại.");
     } finally {
       setIsApplyingVoucher(false);
     }
