@@ -25,3 +25,20 @@ export interface ImportDetail {
   quantity: number;
   unitPrice: number;
 }
+
+// Response từ Excel upload API
+export interface ExcelUploadResponse {
+  payload: {
+    importDetails: {
+      variantId: string;
+      expectedQuantity: number;
+      unitPrice: number;
+    }[];
+    supplierId: number;
+    expectedArrivalDate: string;
+  };
+  success: boolean;
+  message: string;
+  errors: string[];
+  errorType?: string;
+}

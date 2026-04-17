@@ -22,6 +22,9 @@ interface ImportStockItem {
   variantId: string;
   quantity: number;
   price: number;
+  // Additional fields for display
+  productName?: string;
+  imageUrl?: string;
 }
 
 const getTodayIsoDate = () => new Date().toISOString().split("T")[0];
@@ -199,18 +202,58 @@ export const CreateImportStockTab: React.FC = () => {
 
     try {
       setUploadingExcel(true);
-      const excelPayload = await importStockService.uploadImportTicketsExcel(
+      const excelResult = await importStockService.uploadImportTicketsExcel(
         file,
         selectedSupplierId,
         expectedArrivalDate,
       );
 
+      // Access payload from the wrapper result
+      const excelPayload = excelResult.payload;
+      const serverSupplierId = excelResult.supplierId;
+
+      // If supplier changed, reload catalog first before mapping
+      let catalogForMapping = variants;
+      if (serverSupplierId && serverSupplierId !== selectedSupplierId) {
+        try {
+          setLoadingVariants(true);
+          catalogForMapping = await sourcingCatalogService.getCatalog(serverSupplierId);
+        } catch (err) {
+          console.error("Failed to load catalog for server supplier:", err);
+          catalogForMapping = variants; // Fallback to current catalog
+        } finally {
+          setLoadingVariants(false);
+        }
+      }
+
       const mappedItems: ImportStockItem[] = (excelPayload.importDetails || [])
-        .map((detail) => ({
-          variantId: detail.variantId || "",
-          quantity: Number(detail.expectedQuantity || 0),
-          price: Number(detail.unitPrice || 0),
-        }))
+        .map((detail) => {
+          const rawItem = {
+            variantId: detail.variantId || "",
+            quantity: Number(detail.expectedQuantity || 0),
+            price: Number(detail.unitPrice || 0),
+          };
+
+          // Find variant info from correct supplier catalog
+          // Match by productVariantId (from server) with catalog id or productVariantId
+          const variantInfo = catalogForMapping.find(
+            (variant) =>
+              variant.productVariantId === detail.variantId ||
+              variant.id === detail.variantId,
+          );
+
+          if (variantInfo) {
+            return {
+              ...rawItem,
+              variantId: variantInfo.id!, // Use catalog id for UI consistency
+              productName: variantInfo.variantName,
+              imageUrl: variantInfo.primaryImageUrl || undefined,
+              price: variantInfo.negotiatedPrice || rawItem.price,
+            };
+          }
+
+          return rawItem;
+        })
         .filter((item) => Boolean(item.variantId));
 
       if (mappedItems.length === 0) {
@@ -219,19 +262,45 @@ export const CreateImportStockTab: React.FC = () => {
           "warning",
         );
       } else {
+        const foundCount = mappedItems.filter(
+          (item) => item.productName,
+        ).length;
+        const notFoundCount = mappedItems.length - foundCount;
+
         setItems(mappedItems);
-        showToast(
-          `Đã tải ${mappedItems.length} sản phẩm từ Excel. Bạn có thể chỉnh sửa trước khi tạo đơn.`,
-          "success",
-        );
+
+        let message = `Đã tải ${mappedItems.length} sản phẩm từ Excel.`;
+        if (foundCount > 0) {
+          message += ` ${foundCount} sản phẩm đã có thông tin đầy đủ.`;
+        }
+        if (notFoundCount > 0) {
+          message += ` ${notFoundCount} sản phẩm cần chọn thủ công.`;
+        }
+
+        showToast(message, "success");
       }
 
-      if (typeof excelPayload.supplierId === "number") {
-        setSelectedSupplierId(excelPayload.supplierId);
+      // Sync supplier if server returns different supplierId
+      if (serverSupplierId && serverSupplierId !== selectedSupplierId) {
+        const supplierExists = suppliers.find((s) => s.id === serverSupplierId);
+        if (supplierExists) {
+          setSelectedSupplierId(serverSupplierId);
+          // Update variants state with reloaded catalog
+          setVariants(catalogForMapping);
+          showToast(
+            `Đã đồng bộ nhà cung cấp với file Excel: ${supplierExists.name}`,
+            "info",
+          );
+        }
       }
 
+      // Update expected arrival date if provided in Excel
       if (excelPayload.expectedArrivalDate) {
-        setExpectedArrivalDate(excelPayload.expectedArrivalDate.split("T")[0]!);
+        const dateOnly = excelPayload.expectedArrivalDate.split("T")[0]!;
+        if (dateOnly !== expectedArrivalDate) {
+          setExpectedArrivalDate(dateOnly);
+          showToast("Đã cập nhật ngày dự kiến nhận từ file Excel", "info");
+        }
       }
     } catch (err: any) {
       showToast(err.message || "Không thể nhập đơn từ Excel", "error");
@@ -242,18 +311,27 @@ export const CreateImportStockTab: React.FC = () => {
   };
 
   const handleDownloadTemplate = async () => {
+    if (!selectedSupplierId) {
+      showToast(
+        "Vui lòng chọn nhà cung cấp trước khi tải mẫu Excel",
+        "warning",
+      );
+      return;
+    }
+
     try {
       setDownloadingTemplate(true);
-      const blob = await importStockService.downloadImportTemplate();
+      const blob =
+        await importStockService.downloadImportTemplate(selectedSupplierId);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "import-ticket-template.xlsx";
+      link.download = `import-template-supplier-${selectedSupplierId}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      showToast("Đã tải mẫu Excel", "success");
+      showToast("Đã tải mẫu Excel cho nhà cung cấp đã chọn", "success");
     } catch (err: any) {
       showToast(err.message || "Không thể tải mẫu Excel", "error");
     } finally {
@@ -526,19 +604,27 @@ export const CreateImportStockTab: React.FC = () => {
                       <td className="px-4 py-4 align-middle">
                         <div className="flex items-center gap-3">
                           {(() => {
-                            const selectedVariant = variants.find(
-                              (variant) => variant.id === item.variantId,
-                            );
-                            const imageUrl = selectedVariant?.primaryImageUrl;
+                            // Prioritize mapped imageUrl from Excel upload
+                            const displayImageUrl =
+                              item.imageUrl ||
+                              variants.find(
+                                (variant) => variant.id === item.variantId,
+                              )?.primaryImageUrl;
 
-                            return imageUrl ? (
+                            const displayName =
+                              item.productName ||
+                              variants.find(
+                                (variant) => variant.id === item.variantId,
+                              )?.variantName ||
+                              variants.find(
+                                (variant) => variant.id === item.variantId,
+                              )?.variantSku ||
+                              "Variant image";
+
+                            return displayImageUrl ? (
                               <img
-                                src={imageUrl}
-                                alt={
-                                  selectedVariant?.variantName ||
-                                  selectedVariant?.variantSku ||
-                                  "Variant image"
-                                }
+                                src={displayImageUrl}
+                                alt={displayName}
                                 className="h-10 w-10 shrink-0 rounded-md border border-gray-200 object-cover"
                                 loading="lazy"
                                 decoding="async"
@@ -574,24 +660,36 @@ export const CreateImportStockTab: React.FC = () => {
                               const selectedVariant = variants.find(
                                 (v) => v.id === newVariantId,
                               );
+
+                              // Update basic variantId
                               handleItemChange(idx, "variantId", newVariantId);
+
+                              // Update mapped product info and pricing if found in catalog
                               if (selectedVariant) {
-                                handleItemChange(
-                                  idx,
-                                  "price",
-                                  selectedVariant.negotiatedPrice ?? 0,
-                                );
+                                const newItems = [...items];
+                                newItems[idx] = {
+                                  ...newItems[idx]!,
+                                  variantId: newVariantId,
+                                  productName: selectedVariant.variantName,
+                                  imageUrl:
+                                    selectedVariant.primaryImageUrl ||
+                                    undefined,
+                                  price: selectedVariant.negotiatedPrice ?? 0,
+                                };
+                                setItems(newItems);
                               }
                             }}
                             className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-900 text-sm focus:border-red-500 focus:ring-2 focus:ring-red-200 focus:outline-none transition-all"
                             disabled={loadingVariants || variants.length === 0}
                           >
                             <option value="">
-                              {loadingVariants
-                                ? "Đang tải..."
-                                : variants.length === 0
-                                  ? "Chưa có sản phẩm trong catalog"
-                                  : "Chọn sản phẩm..."}
+                              {item.productName
+                                ? `✓ ${item.productName}` // Show mapped product name if available
+                                : loadingVariants
+                                  ? "Đang tải..."
+                                  : variants.length === 0
+                                    ? "Chưa có sản phẩm trong catalog"
+                                    : "Chọn sản phẩm..."}
                             </option>
                             {variants.map((variant) => (
                               <option key={variant.id} value={variant.id}>

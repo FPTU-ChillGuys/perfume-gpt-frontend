@@ -1,6 +1,7 @@
 import { apiInstance } from "@/lib/api";
 import type {
   CreateImportTicketRequestPayload,
+  ExcelUploadResponse,
   ImportDetail,
   ImportTicketResponse,
   ImportTicketsResponse,
@@ -259,7 +260,10 @@ class ImportStockService {
     file: File,
     supplierId: number,
     expectedArrivalDate?: string,
-  ): Promise<CreateImportTicketRequestPayload> {
+  ): Promise<{
+    payload: CreateImportTicketRequestPayload;
+    supplierId: number;
+  }> {
     try {
       const formData = new FormData();
       formData.append("ExcelFile", file);
@@ -281,7 +285,11 @@ class ImportStockService {
           },
         },
       );
-
+      // Check for openapi-fetch error format
+      if (response.error) {
+        const errorMessage = (response.error as any)?.message || "Tải lên file Excel thất bại";
+        throw new Error(errorMessage);
+      }
       if (!response.data?.success) {
         throw new Error(
           response.data?.message || "Tải lên file Excel thất bại",
@@ -292,7 +300,11 @@ class ImportStockService {
         throw new Error("Không nhận được dữ liệu danh sách từ file Excel");
       }
 
-      return response.data.payload;
+      // Trả về cả payload và supplierId để đồng bộ với selectbox
+      return {
+        payload: response.data.payload,
+        supplierId: response.data.payload.supplierId || supplierId,
+      };
     } catch (error: any) {
       console.error("Tải lên file Excel thất bại:", error);
       const errorMessage =
@@ -304,12 +316,21 @@ class ImportStockService {
     }
   }
 
-  async downloadImportTemplate(): Promise<Blob> {
+  async downloadImportTemplate(supplierId?: number): Promise<Blob> {
     try {
+      if (!supplierId) {
+        throw new Error("Vui lòng chọn nhà cung cấp để tải mẫu Excel");
+      }
+
       const response = await apiInstance.GET(
-        `/api/importtickets/excel-template`,
+        `/api/importtickets/excel-template/{supplierId}`,
         {
           parseAs: "blob",
+          params: {
+            path: {
+              supplierId: supplierId,
+            },
+          },
         },
       );
 
@@ -317,7 +338,7 @@ class ImportStockService {
         throw new Error("Tải xuống mẫu Excel thất bại");
       }
 
-      return response.data;
+      return response.data as Blob;
     } catch (error: any) {
       console.error("Tải xuống mẫu Excel thất bại:", error);
       const errorMessage =
