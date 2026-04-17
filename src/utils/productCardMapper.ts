@@ -76,9 +76,11 @@ export const mapProductToCard = (
   const rawPrice = variant?.basePrice ?? minVariantPrice ?? 0;
   const price = Number(rawPrice);
   const productPrimaryImageUrl =
-    typeof product.primaryImage?.url === "string"
-      ? product.primaryImage.url
-      : undefined;
+    typeof product.primaryImage === "string"
+      ? product.primaryImage
+      : typeof (product.primaryImage as any)?.url === "string"
+        ? (product.primaryImage as any).url
+        : undefined;
 
   // Extract tags from product
   const productTags = (product as Record<string, unknown>).tags;
@@ -92,7 +94,8 @@ export const mapProductToCard = (
     maxPrice: maxVariantPrice,
     imageUrl: productPrimaryImageUrl ?? getVariantImageUrl(variant),
     variantId: variant?.id,
-    numberOfVariants: product.numberOfVariants ?? 0,
+    numberOfVariants:
+      product.numberOfVariants ?? (product as any).variants?.length ?? 0,
     tags,
   };
 };
@@ -157,13 +160,7 @@ export const normalizeTrendProducts = (
     .filter((product): product is ProductListItem & { id: string } =>
       Boolean(product.id),
     )
-    .map((product: any) => {
+    .map((product) => {
       const mapped = mapProductToCard(product);
-      const imageUrl =
-        typeof product.primaryImage === "string"
-          ? product.primaryImage
-          : mapped.imageUrl;
-      const numberOfVariants =
-        product.variants?.length ?? product.numberOfVariants ?? 0;
-      return { ...mapped, imageUrl, numberOfVariants, isTrending: true };
+      return { ...mapped, isTrending: true };
     });
