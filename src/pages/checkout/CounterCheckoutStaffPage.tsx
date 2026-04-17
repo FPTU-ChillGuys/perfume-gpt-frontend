@@ -337,7 +337,8 @@ export const CounterCheckoutStaffPage = () => {
   >(null);
   const [isBopisCashDialogOpen, setIsBopisCashDialogOpen] = useState(false);
   const [isBopisQrConfirmOpen, setIsBopisQrConfirmOpen] = useState(false);
-  const [isBopisDeliveryConfirmOpen, setIsBopisDeliveryConfirmOpen] = useState(false);
+  const [isBopisDeliveryConfirmOpen, setIsBopisDeliveryConfirmOpen] =
+    useState(false);
   const [bopisCashReceived, setBopisCashReceived] = useState("");
 
   // Cash Payment Dialog states
@@ -1879,7 +1880,7 @@ export const CounterCheckoutStaffPage = () => {
     };
 
     loadProvinces();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadDistricts = async (provinceId: number) => {
@@ -3200,7 +3201,9 @@ export const CounterCheckoutStaffPage = () => {
                       onClick={handleOpenCheckoutConfirm}
                       disabled={isSubmittingCheckout || cartItems.length === 0}
                     >
-                      {isSubmittingCheckout ? "Đang checkout..." : "Checkout"}
+                      {isSubmittingCheckout
+                        ? "Đang thanh toán..."
+                        : "Thanh toán"}
                     </Button>
                   )}
 
@@ -3567,7 +3570,7 @@ export const CounterCheckoutStaffPage = () => {
           maxWidth="sm"
           fullWidth
         >
-          <DialogTitle>Xác nhận thông tin checkout</DialogTitle>
+          <DialogTitle>Xác nhận thông tin thanh toán</DialogTitle>
           <DialogContent dividers>
             <Stack spacing={1.25}>
               <Stack direction="row" justifyContent="space-between">
@@ -3652,7 +3655,7 @@ export const CounterCheckoutStaffPage = () => {
               }}
               disabled={isSubmittingCheckout}
             >
-              Xác nhận checkout
+              Xác nhận thanh toán
             </Button>
           </DialogActions>
         </Dialog>
@@ -4236,23 +4239,22 @@ export const CounterCheckoutStaffPage = () => {
           <DialogContent>
             <Stack spacing={1.5} mt={1}>
               <Typography variant="body2" color="text.secondary">
-                Bạn có chắc chắn muốn xác nhận giao hàng đơn hàng này cho khách hàng không?
+                Bạn có chắc chắn muốn xác nhận giao hàng đơn hàng này cho khách
+                hàng không?
               </Typography>
-              
+
               <Stack direction="row" justifyContent="space-between">
                 <Typography color="text.secondary">Mã đơn hàng</Typography>
-                <Typography fontWeight={600}>
-                  {bopisOrder?.code}
-                </Typography>
+                <Typography fontWeight={600}>{bopisOrder?.code}</Typography>
               </Stack>
-              
+
               <Stack direction="row" justifyContent="space-between">
                 <Typography color="text.secondary">Khách hàng</Typography>
                 <Typography fontWeight={600}>
                   {bopisOrder?.customerName}
                 </Typography>
               </Stack>
-              
+
               <Stack direction="row" justifyContent="space-between">
                 <Typography color="text.secondary">Tổng tiền</Typography>
                 <Typography fontWeight={700} color="primary.main">

@@ -441,7 +441,7 @@ export const CustomerDisplayScreen = () => {
                 }
               >
                 <OpenInNew fontSize="small" />
-                Mở link thanh toán (test)
+                Mở link thanh toán
               </button>
             </div>
           </div>

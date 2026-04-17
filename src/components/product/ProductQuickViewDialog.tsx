@@ -132,7 +132,7 @@ const ProductQuickViewDialog = ({
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { refreshCart } = useCart();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     null,
   );
@@ -271,6 +271,12 @@ const ProductQuickViewDialog = ({
   };
 
   const handleAddToCart = async (navigateAfterAdd = false) => {
+    if (!isAuthenticated) {
+      showToast("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng", "warning");
+      onClose();
+      return;
+    }
+
     if (isBackOfficeRole) {
       showToast(
         "Tài khoản admin/staff không thể thêm giỏ hàng hoặc thanh toán online",

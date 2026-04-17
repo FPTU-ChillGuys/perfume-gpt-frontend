@@ -835,6 +835,11 @@ const ProductDetailPage = () => {
   };
 
   const handleAddToCart = async (redirectToCheckout = false) => {
+    if (!isAuthenticated) {
+      showToast("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng", "warning");
+      return;
+    }
+
     if (isBackOfficeRole) {
       showToast(
         "Tài khoản admin/staff không thể thêm giỏ hàng hoặc thanh toán online",
