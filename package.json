@@ -9,11 +9,10 @@
   "packageManager": "npm@10.9.4",
   "scripts": {
     "dev": "vite",
-    "build": "npm run generate-vercel-config && tsc -b && vite build",
+    "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "generate-types": "openapi-typescript https://localhost:7011/openapi/v1.json -o ./src/types/api/v1.d.ts",
-    "generate-vercel-config": "node scripts/generate-vercel-config.js"
+    "generate-types": "openapi-typescript https://localhost:7011/openapi/v1.json -o ./src/types/api/v1.d.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -52,7 +51,6 @@
     "@types/react-speech-recognition": "^3.9.6",
     "@vitejs/plugin-basic-ssl": "^2.1.4",
     "@vitejs/plugin-react": "^5.1.1",
-    "dotenv": "^16.6.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

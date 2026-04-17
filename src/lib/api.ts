@@ -28,10 +28,7 @@ const resolveApiBaseUrl = () => {
       window.location.hostname !== "localhost" &&
       window.location.hostname !== "127.0.0.1";
 
-    // On deployed frontend, always use same-origin so rewrite/proxy rules handle routing.
-    if (isProductionHost) {
-      return "";
-    }
+    return configured || "";
   }
 
   return configured || "";
@@ -43,17 +40,9 @@ const resolveAiBaseUrl = () => {
   );
   const apiConfigured = resolveApiBaseUrl();
 
-  // On production hosts, ignore accidental localhost chatbot base URL.
-  if (typeof window !== "undefined") {
-    const isProductionHost =
-      window.location.hostname !== "localhost" &&
-      window.location.hostname !== "127.0.0.1";
-
-    if (isProductionHost && isLocalhostUrl(chatbotConfigured)) {
-      return apiConfigured;
-    }
+  if (!chatbotConfigured) {
+    console.warn("VITE_CHATBOT_BASE_URL is missing, falling back to API URL");
   }
-
   return chatbotConfigured || apiConfigured;
 };
 
