@@ -6,6 +6,10 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   InputAdornment,
   Paper,
@@ -28,9 +32,11 @@ import {
   CheckCircle as ActiveIcon,
   Cancel as InactiveIcon,
   Clear as ClearIcon,
+  Block as BlockIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { userService } from "@/services/userService";
+import { useToast } from "@/hooks/useToast";
 import type { StaffManageItem } from "@/types/staff-user";
 
 const getInitials = (name: string) =>
@@ -42,10 +48,13 @@ const getInitials = (name: string) =>
     .toUpperCase();
 
 export const StaffManagementPage = () => {
+  const { showToast } = useToast();
   const [allStaff, setAllStaff] = useState<StaffManageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [confirmTarget, setConfirmTarget] = useState<StaffManageItem | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
 
   const fetchStaff = useCallback(async () => {
     try {
@@ -63,6 +72,23 @@ export const StaffManagementPage = () => {
   useEffect(() => {
     fetchStaff();
   }, [fetchStaff]);
+
+  const handleDeactivate = async () => {
+    if (!confirmTarget) return;
+    try {
+      setDeactivating(true);
+      await userService.setUserInactive(confirmTarget.id);
+      showToast(`Đã vô hiệu hóa tài khoản ${confirmTarget.fullName}`, "success");
+      setAllStaff((prev) =>
+        prev.map((s) => (s.id === confirmTarget.id ? { ...s, isActive: false } : s)),
+      );
+      setConfirmTarget(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Thao tác thất bại", "error");
+    } finally {
+      setDeactivating(false);
+    }
+  };
 
   const filtered = allStaff.filter((s) => {
     const q = search.toLowerCase();
@@ -260,6 +286,7 @@ export const StaffManagementPage = () => {
                   <TableCell>Email</TableCell>
                   <TableCell>Số điện thoại</TableCell>
                   <TableCell align="center">Trạng thái</TableCell>
+                  <TableCell align="center">Thao tác</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -347,12 +374,29 @@ export const StaffManagementPage = () => {
                             />
                           )}
                         </TableCell>
+
+                        {/* Action */}
+                        <TableCell align="center">
+                          {staff.isActive ? (
+                            <Tooltip title="Vô hiệu hóa tài khoản">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setConfirmTarget(staff)}
+                              >
+                                <BlockIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          ) : (
+                            <Typography variant="caption" color="text.disabled">—</Typography>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
 
                 {!loading && filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} sx={{ py: 8, textAlign: "center" }}>
+                    <TableCell colSpan={6} sx={{ py: 8, textAlign: "center" }}>
                       <BadgeIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
                       <Typography variant="body1" color="text.secondary">
                         Không tìm thấy nhân viên nào
@@ -382,6 +426,44 @@ export const StaffManagementPage = () => {
           )}
         </Paper>
       </Box>
+
+      {/* Confirm deactivate dialog */}
+      <Dialog
+        open={!!confirmTarget}
+        onClose={() => !deactivating && setConfirmTarget(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Xác nhận vô hiệu hóa</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc muốn vô hiệu hóa tài khoản của{" "}
+            <strong>{confirmTarget?.fullName}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Nhân viên sẽ không thể đăng nhập cho đến khi được kích hoạt lại.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setConfirmTarget(null)}
+            disabled={deactivating}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeactivate}
+            disabled={deactivating}
+            startIcon={<BlockIcon />}
+          >
+            {deactivating ? "Đang xử lý…" : "Vô hiệu hóa"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </AdminLayout>
   );
 };
