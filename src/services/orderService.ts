@@ -16,29 +16,10 @@ import type {
 } from "@/types/checkout";
 import type { components } from "@/types/api/v1";
 
-const normalizeBaseUrl = (value?: string) =>
-  (value || "").trim().replace(/\/+$/, "");
-
-const resolveDirectApiBaseUrl = () => {
-  const configured = normalizeBaseUrl(
-    import.meta.env.VITE_API_BASE_URL as string | undefined,
-  );
-
-  if (typeof window !== "undefined") {
-    const isProductionHost =
-      window.location.hostname !== "localhost" &&
-      window.location.hostname !== "127.0.0.1";
-
-    // On deployed frontend, prefer same-origin `/api/*` so platform rewrites/proxies handle CORS.
-    if (isProductionHost) {
-      return "";
-    }
-  }
-
-  return configured;
-};
-
-const DIRECT_API_BASE_URL = resolveDirectApiBaseUrl();
+const DIRECT_API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "").replace(
+  /\/+$/,
+  "",
+);
 
 interface GetMyOrdersParams {
   Status?: OrderStatus;
@@ -380,10 +361,9 @@ class OrderService {
       isRefunded: Boolean(
         this.getValue<boolean>(item, ["isRefunded", "IsRefunded"]),
       ),
-      isRefundOnly: this.getValue<boolean | null>(item, [
-        "isRefundOnly",
-        "IsRefundOnly",
-      ]) ?? null,
+      isRefundOnly:
+        this.getValue<boolean | null>(item, ["isRefundOnly", "IsRefundOnly"]) ??
+        null,
       isRestocked: Boolean(
         this.getValue<boolean>(item, ["isRestocked", "IsRestocked"]),
       ),
@@ -409,10 +389,8 @@ class OrderService {
           this.getValue<number>(detail, ["unitPrice", "UnitPrice"]) ?? 0,
         ),
         campaignPrice: Number(
-          this.getValue<number>(detail, [
-            "campaignPrice",
-            "CampaignPrice",
-          ]) ?? 0,
+          this.getValue<number>(detail, ["campaignPrice", "CampaignPrice"]) ??
+            0,
         ),
         campaignDiscount: Number(
           this.getValue<number>(detail, [
@@ -1387,7 +1365,10 @@ class OrderService {
         recipient: payload.recipient ?? null,
         temporaryMediaIds: payload.temporaryMediaIds ?? null,
       };
-      console.log("[OrderService] createReturnRequest requestBody:", requestBody);
+      console.log(
+        "[OrderService] createReturnRequest requestBody:",
+        requestBody,
+      );
 
       const response = await apiInstance.POST("/api/orderreturnrequests", {
         body: requestBody,
@@ -2021,7 +2002,10 @@ class OrderService {
     }
   }
 
-  async deliverInStoreOrder(orderId: string, posSessionId?: string): Promise<string> {
+  async deliverInStoreOrder(
+    orderId: string,
+    posSessionId?: string,
+  ): Promise<string> {
     try {
       const response = await apiInstance.PUT(
         "/api/orders/{orderId}/deliver-in-store",
