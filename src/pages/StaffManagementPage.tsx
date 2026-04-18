@@ -1,21 +1,18 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Avatar,
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
   IconButton,
   InputAdornment,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
   Skeleton,
   Stack,
   Table,
@@ -31,17 +28,16 @@ import {
 import {
   Search as SearchIcon,
   Refresh as RefreshIcon,
-  People as PeopleIcon,
+  Badge as BadgeIcon,
   CheckCircle as ActiveIcon,
   Cancel as InactiveIcon,
   Clear as ClearIcon,
   Block as BlockIcon,
-  Warning as WarningIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { userService } from "@/services/userService";
 import { useToast } from "@/hooks/useToast";
-import type { UserManageItem } from "@/types/staff-user";
+import type { StaffManageItem } from "@/types/staff-user";
 
 const getInitials = (name: string) =>
   name
@@ -51,43 +47,31 @@ const getInitials = (name: string) =>
     .join("")
     .toUpperCase();
 
-const formatDate = (iso: string | null) => {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-export const UserManagementPage = () => {
+export const StaffManagementPage = () => {
   const { showToast } = useToast();
-  const [allUsers, setAllUsers] = useState<UserManageItem[]>([]);
+  const [allStaff, setAllStaff] = useState<StaffManageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-  const [codFilter, setCodFilter] = useState<"all" | "blocked">("all");
-
-  const [confirmTarget, setConfirmTarget] = useState<UserManageItem | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<StaffManageItem | null>(null);
   const [deactivating, setDeactivating] = useState(false);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchStaff = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await userService.getUserManage();
-      setAllUsers(data);
+      const data = await userService.getStaffManage();
+      setAllStaff(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể tải danh sách người dùng");
+      setError(err instanceof Error ? err.message : "Không thể tải danh sách nhân viên");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    fetchStaff();
+  }, [fetchStaff]);
 
   const handleDeactivate = async () => {
     if (!confirmTarget) return;
@@ -95,8 +79,8 @@ export const UserManagementPage = () => {
       setDeactivating(true);
       await userService.setUserInactive(confirmTarget.id);
       showToast(`Đã vô hiệu hóa tài khoản ${confirmTarget.fullName}`, "success");
-      setAllUsers((prev) =>
-        prev.map((u) => (u.id === confirmTarget.id ? { ...u, isActive: false } : u)),
+      setAllStaff((prev) =>
+        prev.map((s) => (s.id === confirmTarget.id ? { ...s, isActive: false } : s)),
       );
       setConfirmTarget(null);
     } catch (err) {
@@ -106,25 +90,19 @@ export const UserManagementPage = () => {
     }
   };
 
-  const filtered = allUsers.filter((u) => {
+  const filtered = allStaff.filter((s) => {
     const q = search.toLowerCase();
-    if (
-      q &&
-      !u.fullName.toLowerCase().includes(q) &&
-      !u.email.toLowerCase().includes(q) &&
-      !(u.userName?.toLowerCase() ?? "").includes(q) &&
-      !(u.phoneNumber ?? "").includes(q)
-    )
-      return false;
-    if (statusFilter === "active" && !u.isActive) return false;
-    if (statusFilter === "inactive" && u.isActive) return false;
-    if (codFilter === "blocked" && !u.codBlockedUntil) return false;
-    return true;
+    return (
+      !q ||
+      s.fullName.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q) ||
+      (s.userName?.toLowerCase() ?? "").includes(q) ||
+      (s.phoneNumber ?? "").includes(q)
+    );
   });
 
-  const activeCount = allUsers.filter((u) => u.isActive).length;
-  const inactiveCount = allUsers.length - activeCount;
-  const codBlockedCount = allUsers.filter((u) => u.codBlockedUntil).length;
+  const activeCount = allStaff.filter((s) => s.isActive).length;
+  const inactiveCount = allStaff.length - activeCount;
 
   return (
     <AdminLayout>
@@ -146,112 +124,122 @@ export const UserManagementPage = () => {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                bgcolor: "primary.main",
+                bgcolor: "#7c3aed",
                 color: "white",
               }}
             >
-              <PeopleIcon />
+              <BadgeIcon />
             </Box>
             <Box>
               <Typography variant="h5" fontWeight={700}>
-                Quản lý người dùng
+                Quản lý nhân viên
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Xem và quản lý tài khoản khách hàng
+                Xem danh sách và trạng thái tài khoản nhân viên
               </Typography>
             </Box>
           </Stack>
           <Tooltip title="Tải lại">
-            <IconButton onClick={fetchUsers} disabled={loading}>
+            <IconButton onClick={fetchStaff} disabled={loading}>
               <RefreshIcon />
             </IconButton>
           </Tooltip>
         </Stack>
 
-        {/* Stats */}
+        {/* Stats row */}
         <Stack direction="row" spacing={2} sx={{ mb: 3 }} flexWrap="wrap">
-          {[
-            { label: "Tổng người dùng", value: allUsers.length, color: "#6366f1", borderColor: "grey.200", bg: "transparent" },
-            { label: "Đang hoạt động", value: activeCount, color: "#16a34a", borderColor: "#bbf7d0", bg: "#f0fdf4" },
-            { label: "Vô hiệu hóa", value: inactiveCount, color: "#dc2626", borderColor: "#fecaca", bg: "#fff5f5" },
-            { label: "Bị khóa COD", value: codBlockedCount, color: "#d97706", borderColor: "#fde68a", bg: "#fffbeb" },
-          ].map((stat) => (
-            <Paper
-              key={stat.label}
-              elevation={0}
-              sx={{
-                px: 2.5,
-                py: 1.5,
-                border: "1px solid",
-                borderColor: stat.borderColor,
-                borderRadius: 2.5,
-                bgcolor: stat.bg,
-                minWidth: 130,
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" fontWeight={500}>
-                {stat.label}
-              </Typography>
-              <Typography variant="h6" fontWeight={700} sx={{ color: stat.color }}>
-                {loading ? <Skeleton width={40} /> : stat.value}
-              </Typography>
-            </Paper>
-          ))}
+          <Paper
+            elevation={0}
+            sx={{
+              px: 2.5,
+              py: 1.5,
+              border: "1px solid",
+              borderColor: "grey.200",
+              borderRadius: 2.5,
+              minWidth: 120,
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" fontWeight={500}>
+              Tổng nhân viên
+            </Typography>
+            <Typography variant="h6" fontWeight={700}>
+              {loading ? <Skeleton width={40} /> : allStaff.length}
+            </Typography>
+          </Paper>
+          <Paper
+            elevation={0}
+            sx={{
+              px: 2.5,
+              py: 1.5,
+              border: "1px solid",
+              borderColor: "#bbf7d0",
+              borderRadius: 2.5,
+              bgcolor: "#f0fdf4",
+              minWidth: 120,
+            }}
+          >
+            <Typography variant="caption" color="success.dark" fontWeight={500}>
+              Đang hoạt động
+            </Typography>
+            <Typography variant="h6" fontWeight={700} color="success.dark">
+              {loading ? <Skeleton width={40} /> : activeCount}
+            </Typography>
+          </Paper>
+          <Paper
+            elevation={0}
+            sx={{
+              px: 2.5,
+              py: 1.5,
+              border: "1px solid",
+              borderColor: "#fecaca",
+              borderRadius: 2.5,
+              bgcolor: "#fff5f5",
+              minWidth: 120,
+            }}
+          >
+            <Typography variant="caption" color="error.dark" fontWeight={500}>
+              Không hoạt động
+            </Typography>
+            <Typography variant="h6" fontWeight={700} color="error.dark">
+              {loading ? <Skeleton width={40} /> : inactiveCount}
+            </Typography>
+          </Paper>
         </Stack>
 
-        {/* Filters */}
+        {/* Search */}
         <Paper
           elevation={0}
-          sx={{ p: 2, mb: 2.5, border: "1px solid", borderColor: "grey.200", borderRadius: 2.5 }}
+          sx={{
+            p: 2,
+            mb: 2.5,
+            border: "1px solid",
+            borderColor: "grey.200",
+            borderRadius: 2.5,
+          }}
         >
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-            <TextField
-              placeholder="Tìm theo tên, email, username, số điện thoại…"
-              size="small"
-              sx={{ flex: 2 }}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                  endAdornment: search ? (
-                    <InputAdornment position="end">
-                      <IconButton size="small" onClick={() => setSearch("")}>
-                        <ClearIcon fontSize="small" />
-                      </IconButton>
-                    </InputAdornment>
-                  ) : null,
-                },
-              }}
-            />
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>Trạng thái</InputLabel>
-              <Select
-                label="Trạng thái"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-              >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="active">Hoạt động</MenuItem>
-                <MenuItem value="inactive">Vô hiệu</MenuItem>
-              </Select>
-            </FormControl>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>COD</InputLabel>
-              <Select
-                label="COD"
-                value={codFilter}
-                onChange={(e) => setCodFilter(e.target.value as typeof codFilter)}
-              >
-                <MenuItem value="all">Tất cả</MenuItem>
-                <MenuItem value="blocked">Bị khóa COD</MenuItem>
-              </Select>
-            </FormControl>
-          </Stack>
+          <TextField
+            placeholder="Tìm theo tên, email, username, số điện thoại…"
+            size="small"
+            fullWidth
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+                endAdornment: search ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" onClick={() => setSearch("")}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null,
+              },
+            }}
+          />
         </Paper>
 
         {error && (
@@ -259,7 +247,7 @@ export const UserManagementPage = () => {
             severity="error"
             sx={{ mb: 2, borderRadius: 2 }}
             action={
-              <Button color="inherit" size="small" onClick={fetchUsers}>
+              <Button color="inherit" size="small" onClick={fetchStaff}>
                 Thử lại
               </Button>
             }
@@ -271,7 +259,12 @@ export const UserManagementPage = () => {
         {/* Table */}
         <Paper
           elevation={0}
-          sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, overflow: "hidden" }}
+          sx={{
+            border: "1px solid",
+            borderColor: "grey.200",
+            borderRadius: 3,
+            overflow: "hidden",
+          }}
         >
           <TableContainer>
             <Table size="small">
@@ -288,107 +281,80 @@ export const UserManagementPage = () => {
                     },
                   }}
                 >
-                  <TableCell>Người dùng</TableCell>
+                  <TableCell>Nhân viên</TableCell>
                   <TableCell>Username</TableCell>
                   <TableCell>Email</TableCell>
                   <TableCell>Số điện thoại</TableCell>
-                  <TableCell align="center">Từ chối giao</TableCell>
-                  <TableCell>Khóa COD đến</TableCell>
                   <TableCell align="center">Trạng thái</TableCell>
                   <TableCell align="center">Thao tác</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading
-                  ? Array.from({ length: 7 }).map((_, i) => (
+                  ? Array.from({ length: 6 }).map((_, i) => (
                       <TableRow key={i}>
-                        {Array.from({ length: 8 }).map((__, j) => (
+                        {Array.from({ length: 5 }).map((__, j) => (
                           <TableCell key={j}>
                             <Skeleton variant="text" />
                           </TableCell>
                         ))}
                       </TableRow>
                     ))
-                  : filtered.map((user) => (
+                  : filtered.map((staff) => (
                       <TableRow
-                        key={user.id}
+                        key={staff.id}
                         hover
                         sx={{ "&:last-child td": { borderBottom: 0 } }}
                       >
+                        {/* Avatar + name */}
                         <TableCell>
                           <Stack direction="row" spacing={1.5} alignItems="center">
                             <Avatar
-                              src={user.profileImageUrl ?? undefined}
+                              src={staff.profileImageUrl ?? undefined}
                               sx={{
                                 width: 36,
                                 height: 36,
-                                bgcolor: "primary.main",
+                                bgcolor: "#7c3aed",
                                 fontSize: "0.8rem",
                                 fontWeight: 700,
                               }}
                             >
-                              {getInitials(user.fullName)}
+                              {getInitials(staff.fullName)}
                             </Avatar>
                             <Typography variant="body2" fontWeight={600} fontSize="0.85rem">
-                              {user.fullName}
+                              {staff.fullName}
                             </Typography>
                           </Stack>
                         </TableCell>
 
+                        {/* Username */}
                         <TableCell>
                           <Typography
                             variant="body2"
                             fontSize="0.82rem"
                             sx={{ fontFamily: "monospace", color: "text.secondary" }}
                           >
-                            {user.userName || "—"}
+                            {staff.userName || "—"}
                           </Typography>
                         </TableCell>
 
+                        {/* Email */}
                         <TableCell>
                           <Typography variant="body2" fontSize="0.82rem">
-                            {user.email}
+                            {staff.email}
                           </Typography>
                         </TableCell>
 
+                        {/* Phone */}
                         <TableCell>
                           <Typography variant="body2" fontSize="0.82rem" color="text.secondary">
-                            {user.phoneNumber || "—"}
+                            {staff.phoneNumber || "—"}
                           </Typography>
                         </TableCell>
 
+                        {/* Status */}
                         <TableCell align="center">
-                          <Chip
-                            label={user.deliveryRefusalCount}
-                            size="small"
-                            sx={{
-                              fontWeight: 700,
-                              fontSize: "0.78rem",
-                              bgcolor: user.deliveryRefusalCount > 0 ? "#fef3c7" : "#f3f4f6",
-                              color: user.deliveryRefusalCount > 0 ? "#92400e" : "#6b7280",
-                              border: "1px solid",
-                              borderColor: user.deliveryRefusalCount > 0 ? "#fde68a" : "#e5e7eb",
-                            }}
-                          />
-                        </TableCell>
-
-                        <TableCell>
-                          {user.codBlockedUntil ? (
-                            <Stack direction="row" spacing={0.5} alignItems="center">
-                              <WarningIcon sx={{ color: "warning.main", fontSize: 14 }} />
-                              <Typography variant="body2" fontSize="0.82rem" color="warning.dark" fontWeight={600}>
-                                {formatDate(user.codBlockedUntil)}
-                              </Typography>
-                            </Stack>
-                          ) : (
-                            <Typography variant="body2" fontSize="0.82rem" color="text.disabled">
-                              —
-                            </Typography>
-                          )}
-                        </TableCell>
-
-                        <TableCell align="center">
-                          {user.isActive ? (
+                          {staff.isActive ? (
                             <Chip
                               icon={<ActiveIcon fontSize="small" />}
                               label="Hoạt động"
@@ -409,13 +375,14 @@ export const UserManagementPage = () => {
                           )}
                         </TableCell>
 
+                        {/* Action */}
                         <TableCell align="center">
-                          {user.isActive ? (
+                          {staff.isActive ? (
                             <Tooltip title="Vô hiệu hóa tài khoản">
                               <IconButton
                                 size="small"
                                 color="error"
-                                onClick={() => setConfirmTarget(user)}
+                                onClick={() => setConfirmTarget(staff)}
                               >
                                 <BlockIcon fontSize="small" />
                               </IconButton>
@@ -429,10 +396,10 @@ export const UserManagementPage = () => {
 
                 {!loading && filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} sx={{ py: 8, textAlign: "center" }}>
-                      <PeopleIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+                    <TableCell colSpan={6} sx={{ py: 8, textAlign: "center" }}>
+                      <BadgeIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
                       <Typography variant="body1" color="text.secondary">
-                        Không tìm thấy người dùng nào
+                        Không tìm thấy nhân viên nào
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -441,6 +408,7 @@ export const UserManagementPage = () => {
             </Table>
           </TableContainer>
 
+          {/* Result count */}
           {!loading && (
             <Box
               sx={{
@@ -452,7 +420,7 @@ export const UserManagementPage = () => {
               }}
             >
               <Typography variant="caption" color="text.secondary">
-                Hiển thị {filtered.length} / {allUsers.length} người dùng
+                Hiển thị {filtered.length} / {allStaff.length} nhân viên
               </Typography>
             </Box>
           )}
@@ -474,7 +442,7 @@ export const UserManagementPage = () => {
             <strong>{confirmTarget?.fullName}</strong>?
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Người dùng sẽ không thể đăng nhập cho đến khi được kích hoạt lại.
+            Nhân viên sẽ không thể đăng nhập cho đến khi được kích hoạt lại.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2.5 }}>
@@ -499,4 +467,3 @@ export const UserManagementPage = () => {
     </AdminLayout>
   );
 };
-

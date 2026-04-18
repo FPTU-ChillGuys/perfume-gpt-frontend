@@ -46,6 +46,7 @@ import {
   ThumbsUpDown as ThumbsUpDownIcon,
   LocalOffer as LocalOfferIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
+  Badge as BadgeIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -246,6 +247,12 @@ const menuGroups: SidebarMenuGroup[] = [
         text: "Quản lý người dùng",
         icon: <PeopleIcon />,
         path: "/admin/users",
+        roles: ["admin"],
+      },
+      {
+        text: "Quản lý nhân viên",
+        icon: <BadgeIcon />,
+        path: "/admin/staff",
         roles: ["admin"],
       },
       {
