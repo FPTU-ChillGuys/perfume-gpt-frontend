@@ -431,9 +431,12 @@ export const CheckoutPage = () => {
       setSelectedCartItemIds(effectiveSelectedIds);
       setTotals(totalsData);
 
-      // Set default address
+      // Set default address or enable new address form for new users
       if (defaultAddressId) {
         setSelectedAddressId(defaultAddressId);
+      } else if (addressList.length === 0) {
+        // Auto-enable new address form for users with no saved addresses
+        setUseNewAddress(true);
       }
     } catch (error) {
       showToast("Không thể tải dữ liệu. Vui lòng thử lại.", "error");
@@ -589,10 +592,12 @@ export const CheckoutPage = () => {
     try {
       setIsSubmitting(true);
 
-      // Validate
-      if (!isPickupInStore && !selectedAddressId && !useNewAddress) {
-        showToast("Vui lòng chọn địa chỉ giao hàng", "warning");
-        return;
+      // Validate delivery address
+      if (!isPickupInStore) {
+        if (!useNewAddress && !selectedAddressId) {
+          showToast("Vui lòng chọn địa chỉ giao hàng", "warning");
+          return;
+        }
       }
 
       if (

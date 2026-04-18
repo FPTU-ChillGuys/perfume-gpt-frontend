@@ -390,16 +390,189 @@ export const PaymentFailurePage = () => {
           justifyContent: "center",
         }}
       >
-        <Paper
-          sx={{
-            p: { xs: 2, sm: 3 },
-            textAlign: "left",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-            width: "100%",
-          }}
-        >
-          <Stack spacing={2}>
-            <Box>
+        {isInStoreOrder ? (
+          // Single column layout for POS orders
+          <Paper
+            sx={{
+              p: { xs: 2, sm: 3 },
+              textAlign: "left",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+              width: "100%",
+            }}
+          >
+            <Stack spacing={2}>
+              <Box>
+                <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
+                  <Box
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 52,
+                      height: 52,
+                      borderRadius: "50%",
+                      bgcolor: "error.main",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Cancel sx={{ fontSize: 32, color: "white" }} />
+                  </Box>
+                  <Box>
+                    <Typography
+                      variant="h5"
+                      fontWeight={700}
+                      color="error.main"
+                    >
+                      Thanh toán thất bại
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {errorMessage}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Chip
+                  size="small"
+                  color="error"
+                  variant="outlined"
+                  label={`Mã lỗi: ${responseCode || "Không xác định"}`}
+                  sx={{ mb: 1.5 }}
+                />
+
+                <Alert severity="error" sx={{ mb: 2, textAlign: "left" }}>
+                  <Typography variant="body2">
+                    Đơn hàng chưa được thanh toán. Vui lòng thử lại hoặc đổi
+                    phương thức thanh toán.
+                  </Typography>
+                </Alert>
+
+                <Divider sx={{ mb: 2 }} />
+
+                <Typography variant="subtitle1" fontWeight={700} mb={1.5}>
+                  Thông tin giao dịch
+                </Typography>
+
+                {orderId && (
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography color="text.secondary">Mã đơn hàng:</Typography>
+                    <Typography fontWeight={600}>{orderId}</Typography>
+                  </Box>
+                )}
+
+                {amount && (
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography color="text.secondary">Số tiền:</Typography>
+                    <Typography fontWeight={700} color="error">
+                      {formatCurrency(amount)}
+                    </Typography>
+                  </Box>
+                )}
+
+                {payDate && (
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography color="text.secondary">Thời gian:</Typography>
+                    <Typography fontWeight={600}>
+                      {formatDateTime(payDate)}
+                    </Typography>
+                  </Box>
+                )}
+
+                {bankCode && (
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography color="text.secondary">Ngân hàng:</Typography>
+                    <Typography fontWeight={600}>{bankCode}</Typography>
+                  </Box>
+                )}
+
+                {transactionNo && (
+                  <Box display="flex" justifyContent="space-between" mb={1}>
+                    <Typography color="text.secondary">
+                      Mã giao dịch:
+                    </Typography>
+                    <Typography fontWeight={600}>{transactionNo}</Typography>
+                  </Box>
+                )}
+
+                {orderInfo && (
+                  <Box display="flex" mb={1} gap={1.5}>
+                    <Typography
+                      color="text.secondary"
+                      sx={{
+                        flexShrink: 0,
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Nội dung:
+                    </Typography>
+                    <Typography
+                      fontWeight={600}
+                      sx={{
+                        wordBreak: "break-word",
+                        whiteSpace: "normal",
+                        textAlign: "right",
+                        flex: 1,
+                        fontSize: 14,
+                      }}
+                    >
+                      {decodeURIComponent(orderInfo)}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+
+              <Box>
+                <Alert severity="info" sx={{ mb: 2, textAlign: "left" }}>
+                  Đơn hàng tại quầy sẽ được nhân viên xử lý retry thanh toán
+                  trên màn hình POS. Vui lòng chờ nhân viên hỗ trợ.
+                </Alert>
+
+                <Stack spacing={1.25}>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    size="large"
+                    component={RouterLink}
+                    to="/"
+                    sx={{ minHeight: 44 }}
+                  >
+                    Về trang chủ
+                  </Button>
+                </Stack>
+
+                <Box mt={2} p={1.5} bgcolor="grey.50" borderRadius={1.5}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    fontWeight={600}
+                  >
+                    Cần hỗ trợ?
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Liên hệ hotline hoặc email để được hỗ trợ thanh toán nhanh.
+                  </Typography>
+                </Box>
+              </Box>
+            </Stack>
+          </Paper>
+        ) : (
+          // Two-column layout for online orders
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              gap: 3,
+              flexDirection: { xs: "column", md: "row" },
+            }}
+          >
+            {/* Left Column - Error Information and Transaction Details */}
+            <Paper
+              sx={{
+                p: { xs: 2, sm: 3 },
+                textAlign: "left",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                flex: { md: 2 },
+              }}
+            >
               <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
                 <Box
                   sx={{
@@ -510,10 +683,32 @@ export const PaymentFailurePage = () => {
                   </Typography>
                 </Box>
               )}
-            </Box>
 
-            <Box>
-              {!isInStoreOrder && paymentId && (
+              <Box mt={2} p={1.5} bgcolor="grey.50" borderRadius={1.5}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  fontWeight={600}
+                >
+                  Cần hỗ trợ?
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Liên hệ hotline hoặc email để được hỗ trợ thanh toán nhanh.
+                </Typography>
+              </Box>
+            </Paper>
+
+            {/* Right Column - Payment Methods and Actions */}
+            <Paper
+              sx={{
+                p: { xs: 2, sm: 3 },
+                textAlign: "left",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                flex: { md: 1 },
+                height: "fit-content",
+              }}
+            >
+              {paymentId && (
                 <Box
                   sx={{
                     p: 2,
@@ -596,15 +791,8 @@ export const PaymentFailurePage = () => {
                 </Box>
               )}
 
-              {isInStoreOrder && (
-                <Alert severity="info" sx={{ mb: 2, textAlign: "left" }}>
-                  Đơn hàng tại quầy sẽ được nhân viên xử lý retry thanh toán
-                  trên màn hình POS. Vui lòng chờ nhân viên hỗ trợ.
-                </Alert>
-              )}
-
               <Stack spacing={1.25}>
-                {!isInStoreOrder && paymentId ? (
+                {paymentId ? (
                   <Button
                     variant="contained"
                     color="error"
@@ -615,7 +803,7 @@ export const PaymentFailurePage = () => {
                   >
                     {isRetrying ? <CircularProgress size={24} /> : "Thử lại"}
                   </Button>
-                ) : !isInStoreOrder ? (
+                ) : (
                   <Button
                     variant="contained"
                     color="error"
@@ -626,8 +814,8 @@ export const PaymentFailurePage = () => {
                   >
                     Về trang thanh toán
                   </Button>
-                ) : null}
-                {!isInStoreOrder && orderId && (
+                )}
+                {orderId && (
                   <Button
                     variant="outlined"
                     color="info"
@@ -649,22 +837,9 @@ export const PaymentFailurePage = () => {
                   Về trang chủ
                 </Button>
               </Stack>
-
-              <Box mt={2} p={1.5} bgcolor="grey.50" borderRadius={1.5}>
-                <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  fontWeight={600}
-                >
-                  Cần hỗ trợ?
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Liên hệ hotline hoặc email để được hỗ trợ thanh toán nhanh.
-                </Typography>
-              </Box>
-            </Box>
-          </Stack>
-        </Paper>
+            </Paper>
+          </Box>
+        )}
       </Container>
 
       <Dialog
