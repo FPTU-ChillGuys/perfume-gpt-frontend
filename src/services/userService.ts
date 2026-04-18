@@ -1,5 +1,5 @@
 import { apiInstance, getApiBaseUrl } from "@/lib/api";
-import type { StaffLookupResponse } from "../types/staff-user";
+import type { StaffLookupResponse, StaffManageItem, UserManageItem } from "../types/staff-user";
 import type { components } from "@/types/api/v1";
 import { getStoredAccessToken } from "@/utils/authStorage";
 
@@ -110,6 +110,28 @@ class UserService {
       throw new Error(response.data?.message || "Cập nhật thông tin thất bại");
     }
     return response.data.message || "Cập nhật thông tin thành công";
+  }
+
+  async getStaffManage(): Promise<StaffManageItem[]> {
+    const response = await apiInstance.GET("/api/users/staff-manage" as never);
+    const data = response.data as { success: boolean; payload?: StaffManageItem[]; message?: string } | undefined;
+    if (!data?.success) throw new Error(data?.message || "Failed to fetch staff list");
+    return data.payload ?? [];
+  }
+
+  async getUserManage(): Promise<UserManageItem[]> {
+    const response = await apiInstance.GET("/api/users/user-manage" as never);
+    const data = response.data as { success: boolean; payload?: UserManageItem[]; message?: string } | undefined;
+    if (!data?.success) throw new Error(data?.message || "Failed to fetch user list");
+    return data.payload ?? [];
+  }
+
+  async setUserInactive(userId: string): Promise<void> {
+    const response = await apiInstance.PUT("/api/users/user/{userId}/inactive" as never, {
+      params: { path: { userId } },
+    } as never);
+    const data = response.data as { success: boolean; message?: string } | undefined;
+    if (!data?.success) throw new Error(data?.message || "Failed to update user status");
   }
 }
 

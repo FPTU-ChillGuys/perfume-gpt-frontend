@@ -1,315 +1,216 @@
-import { useState, useEffect } from "react";
+﻿import { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
+  Avatar,
   Box,
-  Typography,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  IconButton,
+  InputAdornment,
+  InputLabel,
+  MenuItem,
   Paper,
+  Select,
+  Skeleton,
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   TextField,
-  InputAdornment,
-  Chip,
-  Avatar,
-  IconButton,
   Tooltip,
-  Button,
-  CircularProgress,
-  Stack,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Divider,
+  Typography,
 } from "@mui/material";
 import {
   Search as SearchIcon,
+  Refresh as RefreshIcon,
+  People as PeopleIcon,
+  CheckCircle as ActiveIcon,
+  Cancel as InactiveIcon,
   Clear as ClearIcon,
-  Visibility as VisibilityIcon,
   Block as BlockIcon,
-  CheckCircle as CheckCircleIcon,
-  PersonAdd as PersonAddIcon,
+  Warning as WarningIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
+import { userService } from "@/services/userService";
 import { useToast } from "@/hooks/useToast";
+import type { UserManageItem } from "@/types/staff-user";
 
-// ─── Mock types (replace with real API types when available) ────────────────
-type UserRole = "user" | "staff" | "admin";
-type UserStatus = "active" | "banned";
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .slice(-2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
 
-interface UserItem {
-  id: string;
-  fullName: string;
-  email: string;
-  phoneNumber?: string | null;
-  role: UserRole;
-  status: UserStatus;
-  createdAt: string;
-  lastLoginAt?: string | null;
-  avatarUrl?: string | null;
-  loyaltyPoints?: number;
-}
-
-// ─── Mock data (remove when API is ready) ───────────────────────────────────
-const MOCK_NAMES = [
-  "Nguyễn Văn An",
-  "Trần Thị Bình",
-  "Lê Minh Cường",
-  "Phạm Thị Dung",
-  "Hoàng Văn Em",
-  "Đặng Thị Phương",
-  "Bùi Quốc Hùng",
-  "Vũ Thị Lan",
-];
-const MOCK_ROLES: UserRole[] = ["user", "user", "user", "staff", "admin"];
-
-const MOCK_USERS: UserItem[] = Array.from({ length: 32 }, (_, i) => ({
-  id: `user-${i + 1}`,
-  fullName: MOCK_NAMES[i % MOCK_NAMES.length] ?? "Người dùng",
-  email: `user${i + 1}@example.com`,
-  phoneNumber: `09${String(10000000 + i).slice(1)}`,
-  role: MOCK_ROLES[i % MOCK_ROLES.length] ?? "user",
-  status: (i % 9 === 0 ? "banned" : "active") as UserStatus,
-  createdAt: new Date(
-    Date.now() - Math.floor(Math.random() * 365) * 86400000,
-  ).toISOString(),
-  lastLoginAt:
-    i % 4 === 0
-      ? null
-      : new Date(
-          Date.now() - Math.floor(Math.random() * 30) * 86400000,
-        ).toISOString(),
-  avatarUrl: null,
-  loyaltyPoints: Math.floor(Math.random() * 5000),
-}));
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-const roleConfig: Record<
-  UserRole,
-  {
-    label: string;
-    color:
-      | "default"
-      | "primary"
-      | "error"
-      | "warning"
-      | "success"
-      | "info"
-      | "secondary";
-  }
-> = {
-  user: { label: "Khách hàng", color: "default" },
-  staff: { label: "Nhân viên", color: "info" },
-  admin: { label: "Admin", color: "error" },
-};
-
-const statusConfig: Record<
-  UserStatus,
-  { label: string; color: "success" | "error" }
-> = {
-  active: { label: "Hoạt động", color: "success" },
-  banned: { label: "Đã khoá", color: "error" },
-};
-
-const formatDate = (dateStr?: string | null) => {
-  if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleString("vi-VN", {
+const formatDate = (iso: string | null) => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
 };
 
-const formatCurrency = (value?: number) =>
-  value !== undefined
-    ? new Intl.NumberFormat("vi-VN").format(value) + " điểm"
-    : "—";
-
-const getInitials = (name: string) =>
-  name
-    .split(" ")
-    .map((s) => s[0])
-    .slice(-2)
-    .join("")
-    .toUpperCase();
-
-// ─── Detail Dialog ───────────────────────────────────────────────────────────
-const UserDetailDialog = ({
-  user,
-  onClose,
-}: {
-  user: UserItem | null;
-  onClose: () => void;
-}) => (
-  <Dialog open={Boolean(user)} onClose={onClose} maxWidth="sm" fullWidth>
-    <DialogTitle>Chi tiết người dùng</DialogTitle>
-    <Divider />
-    <DialogContent>
-      {user && (
-        <Stack spacing={2.5} mt={1}>
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Avatar
-              src={user.avatarUrl || undefined}
-              sx={{ width: 64, height: 64, fontSize: 22, fontWeight: 700 }}
-            >
-              {getInitials(user.fullName)}
-            </Avatar>
-            <Box>
-              <Typography variant="h6" fontWeight={700}>
-                {user.fullName}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {user.email}
-              </Typography>
-            </Box>
-          </Stack>
-
-          <Divider />
-
-          {(
-            [
-              ["ID", user.id],
-              ["Số điện thoại", user.phoneNumber || "—"],
-              ["Vai trò", roleConfig[user.role].label],
-              ["Trạng thái", statusConfig[user.status].label],
-              ["Điểm loyalty", formatCurrency(user.loyaltyPoints)],
-              ["Ngày tạo", formatDate(user.createdAt)],
-              ["Đăng nhập cuối", formatDate(user.lastLoginAt)],
-            ] as [string, string][]
-          ).map(([label, value]) => (
-            <Stack
-              key={label}
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              <Typography variant="body2" color="text.secondary" minWidth={140}>
-                {label}
-              </Typography>
-              <Typography variant="body2" fontWeight={500} textAlign="right">
-                {value}
-              </Typography>
-            </Stack>
-          ))}
-        </Stack>
-      )}
-    </DialogContent>
-    <DialogActions>
-      <Button onClick={onClose}>Đóng</Button>
-    </DialogActions>
-  </Dialog>
-);
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
 export const UserManagementPage = () => {
   const { showToast } = useToast();
+  const [allUsers, setAllUsers] = useState<UserManageItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [codFilter, setCodFilter] = useState<"all" | "blocked">("all");
 
-  // Data
-  const [allUsers] = useState<UserItem[]>(MOCK_USERS);
-  const [loading] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<UserManageItem | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
 
-  // Filters
-  const [searchInput, setSearchInput] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<UserRole | "">("");
-  const [statusFilter, setStatusFilter] = useState<UserStatus | "">("");
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await userService.getUserManage();
+      setAllUsers(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Không thể tải danh sách người dùng");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  // Pagination
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  // Detail dialog
-  const [selectedUser, setSelectedUser] = useState<UserItem | null>(null);
-
-  // Reset page when filters change
   useEffect(() => {
-    setPage(0);
-  }, [searchTerm, roleFilter, statusFilter]);
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const handleDeactivate = async () => {
+    if (!confirmTarget) return;
+    try {
+      setDeactivating(true);
+      await userService.setUserInactive(confirmTarget.id);
+      showToast(`Đã vô hiệu hóa tài khoản ${confirmTarget.fullName}`, "success");
+      setAllUsers((prev) =>
+        prev.map((u) => (u.id === confirmTarget.id ? { ...u, isActive: false } : u)),
+      );
+      setConfirmTarget(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Thao tác thất bại", "error");
+    } finally {
+      setDeactivating(false);
+    }
+  };
 
   const filtered = allUsers.filter((u) => {
-    const matchSearch =
-      !searchTerm ||
-      u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.phoneNumber?.includes(searchTerm);
-    const matchRole = !roleFilter || u.role === roleFilter;
-    const matchStatus = !statusFilter || u.status === statusFilter;
-    return matchSearch && matchRole && matchStatus;
+    const q = search.toLowerCase();
+    if (
+      q &&
+      !u.fullName.toLowerCase().includes(q) &&
+      !u.email.toLowerCase().includes(q) &&
+      !(u.userName?.toLowerCase() ?? "").includes(q) &&
+      !(u.phoneNumber ?? "").includes(q)
+    )
+      return false;
+    if (statusFilter === "active" && !u.isActive) return false;
+    if (statusFilter === "inactive" && u.isActive) return false;
+    if (codFilter === "blocked" && !u.codBlockedUntil) return false;
+    return true;
   });
 
-  const paginated = filtered.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage,
-  );
-
-  const handleToggleStatus = (user: UserItem) => {
-    // TODO: call API PATCH /api/users/{id}/status
-    const action = user.status === "active" ? "khoá" : "mở khoá";
-    showToast(`Tính năng ${action} tài khoản chưa có API.`, "warning");
-  };
-
-  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") setSearchTerm(searchInput);
-  };
-
-  const clearSearch = () => {
-    setSearchInput("");
-    setSearchTerm("");
-  };
+  const activeCount = allUsers.filter((u) => u.isActive).length;
+  const inactiveCount = allUsers.length - activeCount;
+  const codBlockedCount = allUsers.filter((u) => u.codBlockedUntil).length;
 
   return (
     <AdminLayout>
-      <Box>
+      <Box sx={{ px: { xs: 2, md: 3 }, py: 3 }}>
         {/* Header */}
         <Stack
-          direction="row"
-          justifyContent="flex-end"
-          alignItems="center"
-          mb={3}
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 3 }}
         >
-          <Tooltip title="Chưa có API tạo người dùng">
-            <span>
-              <Button
-                variant="contained"
-                startIcon={<PersonAddIcon />}
-                disabled
-              >
-                Thêm người dùng
-              </Button>
-            </span>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: 2.5,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                bgcolor: "primary.main",
+                color: "white",
+              }}
+            >
+              <PeopleIcon />
+            </Box>
+            <Box>
+              <Typography variant="h5" fontWeight={700}>
+                Quản lý người dùng
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Xem và quản lý tài khoản khách hàng
+              </Typography>
+            </Box>
+          </Stack>
+          <Tooltip title="Tải lại">
+            <IconButton onClick={fetchUsers} disabled={loading}>
+              <RefreshIcon />
+            </IconButton>
           </Tooltip>
+        </Stack>
+
+        {/* Stats */}
+        <Stack direction="row" spacing={2} sx={{ mb: 3 }} flexWrap="wrap">
+          {[
+            { label: "Tổng người dùng", value: allUsers.length, color: "#6366f1", borderColor: "grey.200", bg: "transparent" },
+            { label: "Đang hoạt động", value: activeCount, color: "#16a34a", borderColor: "#bbf7d0", bg: "#f0fdf4" },
+            { label: "Vô hiệu hóa", value: inactiveCount, color: "#dc2626", borderColor: "#fecaca", bg: "#fff5f5" },
+            { label: "Bị khóa COD", value: codBlockedCount, color: "#d97706", borderColor: "#fde68a", bg: "#fffbeb" },
+          ].map((stat) => (
+            <Paper
+              key={stat.label}
+              elevation={0}
+              sx={{
+                px: 2.5,
+                py: 1.5,
+                border: "1px solid",
+                borderColor: stat.borderColor,
+                borderRadius: 2.5,
+                bgcolor: stat.bg,
+                minWidth: 130,
+              }}
+            >
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                {stat.label}
+              </Typography>
+              <Typography variant="h6" fontWeight={700} sx={{ color: stat.color }}>
+                {loading ? <Skeleton width={40} /> : stat.value}
+              </Typography>
+            </Paper>
+          ))}
         </Stack>
 
         {/* Filters */}
         <Paper
           elevation={0}
-          sx={{
-            p: 2,
-            mb: 2,
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 2,
-          }}
+          sx={{ p: 2, mb: 2.5, border: "1px solid", borderColor: "grey.200", borderRadius: 2.5 }}
         >
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            spacing={2}
-            alignItems="center"
-          >
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
             <TextField
+              placeholder="Tìm theo tên, email, username, số điện thoại…"
               size="small"
-              placeholder="Tìm theo tên, email, SĐT..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              sx={{ flex: 1 }}
+              sx={{ flex: 2 }}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               slotProps={{
                 input: {
                   startAdornment: (
@@ -317,249 +218,285 @@ export const UserManagementPage = () => {
                       <SearchIcon fontSize="small" />
                     </InputAdornment>
                   ),
-                  endAdornment: searchInput && (
+                  endAdornment: search ? (
                     <InputAdornment position="end">
-                      <IconButton size="small" onClick={clearSearch}>
+                      <IconButton size="small" onClick={() => setSearch("")}>
                         <ClearIcon fontSize="small" />
                       </IconButton>
                     </InputAdornment>
-                  ),
+                  ) : null,
                 },
               }}
             />
-
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Vai trò</InputLabel>
-              <Select
-                label="Vai trò"
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as UserRole | "")}
-              >
-                <MenuItem value="">Tất cả</MenuItem>
-                <MenuItem value="user">Khách hàng</MenuItem>
-                <MenuItem value="staff">Nhân viên</MenuItem>
-                <MenuItem value="admin">Admin</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl size="small" sx={{ minWidth: 140 }}>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
               <InputLabel>Trạng thái</InputLabel>
               <Select
                 label="Trạng thái"
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value as UserStatus | "")
-                }
+                onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
               >
-                <MenuItem value="">Tất cả</MenuItem>
+                <MenuItem value="all">Tất cả</MenuItem>
                 <MenuItem value="active">Hoạt động</MenuItem>
-                <MenuItem value="banned">Đã khoá</MenuItem>
+                <MenuItem value="inactive">Vô hiệu</MenuItem>
               </Select>
             </FormControl>
-
-            <Button
-              variant="outlined"
-              onClick={() => setSearchTerm(searchInput)}
-              size="small"
-              sx={{ whiteSpace: "nowrap" }}
-            >
-              Tìm kiếm
-            </Button>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>COD</InputLabel>
+              <Select
+                label="COD"
+                value={codFilter}
+                onChange={(e) => setCodFilter(e.target.value as typeof codFilter)}
+              >
+                <MenuItem value="all">Tất cả</MenuItem>
+                <MenuItem value="blocked">Bị khóa COD</MenuItem>
+              </Select>
+            </FormControl>
           </Stack>
         </Paper>
+
+        {error && (
+          <Alert
+            severity="error"
+            sx={{ mb: 2, borderRadius: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={fetchUsers}>
+                Thử lại
+              </Button>
+            }
+          >
+            {error}
+          </Alert>
+        )}
 
         {/* Table */}
         <Paper
           elevation={0}
-          sx={{
-            border: "1px solid",
-            borderColor: "divider",
-            borderRadius: 2,
-            overflow: "hidden",
-          }}
+          sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, overflow: "hidden" }}
         >
-          {loading ? (
-            <Box display="flex" justifyContent="center" py={6}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "grey.50" }}>
-                      <TableCell sx={{ fontWeight: 700 }}>Người dùng</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Liên hệ</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Vai trò</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Trạng thái</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>
-                        Điểm loyalty
-                      </TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>Ngày tạo</TableCell>
-                      <TableCell sx={{ fontWeight: 700 }}>
-                        Đăng nhập cuối
-                      </TableCell>
-                      <TableCell align="center" sx={{ fontWeight: 700 }}>
-                        Thao tác
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginated.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          align="center"
-                          sx={{ py: 6, color: "text.secondary" }}
-                        >
-                          Không có dữ liệu
-                        </TableCell>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow
+                  sx={{
+                    bgcolor: "grey.50",
+                    "& th": {
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      color: "text.secondary",
+                      whiteSpace: "nowrap",
+                      py: 1.5,
+                    },
+                  }}
+                >
+                  <TableCell>Người dùng</TableCell>
+                  <TableCell>Username</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Số điện thoại</TableCell>
+                  <TableCell align="center">Từ chối giao</TableCell>
+                  <TableCell>Khóa COD đến</TableCell>
+                  <TableCell align="center">Trạng thái</TableCell>
+                  <TableCell align="center">Thao tác</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading
+                  ? Array.from({ length: 7 }).map((_, i) => (
+                      <TableRow key={i}>
+                        {Array.from({ length: 8 }).map((__, j) => (
+                          <TableCell key={j}>
+                            <Skeleton variant="text" />
+                          </TableCell>
+                        ))}
                       </TableRow>
-                    ) : (
-                      paginated.map((user) => (
-                        <TableRow
-                          key={user.id}
-                          hover
-                          sx={{ opacity: user.status === "banned" ? 0.6 : 1 }}
-                        >
-                          <TableCell>
-                            <Stack
-                              direction="row"
-                              spacing={1.5}
-                              alignItems="center"
+                    ))
+                  : filtered.map((user) => (
+                      <TableRow
+                        key={user.id}
+                        hover
+                        sx={{ "&:last-child td": { borderBottom: 0 } }}
+                      >
+                        <TableCell>
+                          <Stack direction="row" spacing={1.5} alignItems="center">
+                            <Avatar
+                              src={user.profileImageUrl ?? undefined}
+                              sx={{
+                                width: 36,
+                                height: 36,
+                                bgcolor: "primary.main",
+                                fontSize: "0.8rem",
+                                fontWeight: 700,
+                              }}
                             >
-                              <Avatar
-                                src={user.avatarUrl || undefined}
-                                sx={{
-                                  width: 36,
-                                  height: 36,
-                                  fontSize: 13,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {getInitials(user.fullName)}
-                              </Avatar>
-                              <Typography
-                                variant="body2"
-                                fontWeight={600}
-                                noWrap
-                              >
-                                {user.fullName}
+                              {getInitials(user.fullName)}
+                            </Avatar>
+                            <Typography variant="body2" fontWeight={600} fontSize="0.85rem">
+                              {user.fullName}
+                            </Typography>
+                          </Stack>
+                        </TableCell>
+
+                        <TableCell>
+                          <Typography
+                            variant="body2"
+                            fontSize="0.82rem"
+                            sx={{ fontFamily: "monospace", color: "text.secondary" }}
+                          >
+                            {user.userName || "—"}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell>
+                          <Typography variant="body2" fontSize="0.82rem">
+                            {user.email}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell>
+                          <Typography variant="body2" fontSize="0.82rem" color="text.secondary">
+                            {user.phoneNumber || "—"}
+                          </Typography>
+                        </TableCell>
+
+                        <TableCell align="center">
+                          <Chip
+                            label={user.deliveryRefusalCount}
+                            size="small"
+                            sx={{
+                              fontWeight: 700,
+                              fontSize: "0.78rem",
+                              bgcolor: user.deliveryRefusalCount > 0 ? "#fef3c7" : "#f3f4f6",
+                              color: user.deliveryRefusalCount > 0 ? "#92400e" : "#6b7280",
+                              border: "1px solid",
+                              borderColor: user.deliveryRefusalCount > 0 ? "#fde68a" : "#e5e7eb",
+                            }}
+                          />
+                        </TableCell>
+
+                        <TableCell>
+                          {user.codBlockedUntil ? (
+                            <Stack direction="row" spacing={0.5} alignItems="center">
+                              <WarningIcon sx={{ color: "warning.main", fontSize: 14 }} />
+                              <Typography variant="body2" fontSize="0.82rem" color="warning.dark" fontWeight={600}>
+                                {formatDate(user.codBlockedUntil)}
                               </Typography>
                             </Stack>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {user.email}
+                          ) : (
+                            <Typography variant="body2" fontSize="0.82rem" color="text.disabled">
+                              —
                             </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {user.phoneNumber || "—"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={roleConfig[user.role].label}
-                              color={roleConfig[user.role].color}
-                              size="small"
-                              variant="outlined"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={statusConfig[user.status].label}
-                              color={statusConfig[user.status].color}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {formatCurrency(user.loyaltyPoints)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {formatDate(user.createdAt)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {formatDate(user.lastLoginAt)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="center">
-                            <Stack
-                              direction="row"
-                              spacing={0.5}
-                              justifyContent="center"
-                            >
-                              <Tooltip title="Xem chi tiết">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => setSelectedUser(user)}
-                                >
-                                  <VisibilityIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip
-                                title={
-                                  user.status === "active"
-                                    ? "Khoá tài khoản (chưa có API)"
-                                    : "Mở khoá tài khoản (chưa có API)"
-                                }
-                              >
-                                <IconButton
-                                  size="small"
-                                  color={
-                                    user.status === "active"
-                                      ? "error"
-                                      : "success"
-                                  }
-                                  onClick={() => handleToggleStatus(user)}
-                                >
-                                  {user.status === "active" ? (
-                                    <BlockIcon fontSize="small" />
-                                  ) : (
-                                    <CheckCircleIcon fontSize="small" />
-                                  )}
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                          )}
+                        </TableCell>
 
-              <TablePagination
-                component="div"
-                count={filtered.length}
-                page={page}
-                onPageChange={(_, p) => setPage(p)}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setRowsPerPage(parseInt(e.target.value, 10));
-                  setPage(0);
-                }}
-                rowsPerPageOptions={[10, 25, 50]}
-                labelRowsPerPage="Hàng mỗi trang:"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}–${to} của ${count}`
-                }
-              />
-            </>
+                        <TableCell align="center">
+                          {user.isActive ? (
+                            <Chip
+                              icon={<ActiveIcon fontSize="small" />}
+                              label="Hoạt động"
+                              size="small"
+                              color="success"
+                              variant="outlined"
+                              sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                            />
+                          ) : (
+                            <Chip
+                              icon={<InactiveIcon fontSize="small" />}
+                              label="Vô hiệu"
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                            />
+                          )}
+                        </TableCell>
+
+                        <TableCell align="center">
+                          {user.isActive ? (
+                            <Tooltip title="Vô hiệu hóa tài khoản">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setConfirmTarget(user)}
+                              >
+                                <BlockIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          ) : (
+                            <Typography variant="caption" color="text.disabled">—</Typography>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                {!loading && filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} sx={{ py: 8, textAlign: "center" }}>
+                      <PeopleIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+                      <Typography variant="body1" color="text.secondary">
+                        Không tìm thấy người dùng nào
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+
+          {!loading && (
+            <Box
+              sx={{
+                px: 2,
+                py: 1.5,
+                borderTop: "1px solid",
+                borderColor: "grey.200",
+                bgcolor: "grey.50",
+              }}
+            >
+              <Typography variant="caption" color="text.secondary">
+                Hiển thị {filtered.length} / {allUsers.length} người dùng
+              </Typography>
+            </Box>
           )}
         </Paper>
       </Box>
 
-      <UserDetailDialog
-        user={selectedUser}
-        onClose={() => setSelectedUser(null)}
-      />
+      {/* Confirm deactivate dialog */}
+      <Dialog
+        open={!!confirmTarget}
+        onClose={() => !deactivating && setConfirmTarget(null)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>Xác nhận vô hiệu hóa</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc muốn vô hiệu hóa tài khoản của{" "}
+            <strong>{confirmTarget?.fullName}</strong>?
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Người dùng sẽ không thể đăng nhập cho đến khi được kích hoạt lại.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setConfirmTarget(null)}
+            disabled={deactivating}
+          >
+            Hủy
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleDeactivate}
+            disabled={deactivating}
+            startIcon={<BlockIcon />}
+          >
+            {deactivating ? "Đang xử lý…" : "Vô hiệu hóa"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </AdminLayout>
   );
 };
+
