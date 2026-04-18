@@ -250,12 +250,6 @@ const menuGroups: SidebarMenuGroup[] = [
         roles: ["admin"],
       },
       {
-        text: "Quản lý nhân viên",
-        icon: <BadgeIcon />,
-        path: "/admin/staff",
-        roles: ["admin"],
-      },
-      {
         text: "Thuộc tính sản phẩm",
         icon: <CategoryIcon />,
         path: "/admin/attributes",

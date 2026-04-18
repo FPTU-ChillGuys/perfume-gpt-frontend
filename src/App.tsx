@@ -130,11 +130,6 @@ const UserManagementPage = lazy(() =>
     default: m.UserManagementPage,
   })),
 );
-const StaffManagementPage = lazy(() =>
-  import("./pages/StaffManagementPage").then((m) => ({
-    default: m.StaffManagementPage,
-  })),
-);
 const AdminConversationsPage = lazy(() =>
   import("./pages/AdminConversationsPage").then((m) => ({
     default: m.AdminConversationsPage,
@@ -519,14 +514,6 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <UserManagementPage />
-                          </RoleBasedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin/staff"
-                        element={
-                          <RoleBasedRoute allowedRoles={["admin"]}>
-                            <StaffManagementPage />
                           </RoleBasedRoute>
                         }
                       />

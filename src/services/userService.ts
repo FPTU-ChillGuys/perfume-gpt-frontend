@@ -133,6 +133,22 @@ class UserService {
     const data = response.data as { success: boolean; message?: string } | undefined;
     if (!data?.success) throw new Error(data?.message || "Failed to update user status");
   }
+
+  async createStaff(body: {
+    fullName: string;
+    phoneNumber: string;
+    email: string;
+    password: string;
+    clientUri: string;
+  }): Promise<string> {
+    const response = await apiInstance.POST("/api/auths/admin/register", {
+      params: { query: { role: "staff" } },
+      body,
+    } as never);
+    const data = response.data as { success: boolean; message?: string } | undefined;
+    if (!data?.success) throw new Error(data?.message || "Tạo nhân viên thất bại");
+    return data.message ?? "Tạo nhân viên thành công";
+  }
 }
 
 export const userService = new UserService();
