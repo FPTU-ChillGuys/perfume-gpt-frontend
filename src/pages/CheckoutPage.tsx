@@ -598,19 +598,19 @@ export const CheckoutPage = () => {
           showToast("Vui lòng chọn địa chỉ giao hàng", "warning");
           return;
         }
-      }
 
-      if (
-        useNewAddress &&
-        (!newAddress.recipientName ||
-          !newAddress.recipientPhoneNumber ||
-          !newAddress.street ||
-          !newAddress.provinceId ||
-          !newAddress.districtId ||
-          !newAddress.wardCode)
-      ) {
-        showToast("Vui lòng điền đầy đủ thông tin địa chỉ", "warning");
-        return;
+        if (
+          useNewAddress &&
+          (!newAddress.recipientName ||
+            !newAddress.recipientPhoneNumber ||
+            !newAddress.street ||
+            !newAddress.provinceId ||
+            !newAddress.districtId ||
+            !newAddress.wardCode)
+        ) {
+          showToast("Vui lòng điền đầy đủ thông tin địa chỉ", "warning");
+          return;
+        }
       }
 
       if (selectedCartItemIds.length === 0) {
