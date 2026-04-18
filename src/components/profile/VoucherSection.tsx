@@ -12,12 +12,26 @@ import {
   Tabs,
   Tab,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  IconButton,
 } from "@mui/material";
 import {
   LocalOffer,
   CheckCircle,
   HourglassEmpty,
   Redeem,
+  Close,
+  PersonAdd,
+  AccountCircle,
 } from "@mui/icons-material";
 import {
   voucherService,
@@ -38,6 +52,204 @@ const formatDiscount = (
   const type = (item as any).discountType;
   if (type === "Percentage" || type === 2) return `${val}%`;
   return `${val.toLocaleString("vi-VN")}đ`;
+};
+
+interface RedeemDialogProps {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: (receiverEmailOrPhone: string | null) => void;
+  voucher: RedeemableVoucherResponse | null;
+  redeeming: boolean;
+}
+
+const RedeemDialog = ({
+  open,
+  onClose,
+  onConfirm,
+  voucher,
+  redeeming,
+}: RedeemDialogProps) => {
+  const [redeemType, setRedeemType] = useState<"self" | "gift">("self");
+  const [receiverInput, setReceiverInput] = useState("");
+  const [inputError, setInputError] = useState("");
+
+  const handleRedeemTypeChange = (value: "self" | "gift") => {
+    setRedeemType(value);
+    setReceiverInput("");
+    setInputError("");
+  };
+
+  const validateInput = () => {
+    if (redeemType === "self") return true;
+
+    if (!receiverInput.trim()) {
+      setInputError("Vui lòng nhập email hoặc số điện thoại");
+      return false;
+    }
+
+    // Simple email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Simple phone validation (Vietnamese format)
+    const phoneRegex = /^0(3[2-9]|5[6789]|7[06789]|8[0-9]|9[0-9])\d{7}$/;
+
+    if (!emailRegex.test(receiverInput) && !phoneRegex.test(receiverInput)) {
+      setInputError("Vui lòng nhập email hoặc số điện thoại hợp lệ");
+      return false;
+    }
+
+    setInputError("");
+    return true;
+  };
+
+  const handleConfirm = () => {
+    if (!validateInput()) return;
+
+    const receiver = redeemType === "self" ? null : receiverInput.trim();
+    onConfirm(receiver);
+  };
+
+  const handleClose = () => {
+    setRedeemType("self");
+    setReceiverInput("");
+    setInputError("");
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          pb: 1,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Redeem color="primary" />
+          <Typography variant="h6" fontWeight={600}>
+            Đổi voucher
+          </Typography>
+        </Box>
+        <IconButton onClick={handleClose} size="small">
+          <Close fontSize="small" />
+        </IconButton>
+      </DialogTitle>
+
+      <DialogContent sx={{ pt: 2 }}>
+        {voucher && (
+          <Paper
+            variant="outlined"
+            sx={{
+              p: 2,
+              mb: 3,
+              borderColor: "primary.main",
+              borderWidth: 1.5,
+              borderRadius: 2,
+              position: "relative",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: 6,
+                height: "100%",
+                bgcolor: "primary.main",
+                borderRadius: "4px 0 0 4px",
+              },
+            }}
+          >
+            <Box sx={{ pl: 1 }}>
+              <Typography variant="subtitle1" fontWeight={600} mb={0.5}>
+                {voucher.code}
+              </Typography>
+              <Typography variant="body1" fontWeight={600} color="primary">
+                Giảm {formatDiscount(voucher)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Tối thiểu:{" "}
+                {voucher.minOrderValue
+                  ? `${Number(voucher.minOrderValue).toLocaleString("vi-VN")}đ`
+                  : "Không giới hạn"}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="warning.main"
+                fontWeight={600}
+                sx={{ display: "block", mt: 1 }}
+              >
+                Chi phí: {voucher.requiredPoints?.toLocaleString("vi-VN")} điểm
+              </Typography>
+            </Box>
+          </Paper>
+        )}
+
+        <FormControl component="fieldset" fullWidth>
+          <FormLabel component="legend" sx={{ mb: 2 }}>
+            Chọn cách thức đổi voucher
+          </FormLabel>
+          <RadioGroup
+            value={redeemType}
+            onChange={(e) =>
+              handleRedeemTypeChange(e.target.value as "self" | "gift")
+            }
+          >
+            <FormControlLabel
+              value="self"
+              control={<Radio />}
+              label={
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <AccountCircle fontSize="small" color="primary" />
+                  <Typography>Đổi cho bản thân</Typography>
+                </Box>
+              }
+            />
+            <FormControlLabel
+              value="gift"
+              control={<Radio />}
+              label={
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <PersonAdd fontSize="small" color="secondary" />
+                  <Typography>Tặng cho người khác</Typography>
+                </Box>
+              }
+            />
+          </RadioGroup>
+        </FormControl>
+
+        {redeemType === "gift" && (
+          <TextField
+            fullWidth
+            label="Email hoặc số điện thoại người nhận"
+            placeholder="Nhập email hoặc số điện thoại..."
+            value={receiverInput}
+            onChange={(e) => {
+              setReceiverInput(e.target.value);
+              setInputError("");
+            }}
+            error={!!inputError}
+            helperText={inputError || "Ví dụ: user@email.com hoặc 0123456789"}
+            sx={{ mt: 2 }}
+            disabled={redeeming}
+          />
+        )}
+      </DialogContent>
+
+      <DialogActions sx={{ p: 3, pt: 1 }}>
+        <Button onClick={handleClose} disabled={redeeming}>
+          Hủy
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleConfirm}
+          disabled={redeeming}
+          startIcon={redeeming ? <CircularProgress size={16} /> : <Redeem />}
+        >
+          {redeeming ? "Đang đổi..." : "Xác nhận đổi"}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 };
 
 interface VoucherCardProps {
@@ -140,7 +352,7 @@ const VoucherCard = ({ voucher }: VoucherCardProps) => {
 
 interface RedeemableCardProps {
   voucher: RedeemableVoucherResponse;
-  onRedeem: (id: string) => void;
+  onRedeem: (voucher: RedeemableVoucherResponse) => void;
   redeeming: boolean;
   balance: number;
 }
@@ -268,9 +480,9 @@ const RedeemableCard = ({
                   )
                 }
                 disabled={!canRedeem || redeeming}
-                onClick={() => voucher.id && onRedeem(voucher.id)}
+                onClick={() => onRedeem(voucher)}
               >
-                Nhận ngay
+                Đổi voucher
               </Button>
             </span>
           </Tooltip>
@@ -291,6 +503,9 @@ export const VoucherSection = () => {
   const [error, setError] = useState("");
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
   const [balance, setBalance] = useState(0);
+  const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] =
+    useState<RedeemableVoucherResponse | null>(null);
 
   const loadMyVouchers = async () => {
     setLoading(true);
@@ -337,10 +552,16 @@ export const VoucherSection = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  const handleRedeem = async (voucherId: string) => {
+  const handleRedeem = async (
+    voucherId: string,
+    receiverEmailOrPhone: string | null,
+  ) => {
     setRedeemingId(voucherId);
     try {
-      const msg = await voucherService.redeemVoucher(voucherId);
+      // Note: You may need to modify voucherService.redeemVoucher to accept receiverEmailOrPhone parameter
+      const msg = await voucherService.redeemVoucher(voucherId, {
+        receiverEmailOrPhone,
+      });
       showToast(msg, "success");
       // Refresh balance after redeem
       import("@/services/loyaltyService").then(({ loyaltyService }) => {
@@ -352,10 +573,28 @@ export const VoucherSection = () => {
       await loadRedeemable();
       await loadMyVouchers();
     } catch (err: any) {
-      showToast(err.message || "Không thể nhận voucher", "error");
+      showToast(err.message || "Không thể đổi voucher", "error");
     } finally {
       setRedeemingId(null);
     }
+  };
+
+  const handleOpenRedeemDialog = (voucher: RedeemableVoucherResponse) => {
+    setSelectedVoucher(voucher);
+    setRedeemDialogOpen(true);
+  };
+
+  const handleCloseRedeemDialog = () => {
+    setRedeemDialogOpen(false);
+    setSelectedVoucher(null);
+  };
+
+  const handleConfirmRedeem = async (receiverEmailOrPhone: string | null) => {
+    if (!selectedVoucher?.id) return;
+
+    await handleRedeem(selectedVoucher.id, receiverEmailOrPhone);
+    setRedeemDialogOpen(false);
+    setSelectedVoucher(null);
   };
 
   const available = myVouchers.filter((v) => !v.isUsed && !v.isExpired);
@@ -473,7 +712,7 @@ export const VoucherSection = () => {
                   <Grid size={{ xs: 12, sm: 6 }} key={v.id}>
                     <RedeemableCard
                       voucher={v}
-                      onRedeem={handleRedeem}
+                      onRedeem={handleOpenRedeemDialog}
                       redeeming={redeemingId === v.id}
                       balance={balance}
                     />
@@ -491,6 +730,14 @@ export const VoucherSection = () => {
           )}
         </>
       )}
+
+      <RedeemDialog
+        open={redeemDialogOpen}
+        onClose={handleCloseRedeemDialog}
+        onConfirm={handleConfirmRedeem}
+        voucher={selectedVoucher}
+        redeeming={redeemingId === selectedVoucher?.id}
+      />
     </Box>
   );
 };

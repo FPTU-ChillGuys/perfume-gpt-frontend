@@ -3,9 +3,7 @@ import type { components } from "@/types/api/v1";
 import type { ApplyVoucherRequest, ApplyVoucherResponse } from "@/types/cart";
 
 export type VoucherResponse = components["schemas"]["VoucherResponse"];
-export type AvailableVoucherResponse =
-  components["schemas"]["AvailableVoucherResponse"];
-type VoucherListResponse =
+export type VoucherListResponse =
   components["schemas"]["PagedResultOfVoucherResponse"];
 
 export type UserVoucherResponse = components["schemas"]["UserVoucherResponse"];
@@ -256,32 +254,23 @@ class VoucherService {
     }
   }
 
-  async getAvailable(params?: {
-    PageNumber?: number;
-    PageSize?: number;
-  }): Promise<{ items: AvailableVoucherResponse[]; totalCount: number }> {
-    const response = await apiInstance.GET("/api/vouchers/available", {
-      params: { query: params },
-    });
-    if (!response.data?.success) {
-      throw new Error(response.data?.message || "Failed to load vouchers");
-    }
-    const payload = response.data.payload as any;
-    return {
-      items: payload?.items ?? [],
-      totalCount: payload?.totalCount ?? 0,
-    };
-  }
-
-  async redeemVoucher(voucherId: string): Promise<string> {
+  async redeemVoucher(
+    voucherId: string,
+    options: { receiverEmailOrPhone?: string | null } = {},
+  ): Promise<string> {
     const response = await apiInstance.POST(
       `${this.BASE_ENDPOINT}/redeem` as any,
-      { body: { voucherId } } as any,
+      {
+        body: {
+          voucherId,
+          receiverEmailOrPhone: options.receiverEmailOrPhone,
+        },
+      } as any,
     );
     if (!response.data?.success) {
       throw new Error(response.data?.message || "Failed to redeem voucher");
     }
-    return response.data.message || "Nhận voucher thành công!";
+    return response.data.message || "Đổi voucher thành công!";
   }
 }
 

@@ -12544,7 +12544,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/users/staff/{staffId}/inactive": {
+    "/api/users/user-manage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfUserManageItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfUserManageItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfUserManageItem"];
+                    };
+                };
+                /** @description Internal Server Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfUserManageItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfUserManageItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfUserManageItem"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/user/{userId}/inactive": {
         parameters: {
             query?: never;
             header?: never;
@@ -12557,7 +12605,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    staffId: string;
+                    userId: string;
                 };
                 cookie?: never;
             };
@@ -13221,60 +13269,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/vouchers/available": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    PageNumber?: number;
-                    PageSize?: number;
-                    SortBy?: string;
-                    SortOrder?: string;
-                    IsDescending?: boolean;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfAvailableVoucherResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/user-vouchers/me": {
         parameters: {
             query?: never;
@@ -13449,24 +13443,6 @@ export interface components {
             /** Format: int32 */
             id?: number;
             value: string;
-        };
-        AvailableVoucherResponse: {
-            /** Format: uuid */
-            id?: string;
-            code: string;
-            /** Format: decimal */
-            discountValue?: number;
-            discountType?: components["schemas"]["DiscountType"];
-            /** Format: decimal */
-            maxDiscountAmount?: null | number;
-            /** Format: decimal */
-            minOrderValue?: null | number;
-            /** Format: date-time */
-            expiryDate?: string;
-            /** Format: int32 */
-            remainingQuantity?: null | number;
-            /** Format: int32 */
-            maxUsagePerUser?: null | number;
         };
         /** @enum {string} */
         BannerLinkType: "Campaign" | "Product" | "ProductVariant" | "Brand";
@@ -13881,6 +13857,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfListOfUserManageItem: {
+            payload?: null | components["schemas"]["UserManageItem"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfListOfVariantLookupItem: {
             payload?: null | components["schemas"]["VariantLookupItem"][];
             success?: boolean;
@@ -13939,13 +13922,6 @@ export interface components {
         };
         BaseResponseOfOrderReturnRequestResponse: {
             payload?: null | components["schemas"]["OrderReturnRequestResponse"];
-            success?: boolean;
-            message?: string;
-            errors?: null | string[];
-            errorType?: null | components["schemas"]["ResponseErrorType"];
-        };
-        BaseResponseOfPagedResultOfAvailableVoucherResponse: {
-            payload?: null | components["schemas"]["PagedResultOfAvailableVoucherResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -14618,6 +14594,7 @@ export interface components {
         CreateInStoreOrderRequest: {
             scannedItems: components["schemas"]["PosScanItemRequest"][];
             voucherCode?: null | string;
+            guestEmailOrPhoneNumber?: null | string;
             /** Format: uuid */
             customerId?: null | string;
             isPickupInStore?: boolean;
@@ -15292,19 +15269,6 @@ export interface components {
         OrderStatus: "Pending" | "Preparing" | "ReadyToPick" | "Delivering" | "Delivered" | "Returning" | "Cancelled" | "Partial_Returned" | "Returned";
         /** @enum {string} */
         OrderType: "Online" | "Offline";
-        PagedResultOfAvailableVoucherResponse: {
-            items: components["schemas"]["AvailableVoucherResponse"][];
-            /** Format: int32 */
-            pageNumber: number;
-            /** Format: int32 */
-            pageSize: number;
-            /** Format: int32 */
-            totalCount: number;
-            /** Format: int32 */
-            totalPages?: number;
-            hasPreviousPage?: boolean;
-            hasNextPage?: boolean;
-        };
         PagedResultOfBannerResponse: {
             items: components["schemas"]["BannerResponse"][];
             /** Format: int32 */
@@ -15693,6 +15657,7 @@ export interface components {
         PreviewPosOrderRequest: {
             scannedItems: components["schemas"]["PosScanItemRequest"][];
             voucherCode?: null | string;
+            guestEmailOrPhoneNumber?: null | string;
             /** Format: uuid */
             customerId?: null | string;
             sessionId?: null | string;
@@ -16678,8 +16643,8 @@ export interface components {
             isPublic?: boolean;
             isMemberOnly?: boolean;
         };
-        /** @enum {null|string} */
-        UsageStatus: "Available" | "Reserved" | "Used" | null;
+        /** @enum {string} */
+        UsageStatus: "Available" | "Reserved" | "Used";
         UserCancelOrderRequest: {
             reason?: components["schemas"]["CancelOrderReason"];
             refundBankName?: null | string;
@@ -16695,6 +16660,20 @@ export interface components {
             phoneNumber: string;
             email: string;
             profilePictureUrl?: null | string;
+        };
+        UserManageItem: {
+            /** Format: uuid */
+            id?: string;
+            userName: string;
+            fullName: string;
+            email: string;
+            phoneNumber: string;
+            isActive?: boolean;
+            profileImageUrl?: null | string;
+            /** Format: int32 */
+            deliveryRefusalCount?: number;
+            /** Format: date-time */
+            codBlockedUntil?: null | string;
         };
         UserOrderResponse: {
             /** Format: uuid */
@@ -16737,13 +16716,13 @@ export interface components {
             code: string;
             /** Format: decimal */
             discountValue?: number;
-            discountType: string;
+            discountType?: components["schemas"]["DiscountType"];
             /** Format: decimal */
             minOrderValue?: null | number;
             /** Format: date-time */
             expiryDate?: string;
             isUsed?: boolean;
-            status: string;
+            status?: components["schemas"]["UsageStatus"];
             isExpired?: boolean;
             /** Format: date-time */
             redeemedAt?: string;

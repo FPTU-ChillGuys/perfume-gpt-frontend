@@ -372,6 +372,7 @@ export const CounterCheckoutStaffPage = () => {
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [orderInvoice, setOrderInvoice] = useState<OrderInvoice | null>(null);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
+  const [guestPhoneForInvoice, setGuestPhoneForInvoice] = useState<string | null>(null);
   const receiptRef = useRef<HTMLDivElement>(null);
   const previewDataRef = useRef<PosPreviewResponse | null>(null);
   const cartItemsRef = useRef<PosCartItem[]>([]);
@@ -455,6 +456,14 @@ export const CounterCheckoutStaffPage = () => {
         return;
       }
 
+      // Lưu SĐT khách lẻ nếu không có selectedCustomer
+      const guestPhone = !selectedCustomer ? (
+        // Ưu tiên customerLookupKeyword (SĐT tìm kiếm khách hàng), fallback recipientPhone (delivery)
+        customerLookupKeyword.trim() || (isPickupInStore ? "" : recipientPhone.trim())
+      ) : null;
+      
+      setGuestPhoneForInvoice(guestPhone);
+
       setSuccessOrderId(orderId);
       setIsSuccessDialogOpen(true);
       await loadOrderInvoice(orderId);
@@ -466,7 +475,7 @@ export const CounterCheckoutStaffPage = () => {
         }
       }, 500);
     },
-    [handlePrint, loadOrderInvoice, isSuccessDialogOpen, successOrderId],
+    [handlePrint, loadOrderInvoice, isSuccessDialogOpen, successOrderId, selectedCustomer, customerLookupKeyword, recipientPhone],
   );
 
   useEffect(() => {
@@ -498,6 +507,7 @@ export const CounterCheckoutStaffPage = () => {
     setIsSuccessDialogOpen(false);
     setSuccessOrderId(null);
     setOrderInvoice(null);
+    setGuestPhoneForInvoice(null);
 
     // Clear BOPIS states
     setBopisOrder(null);
@@ -1940,6 +1950,8 @@ export const CounterCheckoutStaffPage = () => {
 
   const handleClearSelectedCustomer = () => {
     setSelectedCustomer(null);
+    setCustomerLookupKeyword("");
+    setCustomerLookupResults([]);
   };
 
   const handleOpenCheckoutConfirm = () => {
@@ -2029,7 +2041,10 @@ export const CounterCheckoutStaffPage = () => {
         quantity: item.quantity,
       })),
       voucherCode: appliedVoucherCode.trim() || undefined,
-      customerId: selectedCustomer?.id || undefined,
+      customerId: selectedCustomer?.id || null,
+      guestEmailOrPhoneNumber: selectedCustomer?.id 
+        ? undefined 
+        : (customerLookupKeyword.trim() || undefined),
       isPickupInStore,
       payment: {
         method: paymentMethod,
@@ -4286,7 +4301,7 @@ export const CounterCheckoutStaffPage = () => {
 
         {/* Hidden ReceiptTemplate for printing */}
         <div style={{ display: "none" }}>
-          <ReceiptTemplate ref={receiptRef} invoice={orderInvoice} />
+          <ReceiptTemplate ref={receiptRef} invoice={orderInvoice} guestPhone={guestPhoneForInvoice} />
         </div>
       </Container>
     </MainLayout>

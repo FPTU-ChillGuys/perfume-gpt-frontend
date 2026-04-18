@@ -39,7 +39,6 @@ import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import {
   voucherService,
-  type AvailableVoucherResponse,
   type ApplicableVoucherCartItemRequest,
 } from "@/services/voucherService";
 import { VoucherPickerDialog } from "@/components/common/VoucherPickerDialog";
@@ -74,9 +73,6 @@ export const CartPage = () => {
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
-  const [myVoucherList, setMyVoucherList] = useState<
-    AvailableVoucherResponse[]
-  >([]);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   const roundCheckboxSx = {
@@ -783,16 +779,6 @@ export const CartPage = () => {
                       onClick={async () => {
                         setVoucherPickerOpen(true);
                         setLoadingMyVouchers(true);
-                        try {
-                          const data = await voucherService.getAvailable({
-                            PageSize: 50,
-                          });
-                          setMyVoucherList(data.items);
-                        } catch {
-                          setMyVoucherList([]);
-                        } finally {
-                          setLoadingMyVouchers(false);
-                        }
                       }}
                       disabled={isApplyingVoucher}
                       sx={{ mt: 1 }}
