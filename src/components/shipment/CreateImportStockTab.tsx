@@ -89,7 +89,7 @@ export const CreateImportStockTab: React.FC = () => {
           // Clear the importData param from URL after processing
           const newParams = new URLSearchParams(searchParams.toString());
           newParams.delete("importData");
-          setSearchParams(newParams);
+          setSearchParams(newParams, { replace: true });
 
           // Set hasProcessed flag to avoid re-processing
           setHasProcessedImportData(true);
@@ -126,7 +126,17 @@ export const CreateImportStockTab: React.FC = () => {
         setLoadingSuppliers(true);
         const supplierList = await productService.getSuppliers();
         setSuppliers(supplierList);
-        if (supplierList.length > 0) {
+        
+        // Check for supplierId in URL first
+        const urlSupplierId = searchParams.get("supplierId");
+        if (urlSupplierId) {
+          const sId = Number(urlSupplierId);
+          if (supplierList.some(s => s.id === sId)) {
+            setSelectedSupplierId(sId);
+          } else if (supplierList.length > 0) {
+            setSelectedSupplierId(supplierList[0]!.id!);
+          }
+        } else if (supplierList.length > 0) {
           setSelectedSupplierId(supplierList[0]!.id!);
         }
       } catch (err: any) {
@@ -169,6 +179,42 @@ export const CreateImportStockTab: React.FC = () => {
 
     loadCatalog();
   }, [selectedSupplierId, showToast]);
+
+  // Sync / Resolve items with variants info once variants are loaded
+  useEffect(() => {
+    if (items.length > 0 && variants.length > 0) {
+      // Check if any items need resolution (missing productName)
+      const needsResolution = items.some(item => !item.productName);
+      
+      if (needsResolution) {
+        const resolvedItems = items.map(item => {
+          if (item.productName) return item;
+          
+          // Match by ProductVariantId (from restock suggestions) with catalog fields
+          const variantInfo = variants.find(
+            (v) => v.productVariantId === item.variantId || v.id === item.variantId
+          );
+          
+          if (variantInfo) {
+            return {
+              ...item,
+              variantId: variantInfo.id!, // Map to Catalog ID for backend compatibility
+              productName: variantInfo.variantName,
+              imageUrl: variantInfo.primaryImageUrl || undefined,
+              price: variantInfo.negotiatedPrice || item.price,
+            };
+          }
+          return item;
+        });
+        
+        // Basic check to avoid infinite loops
+        const hasChanges = resolvedItems.some((item, idx) => item.variantId !== items[idx]?.variantId || item.productName !== items[idx]?.productName);
+        if (hasChanges) {
+          setItems(resolvedItems);
+        }
+      }
+    }
+  }, [items, variants]);
 
   const triggerExcelPicker = () => {
     fileInputRef.current?.click();

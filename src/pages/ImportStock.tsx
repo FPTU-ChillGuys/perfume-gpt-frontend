@@ -23,7 +23,7 @@ const ImportStock: React.FC = () => {
         // Clear the tab param after processing
         const newParams = new URLSearchParams(searchParams.toString());
         newParams.delete("tab");
-        setSearchParams(newParams);
+        setSearchParams(newParams, { replace: true });
       }
     }
   }, [searchParams, activeTab, setSearchParams]);
