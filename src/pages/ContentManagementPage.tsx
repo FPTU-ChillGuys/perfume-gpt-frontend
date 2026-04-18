@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -117,7 +117,7 @@ export const ContentManagementPage = () => {
       overrides?: Partial<UpdateProductRequest>,
     ): UpdateProductRequest => {
       if (!product.brandId || !product.categoryId) {
-        throw new Error("Sản phẩm thiếu thông tin brand hoặc category");
+        throw new Error("Sáº£n pháº©m thiáº¿u thĂ´ng tin brand hoáº·c category");
       }
 
       const attributePayload = overrides?.attributes ?? [];
@@ -136,8 +136,7 @@ export const ContentManagementPage = () => {
     },
     [],
   );
-  const [bestSellers, setBestSellers] = useState<ProductListItem[]>([]);
-  const [bestSellersLoading, setBestSellersLoading] = useState(false);
+
   const [semanticResults, setSemanticResults] = useState<
     ProductListItemWithVariants[]
   >([]);
@@ -167,7 +166,7 @@ export const ContentManagementPage = () => {
       setBanners(data.items);
     } catch (error) {
       console.error(error);
-      showToast("Không thể tải banner", "error");
+      showToast("KhĂ´ng thá»ƒ táº£i banner", "error");
     } finally {
       setBannersLoading(false);
     }
@@ -176,23 +175,6 @@ export const ContentManagementPage = () => {
   useEffect(() => {
     loadBanners();
   }, [loadBanners]);
-
-  const loadBestSellers = useCallback(async () => {
-    try {
-      setBestSellersLoading(true);
-      const response = await productService.getBestSellers();
-      setBestSellers(response.items.slice(0, 6));
-    } catch (error) {
-      console.error(error);
-      showToast("Không thể tải best seller", "error");
-    } finally {
-      setBestSellersLoading(false);
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    loadBestSellers();
-  }, [loadBestSellers]);
 
   const handleOpenBannerDialog = (banner?: Banner) => {
     setEditingBanner(banner ?? null);
@@ -214,12 +196,12 @@ export const ContentManagementPage = () => {
         await bannerService.createBanner(payload as CreateBannerPayload);
       }
       await loadBanners();
-      showToast("Đã lưu banner", "success");
+      showToast("ÄĂ£ lÆ°u banner", "success");
       setBannerDialogOpen(false);
       setEditingBanner(null);
     } catch (error) {
       console.error(error);
-      showToast("Không thể lưu banner", "error");
+      showToast("KhĂ´ng thá»ƒ lÆ°u banner", "error");
     } finally {
       setBannerSaving(false);
     }
@@ -252,9 +234,9 @@ export const ContentManagementPage = () => {
     openConfirmDialog(
       { type: "deleteBanner", banner },
       {
-        title: "Xóa banner",
-        description: `Bạn có chắc chắn muốn xóa banner "${banner.title}"?`,
-        confirmText: "Xóa",
+        title: "XĂ³a banner",
+        description: `Báº¡n cĂ³ cháº¯c cháº¯n muá»‘n xĂ³a banner "${banner.title}"?`,
+        confirmText: "XĂ³a",
       },
     );
   };
@@ -295,7 +277,7 @@ export const ContentManagementPage = () => {
       await loadBanners();
     } catch (error) {
       console.error(error);
-      showToast("Không thể thay đổi thứ tự", "error");
+      showToast("KhĂ´ng thá»ƒ thay Ä‘á»•i thá»© tá»±", "error");
     }
   };
 
@@ -311,7 +293,7 @@ export const ContentManagementPage = () => {
       setTotalProducts(response.totalCount);
     } catch (error: any) {
       console.error("Failed to fetch products", error);
-      const message = error.message || "Không thể tải sản phẩm";
+      const message = error.message || "KhĂ´ng thá»ƒ táº£i sáº£n pháº©m";
       setProductError(message);
       showToast(message, "error");
     } finally {
@@ -365,7 +347,7 @@ export const ContentManagementPage = () => {
           return;
         }
         console.error("Semantic search failed", error);
-        const message = error.message || "Không thể tìm kiếm sản phẩm";
+        const message = error.message || "KhĂ´ng thá»ƒ tĂ¬m kiáº¿m sáº£n pháº©m";
         setSemanticError(message);
       } finally {
         if (!ignore) {
@@ -385,8 +367,8 @@ export const ContentManagementPage = () => {
     : filteredProducts;
   const tableLoading = semanticActive ? semanticLoading : productsLoading;
   const emptyStateMessage = semanticActive
-    ? "Không có kết quả phù hợp với semantic search"
-    : "Không tìm thấy sản phẩm phù hợp";
+    ? "KhĂ´ng cĂ³ káº¿t quáº£ phĂ¹ há»£p vá»›i semantic search"
+    : "KhĂ´ng tĂ¬m tháº¥y sáº£n pháº©m phĂ¹ há»£p";
 
   const handleChangePage = (_event: unknown, newPage: number) => {
     setProductPage(newPage);
@@ -421,7 +403,7 @@ export const ContentManagementPage = () => {
       );
     } catch (error) {
       console.error(error);
-      showToast("Không thể tải hình sản phẩm", "error");
+      showToast("KhĂ´ng thá»ƒ táº£i hĂ¬nh sáº£n pháº©m", "error");
     } finally {
       setImagesLoading(false);
     }
@@ -443,7 +425,7 @@ export const ContentManagementPage = () => {
       setProductDetail(detail);
     } catch (error) {
       console.error(error);
-      showToast("Không thể tải thông tin sản phẩm", "error");
+      showToast("KhĂ´ng thá»ƒ táº£i thĂ´ng tin sáº£n pháº©m", "error");
     } finally {
       setInsightsLoading(false);
     }
@@ -489,10 +471,10 @@ export const ContentManagementPage = () => {
           ? { ...prev, description: descriptionDraft }
           : prev,
       );
-      showToast("Đã lưu mô tả", "success");
+      showToast("ÄĂ£ lÆ°u mĂ´ táº£", "success");
     } catch (error: any) {
       console.error(error);
-      showToast(error?.message || "Không thể lưu mô tả", "error");
+      showToast(error?.message || "KhĂ´ng thá»ƒ lÆ°u mĂ´ táº£", "error");
     } finally {
       setDescriptionSaving(false);
     }
@@ -518,12 +500,12 @@ export const ContentManagementPage = () => {
           temporaryMediaIdsToAdd: tempIds,
         });
         await productService.updateProduct(selectedProduct.id, payload);
-        showToast("Đã tải hình mới", "success");
+        showToast("ÄĂ£ táº£i hĂ¬nh má»›i", "success");
         await refreshProductImages();
       }
     } catch (error: any) {
       console.error(error);
-      showToast(error?.message || "Không thể tải hình", "error");
+      showToast(error?.message || "KhĂ´ng thá»ƒ táº£i hĂ¬nh", "error");
     } finally {
       setUploadingImages(false);
     }
@@ -552,7 +534,7 @@ export const ContentManagementPage = () => {
         await bannerService.uploadTemporaryImages([imageFile]);
       const tempImage = uploaded[0];
       if (!tempImage) {
-        throw new Error("Không thể tải hình ảnh tạm");
+        throw new Error("KhĂ´ng thá»ƒ táº£i hĂ¬nh áº£nh táº¡m");
       }
 
       const payload: CreateBannerPayload = {
@@ -570,10 +552,10 @@ export const ContentManagementPage = () => {
       };
       await bannerService.createBanner(payload);
       await loadBanners();
-      showToast("Đã đẩy sản phẩm lên banner", "success");
+      showToast("ÄĂ£ Ä‘áº©y sáº£n pháº©m lĂªn banner", "success");
     } catch (error) {
       console.error(error);
-      showToast("Không thể cập nhật banner", "error");
+      showToast("KhĂ´ng thá»ƒ cáº­p nháº­t banner", "error");
     } finally {
       setPromotingProduct(false);
     }
@@ -586,9 +568,9 @@ export const ContentManagementPage = () => {
     openConfirmDialog(
       { type: "deleteImage", mediaId, product: selectedProduct },
       {
-        title: "Xóa hình ảnh",
-        description: "Bạn có chắc chắn muốn xóa hình ảnh này?",
-        confirmText: "Xóa",
+        title: "XĂ³a hĂ¬nh áº£nh",
+        description: "Báº¡n cĂ³ cháº¯c cháº¯n muá»‘n xĂ³a hĂ¬nh áº£nh nĂ y?",
+        confirmText: "XĂ³a",
       },
     );
   };
@@ -600,9 +582,9 @@ export const ContentManagementPage = () => {
     openConfirmDialog(
       { type: "deleteProduct", product },
       {
-        title: "Xóa sản phẩm",
-        description: `Bạn có chắc chắn muốn xóa sản phẩm "${product.name || ""}"? Thao tác này không thể hoàn tác.`,
-        confirmText: "Xóa",
+        title: "XĂ³a sáº£n pháº©m",
+        description: `Báº¡n cĂ³ cháº¯c cháº¯n muá»‘n xĂ³a sáº£n pháº©m "${product.name || ""}"? Thao tĂ¡c nĂ y khĂ´ng thá»ƒ hoĂ n tĂ¡c.`,
+        confirmText: "XĂ³a",
       },
     );
   };
@@ -618,10 +600,10 @@ export const ContentManagementPage = () => {
         case "deleteProduct": {
           const productId = confirmState.action.product.id;
           if (!productId) {
-            throw new Error("Không tìm thấy sản phẩm để xóa");
+            throw new Error("KhĂ´ng tĂ¬m tháº¥y sáº£n pháº©m Ä‘á»ƒ xĂ³a");
           }
           await productService.deleteProduct(productId);
-          showToast("Đã xóa sản phẩm", "success");
+          showToast("ÄĂ£ xĂ³a sáº£n pháº©m", "success");
           if (selectedProduct?.id === productId) {
             setDrawerOpen(false);
             setSelectedProduct(null);
@@ -632,23 +614,23 @@ export const ContentManagementPage = () => {
         case "deleteBanner": {
           const bannerId = confirmState.action.banner.id;
           if (!bannerId) {
-            throw new Error("Không tìm thấy banner để xóa");
+            throw new Error("KhĂ´ng tĂ¬m tháº¥y banner Ä‘á»ƒ xĂ³a");
           }
           await bannerService.deleteBanner(bannerId);
           await loadBanners();
-          showToast("Đã xóa banner", "success");
+          showToast("ÄĂ£ xĂ³a banner", "success");
           break;
         }
         case "deleteImage": {
           const { mediaId, product } = confirmState.action;
           if (!product.id) {
-            throw new Error("Không tìm thấy sản phẩm chứa hình này");
+            throw new Error("KhĂ´ng tĂ¬m tháº¥y sáº£n pháº©m chá»©a hĂ¬nh nĂ y");
           }
           const payload = composeUpdatePayload(product, {
             mediaIdsToDelete: [mediaId],
           });
           await productService.updateProduct(product.id, payload);
-          showToast("Đã xóa hình", "success");
+          showToast("ÄĂ£ xĂ³a hĂ¬nh", "success");
           if (selectedProduct?.id === product.id) {
             await refreshProductImages();
           }
@@ -663,13 +645,13 @@ export const ContentManagementPage = () => {
       const fallbackMessage = (() => {
         switch (confirmState.action?.type) {
           case "deleteProduct":
-            return "Không thể xóa sản phẩm";
+            return "KhĂ´ng thá»ƒ xĂ³a sáº£n pháº©m";
           case "deleteBanner":
-            return "Không thể xóa banner";
+            return "KhĂ´ng thá»ƒ xĂ³a banner";
           case "deleteImage":
-            return "Không thể xóa hình";
+            return "KhĂ´ng thá»ƒ xĂ³a hĂ¬nh";
           default:
-            return "Không thể thực hiện thao tác";
+            return "KhĂ´ng thá»ƒ thá»±c hiá»‡n thao tĂ¡c";
         }
       })();
       showToast(error?.message || fallbackMessage, "error");
@@ -694,7 +676,7 @@ export const ContentManagementPage = () => {
               <Box>
                 <Typography variant="h6">Banner hero</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Kiểm soát thứ tự hiển thị, trạng thái và nội dung CTA của các
+                  Kiá»ƒm soĂ¡t thá»© tá»± hiá»ƒn thá»‹, tráº¡ng thĂ¡i vĂ  ná»™i dung CTA cá»§a cĂ¡c
                   banner.
                 </Typography>
               </Box>
@@ -704,14 +686,14 @@ export const ContentManagementPage = () => {
                   startIcon={<RefreshIcon />}
                   onClick={loadBanners}
                 >
-                  Làm mới
+                  LĂ m má»›i
                 </Button>
                 <Button
                   variant="contained"
                   startIcon={<AddIcon />}
                   onClick={() => handleOpenBannerDialog()}
                 >
-                  Tạo banner
+                  Táº¡o banner
                 </Button>
               </Stack>
             </Stack>
@@ -721,7 +703,7 @@ export const ContentManagementPage = () => {
                 <CircularProgress />
               </Box>
             ) : banners.length === 0 ? (
-              <Alert severity="info">Chưa có banner nào.</Alert>
+              <Alert severity="info">ChÆ°a cĂ³ banner nĂ o.</Alert>
             ) : (
               <Grid container spacing={2}>
                 {banners.map((banner, index) => (
@@ -748,7 +730,7 @@ export const ContentManagementPage = () => {
                         }}
                       >
                         <Chip
-                          label={banner.isActive ? "Kích hoạt" : "Tắt"}
+                          label={banner.isActive ? "KĂ­ch hoáº¡t" : "Táº¯t"}
                           size="small"
                           sx={{
                             position: "absolute",
@@ -823,7 +805,7 @@ export const ContentManagementPage = () => {
                           </Typography>
                         )}
                         <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                          <Tooltip title="Di chuyển lên">
+                          <Tooltip title="Di chuyá»ƒn lĂªn">
                             <span>
                               <IconButton
                                 size="small"
@@ -834,7 +816,7 @@ export const ContentManagementPage = () => {
                               </IconButton>
                             </span>
                           </Tooltip>
-                          <Tooltip title="Di chuyển xuống">
+                          <Tooltip title="Di chuyá»ƒn xuá»‘ng">
                             <span>
                               <IconButton
                                 size="small"
@@ -846,7 +828,7 @@ export const ContentManagementPage = () => {
                             </span>
                           </Tooltip>
                           <Box sx={{ flexGrow: 1 }} />
-                          <Tooltip title="Chỉnh sửa">
+                          <Tooltip title="Chá»‰nh sá»­a">
                             <IconButton
                               size="small"
                               onClick={() => handleOpenBannerDialog(banner)}
@@ -854,7 +836,7 @@ export const ContentManagementPage = () => {
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Xóa">
+                          <Tooltip title="XĂ³a">
                             <IconButton
                               size="small"
                               color="error"
@@ -870,290 +852,6 @@ export const ContentManagementPage = () => {
                 ))}
               </Grid>
             )}
-          </Paper>
-
-          {/* Product Section */}
-          <Paper sx={{ p: 3 }}>
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              justifyContent="space-between"
-              spacing={2}
-              sx={{ mb: 3 }}
-            >
-              <Box>
-                <Typography variant="h6">Quản lý sản phẩm</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Tải hình, chỉnh sửa mô tả và loại bỏ các sản phẩm không còn
-                  kinh doanh.
-                </Typography>
-              </Box>
-              <Stack spacing={1} sx={{ width: { xs: "100%", md: 360 } }}>
-                <TextField
-                  placeholder="Tìm theo tên, thương hiệu..."
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  size="small"
-                />
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography variant="caption" color="text.secondary">
-                    Nhập tối thiểu {SEMANTIC_MIN_CHARS} ký tự để bật semantic
-                    search.
-                  </Typography>
-                  {semanticActive && (
-                    <Chip
-                      size="small"
-                      color="secondary"
-                      label="Semantic"
-                      icon={<AutoAwesomeIcon fontSize="small" />}
-                    />
-                  )}
-                </Stack>
-              </Stack>
-            </Stack>
-
-            {productError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {productError}
-              </Alert>
-            )}
-
-            {semanticError && (
-              <Alert severity="warning" sx={{ mb: 2 }}>
-                {semanticError}
-              </Alert>
-            )}
-
-            <TableContainer component={Paper}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow sx={{ bgcolor: "grey.50" }}>
-                    <TableCell width={80}>Hình</TableCell>
-                    <TableCell>Tên sản phẩm</TableCell>
-                    <TableCell>Thương hiệu</TableCell>
-                    <TableCell>Danh mục</TableCell>
-                    <TableCell>Mô tả</TableCell>
-                    <TableCell align="right">Thao tác</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {tableLoading ? (
-                    <TableRow>
-                      <TableCell colSpan={6}>
-                        <LinearProgress />
-                      </TableCell>
-                    </TableRow>
-                  ) : displayedProducts.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {emptyStateMessage}
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    displayedProducts.map((product) => (
-                      <TableRow hover key={product.id}>
-                        <TableCell>
-                          {product.primaryImage?.url ? (
-                            <Box
-                              component="img"
-                              src={product.primaryImage.url}
-                              alt={product.name ?? "product"}
-                              sx={{
-                                width: 56,
-                                height: 56,
-                                objectFit: "cover",
-                                borderRadius: 1,
-                              }}
-                            />
-                          ) : (
-                            <Box
-                              sx={{
-                                width: 56,
-                                height: 56,
-                                borderRadius: 1,
-                                bgcolor: "grey.200",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "grey.500",
-                                fontSize: 12,
-                              }}
-                            >
-                              No img
-                            </Box>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="subtitle2">
-                            {product.name}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>{product.brandName}</TableCell>
-                        <TableCell>{product.categoryName}</TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="body2"
-                            color="text.secondary"
-                            sx={{
-                              maxWidth: 320,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {product.description || "—"}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">
-                          <Button
-                            variant="outlined"
-                            size="small"
-                            startIcon={<EditIcon fontSize="small" />}
-                            sx={{ mr: 1, textTransform: "none" }}
-                            onClick={() => handleSelectProduct(product)}
-                          >
-                            Chỉnh sửa
-                          </Button>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => requestDeleteProduct(product)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            {!semanticActive ? (
-              <TablePagination
-                component="div"
-                rowsPerPageOptions={[5, 8, 12, 20]}
-                rowsPerPage={rowsPerPage}
-                page={productPage}
-                count={totalProducts}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            ) : (
-              <Typography variant="caption" color="text.secondary">
-                Đang hiển thị {semanticResults.length} kết quả semantic. Xóa ô
-                tìm kiếm để quay lại danh sách chuẩn.
-              </Typography>
-            )}
-            <Divider sx={{ my: 3 }} />
-            <Box>
-              <Stack
-                direction={{ xs: "column", md: "row" }}
-                justifyContent="space-between"
-                alignItems={{ xs: "flex-start", md: "center" }}
-                spacing={1.5}
-                sx={{ mb: 2 }}
-              >
-                <Box>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    Top best seller tuần này
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Sử dụng danh sách này để đẩy nhanh việc tạo banner.
-                  </Typography>
-                </Box>
-                <Button
-                  size="small"
-                  startIcon={<RefreshIcon fontSize="small" />}
-                  onClick={loadBestSellers}
-                  disabled={bestSellersLoading}
-                >
-                  Làm mới danh sách
-                </Button>
-              </Stack>
-              {bestSellersLoading ? (
-                <LinearProgress sx={{ mb: 2 }} />
-              ) : (
-                <Grid container spacing={2}>
-                  {bestSellers.map((product) => (
-                    <Grid size={{ xs: 12, md: 6 }} key={`best-${product.id}`}>
-                      <Paper
-                        variant="outlined"
-                        sx={{
-                          p: 2,
-                          height: "100%",
-                          display: "flex",
-                          gap: 2,
-                          alignItems: "center",
-                        }}
-                      >
-                        {product.primaryImage?.url ? (
-                          <Box
-                            component="img"
-                            src={product.primaryImage.url}
-                            alt={product.name ?? "best seller"}
-                            sx={{
-                              width: 64,
-                              height: 64,
-                              borderRadius: 2,
-                              objectFit: "cover",
-                            }}
-                          />
-                        ) : (
-                          <Box
-                            sx={{
-                              width: 64,
-                              height: 64,
-                              borderRadius: 2,
-                              bgcolor: "grey.200",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: 12,
-                              color: "grey.600",
-                            }}
-                          >
-                            No img
-                          </Box>
-                        )}
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="subtitle2" fontWeight={600}>
-                            {product.name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {product.brandName} · {product.categoryName}
-                          </Typography>
-                          <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                            <Button
-                              size="small"
-                              variant="contained"
-                              onClick={() => handleSelectProduct(product)}
-                            >
-                              Quản lý
-                            </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => handlePromoteProduct(product)}
-                              disabled={promotingProduct}
-                            >
-                              Đẩy banner
-                            </Button>
-                          </Stack>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  ))}
-                  {bestSellers.length === 0 && (
-                    <Grid size={{ xs: 12 }}>
-                      <Alert severity="info">
-                        Chưa có dữ liệu best seller từ API.
-                      </Alert>
-                    </Grid>
-                  )}
-                </Grid>
-              )}
-            </Box>
           </Paper>
         </Stack>
       </Box>
@@ -1182,7 +880,7 @@ export const ContentManagementPage = () => {
               <Box>
                 <Typography variant="h6">{selectedProduct.name}</Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {selectedProduct.brandName} · {selectedProduct.categoryName}
+                  {selectedProduct.brandName} Â· {selectedProduct.categoryName}
                 </Typography>
               </Box>
               <IconButton onClick={() => setDrawerOpen(false)}>
@@ -1192,7 +890,7 @@ export const ContentManagementPage = () => {
             <Divider />
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                Mô tả sản phẩm
+                MĂ´ táº£ sáº£n pháº©m
               </Typography>
               <TextField
                 value={descriptionDraft}
@@ -1207,7 +905,7 @@ export const ContentManagementPage = () => {
                 onClick={handleSaveDescription}
                 disabled={descriptionSaving}
               >
-                {descriptionSaving ? "Đang lưu..." : "Lưu mô tả"}
+                {descriptionSaving ? "Äang lÆ°u..." : "LÆ°u mĂ´ táº£"}
               </Button>
             </Box>
             <Box>
@@ -1215,7 +913,7 @@ export const ContentManagementPage = () => {
                 Banner best seller
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Gắn sản phẩm này lên hero banner trang chủ và giữ trạng thái
+                Gáº¯n sáº£n pháº©m nĂ y lĂªn hero banner trang chá»§ vĂ  giá»¯ tráº¡ng thĂ¡i
                 best seller.
               </Typography>
               <Button
@@ -1226,12 +924,12 @@ export const ContentManagementPage = () => {
                 }}
                 disabled={promotingProduct}
               >
-                {promotingProduct ? "Đang cập nhật..." : "Đẩy lên banner"}
+                {promotingProduct ? "Äang cáº­p nháº­t..." : "Äáº©y lĂªn banner"}
               </Button>
             </Box>
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                Thông tin hương thơm
+                ThĂ´ng tin hÆ°Æ¡ng thÆ¡m
               </Typography>
               {insightsLoading ? (
                 <LinearProgress sx={{ height: 4, borderRadius: 99 }} />
@@ -1239,19 +937,19 @@ export const ContentManagementPage = () => {
                 <Stack spacing={0.75}>
                   {[
                     {
-                      label: "Mã sản phẩm",
+                      label: "MĂ£ sáº£n pháº©m",
                       value: productInformation.productCode,
                     },
-                    { label: "Xuất xứ", value: productInformation.origin },
+                    { label: "Xuáº¥t xá»©", value: productInformation.origin },
                     {
-                      label: "Năm ra mắt",
+                      label: "NÄƒm ra máº¯t",
                       value: productInformation.releaseYear,
                     },
                     {
-                      label: "Nhóm hương",
+                      label: "NhĂ³m hÆ°Æ¡ng",
                       value: productInformation.scentGroup,
                     },
-                    { label: "Phong cách", value: productInformation.style },
+                    { label: "Phong cĂ¡ch", value: productInformation.style },
                   ]
                     .filter((item) => item.value)
                     .map((item) => (
@@ -1271,15 +969,15 @@ export const ContentManagementPage = () => {
                   {(
                     [
                       {
-                        label: "Tầng hương đầu",
+                        label: "Táº§ng hÆ°Æ¡ng Ä‘áº§u",
                         value: productInformation.topNotes,
                       },
                       {
-                        label: "Tầng hương giữa",
+                        label: "Táº§ng hÆ°Æ¡ng giá»¯a",
                         value: productInformation.heartNotes,
                       },
                       {
-                        label: "Tầng hương cuối",
+                        label: "Táº§ng hÆ°Æ¡ng cuá»‘i",
                         value: productInformation.baseNotes,
                       },
                     ] as const
@@ -1301,13 +999,13 @@ export const ContentManagementPage = () => {
                 </Stack>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Chưa có dữ liệu mô tả nâng cao.
+                  ChÆ°a cĂ³ dá»¯ liá»‡u mĂ´ táº£ nĂ¢ng cao.
                 </Typography>
               )}
             </Box>
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                Biến thể & SKU
+                Biáº¿n thá»ƒ & SKU
               </Typography>
               {insightsLoading ? (
                 <LinearProgress sx={{ height: 4, borderRadius: 99 }} />
@@ -1338,7 +1036,7 @@ export const ContentManagementPage = () => {
                           variant.concentrationName,
                         ]
                           .filter(Boolean)
-                          .join(" · ")}
+                          .join(" Â· ")}
                       </Typography>
                       {typeof variant.basePrice === "number" && (
                         <Typography variant="body2" sx={{ mt: 0.5 }}>
@@ -1350,7 +1048,7 @@ export const ContentManagementPage = () => {
                 </Stack>
               ) : (
                 <Typography variant="body2" color="text.secondary">
-                  Chưa có biến thể nào.
+                  ChÆ°a cĂ³ biáº¿n thá»ƒ nĂ o.
                 </Typography>
               )}
             </Box>
@@ -1362,14 +1060,14 @@ export const ContentManagementPage = () => {
                 alignItems="center"
                 sx={{ mb: 1 }}
               >
-                <Typography variant="subtitle2">Thư viện hình ảnh</Typography>
+                <Typography variant="subtitle2">ThÆ° viá»‡n hĂ¬nh áº£nh</Typography>
                 <Button
                   size="small"
                   component="label"
                   startIcon={<CloudUploadIcon fontSize="small" />}
                   disabled={uploadingImages}
                 >
-                  {uploadingImages ? "Đang tải..." : "Tải hình"}
+                  {uploadingImages ? "Äang táº£i..." : "Táº£i hĂ¬nh"}
                   <input
                     hidden
                     type="file"
@@ -1384,7 +1082,7 @@ export const ContentManagementPage = () => {
                   <CircularProgress size={32} />
                 </Box>
               ) : productImages.length === 0 ? (
-                <Alert severity="info">Chưa có hình nào.</Alert>
+                <Alert severity="info">ChÆ°a cĂ³ hĂ¬nh nĂ o.</Alert>
               ) : (
                 <Grid container spacing={2}>
                   {productImages.map((image) => (
@@ -1444,7 +1142,7 @@ export const ContentManagementPage = () => {
         ) : (
           <Box sx={{ p: 3 }}>
             <Typography variant="body2" color="text.secondary">
-              Chọn một sản phẩm để chỉnh sửa.
+              Chá»n má»™t sáº£n pháº©m Ä‘á»ƒ chá»‰nh sá»­a.
             </Typography>
           </Box>
         )}
