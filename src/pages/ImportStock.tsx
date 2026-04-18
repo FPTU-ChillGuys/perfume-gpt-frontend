@@ -7,26 +7,31 @@ import { CreateImportStockTab } from "../components/shipment/CreateImportStockTa
 
 const ImportStock: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState(() => {
+    // Initialize tab from URL params if present
+    const tabParam = searchParams.get("tab");
+    if (tabParam) {
+      const tabValue = parseInt(tabParam, 10);
+      if (!isNaN(tabValue) && (tabValue === 0 || tabValue === 1)) {
+        return tabValue;
+      }
+    }
+    return 0;
+  });
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
   };
 
-  // Auto-switch tab when importData param is present
+  // Clear tab param from URL after initial load
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam) {
-      const tabValue = parseInt(tabParam, 10);
-      if (!isNaN(tabValue) && tabValue !== activeTab) {
-        setActiveTab(tabValue);
-        // Clear the tab param after processing
-        const newParams = new URLSearchParams(searchParams.toString());
-        newParams.delete("tab");
-        setSearchParams(newParams, { replace: true });
-      }
+      const newParams = new URLSearchParams(searchParams.toString());
+      newParams.delete("tab");
+      setSearchParams(newParams, { replace: true });
     }
-  }, [searchParams, activeTab, setSearchParams]);
+  }, [searchParams, setSearchParams]);
 
   return (
     <AdminLayout>

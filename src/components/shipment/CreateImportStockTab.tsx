@@ -126,12 +126,12 @@ export const CreateImportStockTab: React.FC = () => {
         setLoadingSuppliers(true);
         const supplierList = await productService.getSuppliers();
         setSuppliers(supplierList);
-        
+
         // Check for supplierId in URL first
         const urlSupplierId = searchParams.get("supplierId");
         if (urlSupplierId) {
           const sId = Number(urlSupplierId);
-          if (supplierList.some(s => s.id === sId)) {
+          if (supplierList.some((s) => s.id === sId)) {
             setSelectedSupplierId(sId);
           } else if (supplierList.length > 0) {
             setSelectedSupplierId(supplierList[0]!.id!);
@@ -184,17 +184,18 @@ export const CreateImportStockTab: React.FC = () => {
   useEffect(() => {
     if (items.length > 0 && variants.length > 0) {
       // Check if any items need resolution (missing productName)
-      const needsResolution = items.some(item => !item.productName);
-      
+      const needsResolution = items.some((item) => !item.productName);
+
       if (needsResolution) {
-        const resolvedItems = items.map(item => {
+        const resolvedItems = items.map((item) => {
           if (item.productName) return item;
-          
+
           // Match by ProductVariantId (from restock suggestions) with catalog fields
           const variantInfo = variants.find(
-            (v) => v.productVariantId === item.variantId || v.id === item.variantId
+            (v) =>
+              v.productVariantId === item.variantId || v.id === item.variantId,
           );
-          
+
           if (variantInfo) {
             return {
               ...item,
@@ -206,9 +207,13 @@ export const CreateImportStockTab: React.FC = () => {
           }
           return item;
         });
-        
+
         // Basic check to avoid infinite loops
-        const hasChanges = resolvedItems.some((item, idx) => item.variantId !== items[idx]?.variantId || item.productName !== items[idx]?.productName);
+        const hasChanges = resolvedItems.some(
+          (item, idx) =>
+            item.variantId !== items[idx]?.variantId ||
+            item.productName !== items[idx]?.productName,
+        );
         if (hasChanges) {
           setItems(resolvedItems);
         }
@@ -263,7 +268,8 @@ export const CreateImportStockTab: React.FC = () => {
       if (serverSupplierId && serverSupplierId !== selectedSupplierId) {
         try {
           setLoadingVariants(true);
-          catalogForMapping = await sourcingCatalogService.getCatalog(serverSupplierId);
+          catalogForMapping =
+            await sourcingCatalogService.getCatalog(serverSupplierId);
         } catch (err) {
           console.error("Failed to load catalog for server supplier:", err);
           catalogForMapping = variants; // Fallback to current catalog
@@ -730,7 +736,7 @@ export const CreateImportStockTab: React.FC = () => {
                           >
                             <option value="">
                               {item.productName
-                                ? `✓ ${item.productName}` // Show mapped product name if available
+                                ? `${item.productName}` // Show mapped product name if available
                                 : loadingVariants
                                   ? "Đang tải..."
                                   : variants.length === 0
