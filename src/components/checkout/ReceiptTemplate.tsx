@@ -10,258 +10,223 @@ const formatDate = (value?: string | null) => formatDateTimeCompactVN(value);
 
 const toVietnameseCommonText = (value?: string | null) => {
   const raw = (value || "").trim();
-  if (!raw) {
-    return "-";
-  }
+  if (!raw) return "-";
+  return raw.toLowerCase() === "n/a" ? "Không có" : raw;
+};
 
-  const normalized = raw.toLowerCase();
-  if (normalized === "n/a") {
-    return "Không có";
+const getValidPhone = (recipientPhone?: string | null, guestPhone?: string | null) => {
+  // Ưu tiên guestPhone nếu có giá trị hợp lệ
+  if (guestPhone && guestPhone.trim() && guestPhone.toLowerCase() !== "n/a") {
+    return guestPhone.trim();
   }
-
-  return raw;
+  // Fallback recipientPhone nếu có giá trị hợp lệ
+  if (recipientPhone && recipientPhone.trim() && recipientPhone.toLowerCase() !== "n/a") {
+    return recipientPhone.trim();
+  }
+  return null;
 };
 
 const toVietnameseOrderStatus = (value?: string | null) => {
   const normalized = (value || "").trim().toLowerCase();
-  if (!normalized) {
-    return "-";
-  }
-
-  if (normalized === "pending") return "Chờ xử lý";
-  if (normalized === "preparing") return "Đang chuẩn bị";
-  if (normalized === "readytopick") return "Chờ lấy hàng";
-  if (normalized === "delivering") return "Đang giao hàng";
-  if (normalized === "delivered") return "Đã giao hàng";
-  if (normalized === "cancelled") return "Đã hủy";
-  if (normalized === "returning") return "Đang trả hàng";
-  if (normalized === "returned") return "Đã trả hàng";
-  if (normalized === "partial_returned") return "Trả một phần";
-
-  return value || "-";
+  const statusMap: Record<string, string> = {
+    pending: "Chờ xử lý",
+    preparing: "Đang chuẩn bị",
+    readytopick: "Chờ lấy hàng",
+    delivering: "Đang giao hàng",
+    delivered: "Đã giao hàng",
+    cancelled: "Đã hủy",
+    returning: "Đang trả hàng",
+    returned: "Đã trả hàng",
+    partial_returned: "Trả một phần",
+  };
+  return statusMap[normalized] || value || "-";
 };
 
 const toVietnamesePaymentMethod = (value?: string | null) => {
   const normalized = (value || "").trim().toLowerCase();
-  if (!normalized) {
-    return "-";
-  }
-
-  if (normalized === "cashondelivery") return "COD";
-  if (normalized === "cashinstore") return "Tiền mặt";
-  if (normalized === "vnpay") return "VNPay";
-  if (normalized === "momo") return "MoMo";
-  if (normalized === "externalbanktransfer") return "Chuyển khoản";
-  if (normalized === "payos") return "PayOS";
-
-  return value || "-";
+  const methodMap: Record<string, string> = {
+    cashondelivery: "COD",
+    cashinstore: "Tiền mặt",
+    vnpay: "VNPay",
+    momo: "MoMo",
+    externalbanktransfer: "Chuyển khoản",
+    payos: "PayOS",
+  };
+  return methodMap[normalized] || value || "-";
 };
 
 const toVietnameseCustomerName = (value?: string | null) => {
   const raw = (value || "").trim();
-  if (!raw) {
-    return "-";
-  }
-
-  if (raw.toLowerCase() === "guest customer") {
-    return "Khách lẻ";
-  }
-
-  return raw;
+  return !raw || raw.toLowerCase() === "guest customer" ? "Khách lẻ" : raw;
 };
 
 const toVietnameseInvoiceNote = (value?: string | null) => {
-  if (!value) {
-    return "-";
-  }
-
-  const normalized = value.trim().toLowerCase();
-  if (normalized === "physical in-store invoice.") {
-    return "Hóa đơn bán tại cửa hàng";
-  }
-
-  return value;
+  if (!value) return "-";
+  return value.trim().toLowerCase() === "physical in-store invoice."
+    ? "Hóa đơn bán tại cửa hàng"
+    : value;
 };
 
 interface ReceiptTemplateProps {
   invoice: OrderInvoice | null;
+  guestPhone?: string | null;
 }
 
 export const ReceiptTemplate = forwardRef<HTMLDivElement, ReceiptTemplateProps>(
-  ({ invoice }, ref) => {
+  ({ invoice, guestPhone }, ref) => {
     if (!invoice) return null;
+
+    const validPhone = getValidPhone(invoice.recipientPhone, guestPhone);
 
     return (
       <Box
         ref={ref}
         sx={{
-          width: "80mm",
-          p: 2,
-          fontFamily: "monospace",
-          fontSize: "11px",
-          bgcolor: "white",
-          color: "black",
-          lineHeight: 1.4,
+          display: "none",
+          "@media print": {
+            display: "block",
+            width: "72mm", // Cố định chiều rộng tương thích máy in K80
+            margin: "0 auto",
+            padding: "2mm",
+            color: "#000",
+            bgcolor: "#fff",
+            fontFamily: '"Courier New", Courier, monospace',
+            fontSize: "12px",
+            lineHeight: 1.4,
+            "@page": { margin: 0 },
+          },
         }}
       >
-        <Stack spacing={0.75}>
-          {/* Header */}
-          <Box textAlign="center">
-            <Typography variant="h6" fontWeight={800} fontSize={16}>
-              PERFUME GPT BOUTIQUE
-            </Typography>
+        {/* HEADER HÓA ĐƠN */}
+        <Stack spacing={0.5} mb={2} alignItems="center">
+          <Typography fontWeight={800} fontSize="18px">
+            PERFUMEGPT
+          </Typography>
+          <Typography fontWeight={700} fontSize="14px">
+            HÓA ĐƠN BÁN HÀNG
+          </Typography>
+          <Typography fontSize="12px">Mã ĐH: {invoice.code || "-"}</Typography>
+          <Typography fontSize="12px">
+            Ngày: {formatDate(invoice.orderDate)}
+          </Typography>
+        </Stack>
+
+        <Divider sx={{ mb: 1, borderStyle: "dashed", borderColor: "#000" }} />
+
+        {/* THÔNG TIN KHÁCH/NHÂN VIÊN */}
+        <Stack spacing={0.5} mb={1.5} sx={{ fontSize: "12px" }}>
+          <Box>
+            <b>Trạng thái:</b> {toVietnameseOrderStatus(invoice.orderStatus)}
+          </Box>
+          <Box>
+            <b>Thu ngân:</b> {toVietnameseCommonText(invoice.staffName)}
+          </Box>
+          <Box>
+            <b>Khách hàng:</b> {toVietnameseCustomerName(invoice.customerName)}
+          </Box>
+          {validPhone && (
+            <Box>
+              <b>SĐT:</b> {validPhone}
+            </Box>
+          )}
+          {invoice.recipientAddress && (
+            <Box>
+              <b>Địa chỉ:</b> {toVietnameseCommonText(invoice.recipientAddress)}
+            </Box>
+          )}
+        </Stack>
+
+        <Divider sx={{ mb: 1.5, borderStyle: "dashed", borderColor: "#000" }} />
+
+        {/* DANH SÁCH SẢN PHẨM */}
+        <Box sx={{ mb: 2, fontSize: "12px" }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontWeight: 700,
+              borderBottom: "1px solid #000",
+              pb: 0.5,
+              mb: 1,
+            }}
+          >
+            <Box>Sản phẩm</Box>
+            <Box>Thành tiền</Box>
           </Box>
 
-          <Divider sx={{ borderStyle: "dashed" }} />
-
-          {/* Order Info */}
-          <Box>
-            <Typography variant="body2" fontWeight={700} fontSize={13} mb={0.5}>
-              HÓA ĐƠN BÁN HÀNG
-            </Typography>
-            <Typography variant="caption" display="block" fontSize={11}>
-              Mã đơn: {invoice.code || "-"}
-            </Typography>
-            <Typography variant="caption" display="block" fontSize={11}>
-              Ngày: {formatDate(invoice.orderDate) || "-"}
-            </Typography>
-            <Typography variant="caption" display="block" fontSize={11}>
-              Trạng thái: {toVietnameseOrderStatus(invoice.orderStatus)}
-            </Typography>
-            <Typography variant="caption" display="block" fontSize={11}>
-              Nhân viên: {toVietnameseCommonText(invoice.staffName)}
-            </Typography>
-            <Typography variant="caption" display="block" fontSize={11}>
-              Khách hàng: {toVietnameseCustomerName(invoice.customerName)}
-            </Typography>
-            <Typography variant="caption" display="block" fontSize={11}>
-              SĐT: {toVietnameseCommonText(invoice.recipientPhone)}
-            </Typography>
-            {invoice.recipientAddress && (
-              <Typography variant="caption" display="block" fontSize={11}>
-                Địa chỉ: {toVietnameseCommonText(invoice.recipientAddress)}
-              </Typography>
-            )}
-          </Box>
-
-          <Divider sx={{ borderStyle: "dashed" }} />
-
-          {/* Items */}
-          <Box>
-            <Typography
-              variant="caption"
-              fontWeight={700}
-              fontSize={11}
-              mb={0.5}
+          {(invoice.items || []).map((item, index) => (
+            <Box
+              key={`${item.productName}-${item.variantInfo}-${index}`}
+              sx={{
+                mb: 1,
+                pb: 1,
+                borderBottom:
+                  index === (invoice.items?.length || 0) - 1
+                    ? "none"
+                    : "1px dotted #888",
+              }}
             >
-              CHI TIẾT SẢN PHẨM
-            </Typography>
-            {invoice.items?.map((item, index) => (
-              <Box
-                key={`${item.productName}-${item.variantInfo}-${index}`}
-                mb={0.75}
-                pb={0.75}
-                sx={{
-                  borderBottom:
-                    index === (invoice.items?.length || 0) - 1
-                      ? "none"
-                      : "1px dotted #d1d5db",
-                }}
-              >
-                <Typography variant="caption" fontWeight={700} fontSize={11}>
-                  {item.productName || "-"}
-                </Typography>
-                {item.variantInfo && (
-                  <Typography
-                    variant="caption"
-                    display="block"
-                    fontSize={10}
-                    color="text.secondary"
-                  >
-                    Phân loại: {item.variantInfo}
-                  </Typography>
-                )}
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  spacing={1}
-                  mt={0.25}
-                >
-                  <Typography variant="caption" fontSize={11}>
-                    {item.quantity ?? 0} x {formatCurrency(item.unitPrice)}
-                  </Typography>
-                  <Typography variant="caption" fontWeight={700} fontSize={11}>
-                    {formatCurrency(item.subtotal)}
-                  </Typography>
-                </Stack>
+              {/* Dòng 1: Tên + Phân loại */}
+              <Box sx={{ fontWeight: 600, mb: 0.5 }}>
+                {item.productName || "-"}{" "}
+                {item.variantInfo ? `(${item.variantInfo})` : ""}
               </Box>
-            ))}
-          </Box>
+              {/* Dòng 2: SL x Đơn giá = Tạm tính */}
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Box>
+                  {item.quantity ?? 0} x {formatCurrency(item.unitPrice)}
+                </Box>
+                <Box fontWeight={600}>{formatCurrency(item.subtotal)}</Box>
+              </Box>
+            </Box>
+          ))}
+        </Box>
 
-          <Divider sx={{ borderStyle: "dashed" }} />
-
-          {/* Totals */}
-          <Box>
-            <Stack direction="row" justifyContent="space-between" mb={0.5}>
-              <Typography variant="caption" fontSize={11}>
-                Tạm tính
-              </Typography>
-              <Typography variant="caption" fontWeight={600} fontSize={11}>
-                {formatCurrency(invoice.subtotal)}
-              </Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between" mb={0.5}>
-              <Typography variant="caption" fontSize={11}>
-                Giảm giá
-              </Typography>
-              <Typography variant="caption" fontWeight={600} fontSize={11}>
-                {formatCurrency(invoice.discount)}
-              </Typography>
-            </Stack>
-            <Stack direction="row" justifyContent="space-between">
-              <Typography variant="caption" fontSize={11}>
-                Thuế
-              </Typography>
-              <Typography variant="caption" fontWeight={600} fontSize={11}>
-                {formatCurrency(invoice.tax)}
-              </Typography>
-            </Stack>
-          </Box>
-
-          <Divider />
-
+        {/* TỔNG TIỀN */}
+        <Stack spacing={0.5} sx={{ mb: 2, fontSize: "12px" }}>
           <Stack direction="row" justifyContent="space-between">
-            <Typography variant="subtitle1" fontWeight={800} fontSize={13}>
+            <Box>Tạm tính</Box>
+            <Box>{formatCurrency(invoice.subtotal)}</Box>
+          </Stack>
+          <Stack direction="row" justifyContent="space-between">
+            <Box>Giảm giá</Box>
+            <Box>{formatCurrency(invoice.discount)}</Box>
+          </Stack>
+          <Stack direction="row" justifyContent="space-between">
+            <Box>Thuế</Box>
+            <Box>{formatCurrency(invoice.tax)}</Box>
+          </Stack>
+
+          <Divider
+            sx={{ my: 0.5, borderStyle: "dashed", borderColor: "#000" }}
+          />
+
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            mt={0.5}
+          >
+            <Typography fontSize="14px" fontWeight={800}>
               TỔNG CỘNG
             </Typography>
-            <Typography variant="subtitle1" fontWeight={800} fontSize={13}>
+            <Typography fontSize="16px" fontWeight={800}>
               {formatCurrency(invoice.total)}
             </Typography>
           </Stack>
+        </Stack>
 
-          <Divider sx={{ borderStyle: "dashed" }} />
+        <Divider sx={{ mb: 1.5, borderStyle: "dashed", borderColor: "#000" }} />
 
-          {/* Payment Info */}
+        {/* FOOTER & GHI CHÚ */}
+        <Stack spacing={0.5} sx={{ fontSize: "12px", textAlign: "center" }}>
           <Box>
-            <Typography variant="caption" display="block" fontSize={11}>
-              <b>Thanh toán:</b>{" "}
-              {toVietnamesePaymentMethod(invoice.paymentMethod)}
-            </Typography>
-            <Typography variant="caption" display="block" fontSize={11}>
-              <b>Ghi chú:</b> {toVietnameseInvoiceNote(invoice.note)}
-            </Typography>
+            <b>Thanh toán:</b>{" "}
+            {toVietnamesePaymentMethod(invoice.paymentMethod)}
           </Box>
-
-          <Divider sx={{ borderStyle: "dashed" }} />
-
-          {/* Footer */}
-          <Box textAlign="center">
-            <Typography variant="caption" display="block" fontSize={11}>
-              Cảm ơn quý khách!
-            </Typography>
-            <Typography variant="caption" display="block" fontSize={11}>
-              Hẹn gặp lại!
-            </Typography>
+          <Box>Ghi chú: {toVietnameseInvoiceNote(invoice.note)}</Box>
+          <Box sx={{ mt: 1.5, fontWeight: 600, fontStyle: "italic" }}>
+            Cảm ơn quý khách & Hẹn gặp lại!
           </Box>
         </Stack>
       </Box>

@@ -46,6 +46,7 @@ import {
   ThumbsUpDown as ThumbsUpDownIcon,
   LocalOffer as LocalOfferIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
+  Badge as BadgeIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";

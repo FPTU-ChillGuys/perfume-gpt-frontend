@@ -44,7 +44,6 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import {
   voucherService,
-  type AvailableVoucherResponse,
   type ApplicableVoucherCartItemRequest,
 } from "@/services/voucherService";
 import { VoucherPickerDialog } from "@/components/common/VoucherPickerDialog";
@@ -185,9 +184,6 @@ export const CheckoutPage = () => {
   const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
-  const [myVoucherList, setMyVoucherList] = useState<
-    AvailableVoucherResponse[]
-  >([]);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
 
   useEffect(() => {
@@ -435,9 +431,12 @@ export const CheckoutPage = () => {
       setSelectedCartItemIds(effectiveSelectedIds);
       setTotals(totalsData);
 
-      // Set default address
+      // Set default address or enable new address form for new users
       if (defaultAddressId) {
         setSelectedAddressId(defaultAddressId);
+      } else if (addressList.length === 0) {
+        // Auto-enable new address form for users with no saved addresses
+        setUseNewAddress(true);
       }
     } catch (error) {
       showToast("Không thể tải dữ liệu. Vui lòng thử lại.", "error");
@@ -593,10 +592,12 @@ export const CheckoutPage = () => {
     try {
       setIsSubmitting(true);
 
-      // Validate
-      if (!isPickupInStore && !selectedAddressId && !useNewAddress) {
-        showToast("Vui lòng chọn địa chỉ giao hàng", "warning");
-        return;
+      // Validate delivery address
+      if (!isPickupInStore) {
+        if (!useNewAddress && !selectedAddressId) {
+          showToast("Vui lòng chọn địa chỉ giao hàng", "warning");
+          return;
+        }
       }
 
       if (
@@ -1239,16 +1240,6 @@ export const CheckoutPage = () => {
                     onClick={async () => {
                       setVoucherPickerOpen(true);
                       setLoadingMyVouchers(true);
-                      try {
-                        const data = await voucherService.getAvailable({
-                          PageSize: 50,
-                        });
-                        setMyVoucherList(data.items);
-                      } catch {
-                        setMyVoucherList([]);
-                      } finally {
-                        setLoadingMyVouchers(false);
-                      }
                     }}
                     disabled={isApplyingVoucher}
                     sx={{ mt: 1 }}
