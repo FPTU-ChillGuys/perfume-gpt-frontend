@@ -447,7 +447,7 @@ export const CampaignManagementDetailPage = () => {
     if (!campaignId) return;
     // Validate: Create mode requires productVariantId
     if (!editingItem && !itemForm.productVariantId.trim()) {
-      showToast("Product Variant ID không được để trống", "error");
+      showToast("ID của sản phẩm không được để trống", "error");
       return;
     }
     setIsSavingItem(true);
@@ -973,7 +973,7 @@ export const CampaignManagementDetailPage = () => {
           ) : error || !campaign ? (
             <Box sx={{ p: 3 }}>
               <Alert severity="error" sx={{ mb: 2 }}>
-                {error ?? "Không tìm thấy chiến lược"}
+                {error ?? "Không tìm thấy chiến dịch"}
               </Alert>
               <Button variant="outlined" onClick={handleBack}>
                 TRỞ LẠI
@@ -1037,7 +1037,7 @@ export const CampaignManagementDetailPage = () => {
                   <Tooltip
                     title={
                       status === "Cancelled" || status === "Completed"
-                        ? "Không thể hủy chiến lược này"
+                        ? "Không thể hủy chiến dịch này"
                         : ""
                     }
                   >
@@ -1052,7 +1052,7 @@ export const CampaignManagementDetailPage = () => {
                           status === "Cancelled" || status === "Completed"
                         }
                       >
-                        Hủy chiến lược
+                        Hủy chiến dịch
                       </Button>
                     </span>
                   </Tooltip>
@@ -1068,7 +1068,7 @@ export const CampaignManagementDetailPage = () => {
                   sx={{ mb: 2 }}
                 >
                   <Typography variant="h6" fontWeight={600}>
-                    Thông tin chiến lược
+                    Thông tin chiến dịch
                   </Typography>
                 </Stack>
 
@@ -1085,7 +1085,7 @@ export const CampaignManagementDetailPage = () => {
                       color="text.secondary"
                       display="block"
                     >
-                      Tên chiến lược
+                      Tên chiến dịch
                     </Typography>
                     <Typography variant="body1" fontWeight={600}>
                       {campaign.name || "N/A"}
@@ -1098,7 +1098,7 @@ export const CampaignManagementDetailPage = () => {
                       color="text.secondary"
                       display="block"
                     >
-                      Loại chiến lược
+                      Loại chiến dịch
                     </Typography>
                     <Chip
                       size="small"
@@ -1202,7 +1202,7 @@ export const CampaignManagementDetailPage = () => {
                   <Stack direction="row" alignItems="center" spacing={1}>
                     <InventoryIcon color="primary" />
                     <Typography variant="h6" fontWeight={600}>
-                      Sản phẩm trong chiến lược ({items.length})
+                      Sản phẩm trong chiến dịch ({items.length})
                     </Typography>
                   </Stack>
                   <Button
@@ -1219,7 +1219,7 @@ export const CampaignManagementDetailPage = () => {
                 {items.length === 0 ? (
                   <Box sx={{ py: 4, textAlign: "center" }}>
                     <Typography variant="body2" color="text.secondary">
-                      Chiến lược chưa có sản phẩm.
+                      Chiến dịch chưa có sản phẩm.
                     </Typography>
                   </Box>
                 ) : (
