@@ -31,9 +31,10 @@ interface AIRestockJobDialogProps {
     open: boolean;
     onClose: () => void;
     onJobSuccess: (data: RestockAIPredictionData) => void;
+    initialAction?: "idle" | "forceRefresh";
 }
 
-export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJobDialogProps) => {
+export const AIRestockJobDialog = ({ open, onClose, onJobSuccess, initialAction = "idle" }: AIRestockJobDialogProps) => {
     const [phase, setPhase] = useState<JobPhase>("idle");
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [elapsedTime, setElapsedTime] = useState(0);
@@ -74,6 +75,14 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
     useEffect(() => {
         if (!open) {
             stopPolling();
+            const timer = setTimeout(() => {
+                setPhase("idle");
+                setErrorMsg(null);
+            }, 300);
+            return () => {
+                clearTimeout(timer);
+                stopPolling();
+            };
         }
         return () => stopPolling();
     }, [open, stopPolling]);
@@ -95,38 +104,26 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                     // Parse the JSON data directly to pass back to the tab
                     if (jobData.data) {
                         try {
-                            console.log("=== DEBUG RESTOCK JOB DATA ===");
-                            console.log("jobData.data:", jobData.data);
-                            console.log("Type:", typeof jobData.data);
-
                             let parsedData: RestockAIPredictionData;
 
                             // Check if jobData.data is already an object or a string
                             if (typeof jobData.data === 'object' && !Array.isArray(jobData.data)) {
-                                // It's already an object
-                                console.log("✓ jobData.data is already an object");
-
                                 // Check if it's wrapped in ApiResponse format
                                 if ((jobData.data as any).success && (jobData.data as any).data) {
                                     parsedData = (jobData.data as any).data as RestockAIPredictionData;
-                                    console.log("✓ Unwrapped from ApiResponse wrapper");
                                 } else if ((jobData.data as any).variants) {
                                     parsedData = jobData.data as RestockAIPredictionData;
-                                    console.log("✓ Direct format detected");
                                 } else {
                                     throw new Error("Unexpected object format: " + JSON.stringify(jobData.data));
                                 }
                             } else if (typeof jobData.data === 'string') {
                                 // It's a JSON string, need to parse
-                                console.log("✓ jobData.data is a string, parsing...");
                                 const rawParsed = JSON.parse(jobData.data);
 
                                 if (rawParsed.success && rawParsed.data) {
                                     parsedData = rawParsed.data as RestockAIPredictionData;
-                                    console.log("✓ Unwrapped from ApiResponse wrapper (string)");
                                 } else if (rawParsed.variants) {
                                     parsedData = rawParsed as RestockAIPredictionData;
-                                    console.log("✓ Direct format detected (string)");
                                 } else {
                                     throw new Error("Unexpected string format");
                                 }
@@ -134,19 +131,13 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                                 throw new Error("Unexpected data type: " + typeof jobData.data);
                             }
 
-                            console.log("Final parsed data:", parsedData);
-                            console.log("=== END DEBUG ===");
-
                             // Small delay to let user see "Success" alert briefly
                             setTimeout(() => {
                                 onJobSuccess(parsedData);
                                 onClose();
                             }, 1000);
                         } catch (parseError) {
-                            console.error("=== PARSE ERROR ===");
                             console.error("Failed to parse restock job data:", parseError);
-                            console.error("Raw data received:", jobData.data);
-                            console.error("=== END PARSE ERROR ===");
                             setPhase("error");
                             setErrorMsg("Dữ liệu phân tích trả về không đúng định dạng.");
                         }
@@ -178,7 +169,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
         };
     }, [jobId, phase, stopPolling, onJobSuccess, onClose]);
 
-    const handleStart = async (forceRefresh: boolean = false) => {
+    const handleStart = useCallback(async (forceRefresh: boolean = false) => {
         setPhase("pending");
         setErrorMsg(null);
         setJobId(null); // Reset old job ID
@@ -211,7 +202,14 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                 return newTime;
             });
         }, 1000);
-    };
+    }, [restart, showForceRefresh]);
+
+    // Handle auto-start based on initialAction
+    useEffect(() => {
+        if (open && initialAction === "forceRefresh" && phase === "idle") {
+            void handleStart(true);
+        }
+    }, [open, initialAction, phase, handleStart]);
 
     const handleForceRefresh = () => {
         stopPolling();
@@ -222,13 +220,8 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
 
     const handleClose = () => {
         stopPolling();
+        pause();
         onClose();
-        // Option to reset phase after close
-        setTimeout(() => {
-            setPhase("idle");
-            setErrorMsg(null);
-            pause();
-        }, 500);
     };
 
     const handleRetry = () => {
@@ -278,7 +271,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                                 onClick={handleForceRefresh}
                                 startIcon={<RefreshIcon />}
                             >
-                                Force Refresh (Request timed out)
+                                Thử lại (Request timed out)
                             </Button>
                         )}
                     </Box>
@@ -322,7 +315,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess }: AIRestockJob
                         startIcon={<RefreshIcon />}
                         onClick={handleForceRefresh}
                     >
-                        Thử lại (Force Refresh)
+                        Thử lại (Tính toán lại)
                     </Button>
                 )}
                 <Button onClick={handleClose} color="inherit" disabled={phase === "pending"}>

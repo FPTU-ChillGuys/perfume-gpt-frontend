@@ -56,6 +56,7 @@ export const RestockAITab = () => {
 
     // Job Dialog
     const [jobDialogOpen, setJobDialogOpen] = useState(false);
+    const [jobDialogInitialAction, setJobDialogInitialAction] = useState<"idle" | "forceRefresh">("idle");
 
     useEffect(() => {
         loadLogs();
@@ -128,13 +129,18 @@ export const RestockAITab = () => {
     };
 
     const handleJobSuccess = (data: RestockAIPredictionData) => {
-        console.log("Job success received data:", data);
         setSelectedVariants(data.variants || []);
         setDialogTitle("Kết quả Dự đoán Nhập hàng mới nhất");
         // Open detail dialog to show results immediately
         setDetailDialogOpen(true);
         // Refresh logs in background
         loadLogs();
+    };
+
+    const handleRetryPrediction = () => {
+        setDetailDialogOpen(false);
+        setJobDialogInitialAction("forceRefresh");
+        setJobDialogOpen(true);
     };
 
     const filteredLogs = useMemo(() => {
@@ -177,7 +183,10 @@ export const RestockAITab = () => {
                     <Button
                         variant="contained"
                         startIcon={<AutoGraphIcon />}
-                        onClick={() => setJobDialogOpen(true)}
+                        onClick={() => {
+                            setJobDialogInitialAction("idle");
+                            setJobDialogOpen(true);
+                        }}
                     >
                         Dự đoán nhập kho (AI)
                     </Button>
@@ -349,12 +358,18 @@ export const RestockAITab = () => {
                 onClose={() => setDetailDialogOpen(false)}
                 data={selectedVariants}
                 title={dialogTitle}
+                onRetry={handleRetryPrediction}
             />
 
             <AIRestockJobDialog
                 open={jobDialogOpen}
-                onClose={() => setJobDialogOpen(false)}
+                onClose={() => {
+                    setJobDialogOpen(false);
+                    // Slight delay to avoid layout shift before dialog closes
+                    setTimeout(() => setJobDialogInitialAction("idle"), 300);
+                }}
                 onJobSuccess={handleJobSuccess}
+                initialAction={jobDialogInitialAction}
             />
         </Box>
     );

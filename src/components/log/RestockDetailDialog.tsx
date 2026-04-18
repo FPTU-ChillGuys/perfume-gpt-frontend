@@ -24,6 +24,7 @@ interface RestockDetailDialogProps {
     onClose: () => void;
     data: RestockAIVariant[] | null;
     title?: string;
+    onRetry?: () => void;
 }
 
 export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
@@ -31,6 +32,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
     onClose,
     data,
     title = "Chi tiết dự đoán nhập hàng",
+    onRetry,
 }) => {
     const navigate = useNavigate();
 
@@ -180,6 +182,15 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                 )}
             </DialogContent>
             <DialogActions>
+                {onRetry && (
+                    <Button 
+                        onClick={onRetry} 
+                        variant="outlined" 
+                        color="secondary"
+                    >
+                        Tính toán lại
+                    </Button>
+                )}
                 <Button onClick={onClose} variant="outlined" color="primary">
                     Đóng
                 </Button>
