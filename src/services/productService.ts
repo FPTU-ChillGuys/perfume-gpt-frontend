@@ -98,8 +98,8 @@ class ProductService {
       console.error("Error fetching suppliers:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch suppliers",
+        error.message ||
+        "Failed to fetch suppliers",
       );
     }
   }
@@ -123,8 +123,8 @@ class ProductService {
       console.error("Error fetching variants:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch product variants",
+        error.message ||
+        "Failed to fetch product variants",
       );
     }
   }
@@ -149,8 +149,8 @@ class ProductService {
       console.error("Error fetching products:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch products",
+        error.message ||
+        "Failed to fetch products",
       );
     }
   }
@@ -161,7 +161,7 @@ class ProductService {
     try {
       // Endpoint not in generated OpenAPI spec — bypass strict path typing
       const response = await (aiApiInstance as any).GET(
-        "/products/search/v3",
+        "/products/search/v4",
         { params: { query } },
       );
 
@@ -177,8 +177,8 @@ class ProductService {
       console.error("Error searching products semantically:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to search products",
+        error.message ||
+        "Failed to search products",
       );
     }
   }
@@ -196,8 +196,8 @@ class ProductService {
       console.error("Error fetching product lookup:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch product lookup",
+        error.message ||
+        "Failed to fetch product lookup",
       );
     }
   }
@@ -217,8 +217,8 @@ class ProductService {
       console.error("Error fetching product detail:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch product detail",
+        error.message ||
+        "Failed to fetch product detail",
       );
     }
   }
@@ -245,8 +245,8 @@ class ProductService {
       console.error("Error fetching product detail for admin:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch product detail for admin",
+        error.message ||
+        "Failed to fetch product detail for admin",
       );
     }
   }
@@ -275,8 +275,8 @@ class ProductService {
       console.error("Error fetching paged variants:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch product variants",
+        error.message ||
+        "Failed to fetch product variants",
       );
     }
   }
@@ -306,8 +306,8 @@ class ProductService {
       console.error("Error fetching best sellers:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch best sellers",
+        error.message ||
+        "Failed to fetch best sellers",
       );
     }
   }
@@ -337,8 +337,8 @@ class ProductService {
       console.error("Error fetching new arrivals:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch new arrivals",
+        error.message ||
+        "Failed to fetch new arrivals",
       );
     }
   }
@@ -371,8 +371,8 @@ class ProductService {
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to create product",
+        error.message ||
+        "Failed to create product",
       );
     }
   }
@@ -394,8 +394,8 @@ class ProductService {
       console.error("Error creating product variant:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to create product variant",
+        error.message ||
+        "Failed to create product variant",
       );
     }
   }
@@ -416,8 +416,8 @@ class ProductService {
       console.error("Error fetching variant:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch variant",
+        error.message ||
+        "Failed to fetch variant",
       );
     }
   }
@@ -448,8 +448,8 @@ class ProductService {
       console.error("Error updating product variant:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to update product variant",
+        error.message ||
+        "Failed to update product variant",
       );
     }
   }
@@ -472,8 +472,8 @@ class ProductService {
       console.error("Error deleting product variant:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to delete product variant",
+        error.message ||
+        "Failed to delete product variant",
       );
     }
   }
@@ -496,8 +496,8 @@ class ProductService {
       console.error("Error setting primary image:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to set primary image",
+        error.message ||
+        "Failed to set primary image",
       );
     }
   }
@@ -532,13 +532,13 @@ class ProductService {
 
       const metadata = (response.data as any)?.payload?.metadata as
         | {
-            hasPartialFailure?: boolean;
-            allSucceeded?: boolean;
-            operations?: Array<{
-              operationName?: string;
-              errors?: Array<{ errorMessage?: string }>;
-            }>;
-          }
+          hasPartialFailure?: boolean;
+          allSucceeded?: boolean;
+          operations?: Array<{
+            operationName?: string;
+            errors?: Array<{ errorMessage?: string }>;
+          }>;
+        }
         | undefined;
 
       if (metadata?.hasPartialFailure || metadata?.allSucceeded === false) {
@@ -554,7 +554,7 @@ class ProductService {
 
         throw new Error(
           response.data.message ||
-            "Cập nhật sản phẩm thất bại một phần. Vui lòng kiểm tra lại thao tác media.",
+          "Cập nhật sản phẩm thất bại một phần. Vui lòng kiểm tra lại thao tác media.",
         );
       }
 
@@ -562,8 +562,8 @@ class ProductService {
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to update product",
+        error.message ||
+        "Failed to update product",
       );
     }
   }
@@ -583,8 +583,8 @@ class ProductService {
       console.error("Error deleting product:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to delete product",
+        error.message ||
+        "Failed to delete product",
       );
     }
   }
@@ -609,8 +609,8 @@ class ProductService {
       console.error("Error fetching product images:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch product images",
+        error.message ||
+        "Failed to fetch product images",
       );
     }
   }
@@ -635,8 +635,8 @@ class ProductService {
       console.error("Error setting primary image:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to set primary image",
+        error.message ||
+        "Failed to set primary image",
       );
     }
   }
@@ -690,8 +690,8 @@ class ProductService {
       console.error("Error uploading product images:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to upload product images",
+        error.message ||
+        "Failed to upload product images",
       );
     }
   }
@@ -745,8 +745,8 @@ class ProductService {
       console.error("Error uploading variant images:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to upload variant images",
+        error.message ||
+        "Failed to upload variant images",
       );
     }
   }
@@ -773,8 +773,8 @@ class ProductService {
       console.error("Error fetching product information:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch product information",
+        error.message ||
+        "Failed to fetch product information",
       );
     }
   }
@@ -799,8 +799,8 @@ class ProductService {
       console.error("Error fetching product fast look:", error);
       throw new Error(
         error.response?.data?.message ||
-          error.message ||
-          "Failed to fetch product fast look",
+        error.message ||
+        "Failed to fetch product fast look",
       );
     }
   }
