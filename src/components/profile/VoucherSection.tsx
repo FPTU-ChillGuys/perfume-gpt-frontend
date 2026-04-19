@@ -17,11 +17,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  FormControl,
-  FormLabel,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
   IconButton,
 } from "@mui/material";
 import {
@@ -116,7 +111,7 @@ const RedeemDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="xs" fullWidth>
       <DialogTitle
         sx={{
           display: "flex",
@@ -136,90 +131,179 @@ const RedeemDialog = ({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 2 }}>
+      <DialogContent sx={{ pt: 1, pb: 2 }}>
         {voucher && (
-          <Paper
-            variant="outlined"
+          <Box
             sx={{
-              p: 2,
+              display: "flex",
               mb: 3,
-              borderColor: "primary.main",
-              borderWidth: 1.5,
               borderRadius: 2,
-              position: "relative",
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: 6,
-                height: "100%",
-                bgcolor: "primary.main",
-                borderRadius: "4px 0 0 4px",
-              },
+              overflow: "hidden",
+              border: "1.5px solid",
+              borderColor: "primary.main",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
             }}
           >
-            <Box sx={{ pl: 1 }}>
-              <Typography variant="subtitle1" fontWeight={600} mb={0.5}>
+            {/* Left red panel */}
+            <Box
+              sx={{
+                width: 56,
+                minWidth: 56,
+                bgcolor: "primary.main",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                gap: 0.5,
+                py: 2,
+              }}
+            >
+              <Redeem sx={{ fontSize: 22 }} />
+              <Typography
+                variant="caption"
+                sx={{
+                  writingMode: "vertical-rl",
+                  transform: "rotate(180deg)",
+                  fontSize: 9,
+                  letterSpacing: 1,
+                  opacity: 0.9,
+                  textTransform: "uppercase",
+                  fontWeight: 700,
+                }}
+              >
+                VOUCHER
+              </Typography>
+            </Box>
+
+            {/* Dashed separator */}
+            <Box
+              sx={{
+                width: 0,
+                borderLeft: "2px dashed",
+                borderColor: "primary.light",
+                my: 1,
+              }}
+            />
+
+            {/* Right content */}
+            <Box sx={{ flex: 1, px: 2, py: 1.5 }}>
+              <Typography
+                variant="subtitle2"
+                fontWeight={700}
+                letterSpacing={1}
+              >
                 {voucher.code}
               </Typography>
-              <Typography variant="body1" fontWeight={600} color="primary">
+              <Typography
+                variant="h6"
+                fontWeight={800}
+                color="primary.main"
+                sx={{ lineHeight: 1.2, my: 0.5 }}
+              >
                 Giảm {formatDiscount(voucher)}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Tối thiểu:{" "}
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+              >
+                Đơn tối thiểu:{" "}
                 {voucher.minOrderValue
                   ? `${Number(voucher.minOrderValue).toLocaleString("vi-VN")}đ`
                   : "Không giới hạn"}
               </Typography>
-              <Typography
-                variant="caption"
-                color="warning.main"
-                fontWeight={600}
-                sx={{ display: "block", mt: 1 }}
-              >
-                Chi phí: {voucher.requiredPoints?.toLocaleString("vi-VN")} điểm
-              </Typography>
+              <Chip
+                label={`${voucher.requiredPoints?.toLocaleString("vi-VN")} điểm`}
+                size="small"
+                color="warning"
+                sx={{ mt: 1, fontWeight: 700, fontSize: 11 }}
+              />
             </Box>
-          </Paper>
+          </Box>
         )}
 
-        <FormControl component="fieldset" fullWidth>
-          <FormLabel component="legend" sx={{ mb: 2 }}>
-            Chọn cách thức đổi voucher
-          </FormLabel>
-          <RadioGroup
-            value={redeemType}
-            onChange={(e) =>
-              handleRedeemTypeChange(e.target.value as "self" | "gift")
-            }
+        {/* Method selection */}
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          mb={1.5}
+          fontWeight={500}
+        >
+          Chọn cách thức đổi
+        </Typography>
+        <Box sx={{ display: "flex", gap: 1.5, mb: 2 }}>
+          <Box
+            onClick={() => !redeeming && handleRedeemTypeChange("self")}
+            sx={{
+              flex: 1,
+              border: "2px solid",
+              borderColor: redeemType === "self" ? "primary.main" : "divider",
+              borderRadius: 2,
+              p: 1.5,
+              cursor: "pointer",
+              textAlign: "center",
+              bgcolor: redeemType === "self" ? "primary.50" : "transparent",
+              transition: "all 0.15s",
+              "&:hover": { borderColor: "primary.main" },
+            }}
           >
-            <FormControlLabel
-              value="self"
-              control={<Radio />}
-              label={
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <AccountCircle fontSize="small" color="primary" />
-                  <Typography>Đổi cho bản thân</Typography>
-                </Box>
-              }
+            <AccountCircle
+              sx={{
+                fontSize: 28,
+                color: redeemType === "self" ? "primary.main" : "text.disabled",
+                mb: 0.5,
+              }}
             />
-            <FormControlLabel
-              value="gift"
-              control={<Radio />}
-              label={
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <PersonAdd fontSize="small" color="secondary" />
-                  <Typography>Tặng cho người khác</Typography>
-                </Box>
-              }
+            <Typography
+              variant="caption"
+              fontWeight={600}
+              display="block"
+              color={redeemType === "self" ? "primary.main" : "text.secondary"}
+            >
+              Cho bản thân
+            </Typography>
+          </Box>
+          <Box
+            onClick={() => !redeeming && handleRedeemTypeChange("gift")}
+            sx={{
+              flex: 1,
+              border: "2px solid",
+              borderColor: redeemType === "gift" ? "secondary.main" : "divider",
+              borderRadius: 2,
+              p: 1.5,
+              cursor: "pointer",
+              textAlign: "center",
+              bgcolor: redeemType === "gift" ? "secondary.50" : "transparent",
+              transition: "all 0.15s",
+              "&:hover": { borderColor: "secondary.main" },
+            }}
+          >
+            <PersonAdd
+              sx={{
+                fontSize: 28,
+                color:
+                  redeemType === "gift" ? "secondary.main" : "text.disabled",
+                mb: 0.5,
+              }}
             />
-          </RadioGroup>
-        </FormControl>
+            <Typography
+              variant="caption"
+              fontWeight={600}
+              display="block"
+              color={
+                redeemType === "gift" ? "secondary.main" : "text.secondary"
+              }
+            >
+              Tặng người khác
+            </Typography>
+          </Box>
+        </Box>
 
         {redeemType === "gift" && (
           <TextField
             fullWidth
+            size="small"
             label="Email hoặc số điện thoại người nhận"
             placeholder="Nhập email hoặc số điện thoại..."
             value={receiverInput}
@@ -228,15 +312,14 @@ const RedeemDialog = ({
               setInputError("");
             }}
             error={!!inputError}
-            helperText={inputError || "Ví dụ: user@email.com hoặc 0123456789"}
-            sx={{ mt: 2 }}
+            helperText={inputError || "Ví dụ: user@email.com hoặc 0912345678"}
             disabled={redeeming}
           />
         )}
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, pt: 1 }}>
-        <Button onClick={handleClose} disabled={redeeming}>
+      <DialogActions sx={{ px: 3, pb: 2.5, pt: 0, gap: 1 }}>
+        <Button onClick={handleClose} disabled={redeeming} sx={{ flex: 1 }}>
           Hủy
         </Button>
         <Button
@@ -244,6 +327,7 @@ const RedeemDialog = ({
           onClick={handleConfirm}
           disabled={redeeming}
           startIcon={redeeming ? <CircularProgress size={16} /> : <Redeem />}
+          sx={{ flex: 2 }}
         >
           {redeeming ? "Đang đổi..." : "Xác nhận đổi"}
         </Button>
@@ -260,52 +344,76 @@ const VoucherCard = ({ voucher }: VoucherCardProps) => {
   const isUsed = voucher.isUsed;
   const isExpired = voucher.isExpired;
   const inactive = isUsed || isExpired;
+  const accentColor = inactive ? "grey.400" : "primary.main";
+  const borderColor = inactive ? "divider" : "primary.main";
 
   return (
-    <Paper
-      variant="outlined"
+    <Box
       sx={{
-        p: 2,
+        display: "flex",
         borderRadius: 2,
-        opacity: inactive ? 0.6 : 1,
-        borderColor: inactive ? "divider" : "primary.main",
-        borderWidth: inactive ? 1 : 1.5,
-        position: "relative",
         overflow: "hidden",
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: 6,
-          height: "100%",
-          bgcolor: inactive ? "grey.400" : "primary.main",
-          borderRadius: "4px 0 0 4px",
-        },
+        border: "1.5px solid",
+        borderColor,
+        opacity: inactive ? 0.65 : 1,
+        boxShadow: inactive ? "none" : "0 2px 8px rgba(0,0,0,0.07)",
       }}
     >
-      <Box sx={{ pl: 1 }}>
+      {/* Left panel */}
+      <Box
+        sx={{
+          width: 48,
+          minWidth: 48,
+          bgcolor: accentColor,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          gap: 0.5,
+          py: 2,
+        }}
+      >
+        <LocalOffer sx={{ fontSize: 18 }} />
+        <Typography
+          variant="caption"
+          sx={{
+            writingMode: "vertical-rl",
+            transform: "rotate(180deg)",
+            fontSize: 8,
+            letterSpacing: 1,
+            opacity: 0.9,
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+        >
+          VOUCHER
+        </Typography>
+      </Box>
+
+      {/* Dashed separator */}
+      <Box
+        sx={{
+          width: 0,
+          borderLeft: "2px dashed",
+          borderColor: inactive ? "grey.300" : "primary.light",
+          my: 1,
+        }}
+      />
+
+      {/* Right content */}
+      <Box sx={{ flex: 1, px: 1.5, py: 1.25 }}>
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            mb: 1,
+            mb: 0.5,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <LocalOffer
-              fontSize="small"
-              color={inactive ? "disabled" : "primary"}
-            />
-            <Typography
-              variant="subtitle2"
-              fontWeight={700}
-              fontFamily="monospace"
-            >
-              {voucher.code}
-            </Typography>
-          </Box>
+          <Typography variant="subtitle2" fontWeight={700} letterSpacing={0.5}>
+            {voucher.code}
+          </Typography>
           {isUsed ? (
             <Chip label="Đã dùng" size="small" color="default" />
           ) : isExpired ? (
@@ -316,37 +424,40 @@ const VoucherCard = ({ voucher }: VoucherCardProps) => {
               variant="outlined"
             />
           ) : (
-            <Chip label="Có thể dùng" size="small" color="success" />
+            <Chip label="Khả dụng" size="small" color="success" />
           )}
         </Box>
 
         <Typography
           variant="h6"
-          fontWeight={700}
+          fontWeight={800}
           color={inactive ? "text.disabled" : "primary.main"}
+          sx={{ lineHeight: 1.2 }}
         >
           Giảm {formatDiscount(voucher)}
         </Typography>
 
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" display="block">
           Đơn tối thiểu:{" "}
           {voucher.minOrderValue
             ? `${Number(voucher.minOrderValue).toLocaleString("vi-VN")}đ`
             : "Không giới hạn"}
         </Typography>
 
-        <Divider sx={{ my: 1 }} />
+        <Divider sx={{ my: 0.75 }} />
 
-        <Typography variant="caption" color="text.secondary">
-          HSD: {formatDate(voucher.expiryDate)}
-        </Typography>
-        {voucher.redeemedAt && (
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-            Nhận: {formatDate(voucher.redeemedAt)}
+        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+          <Typography variant="caption" color="text.secondary">
+            HSD: {formatDate(voucher.expiryDate)}
           </Typography>
-        )}
+          {voucher.redeemedAt && (
+            <Typography variant="caption" color="text.secondary">
+              Nhận: {formatDate(voucher.redeemedAt)}
+            </Typography>
+          )}
+        </Box>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 
@@ -365,51 +476,75 @@ const RedeemableCard = ({
 }: RedeemableCardProps) => {
   const required = voucher.requiredPoints ?? 0;
   const canRedeem = balance >= required && !voucher.isExpired;
+  const accentColor = canRedeem ? "success.main" : "grey.400";
+  const borderColor = canRedeem ? "success.main" : "divider";
 
   return (
-    <Paper
-      variant="outlined"
+    <Box
       sx={{
-        p: 2,
+        display: "flex",
         borderRadius: 2,
-        borderColor: canRedeem ? "success.main" : "divider",
-        borderWidth: canRedeem ? 1.5 : 1,
-        position: "relative",
         overflow: "hidden",
-        "&::before": {
-          content: '""',
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: 6,
-          height: "100%",
-          bgcolor: canRedeem ? "success.main" : "grey.400",
-          borderRadius: "4px 0 0 4px",
-        },
+        border: "1.5px solid",
+        borderColor,
+        boxShadow: canRedeem ? "0 2px 8px rgba(0,0,0,0.07)" : "none",
       }}
     >
-      <Box sx={{ pl: 1 }}>
+      {/* Left panel */}
+      <Box
+        sx={{
+          width: 48,
+          minWidth: 48,
+          bgcolor: accentColor,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          gap: 0.5,
+          py: 2,
+        }}
+      >
+        <Redeem sx={{ fontSize: 18 }} />
+        <Typography
+          variant="caption"
+          sx={{
+            writingMode: "vertical-rl",
+            transform: "rotate(180deg)",
+            fontSize: 8,
+            letterSpacing: 1,
+            opacity: 0.9,
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+        >
+          ĐỔI ĐIỂM
+        </Typography>
+      </Box>
+
+      {/* Dashed separator */}
+      <Box
+        sx={{
+          width: 0,
+          borderLeft: "2px dashed",
+          borderColor: canRedeem ? "success.light" : "grey.300",
+          my: 1,
+        }}
+      />
+
+      {/* Right content */}
+      <Box sx={{ flex: 1, px: 1.5, py: 1.25 }}>
         <Box
           sx={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            mb: 1,
+            mb: 0.5,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <LocalOffer
-              fontSize="small"
-              color={canRedeem ? "success" : "disabled"}
-            />
-            <Typography
-              variant="subtitle2"
-              fontWeight={700}
-              fontFamily="monospace"
-            >
-              {voucher.code}
-            </Typography>
-          </Box>
+          <Typography variant="subtitle2" fontWeight={700} letterSpacing={0.5}>
+            {voucher.code}
+          </Typography>
           {voucher.isExpired ? (
             <Chip
               label="Hết hạn"
@@ -429,20 +564,21 @@ const RedeemableCard = ({
 
         <Typography
           variant="h6"
-          fontWeight={700}
+          fontWeight={800}
           color={canRedeem ? "success.dark" : "text.disabled"}
+          sx={{ lineHeight: 1.2 }}
         >
           Giảm {formatDiscount(voucher)}
         </Typography>
 
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" display="block">
           Đơn tối thiểu:{" "}
           {voucher.minOrderValue
             ? `${Number(voucher.minOrderValue).toLocaleString("vi-VN")}đ`
             : "Không giới hạn"}
         </Typography>
 
-        <Divider sx={{ my: 1 }} />
+        <Divider sx={{ my: 0.75 }} />
 
         <Box
           sx={{
@@ -451,15 +587,13 @@ const RedeemableCard = ({
             alignItems: "center",
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-            <HourglassEmpty
-              fontSize="small"
-              sx={{ color: "warning.main", fontSize: 14 }}
-            />
-            <Typography variant="caption" fontWeight={600} color="warning.main">
-              {required.toLocaleString("vi-VN")} điểm
-            </Typography>
-          </Box>
+          <Chip
+            icon={<HourglassEmpty sx={{ fontSize: "14px !important" }} />}
+            label={`${required.toLocaleString("vi-VN")} điểm`}
+            size="small"
+            color="warning"
+            sx={{ fontWeight: 700, fontSize: 11 }}
+          />
           <Tooltip
             title={
               !canRedeem && balance < required
@@ -481,14 +615,15 @@ const RedeemableCard = ({
                 }
                 disabled={!canRedeem || redeeming}
                 onClick={() => onRedeem(voucher)}
+                sx={{ fontSize: 12 }}
               >
-                Đổi voucher
+                Đổi ngay
               </Button>
             </span>
           </Tooltip>
         </Box>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 
@@ -511,7 +646,8 @@ export const VoucherSection = () => {
     setLoading(true);
     setError("");
     try {
-      const data = await voucherService.getMyVouchers({ PageSize: 50 });
+      const Status = "Available";
+      const data = await voucherService.getMyVouchers({ PageSize: 50, Status });
       setMyVouchers(data);
     } catch (err: any) {
       setError(err.message || "Không thể tải voucher của bạn");

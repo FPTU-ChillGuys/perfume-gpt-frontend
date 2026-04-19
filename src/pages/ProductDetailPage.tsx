@@ -21,10 +21,14 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import Rating from "@mui/material/Rating";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import { MainLayout } from "@/layouts/MainLayout";
+import { apiInstance } from "@/lib/api";
 import { productService } from "@/services/productService";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
@@ -187,6 +191,25 @@ const ProductDetailPage = () => {
   } | null>(null);
   const [isPoliciesLoading, setIsPoliciesLoading] = useState(false);
 
+  // States: Voucher dropdown
+  const [isVoucherDropdownOpen, setIsVoucherDropdownOpen] = useState(false);
+  const [applicableVouchers, setApplicableVouchers] = useState<
+    Array<{
+      voucherId?: string;
+      code: string;
+      discountValue?: number;
+      discountType?: "Percentage" | "FixedAmount";
+      maxDiscountAmount?: number | null;
+      minOrderValue?: number | null;
+      isMemberOnly?: boolean;
+      isApplicable?: boolean;
+    }>
+  >([]);
+  const [isLoadingVouchers, setIsLoadingVouchers] = useState(false);
+  const voucherCacheRef = useRef<Map<string, typeof applicableVouchers>>(
+    new Map(),
+  );
+
   const fetchMyReviews = useCallback(async (): Promise<ReviewResponse[]> => {
     if (!isAuthenticated) {
       setMyReviews([]);
@@ -263,7 +286,7 @@ const ProductDetailPage = () => {
     const trackAcceptance = async () => {
       try {
         await aiAcceptanceService.clickAIAcceptance(aiAcceptanceId);
-        
+
         // Clean up URL after successful tracking
         if (isMounted) {
           const newSearchParams = new URLSearchParams(searchParams);
@@ -722,6 +745,44 @@ const ProductDetailPage = () => {
       variantChangeTimerRef.current = null;
     }, 500); // Increase debounce for logging only
   };
+
+  const fetchApplicableVouchers = async (variantId: string) => {
+    const cached = voucherCacheRef.current.get(variantId);
+    if (cached) {
+      setApplicableVouchers(cached);
+      return;
+    }
+    setIsLoadingVouchers(true);
+    try {
+      const response = await apiInstance.GET(
+        "/api/vouchers/variant/{variantId}/applicable",
+        { params: { path: { variantId } } },
+      );
+      const list =
+        (response.data as { payload?: typeof applicableVouchers })?.payload ||
+        [];
+      voucherCacheRef.current.set(variantId, list);
+      setApplicableVouchers(list);
+    } catch {
+      setApplicableVouchers([]);
+    } finally {
+      setIsLoadingVouchers(false);
+    }
+  };
+
+  const handleToggleVoucherDropdown = () => {
+    const nextOpen = !isVoucherDropdownOpen;
+    setIsVoucherDropdownOpen(nextOpen);
+    if (nextOpen && selectedVariantId && applicableVouchers.length === 0) {
+      fetchApplicableVouchers(selectedVariantId);
+    }
+  };
+
+  // Reset voucher dropdown when variant changes
+  useEffect(() => {
+    setIsVoucherDropdownOpen(false);
+    setApplicableVouchers([]);
+  }, [selectedVariantId]);
 
   const resolveReviewTargetForVariant = async (
     variantId: string,
@@ -1625,94 +1686,262 @@ const ProductDetailPage = () => {
                 </ToggleButtonGroup>
               </Box>
               {shouldShowCampaignCard && (
-                <Box
-                  sx={{
-                    borderRadius: 2,
-                    border: "1px solid",
-                    borderColor: "error.main",
-                    bgcolor: "#fff5f5",
-                    p: 2,
-                    display: "inline-flex",
-                    flexDirection: "column",
-                    gap: 1,
-                  }}
-                >
-                  <Stack
-                    direction="row"
-                    spacing={1.5}
-                    alignItems="center"
-                    flexWrap="wrap"
-                  >
-                    {selectedCampaignName && (
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        {/* Campaign name badge */}
-                        <Box
-                          sx={{
-                            px: 2,
-                            py: 0.75,
-                            borderRadius: 1.5,
-                            bgcolor: "error.main",
-                            display: "inline-flex",
-                            alignItems: "center",
-                          }}
-                        >
-                          <Typography
-                            component="span"
-                            sx={{
-                              fontSize: "0.875rem",
-                              fontWeight: 700,
-                              color: "white",
-                              textTransform: "uppercase",
-                              letterSpacing: 0.5,
-                            }}
-                          >
-                            {selectedCampaignName}
-                          </Typography>
-                        </Box>
-                      </Stack>
-                    )}
-                    {campaignSavingPercent > 0 && (
-                      <Typography
-                        sx={{
-                          fontSize: "0.9rem",
-                          color: "error.main",
-                          fontWeight: 700,
-                        }}
-                      >
-                        Giảm {formatSavingPercent(campaignSavingPercent)}
-                      </Typography>
-                    )}
-                  </Stack>
-                  {selectedVoucherCode && (
-                    <Box>
-                      <Typography
-                        component="span"
-                        sx={{ fontSize: "0.875rem", color: "text.secondary" }}
-                      >
-                        Áp dụng mã {""}
-                      </Typography>
+                <Box sx={{ position: "relative" }}>
+                  {/* Campaign card - only name badge */}
+                  {selectedCampaignName && (
+                    <Box
+                      sx={{
+                        px: 2,
+                        py: 0.75,
+                        borderRadius: 1.5,
+                        bgcolor: "error.main",
+                        display: "inline-flex",
+                        alignItems: "center",
+                      }}
+                    >
                       <Typography
                         component="span"
                         sx={{
                           fontSize: "0.875rem",
-                          fontWeight: 800,
-                          color: "error.main",
-                          px: 1.5,
-                          py: 0.5,
-                          bgcolor: "rgba(211, 47, 47, 0.08)",
-                          borderRadius: 1,
-                          border: "1px dashed",
-                          borderColor: "error.main",
+                          fontWeight: 700,
+                          color: "white",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.5,
                         }}
                       >
-                        {selectedVoucherCode}
+                        {selectedCampaignName}
                       </Typography>
-                      <Typography
-                        component="span"
-                        sx={{ fontSize: "0.875rem", color: "text.secondary" }}
+                    </Box>
+                  )}
+
+                  {/* Voucher toggle - outside card */}
+                  {selectedVoucherCode && (
+                    <Box sx={{ mt: 1, position: "relative" }}>
+                      <Box
+                        onClick={handleToggleVoucherDropdown}
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          cursor: "pointer",
+                          userSelect: "none",
+                          "&:hover": { opacity: 0.8 },
+                        }}
                       >
-                        {""} để được giảm thêm
-                      </Typography>
+                        <ConfirmationNumberOutlinedIcon
+                          sx={{ fontSize: "1rem", color: "error.main" }}
+                        />
+                        <Typography
+                          component="span"
+                          sx={{
+                            fontSize: "0.875rem",
+                            color: "error.main",
+                            fontWeight: 600,
+                          }}
+                        >
+                          Xem mã giảm giá
+                        </Typography>
+                        {isVoucherDropdownOpen ? (
+                          <KeyboardArrowUpIcon
+                            sx={{ fontSize: "1.1rem", color: "error.main" }}
+                          />
+                        ) : (
+                          <KeyboardArrowDownIcon
+                            sx={{ fontSize: "1.1rem", color: "error.main" }}
+                          />
+                        )}
+                      </Box>
+                      {/* Dropdown overlay - does not push content */}
+                        <Box
+                          sx={{
+                            position: "absolute",
+                            left: 0,
+                            width: 340,
+                            zIndex: 10,
+                            mt: 0.5,
+                            bgcolor: "#fff",
+                            borderRadius: 2,
+                            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+                            border: "1px solid #e0e0e0",
+                            p: 1.5,
+                            maxHeight: 280,
+                            overflowY: "auto",
+                            transition: "transform 0.3s ease-in-out, opacity 0.3s ease-in-out",
+                            transform: isVoucherDropdownOpen ? "translateY(0)" : "translateY(-8px)",
+                            opacity: isVoucherDropdownOpen ? 1 : 0,
+                            pointerEvents: isVoucherDropdownOpen ? "auto" : "none",
+                          }}
+                        >
+                          {isLoadingVouchers ? (
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "center",
+                                py: 2,
+                              }}
+                            >
+                              <CircularProgress size={24} color="error" />
+                            </Box>
+                          ) : applicableVouchers.length === 0 ? (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ py: 1 }}
+                            >
+                              Không có mã giảm giá khả dụng.
+                            </Typography>
+                          ) : (
+                            <Stack spacing={1.5}>
+                              {applicableVouchers.map((v) => {
+                                const isPercent =
+                                  v.discountType === "Percentage";
+                                const discountLabel = isPercent
+                                  ? `Giảm ${v.discountValue ?? 0}%`
+                                  : `Giảm ${currencyFormatter.format(v.discountValue ?? 0)}`;
+                                return (
+                                  <Box
+                                    key={v.voucherId || v.code}
+                                    sx={{
+                                      display: "flex",
+                                      borderRadius: 2,
+                                      overflow: "hidden",
+                                      border: "1px solid #e0e0e0",
+                                      bgcolor: "#fff",
+                                      position: "relative",
+                                      "&::before": {
+                                        content: '""',
+                                        position: "absolute",
+                                        top: -6,
+                                        left: 55,
+                                        width: 12,
+                                        height: 12,
+                                        borderRadius: "50%",
+                                        bgcolor: "#fff",
+                                        border: "1px solid #e0e0e0",
+                                        zIndex: 1,
+                                      },
+                                      "&::after": {
+                                        content: '""',
+                                        position: "absolute",
+                                        bottom: -6,
+                                        left: 55,
+                                        width: 12,
+                                        height: 12,
+                                        borderRadius: "50%",
+                                        bgcolor: "#fff",
+                                        border: "1px solid #e0e0e0",
+                                        zIndex: 1,
+                                      },
+                                    }}
+                                  >
+                                    {/* Left: voucher icon */}
+                                    <Box
+                                      sx={{
+                                        width: 62,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                        bgcolor: "error.main",
+                                      }}
+                                    >
+                                      <ConfirmationNumberOutlinedIcon
+                                        sx={{ color: "#fff", fontSize: 28 }}
+                                      />
+                                    </Box>
+                                    {/* Separator */}
+                                    <Box
+                                      sx={{
+                                        width: "1px",
+                                        borderLeft: "1px dashed #ccc",
+                                        flexShrink: 0,
+                                      }}
+                                    />
+                                    {/* Right: voucher info */}
+                                    <Box
+                                      sx={{
+                                        flex: 1,
+                                        px: 1.5,
+                                        py: 1.2,
+                                        minWidth: 0,
+                                        position: "relative",
+                                      }}
+                                    >
+                                      {v.isMemberOnly != null && (
+                                        <Typography
+                                          sx={{
+                                            position: "absolute",
+                                            top: 4,
+                                            right: 8,
+                                            fontSize: "0.65rem",
+                                            color: "text.disabled",
+                                            fontStyle: "italic",
+                                          }}
+                                        >
+                                          {v.isMemberOnly
+                                            ? "Thành viên"
+                                            : "Mọi người"}
+                                        </Typography>
+                                      )}
+                                      <Typography
+                                        sx={{
+                                          fontWeight: 700,
+                                          fontSize: "0.82rem",
+                                          color: "#333",
+                                          mb: 0.2,
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                          pr: 6,
+                                        }}
+                                      >
+                                        {v.code}
+                                      </Typography>
+                                      <Typography
+                                        sx={{
+                                          fontSize: "0.78rem",
+                                          fontWeight: 700,
+                                          color: "error.main",
+                                        }}
+                                      >
+                                        {discountLabel}
+                                      </Typography>
+                                      {isPercent &&
+                                        v.maxDiscountAmount != null &&
+                                        v.maxDiscountAmount > 0 && (
+                                          <Typography
+                                            sx={{
+                                              fontSize: "0.72rem",
+                                              color: "text.secondary",
+                                            }}
+                                          >
+                                            Giảm tối đa{" "}
+                                            {currencyFormatter.format(
+                                              v.maxDiscountAmount,
+                                            )}
+                                          </Typography>
+                                        )}
+                                      {v.minOrderValue != null &&
+                                        v.minOrderValue > 0 && (
+                                          <Typography
+                                            sx={{
+                                              fontSize: "0.72rem",
+                                              color: "text.secondary",
+                                            }}
+                                          >
+                                            Đơn tối thiểu{" "}
+                                            {currencyFormatter.format(
+                                              v.minOrderValue,
+                                            )}
+                                          </Typography>
+                                        )}
+                                    </Box>
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          )}
+                        </Box>
                     </Box>
                   )}
                 </Box>
