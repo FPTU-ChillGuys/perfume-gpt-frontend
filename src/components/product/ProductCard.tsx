@@ -22,7 +22,6 @@ export interface ProductCardProps {
   numberOfVariants?: number;
   tags?: string[] | null;
   aiAcceptanceId?: string;
-  volumeMl?: number;
 }
 
 export const ProductCard = ({
@@ -39,7 +38,6 @@ export const ProductCard = ({
   numberOfVariants,
   tags,
   aiAcceptanceId,
-  volumeMl,
 }: ProductCardProps) => {
   const { showToast } = useToast();
   const { refreshCart } = useCart();
@@ -192,11 +190,7 @@ export const ProductCard = ({
           </h3>
         </Link>
         <div className="flex h-6 items-center justify-center gap-1 shrink-0">
-          {volumeMl && (
-            <span className="text-sm font-bold text-gray-700 mr-1">
-              {volumeMl}ml -
-            </span>
-          )}
+
           {originalPrice && (
             <span className="text-xs text-gray-400 line-through">
               {formatPrice(originalPrice)}
