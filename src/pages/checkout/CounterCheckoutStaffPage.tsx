@@ -372,7 +372,9 @@ export const CounterCheckoutStaffPage = () => {
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [orderInvoice, setOrderInvoice] = useState<OrderInvoice | null>(null);
   const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
-  const [guestPhoneForInvoice, setGuestPhoneForInvoice] = useState<string | null>(null);
+  const [guestPhoneForInvoice, setGuestPhoneForInvoice] = useState<
+    string | null
+  >(null);
   const receiptRef = useRef<HTMLDivElement>(null);
   const previewDataRef = useRef<PosPreviewResponse | null>(null);
   const cartItemsRef = useRef<PosCartItem[]>([]);
@@ -457,11 +459,12 @@ export const CounterCheckoutStaffPage = () => {
       }
 
       // Lưu SĐT khách lẻ nếu không có selectedCustomer
-      const guestPhone = !selectedCustomer ? (
-        // Ưu tiên customerLookupKeyword (SĐT tìm kiếm khách hàng), fallback recipientPhone (delivery)
-        customerLookupKeyword.trim() || (isPickupInStore ? "" : recipientPhone.trim())
-      ) : null;
-      
+      const guestPhone = !selectedCustomer
+        ? // Ưu tiên customerLookupKeyword (SĐT tìm kiếm khách hàng), fallback recipientPhone (delivery)
+          customerLookupKeyword.trim() ||
+          (isPickupInStore ? "" : recipientPhone.trim())
+        : null;
+
       setGuestPhoneForInvoice(guestPhone);
 
       setSuccessOrderId(orderId);
@@ -475,7 +478,15 @@ export const CounterCheckoutStaffPage = () => {
         }
       }, 500);
     },
-    [handlePrint, loadOrderInvoice, isSuccessDialogOpen, successOrderId, selectedCustomer, customerLookupKeyword, recipientPhone],
+    [
+      handlePrint,
+      loadOrderInvoice,
+      isSuccessDialogOpen,
+      successOrderId,
+      selectedCustomer,
+      customerLookupKeyword,
+      recipientPhone,
+    ],
   );
 
   useEffect(() => {
@@ -621,7 +632,7 @@ export const CounterCheckoutStaffPage = () => {
 
       if (!paymentIdForConfirm) {
         showToast(
-          "Checkout thành công nhưng thiếu payment/order ID",
+          "Checkout thành công nhưng thiếu ID giao dịch/đơn hàng",
           "warning",
         );
         return;
@@ -629,7 +640,7 @@ export const CounterCheckoutStaffPage = () => {
 
       if (!orderIdForInvoice) {
         showToast(
-          "Checkout thành công nhưng thiếu orderId để in hóa đơn",
+          "Checkout thành công nhưng thiếu ID đơn hàng để in hóa đơn",
           "warning",
         );
         return;
@@ -1967,7 +1978,10 @@ export const CounterCheckoutStaffPage = () => {
           quantity: item.quantity,
         })),
         voucherCode: appliedVoucherCode.trim() || undefined,
-        customerId: selectedCustomer?.id || undefined,
+        customerId: selectedCustomer?.id || null,
+        guestEmailOrPhoneNumber: selectedCustomer?.id
+          ? undefined
+          : customerLookupKeyword.trim() || undefined,
         isPickupInStore,
         payment: {
           method: paymentMethod,
@@ -2042,9 +2056,9 @@ export const CounterCheckoutStaffPage = () => {
       })),
       voucherCode: appliedVoucherCode.trim() || undefined,
       customerId: selectedCustomer?.id || null,
-      guestEmailOrPhoneNumber: selectedCustomer?.id 
-        ? undefined 
-        : (customerLookupKeyword.trim() || undefined),
+      guestEmailOrPhoneNumber: selectedCustomer?.id
+        ? undefined
+        : customerLookupKeyword.trim() || undefined,
       isPickupInStore,
       payment: {
         method: paymentMethod,
@@ -4301,7 +4315,11 @@ export const CounterCheckoutStaffPage = () => {
 
         {/* Hidden ReceiptTemplate for printing */}
         <div style={{ display: "none" }}>
-          <ReceiptTemplate ref={receiptRef} invoice={orderInvoice} guestPhone={guestPhoneForInvoice} />
+          <ReceiptTemplate
+            ref={receiptRef}
+            invoice={orderInvoice}
+            guestPhone={guestPhoneForInvoice}
+          />
         </div>
       </Container>
     </MainLayout>

@@ -6810,6 +6810,7 @@ export interface paths {
             parameters: {
                 query?: {
                     UserId?: string;
+                    OrderCode?: string;
                     Status?: components["schemas"]["OrderStatus"];
                     Type?: components["schemas"]["OrderType"];
                     PaymentStatus?: components["schemas"]["PaymentStatus"];
@@ -6993,6 +6994,7 @@ export interface paths {
             parameters: {
                 query?: {
                     UserId?: string;
+                    OrderCode?: string;
                     Status?: components["schemas"]["OrderStatus"];
                     Type?: components["schemas"]["OrderType"];
                     PaymentStatus?: components["schemas"]["PaymentStatus"];
@@ -13269,6 +13271,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vouchers/variant/{variantId}/applicable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    variantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/user-vouchers/me": {
         parameters: {
             query?: never;
@@ -14543,7 +14595,7 @@ export interface components {
             code: string;
             /** Format: decimal */
             discountValue?: number;
-            targetItemType?: components["schemas"]["PromotionType"];
+            targetItemType?: null | components["schemas"]["PromotionType"];
             discountType?: components["schemas"]["DiscountType"];
             applyType?: components["schemas"]["VoucherType"];
             /** Format: decimal */
