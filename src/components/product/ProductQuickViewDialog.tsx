@@ -22,11 +22,13 @@ import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
+import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import type { ProductFastLook } from "@/types/product";
 
 interface ProductQuickViewDialogProps {
   open: boolean;
   productId: string | null;
+  aiAcceptanceId?: string;
   loading: boolean;
   error: string | null;
   fastLook: ProductFastLook | null;
@@ -124,6 +126,7 @@ const sanitizeDescriptionHtml = (html: string) => {
 const ProductQuickViewDialog = ({
   open,
   productId,
+  aiAcceptanceId,
   loading,
   error,
   fastLook,
@@ -301,6 +304,15 @@ const ProductQuickViewDialog = ({
       await refreshCart();
       showToast("Đã thêm vào giỏ hàng", "success");
 
+      // Mark as accepted if inside an AI recommendation context
+      if (aiAcceptanceId) {
+        try {
+          await aiAcceptanceService.clickAIAcceptance(aiAcceptanceId);
+        } catch (error) {
+          console.error("Failed to mark AI acceptance on quick view cart add:", error);
+        }
+      }
+
       if (navigateAfterAdd) {
         onClose();
 
@@ -336,7 +348,12 @@ const ProductQuickViewDialog = ({
       return;
     }
     onClose();
-    navigate(`/products/${productId}`);
+    const queryParams = new URLSearchParams();
+    if (aiAcceptanceId) {
+      queryParams.set("aiAcceptanceId", aiAcceptanceId);
+    }
+    const queryString = queryParams.toString();
+    navigate(`/products/${productId}${queryString ? `?${queryString}` : ""}`);
   };
 
   const renderContent = () => {

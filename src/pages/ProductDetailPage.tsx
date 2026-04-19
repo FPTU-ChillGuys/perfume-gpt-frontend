@@ -32,6 +32,7 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { reviewService } from "@/services/ai/reviewService";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
+import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewSection } from "@/components/review/ReviewSection";
@@ -251,6 +252,38 @@ const ProductDetailPage = () => {
       isMounted = false;
     };
   }, []); // Empty dependency array - fetch only once on mount
+
+  // Effect: Handle AI Acceptance tracking from query parameters
+  useEffect(() => {
+    const aiAcceptanceId = searchParams.get("aiAcceptanceId");
+    if (!aiAcceptanceId) return;
+
+    let isMounted = true;
+
+    const trackAcceptance = async () => {
+      try {
+        await aiAcceptanceService.clickAIAcceptance(aiAcceptanceId);
+        
+        // Clean up URL after successful tracking
+        if (isMounted) {
+          const newSearchParams = new URLSearchParams(searchParams);
+          newSearchParams.delete("aiAcceptanceId");
+          setSearchParams(newSearchParams, { replace: true });
+        }
+      } catch (error) {
+        console.error("Failed to track AI acceptance:", error);
+        if (isMounted) {
+          showToast("Không thể ghi nhận tương tác với sản phẩm gợi ý", "error");
+        }
+      }
+    };
+
+    void trackAcceptance();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [searchParams, setSearchParams, showToast]);
 
   const THUMB_VISIBLE = 5;
   const THUMB_SIZE = 72;

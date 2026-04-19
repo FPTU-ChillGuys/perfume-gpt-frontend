@@ -12,6 +12,7 @@ export const productCardOutputItemSchema = z.object({
     name: z.string(),
     brandName: z.string(),
     primaryImage: z.string().nullable(),
+    aiAcceptanceId: z.string().optional(),
     variants: z.array(productCardVariantOutputSchema)
 });
 

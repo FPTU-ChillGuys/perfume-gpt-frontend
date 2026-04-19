@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/useToast";
 import { useCart } from "@/hooks/useCart";
 import { useProductQuickView } from "@/hooks/useProductQuickView";
 import { productActivityLogService } from "@/services/ai/productActivityLogService";
+import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 
 export interface ProductCardProps {
   id: string;
@@ -20,6 +21,7 @@ export interface ProductCardProps {
   variantId?: string;
   numberOfVariants?: number;
   tags?: string[] | null;
+  aiAcceptanceId?: string;
 }
 
 export const ProductCard = ({
@@ -35,6 +37,7 @@ export const ProductCard = ({
   variantId,
   numberOfVariants,
   tags,
+  aiAcceptanceId,
 }: ProductCardProps) => {
   const { showToast } = useToast();
   const { refreshCart } = useCart();
@@ -50,7 +53,14 @@ export const ProductCard = ({
     Number.isFinite(maxPrice) &&
     maxPrice > salePrice;
 
-  const detailHref = `/products/${id}`;
+  const detailHref = (() => {
+    const queryParams = new URLSearchParams();
+    if (aiAcceptanceId) {
+      queryParams.set("aiAcceptanceId", aiAcceptanceId);
+    }
+    const queryString = queryParams.toString();
+    return `/products/${id}${queryString ? `?${queryString}` : ""}`;
+  })();
 
   const handleProductLinkClick = () => {
     if (!id) {
@@ -75,6 +85,15 @@ export const ProductCard = ({
       await cartService.addItem(variantId, 1);
       await refreshCart();
       showToast("Đã thêm sản phẩm vào giỏ hàng", "success");
+
+      // Mark as accepted if inside an AI recommendation context
+      if (aiAcceptanceId) {
+        try {
+          await aiAcceptanceService.clickAIAcceptance(aiAcceptanceId);
+        } catch (error) {
+          console.error("Failed to mark AI acceptance on direct cart add:", error);
+        }
+      }
     } catch (error) {
       showToast(
         error instanceof Error
@@ -126,7 +145,7 @@ export const ProductCard = ({
               .catch((error) => {
                 console.error("Failed to log quick view click", error);
               });
-            openQuickView(id);
+            openQuickView(id, aiAcceptanceId);
           }}
           className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
         >

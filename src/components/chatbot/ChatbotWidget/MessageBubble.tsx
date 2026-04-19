@@ -9,7 +9,7 @@ import type { ChatMessage } from "@/types/chatbot";
 
 interface MessageBubbleProps {
   msg: ChatMessage;
-  onAddToCart: (variantId: string, productName: string) => void;
+  onAddToCart: (variantId: string, productName: string, aiAcceptanceId?: string) => void;
   onNavigate: (productId: string) => void;
   onSuggestionClick?: (question: string) => void;
   isLastMessage?: boolean;

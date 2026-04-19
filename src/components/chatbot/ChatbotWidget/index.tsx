@@ -317,27 +317,19 @@ export default function ChatbotWidget() {
   }, [conversationActive, resetTranscript, startListening, stopListening]);
 
   const handleAddToCart = useCallback(
-    async (variantId: string, productName: string) => {
+    async (variantId: string, productName: string, aiAcceptanceId?: string) => {
       try {
         // Add item to cart
         await cartService.addItem(variantId, 1);
         showToast(`Đã thêm "${productName}" vào giỏ hàng!`, "success");
 
-        // Create AI acceptance record with the actual cartItemId
-        try {
-          // Fetch cart items to get the actual cartItemId
-          const items = await cartService.getItems();
-          // Find the item we just added by variantId
-          const addedItem = items.find((item) => item.variantId === variantId);
-          if (addedItem?.cartItemId) {
-            await aiAcceptanceService.createCheckoutAcceptance(
-              userId.current,
-              addedItem.cartItemId,
-            );
+        // Mark as accepted if aiAcceptanceId exists
+        if (aiAcceptanceId) {
+          try {
+            await aiAcceptanceService.clickAIAcceptance(aiAcceptanceId);
+          } catch (e) {
+            console.error("Failed to mark AI acceptance on chatbot cart add:", e);
           }
-        } catch (e) {
-          console.error("Failed to create AI acceptance:", e);
-          // Don't fail the add-to-cart if acceptance creation fails
         }
       } catch {
         showToast("Thêm vào giỏ hàng thất bại. Vui lòng thử lại.", "error");

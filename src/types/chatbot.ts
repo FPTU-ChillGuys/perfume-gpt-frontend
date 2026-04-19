@@ -36,6 +36,7 @@ export interface ChatProduct {
     brandName: string;
     categoryName: string;
     primaryImage: string | null;
+    aiAcceptanceId?: string;
     attributes: unknown[];
     variants?: ChatVariant[];
 }
