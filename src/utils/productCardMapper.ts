@@ -97,6 +97,7 @@ export const mapProductToCard = (
     numberOfVariants:
       product.numberOfVariants ?? (product as any).variants?.length ?? 0,
     tags,
+    aiAcceptanceId: (product as any).aiAcceptanceId,
   };
 };
 
@@ -150,6 +151,7 @@ export const mapProductWithVariantsToCard = (
     variantId: firstVariant?.id,
     numberOfVariants: product.numberOfVariants ?? product.variants?.length ?? 0,
     tags,
+    aiAcceptanceId: (product as any).aiAcceptanceId,
   };
 };
 

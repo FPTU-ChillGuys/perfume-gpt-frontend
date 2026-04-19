@@ -65,7 +65,6 @@ export const AIAcceptancePage = () => {
 
     const filteredRecords = useMemo(() => records.filter((r) => {
         const matchesSearch = !searchTerm
-            || r.userId?.toLowerCase().includes(searchTerm.toLowerCase())
             || r.id?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus =
             filterStatus === "all" ||

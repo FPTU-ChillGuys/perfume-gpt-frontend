@@ -31,7 +31,7 @@ export const AIAcceptanceFilters = ({
         >
             <TextField
                 fullWidth
-                label="Tìm theo User ID / Record ID"
+                label="Tìm theo Record ID"
                 placeholder="Nhập ID..."
                 value={searchInput}
                 onChange={(e) => onSearchInputChange(e.target.value)}

@@ -43,7 +43,6 @@ export const AIAcceptanceTable = ({
             <TableHead>
                 <TableRow sx={{ bgcolor: "grey.50" }}>
                     <TableCell>Record ID</TableCell>
-                    <TableCell>User ID</TableCell>
                     <TableCell align="center">Trạng thái</TableCell>
                     <TableCell>Ngày tạo</TableCell>
                     <TableCell>Cập nhật cuối</TableCell>
@@ -52,13 +51,13 @@ export const AIAcceptanceTable = ({
             <TableBody>
                 {loading ? (
                     <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                             <CircularProgress />
                         </TableCell>
                     </TableRow>
                 ) : records.length === 0 ? (
                     <TableRow>
-                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                             <Typography variant="body2" color="text.secondary">
                                 Không có bản ghi nào phù hợp
                             </Typography>
@@ -70,11 +69,6 @@ export const AIAcceptanceTable = ({
                             <TableCell>
                                 <Typography variant="body2" fontWeight={500} title={record.id}>
                                     {record.id?.substring(0, 8)}...
-                                </Typography>
-                            </TableCell>
-                            <TableCell>
-                                <Typography variant="body2" title={record.userId}>
-                                    {record.userId?.substring(0, 8)}...
                                 </Typography>
                             </TableCell>
                             <TableCell align="center">

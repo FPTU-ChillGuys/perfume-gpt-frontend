@@ -9,7 +9,7 @@ import { formatPrice } from "./helpers";
 
 interface ProductCardProps {
   product: ChatProduct;
-  onAddToCart: (variantId: string, productName: string) => void;
+  onAddToCart: (variantId: string, productName: string, aiAcceptanceId?: string) => void;
   onNavigate: (productId: string) => void;
 }
 
@@ -30,7 +30,7 @@ export function ProductCard({
     if (!selectedVariant) return;
     setAdding(true);
     try {
-      await onAddToCart(selectedVariant.id, product.name);
+      await onAddToCart(selectedVariant.id, product.name, product.aiAcceptanceId);
     } finally {
       setAdding(false);
     }

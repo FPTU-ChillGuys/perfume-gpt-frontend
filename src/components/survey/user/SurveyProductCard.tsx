@@ -27,7 +27,7 @@ interface Props {
     userId: string;
 }
 
-export default function SurveyProductCard({ product, userId }: Props) {
+export default function SurveyProductCard({ product }: { product: ChatProduct }) {
     const navigate = useNavigate();
     const { showToast } = useToast();
 
@@ -37,10 +37,16 @@ export default function SurveyProductCard({ product, userId }: Props) {
     const [adding, setAdding] = useState(false);
 
     const goToProduct = () => {
-        const variantQuery = selectedVariant?.id
-            ? `?variantId=${encodeURIComponent(selectedVariant.id)}`
-            : "";
-        navigate(`/products/${product.id}${variantQuery}`);
+        const queryParams = new URLSearchParams();
+        if (selectedVariant?.id) {
+            queryParams.set("variantId", selectedVariant.id);
+        }
+        if (product.aiAcceptanceId) {
+            queryParams.set("aiAcceptanceId", product.aiAcceptanceId);
+        }
+        
+        const queryString = queryParams.toString();
+        navigate(`/products/${product.id}${queryString ? `?${queryString}` : ""}`);
     };
 
     const handleAddToCart = async (e: React.MouseEvent) => {
@@ -53,18 +59,13 @@ export default function SurveyProductCard({ product, userId }: Props) {
             await cartService.addItem(selectedVariant.id, 1);
             showToast(`Đã thêm "${product.name}" vào giỏ hàng`, "success");
 
-            // Create AI acceptance record with the actual cartItemId
-            try {
-                // Fetch cart items to get the actual cartItemId
-                const items = await cartService.getItems();
-                // Find the item we just added by variantId
-                const addedItem = items.find((item) => item.variantId === selectedVariant.id);
-                if (addedItem?.cartItemId) {
-                    await aiAcceptanceService.createCheckoutAcceptance(userId, addedItem.cartItemId);
+            // Mark as accepted if aiAcceptanceId exists
+            if (product.aiAcceptanceId) {
+                try {
+                    await aiAcceptanceService.clickAIAcceptance(product.aiAcceptanceId);
+                } catch (err) {
+                    console.error("Failed to mark AI acceptance on cart add:", err);
                 }
-            } catch (err) {
-                console.error("Failed to create AI acceptance:", err);
-                // Don't fail the add-to-cart if acceptance creation fails
             }
         } catch (err) {
             console.error("AddToCart error:", err);

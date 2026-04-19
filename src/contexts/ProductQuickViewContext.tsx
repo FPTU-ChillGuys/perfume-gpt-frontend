@@ -18,6 +18,7 @@ const toError = (error: unknown, fallbackMessage: string) => {
 interface ProductQuickViewState {
   open: boolean;
   productId: string | null;
+  aiAcceptanceId?: string;
 }
 
 export const ProductQuickViewProvider = ({
@@ -28,6 +29,7 @@ export const ProductQuickViewProvider = ({
   const [state, setState] = useState<ProductQuickViewState>({
     open: false,
     productId: null,
+    aiAcceptanceId: undefined,
   });
   const [fastLook, setFastLook] = useState<ProductFastLook | null>(null);
   const [loading, setLoading] = useState(false);
@@ -69,11 +71,11 @@ export const ProductQuickViewProvider = ({
   }, []);
 
   const openQuickView = useCallback(
-    (productId: string) => {
+    (productId: string, aiAcceptanceId?: string) => {
       if (!productId) {
         return;
       }
-      setState({ open: true, productId });
+      setState({ open: true, productId, aiAcceptanceId });
       setFastLook(null);
       void fetchProductData(productId);
     },
@@ -81,7 +83,7 @@ export const ProductQuickViewProvider = ({
   );
 
   const handleClose = () => {
-    setState({ open: false, productId: null });
+    setState({ open: false, productId: null, aiAcceptanceId: undefined });
     setFastLook(null);
     setError(null);
   };
@@ -92,6 +94,7 @@ export const ProductQuickViewProvider = ({
       <ProductQuickViewDialog
         open={state.open}
         productId={state.productId}
+        aiAcceptanceId={state.aiAcceptanceId}
         loading={loading}
         error={error}
         fastLook={fastLook}

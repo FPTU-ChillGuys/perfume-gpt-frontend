@@ -663,25 +663,6 @@ export const CheckoutPage = () => {
       // Call checkout API
       const response = await orderService.checkout(request);
 
-      // Update AI acceptance for all cart items with status = true
-      if (user?.id) {
-        try {
-          for (const item of items) {
-            const cartItemId = item.cartItemId;
-            if (cartItemId) {
-              await aiAcceptanceService.updateCheckoutAcceptance(
-                user.id,
-                cartItemId,
-                true,
-              );
-            }
-          }
-        } catch (e) {
-          console.error("Failed to update AI acceptance on checkout:", e);
-          // Don't fail the checkout if acceptance update fails
-        }
-      }
-
       // Clear cart
       await refreshCart();
 

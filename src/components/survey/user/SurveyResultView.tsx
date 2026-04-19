@@ -84,7 +84,7 @@ export default function SurveyResultView({ result, userId, onReviewAnswers, onRe
                     </Divider>
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                         {result.products.map((p) => (
-                            <SurveyProductCard key={p.id} product={p} userId={userId} />
+                            <SurveyProductCard key={p.id} product={p} />
                         ))}
                     </Box>
                 </>
