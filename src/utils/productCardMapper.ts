@@ -98,6 +98,7 @@ export const mapProductToCard = (
       product.numberOfVariants ?? (product as any).variants?.length ?? 0,
     tags,
     aiAcceptanceId: (product as any).aiAcceptanceId,
+    volumeMl: variant?.volumeMl ?? variantItems[0]?.volumeMl,
   };
 };
 
@@ -152,6 +153,7 @@ export const mapProductWithVariantsToCard = (
     numberOfVariants: product.numberOfVariants ?? product.variants?.length ?? 0,
     tags,
     aiAcceptanceId: (product as any).aiAcceptanceId,
+    volumeMl: (firstVariant as any)?.volumeMl,
   };
 };
 
