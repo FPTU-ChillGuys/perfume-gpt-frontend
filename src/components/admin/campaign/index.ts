@@ -4,6 +4,7 @@ export {
   type SelectedCampaignItem,
   type SelectableRow,
 } from "./BulkItemSelector";
+export { CampaignCreateView } from "./CampaignCreateView";
 export { VoucherForm } from "./VoucherForm";
 export {
   createEmptyVoucherDraft,

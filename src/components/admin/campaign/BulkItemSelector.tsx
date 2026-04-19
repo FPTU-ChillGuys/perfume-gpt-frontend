@@ -47,7 +47,10 @@ import {
   type StockResponse,
 } from "@/services/inventoryService";
 import { productService } from "@/services/productService";
-import { BulkConfigModal, type BulkConfigValues } from "./BulkConfigModal";
+import {
+  BulkConfigModal,
+  type SplitBulkConfigValues,
+} from "./BulkConfigModal";
 
 // ─── Shared types ───────────────────────────────────────────────────
 type CampaignCategoryTab =
@@ -395,6 +398,25 @@ export const BulkItemSelector = ({
     [selectedItems],
   );
 
+  // Mutual exclusion: if a product-level row is selected/checked, disable its batches and vice-versa
+  const mutualExclusion = useMemo(() => {
+    const productVariants = new Set<string>();
+    const batchVariants = new Set<string>();
+
+    for (const item of selectedItems) {
+      if (!item.batchId) productVariants.add(item.productVariantId);
+      else batchVariants.add(item.productVariantId);
+    }
+    for (const key of checkedKeys) {
+      const row = allRowsCache.current.get(key);
+      if (!row) continue;
+      if (!row.batchId) productVariants.add(row.productVariantId);
+      else batchVariants.add(row.productVariantId);
+    }
+
+    return { productVariants, batchVariants };
+  }, [selectedItems, checkedKeys]);
+
   // ── Checkbox helpers ──
   const availableKeys = useMemo(
     () =>
@@ -441,20 +463,41 @@ export const BulkItemSelector = ({
 
   const checkedCount = checkedKeys.size;
 
+  const { checkedProductCount, checkedBatchCount } = useMemo(() => {
+    let product = 0;
+    let batch = 0;
+    for (const key of checkedKeys) {
+      const row = allRowsCache.current.get(key);
+      if (!row) continue;
+      if (row.batchId) batch++;
+      else product++;
+    }
+    return { checkedProductCount: product, checkedBatchCount: batch };
+  }, [checkedKeys]);
+
   // ── Bulk apply handler ──
-  const handleBulkApply = (config: BulkConfigValues) => {
+  const handleBulkApply = (config: SplitBulkConfigValues) => {
     const newItems: SelectedCampaignItem[] = [];
 
     for (const key of checkedKeys) {
       if (alreadyAddedKeys.has(key)) continue;
       const row = allRowsCache.current.get(key);
       if (!row) continue;
+
+      const isBatch = Boolean(row.batchId);
+      const section = isBatch ? config.batch : config.product;
+      if (!section) continue;
+
       newItems.push({
         ...row,
-        promotionType: config.promotionType,
-        discountType: config.discountType,
-        discountValueInput: config.discountValue,
-        maxUsageInput: row.batchId ? "" : config.maxUsage,
+        promotionType: section.promotionType,
+        discountType: section.discountType,
+        discountValueInput: section.discountValue,
+        maxUsageInput: isBatch
+          ? ""
+          : "maxUsage" in section
+            ? (section as { maxUsage: string }).maxUsage
+            : "",
       });
     }
 
@@ -465,11 +508,7 @@ export const BulkItemSelector = ({
   };
 
   return (
-    <Stack spacing={2} sx={{ minHeight: 0, flex: 1 }}>
-      <Typography variant="subtitle1" fontWeight={700}>
-        Chọn hàng / lô để thêm vào chiến dịch khuyến mãi
-      </Typography>
-
+    <Stack spacing={2} sx={{ minHeight: 0, flex: 1, position: "relative" }}>
       {/* Category tabs */}
       <Paper variant="outlined">
         <Tabs
@@ -575,322 +614,309 @@ export const BulkItemSelector = ({
         </Button>
       </Box>
 
-      {/* Floating bulk action bar */}
-      {checkedCount > 0 && (
-        <Paper
-          elevation={4}
-          sx={{
-            p: 1.5,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            bgcolor: "primary.50",
-            border: 1,
-            borderColor: "primary.200",
-            borderRadius: 2,
-          }}
-        >
-          <Typography variant="body2" fontWeight={600}>
-            Đã chọn {checkedCount} sản phẩm
-          </Typography>
-          <Button
-            variant="contained"
-            size="small"
-            startIcon={<SettingsIcon />}
-            onClick={() => setBulkModalOpen(true)}
-          >
-            Cấu hình chung cho {checkedCount} sản phẩm đã chọn
-          </Button>
-        </Paper>
-      )}
-
       {/* Stock table with checkboxes */}
-      <TableContainer
-        component={Paper}
-        variant="outlined"
-        sx={{ minHeight: 0, flex: 1, overflowY: "auto" }}
+      <Box
+        sx={{ minHeight: 0, flex: 1, display: "flex", flexDirection: "column" }}
       >
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow sx={{ bgcolor: "grey.50" }}>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  indeterminate={someChecked && !allChecked}
-                  checked={allChecked}
-                  onChange={handleToggleAll}
-                  disabled={availableKeys.length === 0}
-                />
-              </TableCell>
-              <TableCell sx={{ width: 56, minWidth: 56 }}>Ảnh</TableCell>
-              <TableCell sx={{ minWidth: 220 }}>Sản phẩm</TableCell>
-              <TableCell sx={{ minWidth: 140 }}>SKU</TableCell>
-              <TableCell align="right" sx={{ minWidth: 120 }}>
-                Giá
-              </TableCell>
-              <TableCell align="right" sx={{ minWidth: 90 }}>
-                Khả dụng
-              </TableCell>
-              <TableCell align="center" sx={{ minWidth: 110 }}>
-                Trạng thái
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {stockLoading ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <CircularProgress size={28} />
+        <TableContainer
+          component={Paper}
+          variant="outlined"
+          sx={{ minHeight: 0, flex: 1, overflowY: "auto" }}
+        >
+          <Table size="small" stickyHeader>
+            <TableHead>
+              <TableRow sx={{ bgcolor: "grey.50" }}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    indeterminate={someChecked && !allChecked}
+                    checked={allChecked}
+                    onChange={handleToggleAll}
+                    disabled={availableKeys.length === 0}
+                  />
+                </TableCell>
+                <TableCell sx={{ width: 56, minWidth: 56 }}>Ảnh</TableCell>
+                <TableCell sx={{ minWidth: 220 }}>Sản phẩm</TableCell>
+                <TableCell sx={{ minWidth: 140 }}>SKU</TableCell>
+                <TableCell align="right" sx={{ minWidth: 120 }}>
+                  Giá
+                </TableCell>
+                <TableCell align="right" sx={{ minWidth: 90 }}>
+                  Khả dụng
+                </TableCell>
+                <TableCell align="center" sx={{ minWidth: 110 }}>
+                  Trạng thái
                 </TableCell>
               </TableRow>
-            ) : stockError ? (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <Alert severity="error">{stockError}</Alert>
-                </TableCell>
-              </TableRow>
-            ) : stockList.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    Không có dữ liệu tồn kho phù hợp.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              stockList.map((stock) => {
-                const variantId = stock.variantId || "";
-                const variantKey = `${variantId}-all`;
-                const batchState = variantId
-                  ? batchByVariantId[variantId]
-                  : undefined;
-                const stockStatus = getStockStatusDisplay(stock);
-                const isVariantAdded = alreadyAddedKeys.has(variantKey);
+            </TableHead>
+            <TableBody>
+              {stockLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                    <CircularProgress size={28} />
+                  </TableCell>
+                </TableRow>
+              ) : stockError ? (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <Alert severity="error">{stockError}</Alert>
+                  </TableCell>
+                </TableRow>
+              ) : stockList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      Không có dữ liệu tồn kho phù hợp.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                stockList.map((stock) => {
+                  const variantId = stock.variantId || "";
+                  const variantKey = `${variantId}-all`;
+                  const batchState = variantId
+                    ? batchByVariantId[variantId]
+                    : undefined;
+                  const stockStatus = getStockStatusDisplay(stock);
+                  const isVariantAdded = alreadyAddedKeys.has(variantKey);
+                  const isVariantBlockedByBatch =
+                    mutualExclusion.batchVariants.has(variantId);
 
-                return (
-                  <Fragment key={stock.id || variantId}>
-                    {/* Variant row */}
-                    <TableRow hover>
-                      <TableCell padding="checkbox">
-                        <Checkbox
-                          checked={
-                            checkedKeys.has(variantKey) || isVariantAdded
-                          }
-                          onChange={() => handleToggleRow(variantKey)}
-                          disabled={isVariantAdded}
-                        />
-                      </TableCell>
-                      <TableCell sx={{ py: 1 }}>
-                        <Avatar
-                          src={stock.variantImageUrl}
-                          alt={stock.productName || "Product"}
-                          variant="rounded"
-                          sx={{ width: 40, height: 40 }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          fontWeight={600}
-                          sx={{ fontSize: "0.875rem", lineHeight: 1.3 }}
-                        >
-                          {stock.productName || "N/A"}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ display: "block" }}
-                        >
-                          {stock.volumeMl ? `${stock.volumeMl}ml` : ""}
-                          {stock.volumeMl && stock.concentrationName
-                            ? " • "
-                            : ""}
-                          {stock.concentrationName || ""}
-                        </Typography>
-                        {isVariantAdded && (
-                          <Chip
-                            size="small"
-                            label="Đã thêm"
-                            color="success"
-                            sx={{ mt: 0.5 }}
+                  return (
+                    <Fragment key={stock.id || variantId}>
+                      {/* Variant row */}
+                      <TableRow hover>
+                        <TableCell padding="checkbox">
+                          <Checkbox
+                            checked={
+                              checkedKeys.has(variantKey) || isVariantAdded
+                            }
+                            onChange={() => handleToggleRow(variantKey)}
+                            disabled={isVariantAdded || isVariantBlockedByBatch}
                           />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2">
-                          {stock.variantSku || "N/A"}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography
-                          variant="body2"
-                          color="error.main"
-                          fontWeight={600}
-                          sx={{ whiteSpace: "nowrap" }}
-                        >
-                          {(() => {
-                            const cached =
-                              variantPricesCache[stock.variantId || ""];
-                            if (!cached) return "−";
-                            const price = cached.basePrice;
-                            return price != null
-                              ? `${price.toLocaleString("vi-VN")} ₫`
-                              : "−";
-                          })()}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Typography variant="body2">
-                          {stock.availableQuantity ?? 0}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip
-                          size="small"
-                          color={stockStatus.color}
-                          label={stockStatus.label}
-                        />
-                      </TableCell>
-                    </TableRow>
-
-                    {/* Batch sub-rows */}
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        sx={{ bgcolor: "grey.50", py: 1.5 }}
-                      >
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ display: "block", px: 1, mb: 1 }}
-                        >
-                          Danh sách lô của SKU {stock.variantSku || "N/A"}
-                        </Typography>
-                        {batchState?.loading ? (
-                          <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing={1}
-                            sx={{ px: 1 }}
+                        </TableCell>
+                        <TableCell sx={{ py: 1 }}>
+                          <Avatar
+                            src={stock.variantImageUrl}
+                            alt={stock.productName || "Product"}
+                            variant="rounded"
+                            sx={{ width: 40, height: 40 }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            fontWeight={600}
+                            sx={{ fontSize: "0.875rem", lineHeight: 1.3 }}
                           >
-                            <CircularProgress size={18} />
-                            <Typography variant="body2" color="text.secondary">
-                              Đang tải danh sách lô...
-                            </Typography>
-                          </Stack>
-                        ) : batchState?.error ? (
-                          <Alert severity="error">{batchState.error}</Alert>
-                        ) : !batchState || batchState.items.length === 0 ? (
+                            {stock.productName || "N/A"}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block" }}
+                          >
+                            {stock.volumeMl ? `${stock.volumeMl}ml` : ""}
+                            {stock.volumeMl && stock.concentrationName
+                              ? " • "
+                              : ""}
+                            {stock.concentrationName || ""}
+                          </Typography>
+                          {isVariantAdded && (
+                            <Chip
+                              size="small"
+                              label="Đã thêm"
+                              color="success"
+                              sx={{ mt: 0.5 }}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2">
+                            {stock.variantSku || "N/A"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
                           <Typography
                             variant="body2"
-                            color="text.secondary"
-                            sx={{ px: 1 }}
+                            color="error.main"
+                            fontWeight={600}
+                            sx={{ whiteSpace: "nowrap" }}
                           >
-                            Không có lô nào cho variant này.
+                            {(() => {
+                              const cached =
+                                variantPricesCache[stock.variantId || ""];
+                              if (!cached) return "−";
+                              const price = cached.basePrice;
+                              return price != null
+                                ? `${price.toLocaleString("vi-VN")} ₫`
+                                : "−";
+                            })()}
                           </Typography>
-                        ) : (
-                          <TableContainer>
-                            <Table size="small">
-                              <TableHead>
-                                <TableRow>
-                                  <TableCell padding="checkbox" />
-                                  <TableCell>Batch code</TableCell>
-                                  <TableCell>NSX - HSD</TableCell>
-                                  <TableCell align="right">Còn lại</TableCell>
-                                  <TableCell align="center">
-                                    Trạng thái
-                                  </TableCell>
-                                </TableRow>
-                              </TableHead>
-                              <TableBody>
-                                {batchState.items.map((batch) => {
-                                  const batchKey = `${variantId}-${batch.id}`;
-                                  const isBatchAdded =
-                                    alreadyAddedKeys.has(batchKey);
+                        </TableCell>
+                        <TableCell align="right">
+                          <Typography variant="body2">
+                            {stock.availableQuantity ?? 0}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            size="small"
+                            color={stockStatus.color}
+                            label={stockStatus.label}
+                          />
+                        </TableCell>
+                      </TableRow>
 
-                                  return (
-                                    <TableRow
-                                      key={
-                                        batch.id ||
-                                        `${variantId}-${batch.batchCode}`
-                                      }
-                                    >
-                                      <TableCell padding="checkbox">
-                                        <Checkbox
-                                          checked={
-                                            checkedKeys.has(batchKey) ||
-                                            isBatchAdded
-                                          }
-                                          onChange={() =>
-                                            handleToggleRow(batchKey)
-                                          }
-                                          disabled={isBatchAdded}
-                                        />
-                                      </TableCell>
-                                      <TableCell>
-                                        {batch.batchCode || "N/A"}
-                                        {isBatchAdded && (
-                                          <Chip
-                                            size="small"
-                                            label="Đã thêm"
-                                            color="success"
-                                            sx={{ ml: 1 }}
+                      {/* Batch sub-rows */}
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          sx={{ bgcolor: "grey.50", py: 1.5 }}
+                        >
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: "block", px: 1, mb: 1 }}
+                          >
+                            Danh sách lô của SKU {stock.variantSku || "N/A"}
+                          </Typography>
+                          {batchState?.loading ? (
+                            <Stack
+                              direction="row"
+                              alignItems="center"
+                              spacing={1}
+                              sx={{ px: 1 }}
+                            >
+                              <CircularProgress size={18} />
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                Đang tải danh sách lô...
+                              </Typography>
+                            </Stack>
+                          ) : batchState?.error ? (
+                            <Alert severity="error">{batchState.error}</Alert>
+                          ) : !batchState || batchState.items.length === 0 ? (
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ px: 1 }}
+                            >
+                              Không có lô nào cho variant này.
+                            </Typography>
+                          ) : (
+                            <TableContainer>
+                              <Table size="small">
+                                <TableHead>
+                                  <TableRow>
+                                    <TableCell padding="checkbox" />
+                                    <TableCell>Batch code</TableCell>
+                                    <TableCell>NSX - HSD</TableCell>
+                                    <TableCell align="right">Còn lại</TableCell>
+                                    <TableCell align="center">
+                                      Trạng thái
+                                    </TableCell>
+                                  </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                  {batchState.items.map((batch) => {
+                                    const batchKey = `${variantId}-${batch.id}`;
+                                    const isBatchAdded =
+                                      alreadyAddedKeys.has(batchKey);
+                                    const isBatchBlockedByProduct =
+                                      mutualExclusion.productVariants.has(
+                                        variantId,
+                                      );
+
+                                    return (
+                                      <TableRow
+                                        key={
+                                          batch.id ||
+                                          `${variantId}-${batch.batchCode}`
+                                        }
+                                      >
+                                        <TableCell padding="checkbox">
+                                          <Checkbox
+                                            checked={
+                                              checkedKeys.has(batchKey) ||
+                                              isBatchAdded
+                                            }
+                                            onChange={() =>
+                                              handleToggleRow(batchKey)
+                                            }
+                                            disabled={
+                                              isBatchAdded ||
+                                              isBatchBlockedByProduct
+                                            }
                                           />
-                                        )}
-                                      </TableCell>
-                                      <TableCell>
-                                        <Typography variant="body2">
-                                          NSX:{" "}
-                                          {formatDate(batch.manufactureDate)}
-                                        </Typography>
-                                        <Typography
-                                          variant="caption"
-                                          color="text.secondary"
-                                        >
-                                          HSD: {formatDate(batch.expiryDate)}
-                                        </Typography>
-                                      </TableCell>
-                                      <TableCell align="right">
-                                        {batch.remainingQuantity ?? 0}
-                                      </TableCell>
-                                      <TableCell align="center">
-                                        {batch.isExpired ? (
-                                          <Chip
-                                            size="small"
-                                            color="error"
-                                            label="Hết hạn"
-                                          />
-                                        ) : (batch.daysUntilExpiry ?? 9999) <=
-                                          60 ? (
-                                          <Chip
-                                            size="small"
-                                            color="warning"
-                                            variant="outlined"
-                                            label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
-                                          />
-                                        ) : (
-                                          <Chip
-                                            size="small"
-                                            color="success"
-                                            variant="outlined"
-                                            label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
-                                          />
-                                        )}
-                                      </TableCell>
-                                    </TableRow>
-                                  );
-                                })}
-                              </TableBody>
-                            </Table>
-                          </TableContainer>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  </Fragment>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                                        </TableCell>
+                                        <TableCell>
+                                          {batch.batchCode || "N/A"}
+                                          {isBatchAdded && (
+                                            <Chip
+                                              size="small"
+                                              label="Đã thêm"
+                                              color="success"
+                                              sx={{ ml: 1 }}
+                                            />
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          <Typography variant="body2">
+                                            NSX:{" "}
+                                            {formatDate(batch.manufactureDate)}
+                                          </Typography>
+                                          <Typography
+                                            variant="caption"
+                                            color="text.secondary"
+                                          >
+                                            HSD: {formatDate(batch.expiryDate)}
+                                          </Typography>
+                                        </TableCell>
+                                        <TableCell align="right">
+                                          {batch.remainingQuantity ?? 0}
+                                        </TableCell>
+                                        <TableCell align="center">
+                                          {batch.isExpired ? (
+                                            <Chip
+                                              size="small"
+                                              color="error"
+                                              label="Hết hạn"
+                                            />
+                                          ) : (batch.daysUntilExpiry ?? 9999) <=
+                                            60 ? (
+                                            <Chip
+                                              size="small"
+                                              color="warning"
+                                              variant="outlined"
+                                              label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
+                                            />
+                                          ) : (
+                                            <Chip
+                                              size="small"
+                                              color="success"
+                                              variant="outlined"
+                                              label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
+                                            />
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            </TableContainer>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    </Fragment>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
 
       <TablePagination
         component="div"
@@ -911,10 +937,29 @@ export const BulkItemSelector = ({
 
       <BulkConfigModal
         open={bulkModalOpen}
-        selectedCount={checkedCount}
+        productCount={checkedProductCount}
+        batchCount={checkedBatchCount}
         onClose={() => setBulkModalOpen(false)}
         onApply={handleBulkApply}
       />
+
+      {/* Floating bulk action button - bottom left of dialog */}
+      {checkedCount > 0 && (
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<SettingsIcon />}
+          onClick={() => setBulkModalOpen(true)}
+          sx={{
+            position: "absolute",
+            bottom: 16,
+            left: 24,
+            zIndex: 1300,
+          }}
+        >
+          Cấu hình chung ({checkedCount})
+        </Button>
+      )}
     </Stack>
   );
 };
