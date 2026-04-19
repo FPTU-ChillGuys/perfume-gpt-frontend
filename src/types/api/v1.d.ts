@@ -14345,9 +14345,12 @@ export interface components {
             campaignId?: string;
             /** Format: uuid */
             productVariantId?: string;
+            sku: string;
+            primaryImageUrl?: null | string;
+            productName: string;
             /** Format: uuid */
             batchId?: null | string;
-            name: string;
+            batchCode?: null | string;
             itemType?: components["schemas"]["PromotionType"];
             discountType?: components["schemas"]["DiscountType"];
             /** Format: decimal */

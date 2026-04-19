@@ -43,10 +43,7 @@ import {
   type DiscountType,
   type PromotionType,
 } from "@/services/campaignService";
-import {
-  BulkConfigModal,
-  type SplitBulkConfigValues,
-} from "./BulkConfigModal";
+import { BulkConfigModal, type SplitBulkConfigValues } from "./BulkConfigModal";
 import {
   BulkItemSelector,
   type SelectedCampaignItem,
@@ -496,12 +493,13 @@ export const CampaignCreateView = ({
         }}
       >
         <Stack direction="row" alignItems="center" spacing={1}>
-          <IconButton onClick={onBack}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Typography variant="h5" fontWeight={700}>
-            Tạo chiến dịch khuyến mãi
-          </Typography>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={onBack}
+            sx={{ color: "text.secondary", textTransform: "none" }}
+          >
+            TRỞ LẠI
+          </Button>
         </Stack>
         <Button
           variant="contained"
@@ -737,211 +735,216 @@ export const CampaignCreateView = ({
               </Paper>
             ) : (
               <>
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow sx={{ bgcolor: "grey.50" }}>
-                      <TableCell sx={{ width: 48 }}>#</TableCell>
-                      <TableCell sx={{ width: 56 }}>Ảnh</TableCell>
-                      <TableCell sx={{ minWidth: 180 }}>Sản phẩm</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Loại KM</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Kiểu giảm</TableCell>
-                      <TableCell sx={{ minWidth: 130 }}>Giá trị giảm</TableCell>
-                      <TableCell sx={{ minWidth: 100 }}>SL tối đa</TableCell>
-                      <TableCell align="center" sx={{ width: 60 }}>
-                        Xóa
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {paginatedItems.map((item, index) => {
-                      const isBatchItem = Boolean(item.batchId);
-                      return (
-                        <TableRow key={item.key} hover>
-                          <TableCell>
-                            {itemsPage * itemsRowsPerPage + index + 1}
-                          </TableCell>
-                          <TableCell>
-                            <Avatar
-                              src={item.variantImageUrl || undefined}
-                              alt={item.productName}
-                              variant="rounded"
-                              sx={{ width: 40, height: 40 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" fontWeight={600}>
-                              {item.productName}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                              component="div"
-                            >
-                              SKU: {item.variantSku}
-                              {isBatchItem ? (
-                                <Typography
-                                  variant="caption"
-                                  fontWeight={700}
-                                  component="span"
-                                >
-                                  {" | Lô: "}{item.batchCode}
-                                </Typography>
-                              ) : (
-                                " | Toàn bộ tồn kho"
-                              )}
-                            </Typography>
-                            {item.basePrice != null && (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "grey.50" }}>
+                        <TableCell sx={{ width: 48 }}>#</TableCell>
+                        <TableCell sx={{ width: 56 }}>Ảnh</TableCell>
+                        <TableCell sx={{ minWidth: 180 }}>Sản phẩm</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>Loại KM</TableCell>
+                        <TableCell sx={{ minWidth: 120 }}>Kiểu giảm</TableCell>
+                        <TableCell sx={{ minWidth: 130 }}>
+                          Giá trị giảm
+                        </TableCell>
+                        <TableCell sx={{ minWidth: 100 }}>SL tối đa</TableCell>
+                        <TableCell align="center" sx={{ width: 60 }}>
+                          Xóa
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {paginatedItems.map((item, index) => {
+                        const isBatchItem = Boolean(item.batchId);
+                        return (
+                          <TableRow key={item.key} hover>
+                            <TableCell>
+                              {itemsPage * itemsRowsPerPage + index + 1}
+                            </TableCell>
+                            <TableCell>
+                              <Avatar
+                                src={item.variantImageUrl || undefined}
+                                alt={item.productName}
+                                variant="rounded"
+                                sx={{ width: 40, height: 40 }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" fontWeight={600}>
+                                {item.productName}
+                              </Typography>
                               <Typography
                                 variant="caption"
-                                color="error.main"
+                                color="text.secondary"
                                 component="div"
                               >
-                                {item.basePrice.toLocaleString("vi-VN")} ₫
+                                SKU: {item.variantSku}
+                                {isBatchItem ? (
+                                  <Typography
+                                    variant="caption"
+                                    fontWeight={700}
+                                    component="span"
+                                  >
+                                    {" | Lô: "}
+                                    {item.batchCode}
+                                  </Typography>
+                                ) : (
+                                  " | Toàn bộ tồn kho"
+                                )}
                               </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <FormControl fullWidth size="small">
-                              <Select
-                                value={item.promotionType}
-                                onChange={(e) =>
-                                  handleSelectedItemFieldChange(
-                                    item.key,
-                                    "promotionType",
-                                    e.target.value,
-                                  )
-                                }
-                              >
-                                {PROMOTION_TYPE_OPTIONS.map((o) => (
-                                  <MenuItem key={o.value} value={o.value}>
-                                    {o.label}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </TableCell>
-                          <TableCell>
-                            <FormControl fullWidth size="small">
-                              <Select
-                                value={item.discountType}
-                                onChange={(e) =>
-                                  handleSelectedItemFieldChange(
-                                    item.key,
-                                    "discountType",
-                                    e.target.value,
-                                  )
-                                }
-                              >
-                                {DISCOUNT_TYPE_OPTIONS.map((o) => (
-                                  <MenuItem key={o.value} value={o.value}>
-                                    {o.label}
-                                  </MenuItem>
-                                ))}
-                              </Select>
-                            </FormControl>
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              size="small"
-                              value={
-                                item.discountType === "Percentage"
-                                  ? item.discountValueInput
-                                  : formatNumberVN(item.discountValueInput)
-                              }
-                              onChange={(e) => {
-                                const inputValue = e.target.value;
-                                if (item.discountType === "Percentage") {
-                                  if (!/^\d*([.,]\d{0,2})?$/.test(inputValue))
-                                    return;
-                                  handleSelectedItemFieldChange(
-                                    item.key,
-                                    "discountValueInput",
-                                    inputValue,
-                                  );
-                                } else {
-                                  const parsed = parseNumberVN(inputValue);
-                                  if (!/^\d*$/.test(parsed)) return;
-                                  handleSelectedItemFieldChange(
-                                    item.key,
-                                    "discountValueInput",
-                                    parsed,
-                                  );
-                                }
-                              }}
-                              InputProps={{
-                                endAdornment: (
-                                  <InputAdornment position="end">
-                                    {item.discountType === "Percentage"
-                                      ? "%"
-                                      : "₫"}
-                                  </InputAdornment>
-                                ),
-                              }}
-                              fullWidth
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {isBatchItem ? (
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                                sx={{ textAlign: "center" }}
-                              >
-                                –
-                              </Typography>
-                            ) : (
+                              {item.basePrice != null && (
+                                <Typography
+                                  variant="caption"
+                                  color="error.main"
+                                  component="div"
+                                >
+                                  {item.basePrice.toLocaleString("vi-VN")} ₫
+                                </Typography>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <FormControl fullWidth size="small">
+                                <Select
+                                  value={item.promotionType}
+                                  onChange={(e) =>
+                                    handleSelectedItemFieldChange(
+                                      item.key,
+                                      "promotionType",
+                                      e.target.value,
+                                    )
+                                  }
+                                >
+                                  {PROMOTION_TYPE_OPTIONS.map((o) => (
+                                    <MenuItem key={o.value} value={o.value}>
+                                      {o.label}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </TableCell>
+                            <TableCell>
+                              <FormControl fullWidth size="small">
+                                <Select
+                                  value={item.discountType}
+                                  onChange={(e) =>
+                                    handleSelectedItemFieldChange(
+                                      item.key,
+                                      "discountType",
+                                      e.target.value,
+                                    )
+                                  }
+                                >
+                                  {DISCOUNT_TYPE_OPTIONS.map((o) => (
+                                    <MenuItem key={o.value} value={o.value}>
+                                      {o.label}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </TableCell>
+                            <TableCell>
                               <TextField
                                 size="small"
-                                value={formatNumberVN(item.maxUsageInput)}
+                                value={
+                                  item.discountType === "Percentage"
+                                    ? item.discountValueInput
+                                    : formatNumberVN(item.discountValueInput)
+                                }
                                 onChange={(e) => {
-                                  const parsed = parseNumberVN(e.target.value);
-                                  if (!/^\d*$/.test(parsed)) return;
-                                  handleSelectedItemFieldChange(
-                                    item.key,
-                                    "maxUsageInput",
-                                    parsed,
-                                  );
+                                  const inputValue = e.target.value;
+                                  if (item.discountType === "Percentage") {
+                                    if (!/^\d*([.,]\d{0,2})?$/.test(inputValue))
+                                      return;
+                                    handleSelectedItemFieldChange(
+                                      item.key,
+                                      "discountValueInput",
+                                      inputValue,
+                                    );
+                                  } else {
+                                    const parsed = parseNumberVN(inputValue);
+                                    if (!/^\d*$/.test(parsed)) return;
+                                    handleSelectedItemFieldChange(
+                                      item.key,
+                                      "discountValueInput",
+                                      parsed,
+                                    );
+                                  }
                                 }}
-                                placeholder="> 0"
+                                InputProps={{
+                                  endAdornment: (
+                                    <InputAdornment position="end">
+                                      {item.discountType === "Percentage"
+                                        ? "%"
+                                        : "₫"}
+                                    </InputAdornment>
+                                  ),
+                                }}
                                 fullWidth
                               />
-                            )}
-                          </TableCell>
-                          <TableCell align="center">
-                            <Tooltip title="Xóa">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => removeSelectedItem(item.key)}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                            </TableCell>
+                            <TableCell>
+                              {isBatchItem ? (
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{ textAlign: "center" }}
+                                >
+                                  –
+                                </Typography>
+                              ) : (
+                                <TextField
+                                  size="small"
+                                  value={formatNumberVN(item.maxUsageInput)}
+                                  onChange={(e) => {
+                                    const parsed = parseNumberVN(
+                                      e.target.value,
+                                    );
+                                    if (!/^\d*$/.test(parsed)) return;
+                                    handleSelectedItemFieldChange(
+                                      item.key,
+                                      "maxUsageInput",
+                                      parsed,
+                                    );
+                                  }}
+                                  placeholder="> 0"
+                                  fullWidth
+                                />
+                              )}
+                            </TableCell>
+                            <TableCell align="center">
+                              <Tooltip title="Xóa">
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => removeSelectedItem(item.key)}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
 
-              <TablePagination
-                component="div"
-                count={filteredSelectedItems.length}
-                page={itemsPage}
-                onPageChange={(_, p) => setItemsPage(p)}
-                rowsPerPage={itemsRowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setItemsRowsPerPage(Number(e.target.value));
-                  setItemsPage(0);
-                }}
-                rowsPerPageOptions={[10, 20, 50]}
-                labelRowsPerPage="Dòng/trang:"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} của ${count}`
-                }
-              />
+                <TablePagination
+                  component="div"
+                  count={filteredSelectedItems.length}
+                  page={itemsPage}
+                  onPageChange={(_, p) => setItemsPage(p)}
+                  rowsPerPage={itemsRowsPerPage}
+                  onRowsPerPageChange={(e) => {
+                    setItemsRowsPerPage(Number(e.target.value));
+                    setItemsPage(0);
+                  }}
+                  rowsPerPageOptions={[10, 20, 50]}
+                  labelRowsPerPage="Dòng/trang:"
+                  labelDisplayedRows={({ from, to, count }) =>
+                    `${from}-${to} của ${count}`
+                  }
+                />
               </>
             )}
 
