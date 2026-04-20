@@ -14775,7 +14775,6 @@ export interface components {
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
-            applyType?: components["schemas"]["VoucherType"];
             /** Format: int32 */
             requiredPoints?: number;
             /** Format: decimal */
@@ -15057,6 +15056,8 @@ export interface components {
             /** Format: int32 */
             absolutePoints?: number;
             reason: string;
+            /** Format: date-time */
+            createdAt?: string;
         };
         LoyaltyTransactionTotalsResponse: {
             /** Format: uuid */
@@ -16542,7 +16543,7 @@ export interface components {
             code: string;
             /** Format: decimal */
             discountValue?: number;
-            targetItemType?: components["schemas"]["PromotionType"];
+            targetItemType?: null | components["schemas"]["PromotionType"];
             discountType?: components["schemas"]["DiscountType"];
             applyType?: components["schemas"]["VoucherType"];
             /** Format: decimal */
@@ -16680,7 +16681,6 @@ export interface components {
             /** Format: decimal */
             discountValue?: number;
             discountType?: components["schemas"]["DiscountType"];
-            applyType?: components["schemas"]["VoucherType"];
             /** Format: int32 */
             requiredPoints?: number;
             /** Format: decimal */

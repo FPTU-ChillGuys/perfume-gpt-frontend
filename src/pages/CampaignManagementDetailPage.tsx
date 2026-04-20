@@ -184,7 +184,7 @@ type ItemsSubTab = "all" | "product" | "batch";
 type VoucherFormData = {
   code: string;
   discountValue: number;
-  targetItemType: PromotionType;
+  targetItemType: PromotionType | null;
   discountType: DiscountType;
   applyType: VoucherType;
   maxDiscountAmount: number | null;
@@ -197,7 +197,7 @@ type VoucherFormData = {
 const defaultVoucherForm: VoucherFormData = {
   code: "",
   discountValue: 0,
-  targetItemType: "Regular",
+  targetItemType: null,
   discountType: "Percentage",
   applyType: "Order",
   maxDiscountAmount: null,
@@ -427,7 +427,8 @@ export const CampaignManagementDetailPage = () => {
           id: v.id,
           code: v.code,
           discountValue: v.discountValue,
-          targetItemType: v.targetItemType,
+          targetItemType:
+            (v.applyType || "Order") === "Order" ? null : v.targetItemType,
           discountType: v.discountType,
           applyType: v.applyType,
           maxDiscountAmount: v.maxDiscountAmount,
@@ -435,7 +436,7 @@ export const CampaignManagementDetailPage = () => {
           totalQuantity: v.totalQuantity,
           maxUsagePerUser: v.maxUsagePerUser,
           isMemberOnly: v.isMemberOnly,
-        })),
+        })) as UpdateCampaignVoucherRequest[],
       });
       showToast("Cập nhật chiến dịch thành công", "success");
       setIsEditingInfo(false);
@@ -606,7 +607,10 @@ export const CampaignManagementDetailPage = () => {
     setVoucherForm({
       code: voucher.code || "",
       discountValue: voucher.discountValue ?? 0,
-      targetItemType: voucher.targetItemType || "Regular",
+      targetItemType:
+        (voucher.applyType || "Order") === "Order"
+          ? null
+          : voucher.targetItemType || "Regular",
       discountType: voucher.discountType || "Percentage",
       applyType: voucher.applyType || "Order",
       maxDiscountAmount: voucher.maxDiscountAmount ?? null,
@@ -638,13 +642,20 @@ export const CampaignManagementDetailPage = () => {
       showToast("Giảm phần trăm phải từ 1 đến 100", "error");
       return;
     }
+    if (voucherForm.applyType === "Product" && !voucherForm.targetItemType) {
+      showToast("Vui lòng chọn nhóm sản phẩm áp dụng", "error");
+      return;
+    }
     setIsSavingVoucher(true);
     try {
       if (editingVoucher?.id) {
-        const payload: UpdateCampaignVoucherRequest = {
+        const payload = {
           code: voucherForm.code,
           discountValue: voucherForm.discountValue,
-          targetItemType: voucherForm.targetItemType,
+          targetItemType:
+            voucherForm.applyType === "Order"
+              ? null
+              : (voucherForm.targetItemType ?? undefined),
           discountType: voucherForm.discountType,
           applyType: voucherForm.applyType,
           maxDiscountAmount: voucherForm.maxDiscountAmount,
@@ -652,7 +663,7 @@ export const CampaignManagementDetailPage = () => {
           totalQuantity: voucherForm.totalQuantity,
           maxUsagePerUser: voucherForm.maxUsagePerUser,
           isMemberOnly: voucherForm.isMemberOnly,
-        };
+        } as UpdateCampaignVoucherRequest;
         await campaignService.updateCampaignVoucher(
           campaignId,
           editingVoucher.id,
@@ -663,7 +674,10 @@ export const CampaignManagementDetailPage = () => {
         const payload: CreateCampaignVoucherRequest = {
           code: voucherForm.code,
           discountValue: voucherForm.discountValue,
-          targetItemType: voucherForm.targetItemType,
+          targetItemType:
+            voucherForm.applyType === "Order"
+              ? null
+              : (voucherForm.targetItemType ?? "Regular"),
           discountType: voucherForm.discountType,
           applyType: voucherForm.applyType,
           maxDiscountAmount: voucherForm.maxDiscountAmount,
@@ -1778,6 +1792,10 @@ export const CampaignManagementDetailPage = () => {
                   setVoucherForm({
                     ...voucherForm,
                     applyType: e.target.value as VoucherType,
+                    targetItemType:
+                      e.target.value === "Order"
+                        ? null
+                        : (voucherForm.targetItemType ?? "Regular"),
                   })
                 }
               >
@@ -1788,25 +1806,27 @@ export const CampaignManagementDetailPage = () => {
                 ))}
               </Select>
             </FormControl>
-            <FormControl size="small" fullWidth>
-              <InputLabel>Nhóm sản phẩm áp dụng</InputLabel>
-              <Select
-                value={voucherForm.targetItemType}
-                label="Nhóm sản phẩm áp dụng"
-                onChange={(e) =>
-                  setVoucherForm({
-                    ...voucherForm,
-                    targetItemType: e.target.value as PromotionType,
-                  })
-                }
-              >
-                {Object.entries(PROMOTION_TYPE_LABEL).map(([key, label]) => (
-                  <MenuItem key={key} value={key}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            {voucherForm.applyType === "Product" && (
+              <FormControl size="small" fullWidth required>
+                <InputLabel>Nhóm sản phẩm áp dụng</InputLabel>
+                <Select
+                  value={voucherForm.targetItemType ?? ""}
+                  label="Nhóm sản phẩm áp dụng"
+                  onChange={(e) =>
+                    setVoucherForm({
+                      ...voucherForm,
+                      targetItemType: e.target.value as PromotionType,
+                    })
+                  }
+                >
+                  {Object.entries(PROMOTION_TYPE_LABEL).map(([key, label]) => (
+                    <MenuItem key={key} value={key}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
             <FormControl size="small" fullWidth>
               <InputLabel>Loại giảm giá</InputLabel>
               <Select
