@@ -8,6 +8,7 @@ import {
   Chip,
   CircularProgress,
   Dialog,
+  Divider,
   DialogActions,
   DialogContent,
   DialogTitle,
@@ -624,7 +625,10 @@ export const CampaignManagementDetailPage = () => {
       return;
     }
     if (!voucherForm.maxUsagePerUser || voucherForm.maxUsagePerUser < 1) {
-      showToast("Vui lòng nhập số lượt sử dụng tối đa mỗi khách (>= 1)", "error");
+      showToast(
+        "Vui lòng nhập số lượt sử dụng tối đa mỗi khách (>= 1)",
+        "error",
+      );
       return;
     }
     if (
@@ -791,7 +795,7 @@ export const CampaignManagementDetailPage = () => {
                 <Typography variant="body1" fontWeight={600}>
                   {campaign.name || "Chi tiết chiến dịch"}
                 </Typography>
-                <Typography color="text.secondary">|</Typography>
+                <Divider orientation="vertical" flexItem />
                 <Chip
                   size="small"
                   color={CAMPAIGN_STATUS_COLOR[status]}
@@ -803,9 +807,14 @@ export const CampaignManagementDetailPage = () => {
                   color="primary"
                   variant="outlined"
                 />
+                <Divider orientation="vertical" flexItem />
                 {(status === "Active" || status === "Paused") && (
                   <Tooltip
-                    title={status === "Active" ? "Tạm dừng chiến dịch" : "Tiếp tục chiến dịch"}
+                    title={
+                      status === "Active"
+                        ? "Tạm dừng chiến dịch"
+                        : "Tiếp tục chiến dịch"
+                    }
                   >
                     <IconButton
                       size="small"
