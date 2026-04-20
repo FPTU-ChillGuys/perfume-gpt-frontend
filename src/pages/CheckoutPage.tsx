@@ -532,7 +532,9 @@ export const CheckoutPage = () => {
       .map((item) => ({
         variantId: item.variantId,
         quantity: item.quantity,
-        price: item.variantPrice,
+        price: item.finalTotal && item.quantity
+          ? Math.round(Number(item.finalTotal) / item.quantity)
+          : item.variantPrice,
       }));
   };
 

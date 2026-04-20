@@ -168,7 +168,10 @@ class VoucherService {
       } as any,
     );
     if (!response.data?.success) {
-      const msg = (response.error as any)?.message || response.data?.message || "Tạo voucher thất bại";
+      const msg =
+        (response.error as any)?.message ||
+        response.data?.message ||
+        "Tạo voucher thất bại";
       throw new Error(msg);
     }
     return response.data.payload as VoucherResponse;
@@ -183,7 +186,10 @@ class VoucherService {
       { params: { path: { voucherId } }, body } as any,
     );
     if (!response.data?.success) {
-      const msg = (response.error as any)?.message || response.data?.message || "Cập nhật voucher thất bại";
+      const msg =
+        (response.error as any)?.message ||
+        response.data?.message ||
+        "Cập nhật voucher thất bại";
       throw new Error(msg);
     }
     return response.data.payload as VoucherResponse;
@@ -195,7 +201,10 @@ class VoucherService {
       { params: { path: { voucherId } } } as any,
     );
     if (!response.data?.success) {
-      const msg = (response.error as any)?.message || response.data?.message || "Xóa voucher thất bại";
+      const msg =
+        (response.error as any)?.message ||
+        response.data?.message ||
+        "Xóa voucher thất bại";
       throw new Error(msg);
     }
   }
@@ -235,10 +244,9 @@ class VoucherService {
     cartItems: ApplicableVoucherCartItemRequest[],
   ): Promise<ApplicableVoucherResponse[]> {
     try {
+      const requestBody = { cartItems };
       const response = await apiInstance.POST("/api/vouchers/applicable", {
-        body: {
-          cartItems,
-        },
+        body: requestBody,
       });
 
       if (!response.data?.success) {
