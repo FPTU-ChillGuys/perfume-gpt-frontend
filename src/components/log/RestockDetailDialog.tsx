@@ -109,7 +109,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                     <TableCell align="right"><strong>Giá Niêm Yết</strong></TableCell>
                                     <TableCell align="right"><strong>Giá Thương Lượng</strong></TableCell>
                                     <TableCell align="center"><strong>Tồn kho</strong></TableCell>
-                                    <TableCell align="center"><strong>Lead Time</strong></TableCell>
+                                    <TableCell align="center"><strong>Thời gian giao hàng dự kiến</strong></TableCell>
                                     <TableCell align="center"><strong>Gợi ý nhập</strong></TableCell>
                                 </TableRow>
                             </TableHead>
@@ -162,7 +162,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                                 </TableCell>
                                                 <TableCell align="center">{row.totalQuantity}</TableCell>
                                                 <TableCell align="center">
-                                                    {row.estimatedLeadTimeDays ? `${row.estimatedLeadTimeDays}d` : "—"}
+                                                    {row.estimatedLeadTimeDays ? `${row.estimatedLeadTimeDays} ngày` : "—"}
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <Typography

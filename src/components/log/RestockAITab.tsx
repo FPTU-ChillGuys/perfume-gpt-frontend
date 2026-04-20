@@ -265,7 +265,6 @@ export const RestockAITab = () => {
                     <TableHead>
                         <TableRow sx={{ bgcolor: "grey.50" }}>
                             <TableCell>Log ID</TableCell>
-                            <TableCell>Nội dung (rút gọn)</TableCell>
                             <TableCell>Ngày tạo</TableCell>
                             <TableCell>Cập nhật cuối</TableCell>
                             <TableCell align="center">Thao tác</TableCell>
@@ -274,13 +273,13 @@ export const RestockAITab = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                                     <CircularProgress />
                                 </TableCell>
                             </TableRow>
                         ) : paginatedLogs.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                                     <Typography variant="body2" color="text.secondary">
                                         Không có log nào phù hợp
                                     </Typography>
@@ -294,23 +293,7 @@ export const RestockAITab = () => {
                                             {log.id?.substring(0, 8)}...
                                         </Typography>
                                     </TableCell>
-                                    <TableCell sx={{ maxWidth: 320 }}>
-                                        <Typography
-                                            variant="body2"
-                                            color="text.secondary"
-                                            sx={{
-                                                overflow: "hidden",
-                                                textOverflow: "ellipsis",
-                                                whiteSpace: "nowrap",
-                                                maxWidth: 300,
-                                            }}
-                                            title={log.inventoryLog}
-                                        >
-                                            {log.inventoryLog
-                                                ? log.inventoryLog.substring(0, 80) + (log.inventoryLog.length > 80 ? "..." : "")
-                                                : "Không có nội dung"}
-                                        </Typography>
-                                    </TableCell>
+
                                     <TableCell>
                                         <Typography variant="body2" noWrap>
                                             {formatDate(log.createdAt)}
@@ -369,6 +352,7 @@ export const RestockAITab = () => {
                     setTimeout(() => setJobDialogInitialAction("idle"), 300);
                 }}
                 onJobSuccess={handleJobSuccess}
+                onRefresh={loadLogs}
                 initialAction={jobDialogInitialAction}
             />
         </Box>

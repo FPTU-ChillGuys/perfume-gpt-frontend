@@ -107,6 +107,7 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
                     setReportText(jobData.data ?? "");
                     setPhase("done");
                     setShowRateLimitMessage(true);
+                    onSuccess?.();
                 } else if (jobData?.status === "failed") {
                     stopPolling();
                     setErrorMsg(jobData.error ?? "Job thất bại.");
@@ -224,7 +225,7 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
                                 onClick={handleForceRefresh}
                                 startIcon={<RefreshIcon />}
                             >
-                                Force Refresh (Request timed out)
+                                Làm mới bắt buộc (Yêu cầu quá hạn)
                             </Button>
                         )}
                     </Box>
@@ -313,7 +314,7 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
                             Thử lại
                         </Button>
                         <Button variant="contained" onClick={handleForceRefresh} color="error">
-                            Force Refresh (Reset)
+                            Làm mới bắt buộc (Đặt lại)
                         </Button>
                     </>
                 )}
@@ -327,14 +328,14 @@ export const AIInventoryReportDialog = ({ open, onClose, onSuccess }: AIInventor
                             </span>
                         </Tooltip>
                         <Button variant="contained" onClick={handleForceRefresh} color="warning">
-                            Force Refresh
+                            Làm mới bắt buộc
                         </Button>
                         <Button
-                            onClick={() => { onSuccess?.(); handleDialogClose(); }}
+                            onClick={handleDialogClose}
                             variant="contained"
                             color="success"
                         >
-                            Đóng & Tải mới
+                            Đóng
                         </Button>
                     </>
                 )}

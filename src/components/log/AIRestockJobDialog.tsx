@@ -31,10 +31,11 @@ interface AIRestockJobDialogProps {
     open: boolean;
     onClose: () => void;
     onJobSuccess: (data: RestockAIPredictionData) => void;
+    onRefresh?: () => void;
     initialAction?: "idle" | "forceRefresh";
 }
 
-export const AIRestockJobDialog = ({ open, onClose, onJobSuccess, initialAction = "idle" }: AIRestockJobDialogProps) => {
+export const AIRestockJobDialog = ({ open, onClose, onJobSuccess, onRefresh, initialAction = "idle" }: AIRestockJobDialogProps) => {
     const [phase, setPhase] = useState<JobPhase>("idle");
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [elapsedTime, setElapsedTime] = useState(0);
@@ -100,6 +101,7 @@ export const AIRestockJobDialog = ({ open, onClose, onJobSuccess, initialAction 
                 if (jobData?.status === "completed") {
                     stopPolling();
                     setPhase("done");
+                    onRefresh?.();
 
                     // Parse the JSON data directly to pass back to the tab
                     if (jobData.data) {
