@@ -501,18 +501,6 @@ export const CampaignCreateView = ({
             TRỞ LẠI
           </Button>
         </Stack>
-        <Button
-          variant="contained"
-          onClick={handleCreateCampaign}
-          disabled={!canCreate || createSubmitting}
-          startIcon={
-            createSubmitting ? (
-              <CircularProgress size={18} color="inherit" />
-            ) : undefined
-          }
-        >
-          {createSubmitting ? "Đang tạo..." : "Tạo chiến dịch"}
-        </Button>
       </Box>
 
       {/* Tabs */}
@@ -827,11 +815,16 @@ export const CampaignCreateView = ({
                                 <Select
                                   value={item.discountType}
                                   onChange={(e) => {
-                                    const newDiscountType = e.target.value as DiscountType;
+                                    const newDiscountType = e.target
+                                      .value as DiscountType;
                                     setSelectedItems((current) =>
                                       current.map((itm) =>
                                         itm.key === item.key
-                                          ? { ...itm, discountType: newDiscountType, discountValueInput: "" }
+                                          ? {
+                                              ...itm,
+                                              discountType: newDiscountType,
+                                              discountValueInput: "",
+                                            }
                                           : itm,
                                       ),
                                     );
@@ -858,7 +851,10 @@ export const CampaignCreateView = ({
                                   if (item.discountType === "Percentage") {
                                     if (!/^\d*([.,]\d{0,2})?$/.test(inputValue))
                                       return;
-                                    if (inputValue !== "" && Number(inputValue.replace(",", ".")) > 100)
+                                    if (
+                                      inputValue !== "" &&
+                                      Number(inputValue.replace(",", ".")) > 100
+                                    )
                                       return;
                                     handleSelectedItemFieldChange(
                                       item.key,
