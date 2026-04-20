@@ -26,6 +26,7 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Divider,
 } from "@mui/material";
 import {
   Search,
@@ -37,6 +38,7 @@ import {
   VisibilityOff,
   Person,
   Public,
+  ContentCopy,
 } from "@mui/icons-material";
 import { ToggleButton, ToggleButtonGroup } from "@mui/material";
 import { AdminLayout } from "../layouts/AdminLayout";
@@ -163,6 +165,7 @@ export const AdminVouchersPage = () => {
         PageNumber: page + 1,
         PageSize: rowsPerPage,
         Code: search || undefined,
+        IsRegular: true,
       });
       setVouchers(result.items);
       setTotalCount(result.totalCount);
@@ -282,6 +285,16 @@ export const AdminVouchersPage = () => {
     }
   };
 
+  const handleCopyVoucherCode = async (code?: string | null) => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      showToast("Đã sao chép mã voucher", "success");
+    } catch {
+      showToast("Không thể sao chép mã voucher", "error");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await voucherService.deleteVoucher(id);
@@ -291,15 +304,6 @@ export const AdminVouchersPage = () => {
     } catch (err: any) {
       showToast(err?.message || "Xóa thất bại", "error");
     }
-  };
-
-  const getStatusChip = (v: VoucherResponse) => {
-    if (v.isExpired) return <Chip label="Hết hạn" color="error" size="small" />;
-    const now = new Date();
-    const end = v.expiryDate ? new Date(v.expiryDate) : null;
-    if (end && end < now)
-      return <Chip label="Hết hạn" color="error" size="small" />;
-    return <Chip label="Đang hiệu lực" color="success" size="small" />;
   };
 
   return (
@@ -347,53 +351,46 @@ export const AdminVouchersPage = () => {
           </Alert>
         )}
 
-        <TableContainer component={Paper}>
+        <TableContainer
+          component={Paper}
+          sx={{ borderRadius: 2, overflow: "hidden" }}
+        >
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell>
-                  <strong>Mã</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Áp dụng</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Loại giảm</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Giá trị</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Giảm tối đa</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Đơn tối thiểu</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Điểm đổi</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>SL còn / tổng</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Hết hạn</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Đối tượng</strong>
-                </TableCell>
-                <TableCell>
-                  <strong>Công khai</strong>
-                </TableCell>
-                <TableCell align="center">
-                  <strong>Thao tác</strong>
-                </TableCell>
+              <TableRow
+                sx={{
+                  bgcolor: "grey.100",
+                  "& th": {
+                    fontWeight: 700,
+                    fontSize: "0.75rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    color: "text.secondary",
+                    borderBottom: "2px solid",
+                    borderColor: "divider",
+                    py: 1.5,
+                    whiteSpace: "nowrap",
+                  },
+                }}
+              >
+                <TableCell>Mã</TableCell>
+                <TableCell>Loại giảm</TableCell>
+                <TableCell>Giá trị</TableCell>
+                <TableCell>Giảm tối đa</TableCell>
+                <TableCell>Đơn tối thiểu</TableCell>
+                <TableCell>Điểm đổi</TableCell>
+                <TableCell>Số lượng</TableCell>
+                <TableCell>Hạn Dùng</TableCell>
+                <TableCell align="center">Đối tượng</TableCell>
+                <TableCell align="center">Công khai</TableCell>
+                <TableCell align="center">Thao tác</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
-                    <CircularProgress />
+                  <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
+                    <CircularProgress size={32} />
                   </TableCell>
                 </TableRow>
               ) : vouchers.length === 0 ? (
@@ -401,77 +398,239 @@ export const AdminVouchersPage = () => {
                   <TableCell
                     colSpan={12}
                     align="center"
-                    sx={{ py: 4, color: "text.secondary" }}
+                    sx={{ py: 6, color: "text.secondary" }}
                   >
+                    <LocalOffer
+                      sx={{
+                        fontSize: 40,
+                        opacity: 0.3,
+                        display: "block",
+                        mx: "auto",
+                        mb: 1,
+                      }}
+                    />
                     Không có voucher nào
                   </TableCell>
                 </TableRow>
               ) : (
                 vouchers.map((v) => (
-                  <TableRow key={v.id} hover>
+                  <TableRow
+                    key={v.id}
+                    hover
+                    sx={{
+                      "&:last-child td": { border: 0 },
+                      transition: "background 0.15s",
+                    }}
+                  >
                     <TableCell>
-                      <strong>{v.code}</strong>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+                      >
+                        <Typography
+                          variant="body2"
+                          fontWeight={700}
+                          fontFamily="monospace"
+                          sx={{ letterSpacing: "0.04em" }}
+                        >
+                          {v.code}
+                        </Typography>
+                        <Tooltip title="Sao chép mã">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleCopyVoucherCode(v.code);
+                            }}
+                            sx={{ p: 0.25, color: "text.secondary" }}
+                          >
+                            <ContentCopy sx={{ fontSize: 13 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                     <TableCell>
                       <Chip
                         label={
-                          v.applyType === "Product" ? "Sản phẩm" : "Đơn hàng"
+                          v.discountType === "Percentage"
+                            ? "Phần trăm"
+                            : "Cố định"
                         }
                         size="small"
-                        variant="outlined"
                         color={
-                          v.applyType === "Product" ? "secondary" : "primary"
+                          v.discountType === "Percentage" ? "info" : "default"
                         }
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "0.7rem",
+                          minWidth: 88,
+                        }}
                       />
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={v.discountType === "Percentage" ? "%" : "VNĐ"}
-                        size="small"
-                        variant="outlined"
-                      />
+                      <Typography
+                        variant="body2"
+                        fontWeight={600}
+                        color="error.main"
+                      >
+                        {v.discountType === "Percentage"
+                          ? `${v.discountValue}%`
+                          : formatVND(v.discountValue)}
+                      </Typography>
                     </TableCell>
                     <TableCell>
-                      {v.discountType === "Percentage"
-                        ? `${v.discountValue}%`
-                        : formatVND(v.discountValue)}
+                      <Typography variant="body2" color="text.secondary">
+                        {v.discountType === "Percentage" && v.maxDiscountAmount
+                          ? formatVND(v.maxDiscountAmount)
+                          : "—"}
+                      </Typography>
                     </TableCell>
                     <TableCell>
-                      {v.discountType === "Percentage" && v.maxDiscountAmount
-                        ? formatVND(v.maxDiscountAmount)
-                        : "—"}
+                      <Typography variant="body2" color="text.secondary">
+                        {formatVND(v.minOrderValue ?? undefined)}
+                      </Typography>
                     </TableCell>
                     <TableCell>
-                      {formatVND(v.minOrderValue ?? undefined)}
+                      {(v.requiredPoints ?? 0) > 0 ? (
+                        <Chip
+                          label={new Intl.NumberFormat("vi-VN").format(
+                            v.requiredPoints ?? 0,
+                          )}
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: "0.7rem",
+                            minWidth: 72,
+                          }}
+                        />
+                      ) : (
+                        <Typography variant="body2" color="text.disabled">
+                          —
+                        </Typography>
+                      )}
                     </TableCell>
-                    <TableCell>{v.requiredPoints ?? 0}</TableCell>
                     <TableCell>
-                      {v.remainingQuantity ?? 0} / {v.totalQuantity ?? "∞"}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 0.25,
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight={600}>
+                          {new Intl.NumberFormat("vi-VN").format(
+                            v.remainingQuantity ?? 0,
+                          )}
+                          <Typography
+                            component="span"
+                            variant="body2"
+                            color="text.secondary"
+                          >
+                            {" "}
+                            /{" "}
+                            {new Intl.NumberFormat("vi-VN").format(
+                              v.totalQuantity ?? 0,
+                            )}
+                          </Typography>
+                        </Typography>
+                        <Box
+                          sx={{
+                            height: 3,
+                            borderRadius: 2,
+                            bgcolor: "grey.200",
+                            overflow: "hidden",
+                            width: 60,
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              height: "100%",
+                              width: `${Math.min(100, ((v.remainingQuantity ?? 0) / Math.max(v.totalQuantity ?? 1, 1)) * 100)}%`,
+                              bgcolor:
+                                (v.remainingQuantity ?? 0) === 0
+                                  ? "error.main"
+                                  : (v.remainingQuantity ?? 0) /
+                                        (v.totalQuantity ?? 1) <
+                                      0.2
+                                    ? "warning.main"
+                                    : "success.main",
+                              borderRadius: 2,
+                            }}
+                          />
+                        </Box>
+                      </Box>
                     </TableCell>
-                    <TableCell>{formatDateTimeVN(v.expiryDate)}</TableCell>
                     <TableCell>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ whiteSpace: "nowrap" }}
+                      >
+                        {formatDateTimeVN(v.expiryDate)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="center">
                       <Tooltip title={v.isMemberOnly ? "Thành viên" : "Tất cả"}>
-                        {v.isMemberOnly ? (
-                          <Person fontSize="small" color="secondary" />
-                        ) : (
-                          <Public fontSize="small" color="action" />
-                        )}
+                        <Chip
+                          icon={
+                            v.isMemberOnly ? (
+                              <Person sx={{ fontSize: "14px !important" }} />
+                            ) : (
+                              <Public sx={{ fontSize: "14px !important" }} />
+                            )
+                          }
+                          label={v.isMemberOnly ? "Thành viên" : "Tất cả"}
+                          size="small"
+                          color={v.isMemberOnly ? "secondary" : "default"}
+                          variant="outlined"
+                          sx={{ fontSize: "0.68rem", minWidth: 100 }}
+                        />
                       </Tooltip>
                     </TableCell>
-                    <TableCell>
+                    <TableCell align="center">
                       {v.isPublic ? (
                         <Tooltip title="Công khai">
-                          <Visibility fontSize="small" color="success" />
+                          <Chip
+                            icon={
+                              <Visibility
+                                sx={{ fontSize: "14px !important" }}
+                              />
+                            }
+                            label="Công khai"
+                            size="small"
+                            color="success"
+                            variant="outlined"
+                            sx={{ fontSize: "0.68rem", minWidth: 96 }}
+                          />
                         </Tooltip>
                       ) : (
                         <Tooltip title="Ẩn">
-                          <VisibilityOff fontSize="small" color="disabled" />
+                          <Chip
+                            icon={
+                              <VisibilityOff
+                                sx={{ fontSize: "14px !important" }}
+                              />
+                            }
+                            label="Ẩn"
+                            size="small"
+                            color="default"
+                            variant="outlined"
+                            sx={{ fontSize: "0.68rem", minWidth: 96 }}
+                          />
                         </Tooltip>
                       )}
                     </TableCell>
-                    <TableCell align="center">
-                      <Tooltip title="Sửa">
-                        <IconButton size="small" onClick={() => openEdit(v)}>
+                    <TableCell align="center" sx={{ whiteSpace: "nowrap" }}>
+                      <Tooltip title="Chỉnh sửa">
+                        <IconButton
+                          size="small"
+                          onClick={() => openEdit(v)}
+                          sx={{
+                            color: "primary.main",
+                            "&:hover": { bgcolor: "primary.50" },
+                          }}
+                        >
                           <Edit fontSize="small" />
                         </IconButton>
                       </Tooltip>
@@ -480,6 +639,7 @@ export const AdminVouchersPage = () => {
                           size="small"
                           color="error"
                           onClick={() => setConfirmDeleteId(v.id!)}
+                          sx={{ "&:hover": { bgcolor: "error.50" } }}
                         >
                           <Delete fontSize="small" />
                         </IconButton>
@@ -514,292 +674,405 @@ export const AdminVouchersPage = () => {
         onClose={() => setDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
       >
-        <DialogTitle>
-          {editingVoucher ? "Sửa voucher" : "Tạo voucher mới"}
+        <DialogTitle
+          sx={{
+            px: 3,
+            py: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Typography variant="h6" fontWeight={600}>
+            {editingVoucher ? "Chỉnh sửa voucher" : "Tạo voucher mới"}
+          </Typography>
         </DialogTitle>
-        <DialogContent dividers>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
-            <TextField
-              label="Mã voucher *"
-              value={form.code}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  code: e.target.value
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9_-]/g, ""),
-                })
-              }
-              size="small"
-              disabled={!!editingVoucher}
-              helperText="Chỉ chứa A-Z, 0-9, _ hoặc -"
-            />
-            <Box
-              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
-            >
-              <FormControl size="small">
-                <InputLabel>Loại giảm giá</InputLabel>
-                <Select
-                  value={form.discountType}
-                  label="Loại giảm giá"
+
+        <DialogContent sx={{ px: 3, py: 2.5 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
+            {/* ── Section 1: Thông tin cơ bản ── */}
+            <Box>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                sx={{ letterSpacing: 1, fontWeight: 600 }}
+              >
+                Thông tin cơ bản
+              </Typography>
+              <Divider sx={{ mt: 0.5, mb: 1.5 }} />
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <TextField
+                  label="Mã voucher *"
+                  value={form.code}
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      discountType: e.target.value as
-                        | "Percentage"
-                        | "FixedAmount",
-                      discountValue: 0,
+                      code: e.target.value
+                        .toUpperCase()
+                        .replace(/[^A-Z0-9_-]/g, ""),
                     })
                   }
+                  size="small"
+                  fullWidth
+                  disabled={!!editingVoucher}
+                  helperText="Chỉ chứa A-Z, 0-9, _ hoặc -"
+                />
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 2,
+                  }}
                 >
-                  <MenuItem value="Percentage">Phần trăm (%)</MenuItem>
-                  <MenuItem value="FixedAmount">Số tiền cố định</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl size="small">
-                <InputLabel>Áp dụng cho</InputLabel>
-                <Select
-                  value={form.applyType}
-                  label="Áp dụng cho"
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      applyType: e.target.value as "Order" | "Product",
-                    })
-                  }
-                >
-                  <MenuItem value="Order">Đơn hàng</MenuItem>
-                  <MenuItem value="Product">Sản phẩm</MenuItem>
-                </Select>
-              </FormControl>
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>Loại giảm giá</InputLabel>
+                    <Select
+                      value={form.discountType}
+                      label="Loại giảm giá"
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          discountType: e.target.value as
+                            | "Percentage"
+                            | "FixedAmount",
+                          discountValue: 0,
+                        })
+                      }
+                    >
+                      <MenuItem value="Percentage">Phần trăm (%)</MenuItem>
+                      <MenuItem value="FixedAmount">Số tiền cố định</MenuItem>
+                    </Select>
+                  </FormControl>
+
+                  {form.discountType === "Percentage" ? (
+                    <TextField
+                      label="Giá trị giảm (%)"
+                      value={
+                        form.discountValue === 0
+                          ? ""
+                          : String(form.discountValue)
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        const num =
+                          raw === "" ? 0 : Math.min(100, parseInt(raw, 10));
+                        setForm({ ...form, discountValue: num });
+                      }}
+                      size="small"
+                      inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                    />
+                  ) : (
+                    <TextField
+                      label="Số tiền giảm"
+                      value={
+                        form.discountValue
+                          ? formatCurrencyInput(form.discountValue)
+                          : ""
+                      }
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          discountValue: parseCurrencyInput(e.target.value),
+                        })
+                      }
+                      size="small"
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">đ</InputAdornment>
+                        ),
+                      }}
+                    />
+                  )}
+                </Box>
+
+                {form.discountType === "Percentage" && (
+                  <TextField
+                    label="Giảm tối đa"
+                    value={
+                      form.maxDiscountAmount != null
+                        ? formatCurrencyInput(form.maxDiscountAmount)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const v = parseCurrencyInput(e.target.value);
+                      setForm({ ...form, maxDiscountAmount: v || null });
+                    }}
+                    size="small"
+                    fullWidth
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">đ</InputAdornment>
+                      ),
+                    }}
+                  />
+                )}
+              </Box>
             </Box>
-            {form.discountType === "Percentage" ? (
+
+            {/* ── Section 2: Điều kiện áp dụng ── */}
+            <Box>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                sx={{ letterSpacing: 1, fontWeight: 600 }}
+              >
+                Điều kiện áp dụng
+              </Typography>
+              <Divider sx={{ mt: 0.5, mb: 1.5 }} />
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 2,
+                  }}
+                >
+                  <TextField
+                    label="Đơn hàng tối thiểu"
+                    value={
+                      form.minOrderValue
+                        ? formatCurrencyInput(form.minOrderValue)
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        minOrderValue: parseCurrencyInput(e.target.value),
+                      })
+                    }
+                    size="small"
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">đ</InputAdornment>
+                      ),
+                    }}
+                  />
+                  <TextField
+                    label="Ngày hết hạn *"
+                    type="datetime-local"
+                    value={form.expiryDate}
+                    onChange={(e) =>
+                      setForm({ ...form, expiryDate: e.target.value })
+                    }
+                    size="small"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Box>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: editingVoucher ? "1fr 1fr" : "1fr",
+                    gap: 2,
+                  }}
+                >
+                  <TextField
+                    label="Tổng số lượng *"
+                    value={
+                      form.totalQuantity === 0 ? "" : String(form.totalQuantity)
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      setForm({
+                        ...form,
+                        totalQuantity: raw === "" ? 0 : parseInt(raw, 10),
+                      });
+                    }}
+                    size="small"
+                    inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                  />
+                  {editingVoucher && (
+                    <TextField
+                      label="Số lượng còn lại"
+                      value={
+                        form.remainingQuantity === 0
+                          ? ""
+                          : String(form.remainingQuantity)
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        setForm({
+                          ...form,
+                          remainingQuantity: raw === "" ? 0 : parseInt(raw, 10),
+                        });
+                      }}
+                      size="small"
+                      inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                    />
+                  )}
+                </Box>
+              </Box>
+            </Box>
+
+            {/* ── Section 3: Cài đặt nâng cao ── */}
+            <Box>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                sx={{ letterSpacing: 1, fontWeight: 600 }}
+              >
+                Cài đặt nâng cao
+              </Typography>
+              <Divider sx={{ mt: 0.5, mb: 1.5 }} />
               <Box
-                sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 2,
+                }}
               >
                 <TextField
-                  label="Giá trị giảm (%)"
+                  label="Điểm loyalty cần đổi"
                   value={
-                    form.discountValue === 0 ? "" : String(form.discountValue)
-                  }
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/\D/g, "");
-                    const num =
-                      raw === "" ? 0 : Math.min(100, parseInt(raw, 10));
-                    setForm({ ...form, discountValue: num });
-                  }}
-                  size="small"
-                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                />
-                <TextField
-                  label="Giảm tối đa"
-                  value={
-                    form.maxDiscountAmount != null
-                      ? formatCurrencyInput(form.maxDiscountAmount)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const v = parseCurrencyInput(e.target.value);
-                    setForm({ ...form, maxDiscountAmount: v || null });
-                  }}
-                  size="small"
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">đ</InputAdornment>
-                    ),
-                  }}
-                />
-              </Box>
-            ) : (
-              <TextField
-                label="Số tiền giảm"
-                value={
-                  form.discountValue
-                    ? formatCurrencyInput(form.discountValue)
-                    : ""
-                }
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    discountValue: parseCurrencyInput(e.target.value),
-                  })
-                }
-                size="small"
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">đ</InputAdornment>
-                  ),
-                }}
-              />
-            )}
-            <TextField
-              label="Đơn hàng tối thiểu"
-              value={
-                form.minOrderValue
-                  ? formatCurrencyInput(form.minOrderValue)
-                  : ""
-              }
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  minOrderValue: parseCurrencyInput(e.target.value),
-                })
-              }
-              size="small"
-              InputProps={{
-                endAdornment: <InputAdornment position="end">đ</InputAdornment>,
-              }}
-            />
-            <Box
-              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
-            >
-              <TextField
-                label="Điểm loyalty cần đổi"
-                value={
-                  form.requiredPoints === 0 ? "" : formatCurrencyInput(form.requiredPoints)
-                }
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/\D/g, "");
-                  const pts = raw === "" ? 0 : parseInt(raw, 10);
-                  setForm({
-                    ...form,
-                    requiredPoints: pts,
-                    isMemberOnly: pts > 0 ? true : form.isMemberOnly,
-                  });
-                }}
-                size="small"
-                inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-                helperText={form.requiredPoints > 0 ? "Tự động giới hạn thành viên" : undefined}
-              />
-              <TextField
-                label="Số lần/người"
-                value={
-                  form.maxUsagePerUser === null
-                    ? ""
-                    : String(form.maxUsagePerUser)
-                }
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/\D/g, "");
-                  setForm({
-                    ...form,
-                    maxUsagePerUser: raw === "" ? null : parseInt(raw, 10),
-                  });
-                }}
-                size="small"
-                helperText="Để trống = không giới hạn"
-                inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-              />
-            </Box>
-            <Box
-              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2 }}
-            >
-              <TextField
-                label="Tổng số lượng *"
-                value={
-                  form.totalQuantity === 0 ? "" : String(form.totalQuantity)
-                }
-                onChange={(e) => {
-                  const raw = e.target.value.replace(/\D/g, "");
-                  setForm({
-                    ...form,
-                    totalQuantity: raw === "" ? 0 : parseInt(raw, 10),
-                  });
-                }}
-                size="small"
-                inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
-              />
-              {editingVoucher && (
-                <TextField
-                  label="Số lượng còn lại"
-                  value={
-                    form.remainingQuantity === 0
+                    form.requiredPoints === 0
                       ? ""
-                      : String(form.remainingQuantity)
+                      : formatCurrencyInput(form.requiredPoints)
                   }
                   onChange={(e) => {
                     const raw = e.target.value.replace(/\D/g, "");
+                    const pts = raw === "" ? 0 : parseInt(raw, 10);
                     setForm({
                       ...form,
-                      remainingQuantity: raw === "" ? 0 : parseInt(raw, 10),
+                      requiredPoints: pts,
+                      isMemberOnly: pts > 0 ? true : form.isMemberOnly,
                     });
                   }}
                   size="small"
                   inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                  helperText={
+                    form.requiredPoints > 0
+                      ? "Tự động giới hạn thành viên"
+                      : undefined
+                  }
                 />
-              )}
+                <TextField
+                  label="Số lần/người"
+                  value={
+                    form.maxUsagePerUser === null
+                      ? ""
+                      : String(form.maxUsagePerUser)
+                  }
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    setForm({
+                      ...form,
+                      maxUsagePerUser: raw === "" ? null : parseInt(raw, 10),
+                    });
+                  }}
+                  size="small"
+                  helperText="Để trống = không giới hạn"
+                  inputProps={{ inputMode: "numeric", pattern: "[0-9]*" }}
+                />
+              </Box>
             </Box>
-            <TextField
-              label="Ngày hết hạn *"
-              type="datetime-local"
-              value={form.expiryDate}
-              onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
-              size="small"
-              InputLabelProps={{ shrink: true }}
-            />
+
+            {/* ── Section 4: Đối tượng & Hiển thị ── */}
             <Box>
               <Typography
-                variant="caption"
+                variant="overline"
                 color="text.secondary"
-                sx={{ mb: 0.5, display: "block" }}
+                sx={{ letterSpacing: 1, fontWeight: 600 }}
               >
-                Đối tượng áp dụng
+                Đối tượng & Hiển thị
               </Typography>
-              <ToggleButtonGroup
-                value={form.isMemberOnly ? "member" : "all"}
-                exclusive
-                onChange={(_, val) => {
-                  if (val !== null)
-                    setForm({ ...form, isMemberOnly: val === "member" });
+              <Divider sx={{ mt: 0.5, mb: 1.5 }} />
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 2,
                 }}
-                size="small"
-                fullWidth
               >
-                <ToggleButton value="all" sx={{ flex: 1 }}>
-                  <Public fontSize="small" sx={{ mr: 0.5 }} />
-                  Tất cả
-                </ToggleButton>
-                <ToggleButton value="member" sx={{ flex: 1 }}>
-                  <Person fontSize="small" sx={{ mr: 0.5 }} />
-                  Thành viên
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-            <Box>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ mb: 0.5, display: "block" }}
-              >
-                Hiển thị
-              </Typography>
-              <ToggleButtonGroup
-                value={form.isPublic ? "public" : "private"}
-                exclusive
-                onChange={(_, val) => {
-                  if (val !== null)
-                    setForm({ ...form, isPublic: val === "public" });
-                }}
-                size="small"
-                fullWidth
-              >
-                <ToggleButton value="public" sx={{ flex: 1 }}>
-                  <Visibility fontSize="small" sx={{ mr: 0.5 }} />
-                  Công khai
-                </ToggleButton>
-                <ToggleButton value="private" sx={{ flex: 1 }}>
-                  <VisibilityOff fontSize="small" sx={{ mr: 0.5 }} />
-                  Ẩn
-                </ToggleButton>
-              </ToggleButtonGroup>
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mb: 0.75, display: "block", fontWeight: 500 }}
+                  >
+                    Đối tượng áp dụng
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={form.isMemberOnly ? "member" : "all"}
+                    exclusive
+                    onChange={(_, val) => {
+                      if (val !== null)
+                        setForm({ ...form, isMemberOnly: val === "member" });
+                    }}
+                    size="small"
+                    fullWidth
+                  >
+                    <ToggleButton value="all" sx={{ flex: 1, fontSize: 12 }}>
+                      <Public fontSize="small" sx={{ mr: 0.5 }} />
+                      Tất cả
+                    </ToggleButton>
+                    <ToggleButton value="member" sx={{ flex: 1, fontSize: 12 }}>
+                      <Person fontSize="small" sx={{ mr: 0.5 }} />
+                      Thành viên
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+                <Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ mb: 0.75, display: "block", fontWeight: 500 }}
+                  >
+                    Hiển thị
+                  </Typography>
+                  <ToggleButtonGroup
+                    value={form.isPublic ? "public" : "private"}
+                    exclusive
+                    onChange={(_, val) => {
+                      if (val !== null)
+                        setForm({ ...form, isPublic: val === "public" });
+                    }}
+                    size="small"
+                    fullWidth
+                  >
+                    <ToggleButton value="public" sx={{ flex: 1, fontSize: 12 }}>
+                      <Visibility fontSize="small" sx={{ mr: 0.5 }} />
+                      Công khai
+                    </ToggleButton>
+                    <ToggleButton
+                      value="private"
+                      sx={{ flex: 1, fontSize: 12 }}
+                    >
+                      <VisibilityOff fontSize="small" sx={{ mr: 0.5 }} />
+                      Ẩn
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+              </Box>
             </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialogOpen(false)} disabled={isSaving}>
+
+        <DialogActions
+          sx={{
+            px: 3,
+            py: 2,
+            borderTop: "1px solid",
+            borderColor: "divider",
+            gap: 1,
+          }}
+        >
+          <Button
+            onClick={() => setDialogOpen(false)}
+            disabled={isSaving}
+            variant="outlined"
+            color="inherit"
+          >
             Hủy
           </Button>
-          <Button variant="contained" onClick={handleSave} disabled={isSaving}>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            disabled={isSaving}
+            sx={{ minWidth: 90 }}
+          >
             {isSaving ? <CircularProgress size={20} color="inherit" /> : "Lưu"}
           </Button>
         </DialogActions>

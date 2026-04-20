@@ -12857,6 +12857,7 @@ export interface paths {
             parameters: {
                 query?: {
                     IsExpired?: boolean;
+                    IsRegular?: boolean;
                     Code?: string;
                     PageNumber?: number;
                     PageSize?: number;

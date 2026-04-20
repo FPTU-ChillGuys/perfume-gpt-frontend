@@ -129,6 +129,7 @@ class VoucherService {
     PageSize?: number;
     Code?: string;
     IsExpired?: boolean;
+    IsRegular?: boolean;
   }): Promise<PagedVouchers> {
     const response = await apiInstance.GET(this.BASE_ENDPOINT, {
       params: { query: params },
