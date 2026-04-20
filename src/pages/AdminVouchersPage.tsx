@@ -51,8 +51,47 @@ import { useToast } from "../hooks/useToast";
 const formatVND = (value?: number | null) =>
   value != null ? new Intl.NumberFormat("vi-VN").format(value) + "đ" : "—";
 
-const formatDate = (dateStr?: string) =>
-  dateStr ? new Date(dateStr).toLocaleDateString("vi-VN") : "—";
+const formatDateTimeVN = (dateStr?: string) => {
+  if (!dateStr) return "—";
+  const date = new Date(dateStr);
+  date.setHours(date.getHours() + 7);
+  const d = date.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const t = date.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  return `${d} ${t}`;
+};
+
+const toLocalDatetimeString = (isoDate?: string | null) => {
+  if (!isoDate) return "";
+  const d = new Date(isoDate);
+  d.setHours(d.getHours() + 7);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+const fromLocalDatetimeString = (local: string) => {
+  if (!local) return "";
+  const d = new Date(local);
+  d.setHours(d.getHours() - 7);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}:00`;
+};
 
 const parseCurrencyInput = (raw: string): number => {
   return parseInt(raw.replace(/\D/g, ""), 10) || 0;
@@ -164,7 +203,7 @@ export const AdminVouchersPage = () => {
       requiredPoints: v.requiredPoints ?? 0,
       maxDiscountAmount: v.maxDiscountAmount ?? null,
       minOrderValue: v.minOrderValue ?? 0,
-      expiryDate: v.expiryDate ? v.expiryDate.substring(0, 16) : "",
+      expiryDate: toLocalDatetimeString(v.expiryDate),
       totalQuantity: v.totalQuantity ?? 100,
       remainingQuantity: v.remainingQuantity ?? 0,
       maxUsagePerUser: v.maxUsagePerUser ?? null,
@@ -183,6 +222,10 @@ export const AdminVouchersPage = () => {
       showToast("Giá trị giảm phải lớn hơn 0", "error");
       return;
     }
+    if (form.discountType === "Percentage" && form.discountValue > 100) {
+      showToast("Giảm phần trăm không được vượt quá 100%", "error");
+      return;
+    }
     if (form.totalQuantity <= 0) {
       showToast("Số lượng phải lớn hơn 0", "error");
       return;
@@ -193,7 +236,7 @@ export const AdminVouchersPage = () => {
     }
     setIsSaving(true);
     try {
-      const expiryISO = new Date(form.expiryDate).toISOString();
+      const expiryISO = fromLocalDatetimeString(form.expiryDate);
       if (editingVoucher?.id) {
         const body: UpdateVoucherRequest = {
           code: form.code,
@@ -341,9 +384,6 @@ export const AdminVouchersPage = () => {
                 <TableCell>
                   <strong>Công khai</strong>
                 </TableCell>
-                <TableCell>
-                  <strong>Trạng thái</strong>
-                </TableCell>
                 <TableCell align="center">
                   <strong>Thao tác</strong>
                 </TableCell>
@@ -352,14 +392,14 @@ export const AdminVouchersPage = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={13} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : vouchers.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={13}
+                    colSpan={12}
                     align="center"
                     sx={{ py: 4, color: "text.secondary" }}
                   >
@@ -408,7 +448,7 @@ export const AdminVouchersPage = () => {
                     <TableCell>
                       {v.remainingQuantity ?? 0} / {v.totalQuantity ?? "∞"}
                     </TableCell>
-                    <TableCell>{formatDate(v.expiryDate)}</TableCell>
+                    <TableCell>{formatDateTimeVN(v.expiryDate)}</TableCell>
                     <TableCell>
                       <Tooltip title={v.isMemberOnly ? "Thành viên" : "Tất cả"}>
                         {v.isMemberOnly ? (
@@ -429,7 +469,6 @@ export const AdminVouchersPage = () => {
                         </Tooltip>
                       )}
                     </TableCell>
-                    <TableCell>{getStatusChip(v)}</TableCell>
                     <TableCell align="center">
                       <Tooltip title="Sửa">
                         <IconButton size="small" onClick={() => openEdit(v)}>
@@ -510,6 +549,7 @@ export const AdminVouchersPage = () => {
                       discountType: e.target.value as
                         | "Percentage"
                         | "FixedAmount",
+                      discountValue: 0,
                     })
                   }
                 >
@@ -715,7 +755,7 @@ export const AdminVouchersPage = () => {
                 size="small"
                 fullWidth
               >
-                <ToggleButton value="all" sx={{ flex: 1 }} disabled={form.requiredPoints > 0}>
+                <ToggleButton value="all" sx={{ flex: 1 }}>
                   <Public fontSize="small" sx={{ mr: 0.5 }} />
                   Tất cả
                 </ToggleButton>
