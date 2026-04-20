@@ -274,14 +274,18 @@ function App() {
                       <Route
                         path="/checkout/counter/staff"
                         element={
-                          <RoleBasedRoute allowedRoles={["admin", "staff"]}>
+                          <RoleBasedRoute allowedRoles={["staff"]}>
                             <CounterCheckoutStaffPage />
                           </RoleBasedRoute>
                         }
                       />
                       <Route
                         path="/checkout/counter/display"
-                        element={<CustomerDisplayScreen />}
+                        element={
+                          <RoleBasedRoute allowedRoles={["staff"]}>
+                            <CustomerDisplayScreen />
+                          </RoleBasedRoute>
+                        }
                       />
                       <Route path="/products" element={<ProductListPage />} />
                       <Route path="/survey" element={<SurveyPage />} />
