@@ -20,7 +20,7 @@ import {
   VolumeOff as VolumeOffIcon,
 } from "@mui/icons-material";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import AiLogo from "@/assets/AI_LOGO.png";
 
 import { chatbotService } from "@/services/ai/chatbotService";
@@ -70,6 +70,12 @@ export default function ChatbotWidget() {
 
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isStaffMode =
+    location.pathname.startsWith("/staff") ||
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/checkout/counter/staff");
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastInputTimeRef = useRef<number>(Date.now());
@@ -166,6 +172,7 @@ export default function ChatbotWidget() {
           conversationId.current,
           userId.current,
           updatedMessages,
+          isStaffMode
         );
 
         setMessages(data.messages);
@@ -381,6 +388,7 @@ export default function ChatbotWidget() {
           <ChatHeader
             onSettingsClick={(e) => setSettingsAnchor(e.currentTarget)}
             onClose={() => setOpen(false)}
+            isStaffMode={isStaffMode}
           />
 
           <Menu
@@ -436,6 +444,7 @@ export default function ChatbotWidget() {
             loading={loading}
             onMessageClick={(s) => setInput(s)}
             messagesEndRef={messagesEndRef}
+            isStaffMode={isStaffMode}
             renderMessage={(msg, idx, isLastMessage) => (
               <MessageBubble
                 key={idx}

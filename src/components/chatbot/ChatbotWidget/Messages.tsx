@@ -9,6 +9,7 @@ interface ChatMessagesProps {
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   renderMessage: (msg: ChatMessage, idx: number, isLastMessage: boolean) => React.ReactNode;
   renderTypingIndicator: () => React.ReactNode;
+  isStaffMode?: boolean;
 }
 
 export function ChatMessages({
@@ -18,6 +19,7 @@ export function ChatMessages({
   messagesEndRef,
   renderMessage,
   renderTypingIndicator,
+  isStaffMode = false,
 }: ChatMessagesProps) {
   return (
     <Box
@@ -59,11 +61,12 @@ export function ChatMessages({
               variant="subtitle1"
               sx={{ fontWeight: 700, color: "text.primary" }}
             >
-              Xin chào! Tôi là PerfumeGPT 👋
+              {isStaffMode ? "Công cụ Tư vấn (Staff Mode) 🛠️" : "Xin chào! Tôi là PerfumeGPT 👋"}
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.5, maxWidth: 280 }}>
-              Hãy hỏi tôi về nước hoa – tôi sẽ gợi ý những sản phẩm phù
-              hợp nhất cho bạn!
+              {isStaffMode 
+                ? "Tra cứu tồn kho, so sánh sản phẩm hoặc tóm tắt đánh giá để hỗ trợ khách hàng nhanh nhất."
+                : "Hãy hỏi tôi về nước hoa – tôi sẽ gợi ý những sản phẩm phù hợp nhất cho bạn!"}
             </Typography>
           </Box>
           <Box
@@ -74,11 +77,10 @@ export function ChatMessages({
               justifyContent: "center",
             }}
           >
-            {[
-              "Gợi ý nước hoa nam",
-              "Nước hoa nữ dịu nhẹ",
-              "Nước hoa tặng quà",
-            ].map((s) => (
+            {(isStaffMode 
+              ? ["Check kho Bleu de Chanel", "So sánh Dior Sauvage vs YSL Y", "Tóm tắt review chai Lancome", "Tìm mùi hương theo gu khách"]
+              : ["Gợi ý nước hoa nam", "Nước hoa nữ dịu nhẹ", "Nước hoa tặng quà"]
+            ).map((s) => (
               <Chip
                 key={s}
                 label={s}
@@ -86,10 +88,10 @@ export function ChatMessages({
                 size="small"
                 variant="outlined"
                 sx={{
-                  borderColor: "#dc2626",
-                  color: "#dc2626",
+                  borderColor: isStaffMode ? "slateblue" : "#dc2626",
+                  color: isStaffMode ? "slateblue" : "#dc2626",
                   cursor: "pointer",
-                  "&:hover": { bgcolor: "#fef2f2" },
+                  "&:hover": { bgcolor: isStaffMode ? "ghostwhite" : "#fef2f2" },
                 }}
               />
             ))}
