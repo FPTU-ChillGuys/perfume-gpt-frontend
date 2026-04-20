@@ -8,16 +8,20 @@ import AiLogo from "@/assets/AI_LOGO.png";
 interface ChatHeaderProps {
   onSettingsClick: (event: React.MouseEvent<HTMLElement>) => void;
   onClose: () => void;
+  isStaffMode?: boolean;
 }
 
 export function ChatHeader({
   onSettingsClick,
   onClose,
+  isStaffMode = false,
 }: ChatHeaderProps) {
   return (
     <Box
       sx={{
-        background: "linear-gradient(135deg, #1f2937 0%, #dc2626 100%)",
+        background: isStaffMode
+          ? "linear-gradient(135deg, slateblue 0%, #1f2937 100%)"
+          : "linear-gradient(135deg, #1f2937 0%, #dc2626 100%)",
         color: "#fff",
         px: 2.5,
         py: 1.5,
@@ -25,6 +29,7 @@ export function ChatHeader({
         alignItems: "center",
         gap: 1.5,
         flexShrink: 0,
+        borderBottom: isStaffMode ? "2px solid rgba(255,255,255,0.1)" : "none",
       }}
     >
       <Avatar
@@ -36,7 +41,7 @@ export function ChatHeader({
           variant="subtitle1"
           sx={{ fontWeight: 700, lineHeight: 1.2 }}
         >
-          PerfumeGPT Assistant
+          {isStaffMode ? "Staff Consultation Tool" : "PerfumeGPT Assistant"}
         </Typography>
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <Box

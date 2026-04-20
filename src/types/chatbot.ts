@@ -52,6 +52,7 @@ export interface ConversationRequest {
     id: string;
     userId: string;
     messages: ChatMessage[];
+    isStaff?: boolean;
 }
 
 export interface ConversationResponseData {

@@ -11,7 +11,8 @@ class ChatbotService {
     async sendMessage(
         conversationId: string,
         userId: string,
-        messages: ChatMessage[]
+        messages: ChatMessage[],
+        isStaff: boolean = false
     ): Promise<ConversationResponseData> {
         try {
             const cleanMessages = messages.map(({ sender, message }) => ({ sender, message }));
@@ -20,9 +21,12 @@ class ChatbotService {
                 id: conversationId,
                 userId,
                 messages: cleanMessages,
+                isStaff,
             };
 
-            const response = await aiApiInstance.POST(this.CHAT_ENDPOINT, {
+            const endpoint = isStaff ? "/conversation/chat/v10-staff" : this.CHAT_ENDPOINT;
+
+            const response = await aiApiInstance.POST(endpoint, {
                 body,
             });
 

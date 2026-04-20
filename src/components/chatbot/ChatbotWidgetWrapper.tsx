@@ -10,7 +10,10 @@ export function ChatbotWidgetWrapper() {
   const showChatbot =
     location.pathname === "/" || // Home page
     location.pathname.startsWith("/products") || // Product list & detail pages
-    location.pathname.startsWith("/survey"); // Survey page
+    location.pathname.startsWith("/survey") || // Survey page
+    location.pathname.startsWith("/staff") || // Staff pages
+    location.pathname.startsWith("/admin") || // Admin pages
+    location.pathname.startsWith("/checkout/counter/staff"); // Counter checkout staff page
 
   if (!showChatbot) {
     return null;
