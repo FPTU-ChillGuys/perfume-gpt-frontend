@@ -1511,15 +1511,39 @@ export const OrderManagementDetailPage = () => {
                             </Box>
                           </Stack>
                         ) : (
-                          <Box display="flex" alignItems="center" gap={1}>
-                            <Person
-                              fontSize="small"
-                              sx={{ color: "text.secondary" }}
-                            />
-                            <Typography variant="body2" fontWeight={600}>
-                              Khách lẻ
-                            </Typography>
-                          </Box>
+                          <Stack spacing={1}>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Person
+                                fontSize="small"
+                                sx={{ color: "text.secondary" }}
+                              />
+                              <Typography variant="body2" fontWeight={600}>
+                                Khách lẻ
+                              </Typography>
+                            </Box>
+                            {order.customerEmail && (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Email
+                                  fontSize="small"
+                                  sx={{ color: "text.secondary" }}
+                                />
+                                <Typography variant="caption" color="text.secondary">
+                                  {order.customerEmail}
+                                </Typography>
+                              </Box>
+                            )}
+                            {order.customerPhoneNumber && (
+                              <Box display="flex" alignItems="center" gap={1}>
+                                <Phone
+                                  fontSize="small"
+                                  sx={{ color: "text.secondary" }}
+                                />
+                                <Typography variant="caption">
+                                  {order.customerPhoneNumber}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Stack>
                         )}
                         <Stack direction="row" spacing={0.75} flexWrap="wrap">
                           {order.staffName && (

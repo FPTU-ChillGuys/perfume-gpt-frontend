@@ -73,16 +73,33 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
 
   const handleNotificationClick = (item: NotificationItem) => {
     if (!item.referenceId) return;
-    switch (item.referenceType) {
-      case "Order":
-        navigate(`/my-orders/${item.referenceId}`);
-        break;
-      case "OrderCancelRequest":
-        navigate(`/my-cancel-requests/${item.referenceId}`);
-        break;
-      case "OrderReturnRequest":
-        navigate(`/my-return-requests/${item.referenceId}`);
-        break;
+
+    const role = user?.role;
+    if (role === "admin" || role === "staff") {
+      const prefix = role === "staff" ? "/staff" : "/admin";
+      switch (item.referenceType) {
+        case "Order":
+          navigate(`${prefix}/orders/${item.referenceId}`);
+          break;
+        case "OrderCancelRequest":
+          navigate(`${prefix}/cancel-requests/${item.referenceId}`);
+          break;
+        case "OrderReturnRequest":
+          navigate(`${prefix}/return-requests/${item.referenceId}`);
+          break;
+      }
+    } else {
+      switch (item.referenceType) {
+        case "Order":
+          navigate(`/my-orders/${item.referenceId}`);
+          break;
+        case "OrderCancelRequest":
+          navigate(`/my-cancel-requests/${item.referenceId}`);
+          break;
+        case "OrderReturnRequest":
+          navigate(`/my-return-requests/${item.referenceId}`);
+          break;
+      }
     }
   };
 

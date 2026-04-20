@@ -185,6 +185,17 @@ export const CheckoutPage = () => {
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+
+  const VN_PHONE_REGEX = /^(0)(3[2-9]|5[6789]|7[06789]|8[0-9]|9[0-9])[0-9]{7}$/;
+
+  const validatePhone = (value: string): string | null => {
+    if (!value) return null;
+    if (!VN_PHONE_REGEX.test(value)) {
+      return "Số điện thoại không hợp lệ";
+    }
+    return null;
+  };
 
   useEffect(() => {
     loadData();
@@ -611,6 +622,15 @@ export const CheckoutPage = () => {
           showToast("Vui lòng điền đầy đủ thông tin địa chỉ", "warning");
           return;
         }
+
+        if (
+          useNewAddress &&
+          !VN_PHONE_REGEX.test(newAddress.recipientPhoneNumber)
+        ) {
+          setPhoneError("Số điện thoại không hợp lệ");
+          showToast("Số điện thoại không hợp lệ", "warning");
+          return;
+        }
       }
 
       if (selectedCartItemIds.length === 0) {
@@ -914,12 +934,16 @@ export const CheckoutPage = () => {
                     <TextField
                       label="Số điện thoại *"
                       value={newAddress.recipientPhoneNumber}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const val = e.target.value;
                         setNewAddress({
                           ...newAddress,
-                          recipientPhoneNumber: e.target.value,
-                        })
-                      }
+                          recipientPhoneNumber: val,
+                        });
+                        setPhoneError(validatePhone(val));
+                      }}
+                      error={!!phoneError}
+                      helperText={phoneError}
                       required
                       fullWidth
                     />

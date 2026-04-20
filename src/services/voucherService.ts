@@ -26,6 +26,7 @@ export interface CreateVoucherRequest {
   totalQuantity: number;
   maxUsagePerUser: number | null;
   isPublic: boolean;
+  isMemberOnly: boolean;
 }
 
 export interface UpdateVoucherRequest extends CreateVoucherRequest {
@@ -167,7 +168,8 @@ class VoucherService {
       } as any,
     );
     if (!response.data?.success) {
-      throw new Error(response.data?.message || "Failed to create voucher");
+      const msg = (response.error as any)?.message || response.data?.message || "Tạo voucher thất bại";
+      throw new Error(msg);
     }
     return response.data.payload as VoucherResponse;
   }
@@ -181,7 +183,8 @@ class VoucherService {
       { params: { path: { voucherId } }, body } as any,
     );
     if (!response.data?.success) {
-      throw new Error(response.data?.message || "Failed to update voucher");
+      const msg = (response.error as any)?.message || response.data?.message || "Cập nhật voucher thất bại";
+      throw new Error(msg);
     }
     return response.data.payload as VoucherResponse;
   }
@@ -192,7 +195,8 @@ class VoucherService {
       { params: { path: { voucherId } } } as any,
     );
     if (!response.data?.success) {
-      throw new Error(response.data?.message || "Failed to delete voucher");
+      const msg = (response.error as any)?.message || response.data?.message || "Xóa voucher thất bại";
+      throw new Error(msg);
     }
   }
 
