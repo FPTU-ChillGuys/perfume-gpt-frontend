@@ -134,7 +134,10 @@ export const CheckoutPage = () => {
   const [addresses, setAddresses] = useState<AddressResponse[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [useNewAddress, setUseNewAddress] = useState(false);
-  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherCode, setVoucherCode] = useState(
+    () =>
+      voucherCodeFromCart ?? sessionStorage.getItem("appliedVoucherCode") ?? "",
+  );
   const [appliedVoucher, setAppliedVoucher] =
     useState<ApplyVoucherResponse | null>(null);
 
@@ -181,7 +184,11 @@ export const CheckoutPage = () => {
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingWards, setIsLoadingWards] = useState(false);
-  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+  // Start as true if there's a saved voucher to auto-apply
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(
+    () =>
+      !!(voucherCodeFromCart ?? sessionStorage.getItem("appliedVoucherCode")),
+  );
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
@@ -200,13 +207,6 @@ export const CheckoutPage = () => {
   useEffect(() => {
     loadData();
     loadProvinces();
-    // Load voucher from navigation state or sessionStorage
-    const sessionVoucher = sessionStorage.getItem("appliedVoucherCode");
-    if (voucherCodeFromCart) {
-      setVoucherCode(voucherCodeFromCart);
-    } else if (sessionVoucher) {
-      setVoucherCode(sessionVoucher);
-    }
 
     // Cleanup: Remove voucher when leaving checkout (unless going back to cart)
     return () => {
@@ -532,9 +532,10 @@ export const CheckoutPage = () => {
       .map((item) => ({
         variantId: item.variantId,
         quantity: item.quantity,
-        price: item.finalTotal && item.quantity
-          ? Math.round(Number(item.finalTotal) / item.quantity)
-          : item.variantPrice,
+        price:
+          item.finalTotal && item.quantity
+            ? Math.round(Number(item.finalTotal) / item.quantity)
+            : item.variantPrice,
       }));
   };
 
@@ -1222,38 +1223,24 @@ export const CheckoutPage = () => {
                     error={!!voucherError}
                     fullWidth
                   />
-                  {!appliedVoucher && (
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => applyVoucher()}
-                      disabled={isApplyingVoucher || !voucherCode.trim()}
-                      sx={{
-                        minWidth: 110,
-                        whiteSpace: "nowrap",
-                        px: 2,
-                      }}
-                    >
-                      {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
-                    </Button>
-                  )}
-                </Box>
-                {!appliedVoucher && (
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     size="small"
-                    fullWidth
-                    startIcon={<LocalOffer />}
-                    onClick={async () => {
-                      setVoucherPickerOpen(true);
-                      setLoadingMyVouchers(true);
+                    onClick={() => applyVoucher()}
+                    disabled={
+                      !!appliedVoucher ||
+                      isApplyingVoucher ||
+                      !voucherCode.trim()
+                    }
+                    sx={{
+                      minWidth: 110,
+                      whiteSpace: "nowrap",
+                      px: 2,
                     }}
-                    disabled={isApplyingVoucher}
-                    sx={{ mt: 1 }}
                   >
-                    Chọn voucher
+                    {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
                   </Button>
-                )}
+                </Box>
                 {voucherError && (
                   <Typography
                     variant="caption"
@@ -1302,6 +1289,20 @@ export const CheckoutPage = () => {
                     </Button>
                   </Box>
                 )}
+                <Button
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  startIcon={<LocalOffer />}
+                  onClick={() => {
+                    setVoucherPickerOpen(true);
+                    setLoadingMyVouchers(true);
+                  }}
+                  disabled={isApplyingVoucher}
+                  sx={{ mt: 1 }}
+                >
+                  {appliedVoucher ? "Đổi voucher" : "Chọn voucher"}
+                </Button>
               </Box>
 
               <Divider sx={{ my: 2 }} />

@@ -67,10 +67,16 @@ export const CartPage = () => {
   const [totalsWarningMessage, setTotalsWarningMessage] = useState<
     string | null
   >(null);
-  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherCode, setVoucherCode] = useState(
+    () => sessionStorage.getItem("appliedVoucherCode") ?? "",
+  );
   const [appliedVoucher, setAppliedVoucher] =
     useState<ApplyVoucherResponse | null>(null);
-  const [isApplyingVoucher, setIsApplyingVoucher] = useState(false);
+  // Start as true if there's a saved voucher to auto-apply, so the input is
+  // never shown before the auto-apply completes.
+  const [isApplyingVoucher, setIsApplyingVoucher] = useState(
+    () => !!sessionStorage.getItem("appliedVoucherCode"),
+  );
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
@@ -188,11 +194,6 @@ export const CartPage = () => {
   // Initial load - chỉ chạy một lần khi component mount
   useEffect(() => {
     void loadCart(true);
-    // Load voucher from sessionStorage if exists
-    const savedVoucher = sessionStorage.getItem("appliedVoucherCode");
-    if (savedVoucher) {
-      setVoucherCode(savedVoucher);
-    }
 
     // Cleanup: Remove voucher when leaving cart (unless going to checkout)
     return () => {
@@ -216,9 +217,7 @@ export const CartPage = () => {
     const savedVoucher = sessionStorage.getItem("appliedVoucherCode");
     if (savedVoucher && savedVoucher === voucherCode && items.length > 0) {
       // Auto apply voucher from session
-      setTimeout(() => {
-        void applyVoucher(voucherCode);
-      }, 500);
+      void applyVoucher(voucherCode);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasInitializedSelection, items.length]);
@@ -236,9 +235,10 @@ export const CartPage = () => {
       .map((item) => ({
         variantId: item.variantId,
         quantity: item.quantity,
-        price: item.finalTotal && item.quantity
-          ? Math.round(Number(item.finalTotal) / item.quantity)
-          : item.variantPrice,
+        price:
+          item.finalTotal && item.quantity
+            ? Math.round(Number(item.finalTotal) / item.quantity)
+            : item.variantPrice,
       }));
   };
 
@@ -305,19 +305,37 @@ export const CartPage = () => {
     }
   };
 
+  const clearVoucherOnCartChange = () => {
+    if (appliedVoucher) {
+      setAppliedVoucher(null);
+      setVoucherCode("");
+      setVoucherError(null);
+      sessionStorage.removeItem("appliedVoucherCode");
+      showToast("Mã giảm giá đã bị xóa do thay đổi giỏ hàng.", "info");
+    }
+  };
+
   const handleToggleItem = (cartItemId?: string) => {
     if (!cartItemId) {
       return;
     }
 
+    const isDeselecting = selectedCartItemIds.includes(cartItemId);
+    if (isDeselecting) {
+      clearVoucherOnCartChange();
+    }
+
     setSelectedCartItemIds((prev) =>
-      prev.includes(cartItemId)
+      isDeselecting
         ? prev.filter((id) => id !== cartItemId)
         : [...prev, cartItemId],
     );
   };
 
   const handleToggleSelectAll = (checked: boolean) => {
+    if (!checked) {
+      clearVoucherOnCartChange();
+    }
     const allIds = getSelectableItemIds();
     setSelectedCartItemIds(checked ? allIds : []);
   };
@@ -342,6 +360,12 @@ export const CartPage = () => {
     }
 
     setUpdatingItemId(cartItemId);
+
+    // Removing quantity may invalidate voucher conditions — clear it proactively
+    if (delta < 0) {
+      clearVoucherOnCartChange();
+    }
+
     try {
       await cartService.updateCartItem(cartItemId, nextQuantity);
       await loadCart();
@@ -367,6 +391,10 @@ export const CartPage = () => {
   const doRemoveItem = async (cartItemId: string) => {
     setConfirmDeleteId(null);
     setUpdatingItemId(cartItemId);
+
+    // Removing an item may invalidate voucher conditions — clear it proactively
+    clearVoucherOnCartChange();
+
     try {
       await cartService.removeCartItem(cartItemId);
       await loadCart();
@@ -756,38 +784,24 @@ export const CartPage = () => {
                       error={!!voucherError}
                       fullWidth
                     />
-                    {!appliedVoucher && (
-                      <Button
-                        variant="contained"
-                        size="small"
-                        onClick={() => applyVoucher(voucherCode)}
-                        disabled={isApplyingVoucher || !voucherCode.trim()}
-                        sx={{
-                          minWidth: 110,
-                          whiteSpace: "nowrap",
-                          px: 2,
-                        }}
-                      >
-                        {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
-                      </Button>
-                    )}
-                  </Box>
-                  {!appliedVoucher && (
                     <Button
-                      variant="outlined"
+                      variant="contained"
                       size="small"
-                      fullWidth
-                      startIcon={<LocalOffer />}
-                      onClick={async () => {
-                        setVoucherPickerOpen(true);
-                        setLoadingMyVouchers(true);
+                      onClick={() => applyVoucher(voucherCode)}
+                      disabled={
+                        !!appliedVoucher ||
+                        isApplyingVoucher ||
+                        !voucherCode.trim()
+                      }
+                      sx={{
+                        minWidth: 110,
+                        whiteSpace: "nowrap",
+                        px: 2,
                       }}
-                      disabled={isApplyingVoucher}
-                      sx={{ mt: 1 }}
                     >
-                      Chọn voucher
+                      {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
                     </Button>
-                  )}
+                  </Box>
                   {voucherError && (
                     <Typography
                       variant="caption"
@@ -800,7 +814,6 @@ export const CartPage = () => {
                   {appliedVoucher && (
                     <Box
                       sx={{
-                        mt: 1,
                         p: 1.5,
                         bgcolor: "success.lighter",
                         borderRadius: 1,
@@ -834,6 +847,19 @@ export const CartPage = () => {
                       </Button>
                     </Box>
                   )}
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    fullWidth
+                    onClick={() => {
+                      setVoucherPickerOpen(true);
+                      setLoadingMyVouchers(true);
+                    }}
+                    disabled={isApplyingVoucher}
+                    sx={{ mt: 1 }}
+                  >
+                    {appliedVoucher ? "Đổi voucher" : "Chọn voucher"}
+                  </Button>
                 </Box>
 
                 <Divider sx={{ my: 2 }} />
