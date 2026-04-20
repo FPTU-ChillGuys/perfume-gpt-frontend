@@ -150,7 +150,15 @@ export const LoyaltyHistorySection = () => {
                 {items.map((item, idx) => (
                   <TableRow key={item.id ?? idx} hover>
                     <TableCell sx={{ whiteSpace: "nowrap" }}>
-                      {item.id ? new Date().toLocaleDateString("vi-VN") : "—"}
+                      {item.createdAt
+                        ? new Date(item.createdAt).toLocaleString("vi-VN", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
                     </TableCell>
                     <TableCell>{item.reason || "—"}</TableCell>
                     <TableCell align="center">

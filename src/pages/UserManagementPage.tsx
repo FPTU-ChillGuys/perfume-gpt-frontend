@@ -5,10 +5,13 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
+  Drawer,
   FormControl,
   IconButton,
   InputAdornment,
@@ -24,9 +27,12 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   Tabs,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -41,9 +47,17 @@ import {
   Block as BlockIcon,
   Warning as WarningIcon,
   PersonAdd as PersonAddIcon,
+  EmojiEvents as PointsIcon,
+  History as HistoryIcon,
+  Add as AddIcon,
+  Remove as RemoveIcon,
+  Close as CloseIcon,
+  TrendingUp as EarnIcon,
+  TrendingDown as SpendIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { userService } from "@/services/userService";
+import { loyaltyService, type LoyaltyHistoryItem } from "@/services/loyaltyService";
 import { useToast } from "@/hooks/useToast";
 import type { StaffManageItem, UserManageItem } from "@/types/staff-user";
 
@@ -67,6 +81,17 @@ const formatDate = (iso: string | null) => {
   });
 };
 
+const formatDateTime = (iso: string | null) => {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 const PHONE_REGEX = /^(0)(3[2-9]|5[6789]|7[06789]|8[0-9]|9[0-9])[0-9]{7}$/;
 
 // ---------------------------------------------------------------------------
@@ -74,6 +99,87 @@ const PHONE_REGEX = /^(0)(3[2-9]|5[6789]|7[06789]|8[0-9]|9[0-9])[0-9]{7}$/;
 // ---------------------------------------------------------------------------
 function UsersTab() {
   const { showToast } = useToast();
+
+  // --- Loyalty drawer state ---
+  const [loyaltyUser, setLoyaltyUser] = useState<UserManageItem | null>(null);
+  const [historyItems, setHistoryItems] = useState<LoyaltyHistoryItem[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyPageSize] = useState(8);
+  const [historyTypeFilter, setHistoryTypeFilter] = useState<"" | "Earn" | "Spend">("");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  // --- Adjust points (inline in drawer) ---
+  const [pointsType, setPointsType] = useState<"Earn" | "Spend">("Earn");
+  const [pointsAmount, setPointsAmount] = useState("");
+  const [pointsReason, setPointsReason] = useState("");
+  const [pointsErrors, setPointsErrors] = useState<{ amount?: string; reason?: string }>({});
+  const [pointsSaving, setPointsSaving] = useState(false);
+
+  const loadHistory = useCallback(
+    async (user: UserManageItem, page: number, type: "" | "Earn" | "Spend") => {
+      try {
+        setHistoryLoading(true);
+        setHistoryError(null);
+        const result = await loyaltyService.getUserHistory(
+          user.id,
+          page + 1,
+          historyPageSize,
+          type || undefined,
+        );
+        setHistoryItems(result.items);
+        setHistoryTotal(result.totalCount);
+      } catch (err) {
+        setHistoryError(err instanceof Error ? err.message : "Không thể tải lịch sử");
+      } finally {
+        setHistoryLoading(false);
+      }
+    },
+    [historyPageSize],
+  );
+
+  const openLoyaltyDrawer = (user: UserManageItem) => {
+    setLoyaltyUser(user);
+    setHistoryPage(0);
+    setHistoryTypeFilter("");
+    setPointsType("Earn");
+    setPointsAmount("");
+    setPointsReason("");
+    setPointsErrors({});
+    loadHistory(user, 0, "");
+  };
+
+  const closeLoyaltyDrawer = () => {
+    setLoyaltyUser(null);
+    setHistoryItems([]);
+  };
+
+  const handlePointsSubmit = async () => {
+    if (!loyaltyUser) return;
+    const errs: typeof pointsErrors = {};
+    const amt = parseInt(pointsAmount, 10);
+    if (!pointsAmount || isNaN(amt) || amt <= 0) errs.amount = "Số điểm phải lớn hơn 0";
+    if (!pointsReason.trim()) errs.reason = "Lý do không được để trống";
+    if (Object.keys(errs).length > 0) { setPointsErrors(errs); return; }
+
+    try {
+      setPointsSaving(true);
+      await loyaltyService.manualChange(loyaltyUser.id, amt, pointsType, pointsReason.trim());
+      showToast(
+        `${pointsType === "Earn" ? "Cộng" : "Trừ"} ${amt} điểm cho ${loyaltyUser.fullName} thành công`,
+        "success",
+      );
+      setPointsAmount("");
+      setPointsReason("");
+      setPointsErrors({});
+      loadHistory(loyaltyUser, historyPage, historyTypeFilter);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Thao tác thất bại", "error");
+    } finally {
+      setPointsSaving(false);
+    }
+  };
   const [allUsers, setAllUsers] = useState<UserManageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -271,8 +377,7 @@ function UsersTab() {
                 <TableCell align="center">Từ chối giao</TableCell>
                 <TableCell>Khóa COD đến</TableCell>
                 <TableCell align="center">Trạng thái</TableCell>
-                <TableCell align="center">Thao tác</TableCell>
-              </TableRow>
+                <TableCell align="center">Thao tác</TableCell>              </TableRow>
             </TableHead>
             <TableBody>
               {loading
@@ -384,21 +489,47 @@ function UsersTab() {
                         )}
                       </TableCell>
                       <TableCell align="center">
-                        {user.isActive ? (
-                          <Tooltip title="Vô hiệu hóa tài khoản">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => setConfirmTarget(user)}
-                            >
+                        <Stack direction="row" spacing={0.5} justifyContent="center">
+                          <Tooltip title={user.isActive ? "Lịch sử & Điều chỉnh điểm" : "Tài khoản đã bị vô hiệu hóa"}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={!user.isActive}
+                                sx={{ color: user.isActive ? "#7c3aed" : undefined }}
+                                onClick={() => openLoyaltyDrawer(user)}
+                              >
+                                <HistoryIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip title={user.isActive ? "Điều chỉnh điểm" : "Tài khoản đã bị vô hiệu hóa"}>
+                            <span>
+                              <IconButton
+                                size="small"
+                                disabled={!user.isActive}
+                                sx={{ color: user.isActive ? "#0891b2" : undefined }}
+                                onClick={() => openLoyaltyDrawer(user)}
+                              >
+                                <PointsIcon fontSize="small" />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          {user.isActive ? (
+                            <Tooltip title="Vô hiệu hóa tài khoản">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => setConfirmTarget(user)}
+                              >
+                                <BlockIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          ) : (
+                            <IconButton size="small" disabled>
                               <BlockIcon fontSize="small" />
                             </IconButton>
-                          </Tooltip>
-                        ) : (
-                          <Typography variant="caption" color="text.disabled">
-                            —
-                          </Typography>
-                        )}
+                          )}
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -423,6 +554,289 @@ function UsersTab() {
           </Box>
         )}
       </Paper>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Loyalty drawer — two-panel (history | adjust form)                   */}
+      {/* ------------------------------------------------------------------ */}
+      <Drawer
+        anchor="right"
+        open={!!loyaltyUser}
+        onClose={closeLoyaltyDrawer}
+        PaperProps={{ sx: { width: { xs: "100%", sm: 820 } } }}
+      >
+        {loyaltyUser && (
+          <Stack sx={{ height: "100%" }}>
+            {/* Header */}
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={2}
+              sx={{
+                px: 3,
+                py: 2,
+                flexShrink: 0,
+                background: "linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)",
+                color: "white",
+              }}
+            >
+              <Avatar
+                src={loyaltyUser.profileImageUrl ?? undefined}
+                sx={{ width: 40, height: 40, bgcolor: "rgba(255,255,255,0.2)", fontWeight: 700 }}
+              >
+                {getInitials(loyaltyUser.fullName)}
+              </Avatar>
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography variant="subtitle1" fontWeight={700} noWrap>
+                    {loyaltyUser.fullName}
+                  </Typography>
+                  {!loyaltyUser.isActive && (
+                    <Chip
+                      label="Vô hiệu"
+                      size="small"
+                      sx={{ bgcolor: "rgba(255,255,255,0.2)", color: "white", fontWeight: 600, fontSize: "0.7rem", height: 20 }}
+                    />
+                  )}
+                </Stack>
+                <Typography variant="caption" sx={{ opacity: 0.85 }}>
+                  {loyaltyUser.email}
+                </Typography>
+              </Box>
+              <IconButton size="small" sx={{ color: "white" }} onClick={closeLoyaltyDrawer}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Stack>
+
+            {/* Two-column body */}
+            <Stack direction="row" sx={{ flexGrow: 1, overflow: "hidden" }}>
+
+              {/* ---- LEFT: History ---- */}
+              <Stack sx={{ flex: 1, overflow: "hidden", borderRight: "1px solid", borderColor: "divider" }}>
+                {/* Filter */}
+                <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.100", flexShrink: 0 }}>
+                  <ToggleButtonGroup
+                    size="small"
+                    value={historyTypeFilter}
+                    exclusive
+                    onChange={(_, v) => {
+                      const next = v ?? "";
+                      setHistoryTypeFilter(next);
+                      setHistoryPage(0);
+                      loadHistory(loyaltyUser, 0, next);
+                    }}
+                  >
+                    <ToggleButton value="">Tất cả</ToggleButton>
+                    <ToggleButton value="Earn" sx={{ color: "#16a34a" }}>
+                      <EarnIcon fontSize="small" sx={{ mr: 0.5 }} /> Cộng
+                    </ToggleButton>
+                    <ToggleButton value="Spend" sx={{ color: "#dc2626" }}>
+                      <SpendIcon fontSize="small" sx={{ mr: 0.5 }} /> Trừ
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Box>
+
+                {/* List */}
+                <Box sx={{ flexGrow: 1, overflow: "auto", px: 2, py: 1.5 }}>
+                  {historyLoading ? (
+                    <Stack spacing={1.5}>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} variant="rounded" height={64} />
+                      ))}
+                    </Stack>
+                  ) : historyError ? (
+                    <Alert severity="error">{historyError}</Alert>
+                  ) : historyItems.length === 0 ? (
+                    <Box sx={{ textAlign: "center", py: 6 }}>
+                      <HistoryIcon sx={{ fontSize: 40, color: "grey.300", mb: 1 }} />
+                      <Typography color="text.secondary" variant="body2">Chưa có giao dịch nào</Typography>
+                    </Box>
+                  ) : (
+                    <Stack spacing={1}>
+                      {historyItems.map((item, idx) => {
+                        const isEarn = item.transactionType === "Earn";
+                        return (
+                          <Paper
+                            key={item.id ?? idx}
+                            elevation={0}
+                            sx={{
+                              p: 1.5,
+                              border: "1px solid",
+                              borderColor: isEarn ? "#bbf7d0" : "#fecaca",
+                              borderRadius: 2,
+                              bgcolor: isEarn ? "#f0fdf4" : "#fff5f5",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1.5,
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                bgcolor: isEarn ? "#dcfce7" : "#fee2e2",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {isEarn ? (
+                                <AddIcon sx={{ color: "#16a34a", fontSize: 16 }} />
+                              ) : (
+                                <RemoveIcon sx={{ color: "#dc2626", fontSize: 16 }} />
+                              )}
+                            </Box>
+                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                sx={{ color: isEarn ? "#15803d" : "#b91c1c", fontSize: "0.82rem" }}
+                              >
+                                {isEarn ? "+" : "-"}{Math.abs(item.pointsChanged ?? 0)} điểm
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary" display="block" noWrap>
+                                {item.reason || "—"}
+                              </Typography>
+                            </Box>
+                            <Typography variant="caption" color="text.disabled" sx={{ whiteSpace: "nowrap", flexShrink: 0, fontSize: "0.7rem" }}>
+                              {formatDateTime(item.createdAt ?? null)}
+                            </Typography>
+                          </Paper>
+                        );
+                      })}
+                    </Stack>
+                  )}
+                </Box>
+
+                {/* Pagination */}
+                {historyTotal > historyPageSize && (
+                  <Box sx={{ borderTop: "1px solid", borderColor: "grey.200", flexShrink: 0 }}>
+                    <TablePagination
+                      component="div"
+                      count={historyTotal}
+                      page={historyPage}
+                      rowsPerPage={historyPageSize}
+                      rowsPerPageOptions={[historyPageSize]}
+                      onPageChange={(_, p) => {
+                        setHistoryPage(p);
+                        loadHistory(loyaltyUser, p, historyTypeFilter);
+                      }}
+                      labelDisplayedRows={({ from, to, count }) => `${from}–${to} / ${count}`}
+                    />
+                  </Box>
+                )}
+              </Stack>
+
+              {/* ---- RIGHT: Adjust points form ---- */}
+              <Box
+                sx={{
+                  width: 300,
+                  flexShrink: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  overflow: "auto",
+                  opacity: loyaltyUser.isActive ? 1 : 0.45,
+                  pointerEvents: loyaltyUser.isActive ? "auto" : "none",
+                }}
+              >
+                <Box sx={{ px: 2.5, pt: 2, pb: 1, borderBottom: "1px solid", borderColor: "grey.100" }}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <PointsIcon sx={{ color: "#7c3aed", fontSize: 18 }} />
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      Điều chỉnh điểm
+                    </Typography>
+                  </Stack>
+                  {!loyaltyUser.isActive && (
+                    <Typography variant="caption" color="error.main" sx={{ display: "block", mt: 0.5 }}>
+                      Tài khoản bị vô hiệu — không thể điều chỉnh
+                    </Typography>
+                  )}
+                </Box>
+
+                <Stack spacing={2} sx={{ p: 2.5, flexGrow: 1 }}>
+                  <ToggleButtonGroup
+                    fullWidth
+                    exclusive
+                    value={pointsType}
+                    onChange={(_, v) => v && setPointsType(v)}
+                    size="small"
+                  >
+                    <ToggleButton
+                      value="Earn"
+                      sx={{
+                        flex: 1,
+                        fontWeight: 600,
+                        fontSize: "0.78rem",
+                        "&.Mui-selected": { bgcolor: "#dcfce7", color: "#15803d", borderColor: "#86efac" },
+                      }}
+                    >
+                      <AddIcon fontSize="small" sx={{ mr: 0.5 }} /> Cộng
+                    </ToggleButton>
+                    <ToggleButton
+                      value="Spend"
+                      sx={{
+                        flex: 1,
+                        fontWeight: 600,
+                        fontSize: "0.78rem",
+                        "&.Mui-selected": { bgcolor: "#fee2e2", color: "#b91c1c", borderColor: "#fca5a5" },
+                      }}
+                    >
+                      <RemoveIcon fontSize="small" sx={{ mr: 0.5 }} /> Trừ
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+
+                  <TextField
+                    label="Số điểm"
+                    fullWidth
+                    size="small"
+                    type="number"
+                    value={pointsAmount}
+                    onChange={(e) => {
+                      setPointsAmount(e.target.value);
+                      setPointsErrors((prev) => ({ ...prev, amount: undefined }));
+                    }}
+                    error={!!pointsErrors.amount}
+                    helperText={pointsErrors.amount}
+                    slotProps={{ htmlInput: { min: 1 } }}
+                  />
+
+                  <TextField
+                    label="Lý do"
+                    fullWidth
+                    size="small"
+                    multiline
+                    rows={3}
+                    placeholder="Nhập lý do điều chỉnh…"
+                    value={pointsReason}
+                    onChange={(e) => {
+                      setPointsReason(e.target.value);
+                      setPointsErrors((prev) => ({ ...prev, reason: undefined }));
+                    }}
+                    error={!!pointsErrors.reason}
+                    helperText={pointsErrors.reason}
+                  />
+
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={handlePointsSubmit}
+                    disabled={pointsSaving}
+                    startIcon={pointsType === "Earn" ? <AddIcon /> : <RemoveIcon />}
+                    sx={{
+                      bgcolor: pointsType === "Earn" ? "#16a34a" : "#dc2626",
+                      "&:hover": { bgcolor: pointsType === "Earn" ? "#15803d" : "#b91c1c" },
+                      fontWeight: 600,
+                    }}
+                  >
+                    {pointsSaving ? "Đang xử lý…" : pointsType === "Earn" ? "Cộng điểm" : "Trừ điểm"}
+                  </Button>
+                </Stack>
+              </Box>
+            </Stack>
+          </Stack>
+        )}
+      </Drawer>
 
       {/* Confirm deactivate */}
       <Dialog
