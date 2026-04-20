@@ -836,19 +836,30 @@ export const BulkItemSelector = ({
                                         }
                                       >
                                         <TableCell padding="checkbox">
-                                          <Checkbox
-                                            checked={
-                                              checkedKeys.has(batchKey) ||
-                                              isBatchAdded
+                                          <Tooltip
+                                            title={
+                                              batch.isExpired
+                                                ? "Lô đã hết hạn, không thể chọn"
+                                                : ""
                                             }
-                                            onChange={() =>
-                                              handleToggleRow(batchKey)
-                                            }
-                                            disabled={
-                                              isBatchAdded ||
-                                              isBatchBlockedByProduct
-                                            }
-                                          />
+                                          >
+                                            <span>
+                                              <Checkbox
+                                                checked={
+                                                  checkedKeys.has(batchKey) ||
+                                                  isBatchAdded
+                                                }
+                                                onChange={() =>
+                                                  handleToggleRow(batchKey)
+                                                }
+                                                disabled={
+                                                  isBatchAdded ||
+                                                  isBatchBlockedByProduct ||
+                                                  Boolean(batch.isExpired)
+                                                }
+                                              />
+                                            </span>
+                                          </Tooltip>
                                         </TableCell>
                                         <TableCell>
                                           {batch.batchCode || "N/A"}

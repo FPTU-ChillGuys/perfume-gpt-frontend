@@ -622,6 +622,17 @@ export const CampaignManagementDetailPage = () => {
       showToast("Mã voucher không được để trống", "error");
       return;
     }
+    if (!voucherForm.maxUsagePerUser || voucherForm.maxUsagePerUser < 1) {
+      showToast("Vui lòng nhập số lượt sử dụng tối đa mỗi khách (>= 1)", "error");
+      return;
+    }
+    if (
+      voucherForm.discountType === "Percentage" &&
+      (voucherForm.discountValue <= 0 || voucherForm.discountValue > 100)
+    ) {
+      showToast("Giảm phần trăm phải từ 1 đến 100", "error");
+      return;
+    }
     setIsSavingVoucher(true);
     try {
       if (editingVoucher?.id) {
@@ -634,9 +645,7 @@ export const CampaignManagementDetailPage = () => {
           maxDiscountAmount: voucherForm.maxDiscountAmount,
           minOrderValue: voucherForm.minOrderValue,
           totalQuantity: voucherForm.totalQuantity,
-          maxUsagePerUser: voucherForm.isMemberOnly
-            ? voucherForm.maxUsagePerUser
-            : null,
+          maxUsagePerUser: voucherForm.maxUsagePerUser,
           isMemberOnly: voucherForm.isMemberOnly,
         };
         await campaignService.updateCampaignVoucher(
@@ -655,9 +664,7 @@ export const CampaignManagementDetailPage = () => {
           maxDiscountAmount: voucherForm.maxDiscountAmount,
           minOrderValue: voucherForm.minOrderValue,
           totalQuantity: voucherForm.totalQuantity,
-          maxUsagePerUser: voucherForm.isMemberOnly
-            ? voucherForm.maxUsagePerUser
-            : null,
+          maxUsagePerUser: voucherForm.maxUsagePerUser,
           isMemberOnly: voucherForm.isMemberOnly,
         };
         await campaignService.createCampaignVoucher(campaignId, payload);
@@ -1240,6 +1247,7 @@ export const CampaignManagementDetailPage = () => {
                                               ...editingItemForm,
                                               discountType: e.target
                                                 .value as DiscountType,
+                                              discountValue: 0,
                                             })
                                           }
                                         >
@@ -1282,11 +1290,11 @@ export const CampaignManagementDetailPage = () => {
                                             "Percentage"
                                           ) {
                                             const num = Number(val);
-                                            if (!isNaN(num))
-                                              setEditingItemForm({
-                                                ...editingItemForm,
-                                                discountValue: num,
-                                              });
+                                            if (isNaN(num) || num > 100) return;
+                                            setEditingItemForm({
+                                              ...editingItemForm,
+                                              discountValue: num,
+                                            });
                                           } else {
                                             const parsed = parseNumberVN(val);
                                             const num = Number(parsed);
@@ -1796,6 +1804,7 @@ export const CampaignManagementDetailPage = () => {
                   setVoucherForm({
                     ...voucherForm,
                     discountType: e.target.value as DiscountType,
+                    discountValue: 0,
                   })
                 }
               >
@@ -1820,9 +1829,11 @@ export const CampaignManagementDetailPage = () => {
                 const value = e.target.value;
                 if (voucherForm.discountType === "Percentage") {
                   if (!/^\d*([.,]\d{0,2})?$/.test(value)) return;
+                  const num = value ? Number(value.replace(",", ".")) : 0;
+                  if (num > 100) return;
                   setVoucherForm({
                     ...voucherForm,
-                    discountValue: value ? Number(value.replace(",", ".")) : 0,
+                    discountValue: num,
                   });
                 } else {
                   const parsed = parseNumberVN(value);
@@ -1903,6 +1914,7 @@ export const CampaignManagementDetailPage = () => {
               type="number"
               size="small"
               fullWidth
+              required
               value={voucherForm.maxUsagePerUser ?? ""}
               onChange={(e) =>
                 setVoucherForm({
@@ -1913,12 +1925,7 @@ export const CampaignManagementDetailPage = () => {
                 })
               }
               placeholder="VD: 1"
-              helperText={
-                voucherForm.isMemberOnly
-                  ? "Để trống = không giới hạn"
-                  : "Chỉ áp dụng khi bật Member Only"
-              }
-              disabled={!voucherForm.isMemberOnly}
+              helperText="Số lượt sử dụng tối đa mỗi khách"
             />
             <FormControlLabel
               control={

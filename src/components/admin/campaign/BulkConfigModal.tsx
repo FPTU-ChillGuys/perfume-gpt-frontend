@@ -138,6 +138,7 @@ const ConfigSection = ({
           const val = e.target.value;
           if (isPercentage) {
             if (!/^\d*([.,]\d{0,2})?$/.test(val)) return;
+            if (val !== "" && Number(val.replace(",", ".")) > 100) return;
             onChange({ ...config, discountValue: val });
           } else {
             const parsed = parseNumberVN(val);

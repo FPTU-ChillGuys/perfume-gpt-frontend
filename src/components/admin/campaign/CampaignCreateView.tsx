@@ -332,10 +332,9 @@ export const CampaignCreateView = ({
       const totalQuantity = voucher.totalQuantityInput.trim()
         ? Number(voucher.totalQuantityInput)
         : null;
-      const maxUsagePerUser =
-        voucher.isMemberOnly && voucher.maxUsagePerUserInput.trim()
-          ? Number(voucher.maxUsagePerUserInput)
-          : null;
+      const maxUsagePerUser = voucher.maxUsagePerUserInput.trim()
+        ? Number(voucher.maxUsagePerUserInput)
+        : null;
 
       if (!code) continue;
 
@@ -391,11 +390,12 @@ export const CampaignCreateView = ({
       }
 
       if (
-        maxUsagePerUser !== null &&
-        (!Number.isInteger(maxUsagePerUser) || maxUsagePerUser < 1)
+        maxUsagePerUser === null ||
+        !Number.isInteger(maxUsagePerUser) ||
+        maxUsagePerUser < 1
       ) {
         showToast(
-          `Voucher #${rowNumber}: số lần sử dụng/khách không hợp lệ`,
+          `Voucher #${rowNumber}: vui lòng điền số lượt/khách hợp lệ (>= 1)`,
           "warning",
         );
         return;
@@ -826,13 +826,16 @@ export const CampaignCreateView = ({
                               <FormControl fullWidth size="small">
                                 <Select
                                   value={item.discountType}
-                                  onChange={(e) =>
-                                    handleSelectedItemFieldChange(
-                                      item.key,
-                                      "discountType",
-                                      e.target.value,
-                                    )
-                                  }
+                                  onChange={(e) => {
+                                    const newDiscountType = e.target.value as DiscountType;
+                                    setSelectedItems((current) =>
+                                      current.map((itm) =>
+                                        itm.key === item.key
+                                          ? { ...itm, discountType: newDiscountType, discountValueInput: "" }
+                                          : itm,
+                                      ),
+                                    );
+                                  }}
                                 >
                                   {DISCOUNT_TYPE_OPTIONS.map((o) => (
                                     <MenuItem key={o.value} value={o.value}>
@@ -854,6 +857,8 @@ export const CampaignCreateView = ({
                                   const inputValue = e.target.value;
                                   if (item.discountType === "Percentage") {
                                     if (!/^\d*([.,]\d{0,2})?$/.test(inputValue))
+                                      return;
+                                    if (inputValue !== "" && Number(inputValue.replace(",", ".")) > 100)
                                       return;
                                     handleSelectedItemFieldChange(
                                       item.key,

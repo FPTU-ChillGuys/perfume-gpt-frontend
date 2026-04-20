@@ -81,6 +81,14 @@ export const VoucherForm = ({
       vouchers.map((v) => {
         if (v.key !== key) return v;
 
+        if (field === "discountType") {
+          return {
+            ...v,
+            discountType: value as DiscountType,
+            discountValueInput: "",
+          };
+        }
+
         if (field === "applyType") {
           const nextApplyType = value as VoucherType;
           return {
@@ -96,8 +104,6 @@ export const VoucherForm = ({
           return {
             ...v,
             isMemberOnly: isMember,
-            // When turning off isMemberOnly, clear maxUsagePerUser
-            maxUsagePerUserInput: isMember ? v.maxUsagePerUserInput : "",
           };
         }
 
@@ -362,8 +368,8 @@ export const VoucherForm = ({
                     display: "grid",
                     gridTemplateColumns: {
                       xs: "1fr",
-                      sm: voucher.isMemberOnly ? "1fr 1fr" : "1fr",
-                      md: voucher.isMemberOnly ? "1fr 1fr" : "1fr",
+                      sm: "1fr 1fr",
+                      md: "1fr 1fr",
                     },
                     gap: 2,
                     alignItems: "center",
@@ -387,24 +393,23 @@ export const VoucherForm = ({
                     />
                   </Box>
 
-                  {/* maxUsagePerUser - only shown when isMemberOnly is true */}
-                  {voucher.isMemberOnly && (
-                    <TextField
-                      label="Lượt/khách"
-                      size="small"
-                      value={voucher.maxUsagePerUserInput}
-                      onChange={(e) => {
-                        if (!/^\d*$/.test(e.target.value)) return;
-                        updateField(
-                          voucher.key,
-                          "maxUsagePerUserInput",
-                          e.target.value,
-                        );
-                      }}
-                      placeholder="VD: 1"
-                      fullWidth
-                    />
-                  )}
+                  {/* maxUsagePerUser - always shown */}
+                  <TextField
+                    label="Lượt/khách"
+                    size="small"
+                    required
+                    value={voucher.maxUsagePerUserInput}
+                    onChange={(e) => {
+                      if (!/^\d*$/.test(e.target.value)) return;
+                      updateField(
+                        voucher.key,
+                        "maxUsagePerUserInput",
+                        e.target.value,
+                      );
+                    }}
+                    placeholder="VD: 1"
+                    fullWidth
+                  />
                 </Box>
               </Paper>
             );
