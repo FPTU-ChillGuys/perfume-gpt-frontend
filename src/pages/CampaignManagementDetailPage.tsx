@@ -45,6 +45,10 @@ import PauseIcon from "@mui/icons-material/Pause";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SaveIcon from "@mui/icons-material/Save";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import LocalOfferIcon from "@mui/icons-material/LocalOffer";
+import PersonIcon from "@mui/icons-material/Person";
+import PublicIcon from "@mui/icons-material/Public";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
   campaignService,
@@ -596,6 +600,16 @@ export const CampaignManagementDetailPage = () => {
   };
 
   // ── Voucher Handlers ──
+  const handleCopyVoucherCode = async (code?: string | null) => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      showToast("Đã sao chép mã voucher", "success");
+    } catch {
+      showToast("Không thể sao chép mã voucher", "error");
+    }
+  };
+
   const openCreateVoucher = () => {
     setEditingVoucher(null);
     setVoucherForm(defaultVoucherForm);
@@ -1541,22 +1555,35 @@ export const CampaignManagementDetailPage = () => {
                   ) : (
                     <TableContainer
                       component={Paper}
-                      variant="outlined"
-                      sx={{ borderRadius: 1.5 }}
+                      sx={{ borderRadius: 2, overflow: "hidden" }}
                     >
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ bgcolor: "grey.50" }}>
+                          <TableRow
+                            sx={{
+                              bgcolor: "grey.100",
+                              "& th": {
+                                fontWeight: 700,
+                                fontSize: "0.75rem",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em",
+                                color: "text.secondary",
+                                borderBottom: "2px solid",
+                                borderColor: "divider",
+                                py: 1.5,
+                                whiteSpace: "nowrap",
+                              },
+                            }}
+                          >
                             <TableCell>Mã</TableCell>
-                            <TableCell align="center">Loại áp dụng</TableCell>
-                            <TableCell align="center">Loại giảm</TableCell>
-                            <TableCell align="right">Giá trị giảm</TableCell>
-                            <TableCell align="right">Giảm tối đa</TableCell>
-                            <TableCell align="right">Đơn tối thiểu</TableCell>
-                            <TableCell align="center">SL</TableCell>
-                            <TableCell align="center">Còn lại</TableCell>
-                            <TableCell align="center">Member</TableCell>
-                            <TableCell align="center">Hết hạn</TableCell>
+                            <TableCell>Loại áp dụng</TableCell>
+                            <TableCell>Loại giảm</TableCell>
+                            <TableCell>Giá trị giảm</TableCell>
+                            <TableCell>Giảm tối đa</TableCell>
+                            <TableCell>Đơn tối thiểu</TableCell>
+                            <TableCell>Số lượng</TableCell>
+                            <TableCell align="center">Đối tượng</TableCell>
+                            <TableCell>Hết hạn</TableCell>
                             <TableCell align="center">Thao tác</TableCell>
                           </TableRow>
                         </TableHead>
@@ -1565,27 +1592,85 @@ export const CampaignManagementDetailPage = () => {
                             const vDiscountType =
                               v.discountType || "Percentage";
                             return (
-                              <TableRow key={v.id} hover>
+                              <TableRow
+                                key={v.id}
+                                hover
+                                sx={{ "&:last-child td": { border: 0 } }}
+                              >
                                 <TableCell>
-                                  <Typography variant="body2" fontWeight={600}>
-                                    {v.code}
-                                  </Typography>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={700}
+                                      fontFamily="monospace"
+                                      sx={{ letterSpacing: "0.04em" }}
+                                    >
+                                      {v.code}
+                                    </Typography>
+                                    <Tooltip title="Sao chép mã">
+                                      <IconButton
+                                        size="small"
+                                        onClick={() =>
+                                          void handleCopyVoucherCode(v.code)
+                                        }
+                                        sx={{
+                                          p: 0.25,
+                                          color: "text.secondary",
+                                        }}
+                                      >
+                                        <ContentCopyIcon
+                                          sx={{ fontSize: 13 }}
+                                        />
+                                      </IconButton>
+                                    </Tooltip>
+                                  </Box>
                                 </TableCell>
-                                <TableCell align="center">
+                                <TableCell>
                                   <Chip
                                     size="small"
                                     variant="outlined"
                                     label={
                                       VOUCHER_TYPE_LABEL[v.applyType || "Order"]
                                     }
+                                    color={
+                                      v.applyType === "Product"
+                                        ? "secondary"
+                                        : "primary"
+                                    }
+                                    sx={{
+                                      fontWeight: 600,
+                                      fontSize: "0.7rem",
+                                      minWidth: 88,
+                                    }}
                                   />
                                 </TableCell>
-                                <TableCell align="center">
-                                  <Typography variant="body2">
-                                    {DISCOUNT_TYPE_LABEL[vDiscountType]}
-                                  </Typography>
+                                <TableCell>
+                                  <Chip
+                                    size="small"
+                                    label={
+                                      vDiscountType === "Percentage"
+                                        ? "Phần trăm"
+                                        : "Cố định"
+                                    }
+                                    color={
+                                      vDiscountType === "Percentage"
+                                        ? "info"
+                                        : "default"
+                                    }
+                                    sx={{
+                                      fontWeight: 600,
+                                      fontSize: "0.7rem",
+                                      minWidth: 88,
+                                    }}
+                                  />
                                 </TableCell>
-                                <TableCell align="right">
+                                <TableCell>
                                   <Typography
                                     variant="body2"
                                     fontWeight={600}
@@ -1596,41 +1681,107 @@ export const CampaignManagementDetailPage = () => {
                                       : formatCurrency(v.discountValue)}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body2">
+                                <TableCell>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
                                     {v.maxDiscountAmount != null
                                       ? formatCurrency(v.maxDiscountAmount)
-                                      : "-"}
+                                      : "—"}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body2">
+                                <TableCell>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                  >
                                     {formatCurrency(v.minOrderValue)}
                                   </Typography>
                                 </TableCell>
-                                <TableCell align="center">
-                                  <Typography variant="body2">
-                                    {v.totalQuantity ?? "∞"}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Typography variant="body2">
-                                    {v.remainingQuantity ?? "-"}
-                                  </Typography>
+                                <TableCell>
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      gap: 0.25,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      fontWeight={600}
+                                    >
+                                      {new Intl.NumberFormat("vi-VN").format(
+                                        v.remainingQuantity ?? 0,
+                                      )}
+                                      <Typography
+                                        component="span"
+                                        variant="body2"
+                                        color="text.secondary"
+                                      >
+                                        {" "}
+                                        /{" "}
+                                        {v.totalQuantity != null
+                                          ? new Intl.NumberFormat(
+                                              "vi-VN",
+                                            ).format(v.totalQuantity)
+                                          : "∞"}
+                                      </Typography>
+                                    </Typography>
+                                    {v.totalQuantity != null && (
+                                      <Box
+                                        sx={{
+                                          height: 3,
+                                          borderRadius: 2,
+                                          bgcolor: "grey.200",
+                                          overflow: "hidden",
+                                          width: 60,
+                                        }}
+                                      >
+                                        <Box
+                                          sx={{
+                                            height: "100%",
+                                            width: `${Math.min(100, ((v.remainingQuantity ?? 0) / Math.max(v.totalQuantity, 1)) * 100)}%`,
+                                            bgcolor:
+                                              (v.remainingQuantity ?? 0) === 0
+                                                ? "error.main"
+                                                : (v.remainingQuantity ?? 0) /
+                                                      v.totalQuantity <
+                                                    0.2
+                                                  ? "warning.main"
+                                                  : "success.main",
+                                            borderRadius: 2,
+                                          }}
+                                        />
+                                      </Box>
+                                    )}
+                                  </Box>
                                 </TableCell>
                                 <TableCell align="center">
                                   <Chip
                                     size="small"
+                                    icon={
+                                      v.isMemberOnly ? (
+                                        <PersonIcon
+                                          sx={{ fontSize: "14px !important" }}
+                                        />
+                                      ) : (
+                                        <PublicIcon
+                                          sx={{ fontSize: "14px !important" }}
+                                        />
+                                      )
+                                    }
                                     label={
-                                      v.isMemberOnly ? "Chỉ member" : "Tất cả"
+                                      v.isMemberOnly ? "Thành viên" : "Tất cả"
                                     }
                                     color={
-                                      v.isMemberOnly ? "primary" : "default"
+                                      v.isMemberOnly ? "secondary" : "default"
                                     }
                                     variant="outlined"
+                                    sx={{ fontSize: "0.68rem", minWidth: 100 }}
                                   />
                                 </TableCell>
-                                <TableCell align="center">
+                                <TableCell>
                                   {v.isExpired ? (
                                     <Chip
                                       label="Hết hạn"
@@ -1638,17 +1789,24 @@ export const CampaignManagementDetailPage = () => {
                                       size="small"
                                     />
                                   ) : (
-                                    <Typography variant="body2">
+                                    <Typography
+                                      variant="body2"
+                                      color="text.secondary"
+                                      sx={{ whiteSpace: "nowrap" }}
+                                    >
                                       {formatDateTime(v.expiryDate)}
                                     </Typography>
                                   )}
                                 </TableCell>
-                                <TableCell align="center">
+                                <TableCell
+                                  align="center"
+                                  sx={{ whiteSpace: "nowrap" }}
+                                >
                                   <Tooltip
                                     title={
                                       !canEdit
                                         ? "Chỉ sửa khi Tạm dừng hoặc Sắp diễn ra"
-                                        : "Sửa"
+                                        : "Chỉnh sửa"
                                     }
                                   >
                                     <span>
@@ -1656,6 +1814,10 @@ export const CampaignManagementDetailPage = () => {
                                         size="small"
                                         onClick={() => openEditVoucher(v)}
                                         disabled={!canEdit}
+                                        sx={{
+                                          color: "primary.main",
+                                          "&:hover": { bgcolor: "primary.50" },
+                                        }}
                                       >
                                         <EditIcon fontSize="small" />
                                       </IconButton>
@@ -1678,6 +1840,9 @@ export const CampaignManagementDetailPage = () => {
                                           )
                                         }
                                         disabled={!canEdit}
+                                        sx={{
+                                          "&:hover": { bgcolor: "error.50" },
+                                        }}
                                       >
                                         <DeleteIcon fontSize="small" />
                                       </IconButton>
@@ -1767,220 +1932,333 @@ export const CampaignManagementDetailPage = () => {
         onClose={() => setVoucherDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{ sx: { borderRadius: 2 } }}
       >
-        <DialogTitle>
-          {editingVoucher ? "Chỉnh sửa voucher" : "Thêm voucher"}
+        <DialogTitle
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            pb: 1.5,
+          }}
+        >
+          <Typography variant="h6" fontWeight={700} component="span">
+            {editingVoucher ? "Chỉnh sửa voucher" : "Thêm voucher mới"}
+          </Typography>
         </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Mã voucher"
-              size="small"
-              fullWidth
-              required
-              value={voucherForm.code}
-              onChange={(e) =>
-                setVoucherForm({ ...voucherForm, code: e.target.value })
-              }
-            />
-            <FormControl size="small" fullWidth>
-              <InputLabel>Loại áp dụng</InputLabel>
-              <Select
-                value={voucherForm.applyType}
-                label="Loại áp dụng"
-                onChange={(e) =>
-                  setVoucherForm({
-                    ...voucherForm,
-                    applyType: e.target.value as VoucherType,
-                    targetItemType:
-                      e.target.value === "Order"
-                        ? null
-                        : (voucherForm.targetItemType ?? "Regular"),
-                  })
-                }
+        <DialogContent sx={{ pt: 2.5 }}>
+          <Stack spacing={2.5}>
+            {/* ── Section 1: Thông tin cơ bản ── */}
+            <Box>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                fontWeight={700}
+                letterSpacing={1}
               >
-                {Object.entries(VOUCHER_TYPE_LABEL).map(([key, label]) => (
-                  <MenuItem key={key} value={key}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            {voucherForm.applyType === "Product" && (
-              <FormControl size="small" fullWidth required>
-                <InputLabel>Nhóm sản phẩm áp dụng</InputLabel>
-                <Select
-                  value={voucherForm.targetItemType ?? ""}
-                  label="Nhóm sản phẩm áp dụng"
+                Thông tin cơ bản
+              </Typography>
+              <Divider sx={{ mb: 1.5 }} />
+              <Stack spacing={2}>
+                <TextField
+                  label="Mã voucher"
+                  size="small"
+                  fullWidth
+                  required
+                  value={voucherForm.code}
                   onChange={(e) =>
-                    setVoucherForm({
-                      ...voucherForm,
-                      targetItemType: e.target.value as PromotionType,
-                    })
-                  }
-                >
-                  {Object.entries(PROMOTION_TYPE_LABEL).map(([key, label]) => (
-                    <MenuItem key={key} value={key}>
-                      {label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            )}
-            <FormControl size="small" fullWidth>
-              <InputLabel>Loại giảm giá</InputLabel>
-              <Select
-                value={voucherForm.discountType}
-                label="Loại giảm giá"
-                onChange={(e) =>
-                  setVoucherForm({
-                    ...voucherForm,
-                    discountType: e.target.value as DiscountType,
-                    discountValue: 0,
-                  })
-                }
-              >
-                {Object.entries(DISCOUNT_TYPE_LABEL).map(([key, label]) => (
-                  <MenuItem key={key} value={key}>
-                    {label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              label="Giá trị giảm"
-              size="small"
-              fullWidth
-              required
-              value={
-                voucherForm.discountType === "Percentage"
-                  ? voucherForm.discountValue
-                  : formatNumberVN(voucherForm.discountValue)
-              }
-              onChange={(e) => {
-                const value = e.target.value;
-                if (voucherForm.discountType === "Percentage") {
-                  if (!/^\d*([.,]\d{0,2})?$/.test(value)) return;
-                  const num = value ? Number(value.replace(",", ".")) : 0;
-                  if (num > 100) return;
-                  setVoucherForm({
-                    ...voucherForm,
-                    discountValue: num,
-                  });
-                } else {
-                  const parsed = parseNumberVN(value);
-                  if (!/^\d*$/.test(parsed)) return;
-                  setVoucherForm({
-                    ...voucherForm,
-                    discountValue: parsed ? Number(parsed) : 0,
-                  });
-                }
-              }}
-              placeholder={
-                voucherForm.discountType === "Percentage"
-                  ? "VD: 10.5"
-                  : "VD: 50.000"
-              }
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {voucherForm.discountType === "Percentage" ? "%" : "VND"}
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <TextField
-              label="Giảm tối đa (VND)"
-              size="small"
-              fullWidth
-              value={
-                voucherForm.maxDiscountAmount
-                  ? formatNumberVN(voucherForm.maxDiscountAmount)
-                  : ""
-              }
-              onChange={(e) => {
-                const parsed = parseNumberVN(e.target.value);
-                if (parsed && !/^\d*$/.test(parsed)) return;
-                setVoucherForm({
-                  ...voucherForm,
-                  maxDiscountAmount: parsed ? Number(parsed) : null,
-                });
-              }}
-              placeholder="VD: 100.000"
-              helperText="Để trống = không giới hạn"
-              disabled={voucherForm.discountType === "FixedAmount"}
-            />
-            <TextField
-              label="Đơn tối thiểu (VND)"
-              size="small"
-              fullWidth
-              required
-              value={formatNumberVN(voucherForm.minOrderValue)}
-              onChange={(e) => {
-                const parsed = parseNumberVN(e.target.value);
-                if (!/^\d*$/.test(parsed)) return;
-                setVoucherForm({
-                  ...voucherForm,
-                  minOrderValue: parsed ? Number(parsed) : 0,
-                });
-              }}
-              placeholder="VD: 500.000"
-            />
-            <TextField
-              label="Số lượng mã"
-              type="number"
-              size="small"
-              fullWidth
-              value={voucherForm.totalQuantity ?? ""}
-              onChange={(e) =>
-                setVoucherForm({
-                  ...voucherForm,
-                  totalQuantity: e.target.value ? Number(e.target.value) : null,
-                })
-              }
-              placeholder="VD: 100"
-              helperText="Để trống = không giới hạn"
-            />
-            <TextField
-              label="Tối đa / người dùng"
-              type="number"
-              size="small"
-              fullWidth
-              required
-              value={voucherForm.maxUsagePerUser ?? ""}
-              onChange={(e) =>
-                setVoucherForm({
-                  ...voucherForm,
-                  maxUsagePerUser: e.target.value
-                    ? Number(e.target.value)
-                    : null,
-                })
-              }
-              placeholder="VD: 1"
-              helperText="Số lượt sử dụng tối đa mỗi khách"
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={voucherForm.isMemberOnly}
-                  onChange={(e) =>
-                    setVoucherForm({
-                      ...voucherForm,
-                      isMemberOnly: e.target.checked,
-                    })
+                    setVoucherForm({ ...voucherForm, code: e.target.value })
                   }
                 />
-              }
-              label="Chỉ dành cho thành viên (Member Only)"
-            />
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 1.5,
+                  }}
+                >
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>Loại giảm giá</InputLabel>
+                    <Select
+                      value={voucherForm.discountType}
+                      label="Loại giảm giá"
+                      onChange={(e) =>
+                        setVoucherForm({
+                          ...voucherForm,
+                          discountType: e.target.value as DiscountType,
+                          discountValue: 0,
+                        })
+                      }
+                    >
+                      {Object.entries(DISCOUNT_TYPE_LABEL).map(
+                        ([key, label]) => (
+                          <MenuItem key={key} value={key}>
+                            {label}
+                          </MenuItem>
+                        ),
+                      )}
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    label="Giá trị giảm"
+                    size="small"
+                    fullWidth
+                    required
+                    value={
+                      voucherForm.discountType === "Percentage"
+                        ? voucherForm.discountValue
+                        : formatNumberVN(voucherForm.discountValue)
+                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (voucherForm.discountType === "Percentage") {
+                        if (!/^\d*([.,]\d{0,2})?$/.test(value)) return;
+                        const num = value ? Number(value.replace(",", ".")) : 0;
+                        if (num > 100) return;
+                        setVoucherForm({ ...voucherForm, discountValue: num });
+                      } else {
+                        const parsed = parseNumberVN(value);
+                        if (!/^\d*$/.test(parsed)) return;
+                        setVoucherForm({
+                          ...voucherForm,
+                          discountValue: parsed ? Number(parsed) : 0,
+                        });
+                      }
+                    }}
+                    placeholder={
+                      voucherForm.discountType === "Percentage"
+                        ? "VD: 10.5"
+                        : "VD: 50.000"
+                    }
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          {voucherForm.discountType === "Percentage"
+                            ? "%"
+                            : "VND"}
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+              </Stack>
+            </Box>
+
+            {/* ── Section 2: Loại áp dụng ── */}
+            <Box>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                fontWeight={700}
+                letterSpacing={1}
+              >
+                Loại áp dụng
+              </Typography>
+              <Divider sx={{ mb: 1.5 }} />
+              <Stack spacing={2}>
+                <FormControl size="small" fullWidth>
+                  <InputLabel>Loại áp dụng</InputLabel>
+                  <Select
+                    value={voucherForm.applyType}
+                    label="Loại áp dụng"
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        applyType: e.target.value as VoucherType,
+                        targetItemType:
+                          e.target.value === "Order"
+                            ? null
+                            : (voucherForm.targetItemType ?? "Regular"),
+                      })
+                    }
+                  >
+                    {Object.entries(VOUCHER_TYPE_LABEL).map(([key, label]) => (
+                      <MenuItem key={key} value={key}>
+                        {label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                {voucherForm.applyType === "Product" && (
+                  <FormControl size="small" fullWidth required>
+                    <InputLabel>Nhóm sản phẩm áp dụng</InputLabel>
+                    <Select
+                      value={voucherForm.targetItemType ?? ""}
+                      label="Nhóm sản phẩm áp dụng"
+                      onChange={(e) =>
+                        setVoucherForm({
+                          ...voucherForm,
+                          targetItemType: e.target.value as PromotionType,
+                        })
+                      }
+                    >
+                      {Object.entries(PROMOTION_TYPE_LABEL).map(
+                        ([key, label]) => (
+                          <MenuItem key={key} value={key}>
+                            {label}
+                          </MenuItem>
+                        ),
+                      )}
+                    </Select>
+                  </FormControl>
+                )}
+              </Stack>
+            </Box>
+
+            {/* ── Section 3: Điều kiện áp dụng ── */}
+            <Box>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                fontWeight={700}
+                letterSpacing={1}
+              >
+                Điều kiện áp dụng
+              </Typography>
+              <Divider sx={{ mb: 1.5 }} />
+              <Stack spacing={2}>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 1.5,
+                  }}
+                >
+                  <TextField
+                    label="Đơn tối thiểu (VND)"
+                    size="small"
+                    fullWidth
+                    required
+                    value={formatNumberVN(voucherForm.minOrderValue)}
+                    onChange={(e) => {
+                      const parsed = parseNumberVN(e.target.value);
+                      if (!/^\d*$/.test(parsed)) return;
+                      setVoucherForm({
+                        ...voucherForm,
+                        minOrderValue: parsed ? Number(parsed) : 0,
+                      });
+                    }}
+                    placeholder="VD: 500.000"
+                  />
+                  <TextField
+                    label="Giảm tối đa (VND)"
+                    size="small"
+                    fullWidth
+                    value={
+                      voucherForm.maxDiscountAmount
+                        ? formatNumberVN(voucherForm.maxDiscountAmount)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const parsed = parseNumberVN(e.target.value);
+                      if (parsed && !/^\d*$/.test(parsed)) return;
+                      setVoucherForm({
+                        ...voucherForm,
+                        maxDiscountAmount: parsed ? Number(parsed) : null,
+                      });
+                    }}
+                    placeholder="VD: 100.000"
+                    helperText="Để trống = không giới hạn"
+                    disabled={voucherForm.discountType === "FixedAmount"}
+                  />
+                </Box>
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 1.5,
+                  }}
+                >
+                  <TextField
+                    label="Số lượng mã"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    value={voucherForm.totalQuantity ?? ""}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        totalQuantity: e.target.value
+                          ? Number(e.target.value)
+                          : null,
+                      })
+                    }
+                    placeholder="VD: 100"
+                    helperText="Để trống = không giới hạn"
+                  />
+                  <TextField
+                    label="Tối đa / người dùng"
+                    type="number"
+                    size="small"
+                    fullWidth
+                    required
+                    value={voucherForm.maxUsagePerUser ?? ""}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        maxUsagePerUser: e.target.value
+                          ? Number(e.target.value)
+                          : null,
+                      })
+                    }
+                    placeholder="VD: 1"
+                    helperText="Số lượt tối đa mỗi khách"
+                  />
+                </Box>
+              </Stack>
+            </Box>
+
+            {/* ── Section 4: Đối tượng ── */}
+            <Box>
+              <Typography
+                variant="overline"
+                color="text.secondary"
+                fontWeight={700}
+                letterSpacing={1}
+              >
+                Đối tượng
+              </Typography>
+              <Divider sx={{ mb: 1.5 }} />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={voucherForm.isMemberOnly}
+                    onChange={(e) =>
+                      setVoucherForm({
+                        ...voucherForm,
+                        isMemberOnly: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Chỉ dành cho thành viên (Member Only)"
+              />
+            </Box>
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setVoucherDialogOpen(false)}>Hủy</Button>
+        <DialogActions
+          sx={{
+            borderTop: "1px solid",
+            borderColor: "divider",
+            px: 3,
+            py: 1.5,
+            gap: 1,
+          }}
+        >
+          <Button
+            onClick={() => setVoucherDialogOpen(false)}
+            variant="outlined"
+            color="inherit"
+          >
+            Hủy
+          </Button>
           <Button
             variant="contained"
             onClick={() => void handleSaveVoucher()}
             disabled={isSavingVoucher}
+            sx={{ minWidth: 90 }}
           >
             {isSavingVoucher ? <CircularProgress size={20} /> : "Lưu"}
           </Button>
