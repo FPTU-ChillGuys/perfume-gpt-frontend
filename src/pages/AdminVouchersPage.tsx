@@ -687,7 +687,7 @@ export const AdminVouchersPage = () => {
             gap: 1,
           }}
         >
-          <Typography variant="h6" fontWeight={600}>
+          <Typography variant="h6" fontWeight={600} component="span">
             {editingVoucher ? "Chỉnh sửa voucher" : "Tạo voucher mới"}
           </Typography>
         </DialogTitle>
