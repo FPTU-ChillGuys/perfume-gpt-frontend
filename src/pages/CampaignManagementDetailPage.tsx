@@ -40,7 +40,8 @@ import Sync from "@mui/icons-material/Sync";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
-import CancelIcon from "@mui/icons-material/Cancel";
+import PauseIcon from "@mui/icons-material/Pause";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import SettingsIcon from "@mui/icons-material/Settings";
 import SaveIcon from "@mui/icons-material/Save";
 import { AdminLayout } from "@/layouts/AdminLayout";
@@ -288,8 +289,8 @@ export const CampaignManagementDetailPage = () => {
   const [confirmDeleteVoucherId, setConfirmDeleteVoucherId] = useState<
     string | null
   >(null);
-  const [confirmCancelCampaign, setConfirmCancelCampaign] = useState(false);
-  const [isCancellingCampaign, setIsCancellingCampaign] = useState(false);
+  const [confirmTogglePause, setConfirmTogglePause] = useState(false);
+  const [isTogglingPause, setIsTogglingPause] = useState(false);
 
   // ── Load Data ──
   const loadDetail = useCallback(async () => {
@@ -697,21 +698,27 @@ export const CampaignManagementDetailPage = () => {
     }
   };
 
-  const handleCancelCampaign = async () => {
+  const handleTogglePause = async () => {
     if (!campaignId) return;
-    setIsCancellingCampaign(true);
+    const newStatus: CampaignStatus = status === "Active" ? "Paused" : "Active";
+    setIsTogglingPause(true);
     try {
-      await campaignService.updateCampaignStatus(campaignId, "Cancelled");
-      showToast("Hủy chiến dịch thành công", "success");
-      setConfirmCancelCampaign(false);
+      await campaignService.updateCampaignStatus(campaignId, newStatus);
+      showToast(
+        newStatus === "Paused"
+          ? "Đã tạm dừng chiến dịch"
+          : "Đã tiếp tục chiến dịch",
+        "success",
+      );
+      setConfirmTogglePause(false);
       void loadDetail();
     } catch (err) {
       showToast(
-        err instanceof Error ? err.message : "Hủy chiến dịch thất bại",
+        err instanceof Error ? err.message : "Cập nhật trạng thái thất bại",
         "error",
       );
     } finally {
-      setIsCancellingCampaign(false);
+      setIsTogglingPause(false);
     }
   };
 
@@ -796,28 +803,24 @@ export const CampaignManagementDetailPage = () => {
                   color="primary"
                   variant="outlined"
                 />
-                <Tooltip
-                  title={
-                    status === "Cancelled" || status === "Completed"
-                      ? "Không thể hủy chiến dịch này"
-                      : ""
-                  }
-                >
-                  <span>
-                    <Button
+                {(status === "Active" || status === "Paused") && (
+                  <Tooltip
+                    title={status === "Active" ? "Tạm dừng chiến dịch" : "Tiếp tục chiến dịch"}
+                  >
+                    <IconButton
                       size="small"
-                      variant="outlined"
-                      color="error"
-                      startIcon={<CancelIcon />}
-                      onClick={() => setConfirmCancelCampaign(true)}
-                      disabled={
-                        status === "Cancelled" || status === "Completed"
-                      }
+                      color={status === "Active" ? "warning" : "success"}
+                      onClick={() => setConfirmTogglePause(true)}
+                      disabled={isTogglingPause}
                     >
-                      Hủy chiến dịch
-                    </Button>
-                  </span>
-                </Tooltip>
+                      {status === "Active" ? (
+                        <PauseIcon fontSize="small" />
+                      ) : (
+                        <PlayArrowIcon fontSize="small" />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                )}
               </Stack>
             </Box>
 
@@ -1981,35 +1984,40 @@ export const CampaignManagementDetailPage = () => {
         </DialogActions>
       </Dialog>
 
-      {/* ── Confirm Cancel Campaign ── */}
+      {/* ── Confirm Pause/Resume Campaign ── */}
       <Dialog
-        open={confirmCancelCampaign}
-        onClose={() => !isCancellingCampaign && setConfirmCancelCampaign(false)}
+        open={confirmTogglePause}
+        onClose={() => !isTogglingPause && setConfirmTogglePause(false)}
       >
-        <DialogTitle>Xác nhận hủy chiến dịch</DialogTitle>
+        <DialogTitle>
+          {status === "Active" ? "Xác nhận tạm dừng" : "Xác nhận tiếp tục"}
+        </DialogTitle>
         <DialogContent>
           <Typography>
-            Bạn có chắc chắn muốn hủy chiến dịch này? Hành động này không thể
-            hoàn tác.
+            {status === "Active"
+              ? "Bạn có chắc muốn tạm dừng chiến dịch này?"
+              : "Bạn có chắc muốn tiếp tục chạy chiến dịch này?"}
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button
-            onClick={() => setConfirmCancelCampaign(false)}
-            disabled={isCancellingCampaign}
+            onClick={() => setConfirmTogglePause(false)}
+            disabled={isTogglingPause}
           >
             Hủy
           </Button>
           <Button
             variant="contained"
-            color="error"
-            onClick={() => void handleCancelCampaign()}
-            disabled={isCancellingCampaign}
+            color={status === "Active" ? "warning" : "success"}
+            onClick={() => void handleTogglePause()}
+            disabled={isTogglingPause}
           >
-            {isCancellingCampaign ? (
+            {isTogglingPause ? (
               <CircularProgress size={20} />
+            ) : status === "Active" ? (
+              "Tạm dừng"
             ) : (
-              "Xác nhận hủy"
+              "Tiếp tục"
             )}
           </Button>
         </DialogActions>
