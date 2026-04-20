@@ -199,7 +199,7 @@ export const CreateImportStockTab: React.FC = () => {
           if (variantInfo) {
             return {
               ...item,
-              variantId: variantInfo.id!, // Map to Catalog ID for backend compatibility
+              variantId: variantInfo.productVariantId!, // Use productVariantId for backend
               productName: variantInfo.variantName,
               imageUrl: variantInfo.primaryImageUrl || undefined,
               price: variantInfo.negotiatedPrice || item.price,
@@ -297,7 +297,7 @@ export const CreateImportStockTab: React.FC = () => {
           if (variantInfo) {
             return {
               ...rawItem,
-              variantId: variantInfo.id!, // Use catalog id for UI consistency
+              variantId: variantInfo.productVariantId!, // Use productVariantId for backend
               productName: variantInfo.variantName,
               imageUrl: variantInfo.primaryImageUrl || undefined,
               price: variantInfo.negotiatedPrice || rawItem.price,
@@ -660,16 +660,16 @@ export const CreateImportStockTab: React.FC = () => {
                             const displayImageUrl =
                               item.imageUrl ||
                               variants.find(
-                                (variant) => variant.id === item.variantId,
+                                (variant) => variant.productVariantId === item.variantId,
                               )?.primaryImageUrl;
 
                             const displayName =
                               item.productName ||
                               variants.find(
-                                (variant) => variant.id === item.variantId,
+                                (variant) => variant.productVariantId === item.variantId,
                               )?.variantName ||
                               variants.find(
-                                (variant) => variant.id === item.variantId,
+                                (variant) => variant.productVariantId === item.variantId,
                               )?.variantSku ||
                               "Variant image";
 
@@ -710,7 +710,7 @@ export const CreateImportStockTab: React.FC = () => {
                               }
 
                               const selectedVariant = variants.find(
-                                (v) => v.id === newVariantId,
+                                (v) => v.productVariantId === newVariantId,
                               );
 
                               // Update basic variantId
@@ -721,7 +721,7 @@ export const CreateImportStockTab: React.FC = () => {
                                 const newItems = [...items];
                                 newItems[idx] = {
                                   ...newItems[idx]!,
-                                  variantId: newVariantId,
+                                  variantId: selectedVariant.productVariantId!,
                                   productName: selectedVariant.variantName,
                                   imageUrl:
                                     selectedVariant.primaryImageUrl ||
@@ -744,7 +744,7 @@ export const CreateImportStockTab: React.FC = () => {
                                     : "Chọn sản phẩm..."}
                             </option>
                             {variants.map((variant) => (
-                              <option key={variant.id} value={variant.id}>
+                              <option key={variant.id} value={variant.productVariantId}>
                                 {variant.variantName ||
                                   variant.variantSku ||
                                   "Variant"}
