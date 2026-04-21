@@ -81,14 +81,8 @@ const toLocalDateTime = (
   withFraction = false,
 ) => {
   if (!dateValue || !timeValue) return "";
-  const localDate = new Date(`${dateValue}T${timeValue}:00`);
-  localDate.setHours(localDate.getHours() - 7);
-  const year = localDate.getFullYear();
-  const month = String(localDate.getMonth() + 1).padStart(2, "0");
-  const day = String(localDate.getDate()).padStart(2, "0");
-  const hours = String(localDate.getHours()).padStart(2, "0");
-  const minutes = String(localDate.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:00${withFraction ? ".00" : ""}`;
+  // Pass local datetime directly; server (UTC+7) converts to UTC on its own.
+  return `${dateValue}T${timeValue}:00${withFraction ? ".00" : ""}`;
 };
 
 const formatNumberVN = (value: string): string => {

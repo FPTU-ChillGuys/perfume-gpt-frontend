@@ -170,14 +170,9 @@ const toLocalDatetimeString = (isoDate?: string | null) => {
 
 const fromLocalDatetimeString = (local: string) => {
   if (!local) return undefined;
-  const d = new Date(local);
-  d.setHours(d.getHours() - 7);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const hours = String(d.getHours()).padStart(2, "0");
-  const minutes = String(d.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}:00`;
+  // Pass the local datetime-local value directly as ISO string.
+  // The server (UTC+7) interprets the received string as local time and converts to UTC itself.
+  return local.length === 16 ? `${local}:00` : local;
 };
 
 // ─── Types ───────────────────────────────────────────────────────────
