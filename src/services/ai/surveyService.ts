@@ -247,10 +247,10 @@ class SurveyService {
         }
     }
 
-    // 13. POST /surveys/user/v4?userId={userId} — submit survey V4 (query-based)
+    // 13. POST /surveys/user/v5?userId={userId} — submit survey V4 (query-based)
     async submitSurveyV4(userId: string, answers: SurveyQuesAnsDetailRequest[]): Promise<SubmitSurveyResponse> {
         try {
-            const response = await aiApiInstance.POST("/surveys/user/v4", {
+            const response = await aiApiInstance.POST("/surveys/user/v5", {
                 params: {
                     query: { userId }
                 },
