@@ -74,9 +74,7 @@ class CampaignService {
       messageParts.push(base.message);
     }
 
-    if (base?.errorType !== undefined && base?.errorType !== null) {
-      messageParts.push(`Type: ${String(base.errorType)}`);
-    }
+
 
     if (base?.errors && base.errors.length > 0) {
       messageParts.push(base.errors.join(" | "));
@@ -148,8 +146,6 @@ class CampaignService {
         const message = this.formatApiErrorMessage(
           {
             message: apiError?.message,
-            errors: apiError?.errors,
-            errorType: apiError?.errorType,
           },
           statusCode,
           "Failed to fetch campaign detail",
@@ -161,8 +157,6 @@ class CampaignService {
         const message = this.formatApiErrorMessage(
           {
             message: response.data?.message,
-            errors: response.data?.errors,
-            errorType: response.data?.errorType,
           },
           response.response?.status,
           "Failed to fetch campaign detail",
@@ -198,8 +192,6 @@ class CampaignService {
         const message = this.formatApiErrorMessage(
           {
             message: apiError?.message,
-            errors: apiError?.errors,
-            errorType: apiError?.errorType,
           },
           statusCode,
           "Failed to fetch campaign items",
@@ -211,8 +203,6 @@ class CampaignService {
         const message = this.formatApiErrorMessage(
           {
             message: response.data?.message,
-            errors: response.data?.errors,
-            errorType: response.data?.errorType,
           },
           response.response?.status,
           "Failed to fetch campaign items",
@@ -244,8 +234,6 @@ class CampaignService {
           this.formatApiErrorMessage(
             {
               message: apiError?.message,
-              errors: apiError?.errors,
-              errorType: apiError?.errorType,
             },
             response.response?.status,
             "Failed to update campaign",
@@ -275,8 +263,6 @@ class CampaignService {
           this.formatApiErrorMessage(
             {
               message: apiError?.message,
-              errors: apiError?.errors,
-              errorType: apiError?.errorType,
             },
             response.response?.status,
             "Failed to delete campaign",
@@ -313,8 +299,6 @@ class CampaignService {
           this.formatApiErrorMessage(
             {
               message: apiError?.message,
-              errors: apiError?.errors,
-              errorType: apiError?.errorType,
             },
             response.response?.status,
             "Failed to update campaign status",
@@ -347,8 +331,6 @@ class CampaignService {
         const message = this.formatApiErrorMessage(
           {
             message: apiError?.message,
-            errors: apiError?.errors,
-            errorType: apiError?.errorType,
           },
           statusCode,
           "Failed to create campaign",
@@ -367,8 +349,6 @@ class CampaignService {
         const message = this.formatApiErrorMessage(
           {
             message: response.data?.message,
-            errors: response.data?.errors,
-            errorType: response.data?.errorType,
           },
           response.response?.status,
           "Failed to create campaign",
@@ -596,8 +576,6 @@ class CampaignService {
           this.formatApiErrorMessage(
             {
               message: apiError?.message,
-              errors: apiError?.errors,
-              errorType: apiError?.errorType,
             },
             response.response?.status,
             "Failed to update campaign voucher",
@@ -635,8 +613,6 @@ class CampaignService {
           this.formatApiErrorMessage(
             {
               message: apiError?.message,
-              errors: apiError?.errors,
-              errorType: apiError?.errorType,
             },
             response.response?.status,
             "Failed to delete campaign voucher",

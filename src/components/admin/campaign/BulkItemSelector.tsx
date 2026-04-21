@@ -125,6 +125,12 @@ const formatDate = (value?: string | null) => {
   return date.toLocaleDateString("vi-VN");
 };
 
+const isBatchExpired = (batch: BatchDetailResponse): boolean => {
+  if (batch.isExpired) return true;
+  if (batch.expiryDate) return new Date(batch.expiryDate) < new Date();
+  return false;
+};
+
 const getStockStatusDisplay = (stock: StockResponse) => {
   if (stock.status === "OutOfStock")
     return { label: "Hết hàng", color: "error" as const };
@@ -421,9 +427,19 @@ export const BulkItemSelector = ({
   const availableKeys = useMemo(
     () =>
       selectableRows
-        .filter((r) => !alreadyAddedKeys.has(r.key))
+        .filter((r) => {
+          if (alreadyAddedKeys.has(r.key)) return false;
+          // exclude expired batch rows
+          if (r.batchId) {
+            const batch = batchByVariantId[r.productVariantId]?.items.find(
+              (b) => b.id === r.batchId,
+            );
+            if (batch && isBatchExpired(batch)) return false;
+          }
+          return true;
+        })
         .map((r) => r.key),
-    [selectableRows, alreadyAddedKeys],
+    [selectableRows, alreadyAddedKeys, batchByVariantId],
   );
 
   // Only variant-level (non-batch) keys for the "select all" header checkbox
@@ -483,6 +499,14 @@ export const BulkItemSelector = ({
       if (alreadyAddedKeys.has(key)) continue;
       const row = allRowsCache.current.get(key);
       if (!row) continue;
+
+      // Skip expired batch rows
+      if (row.batchId) {
+        const batch = batchByVariantId[row.productVariantId]?.items.find(
+          (b) => b.id === row.batchId,
+        );
+        if (batch && isBatchExpired(batch)) continue;
+      }
 
       const isBatch = Boolean(row.batchId);
       const section = isBatch ? config.batch : config.product;
@@ -834,11 +858,12 @@ export const BulkItemSelector = ({
                                           batch.id ||
                                           `${variantId}-${batch.batchCode}`
                                         }
+                                        sx={isBatchExpired(batch) ? { opacity: 0.5 } : undefined}
                                       >
                                         <TableCell padding="checkbox">
                                           <Tooltip
                                             title={
-                                              batch.isExpired
+                                              isBatchExpired(batch)
                                                 ? "Lô đã hết hạn, không thể chọn"
                                                 : ""
                                             }
@@ -855,7 +880,7 @@ export const BulkItemSelector = ({
                                                 disabled={
                                                   isBatchAdded ||
                                                   isBatchBlockedByProduct ||
-                                                  Boolean(batch.isExpired)
+                                                  isBatchExpired(batch)
                                                 }
                                               />
                                             </span>
@@ -888,7 +913,7 @@ export const BulkItemSelector = ({
                                           {batch.remainingQuantity ?? 0}
                                         </TableCell>
                                         <TableCell align="center">
-                                          {batch.isExpired ? (
+                                          {isBatchExpired(batch) ? (
                                             <Chip
                                               size="small"
                                               color="error"
