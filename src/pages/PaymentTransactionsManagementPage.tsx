@@ -86,7 +86,18 @@ const formatCurrency = (value?: number) => {
 };
 
 const formatDateTime = (value?: string | null) => {
-  return formatDateTimeVN(value);
+  if (!value) return "-";
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "-";
+  const adjusted = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(adjusted);
 };
 
 export const PaymentTransactionsManagementPage = () => {
@@ -374,7 +385,6 @@ export const PaymentTransactionsManagementPage = () => {
                 <TableCell>Phương thức</TableCell>
                 <TableCell>Trạng thái</TableCell>
                 <TableCell align="right">Số tiền</TableCell>
-                <TableCell>Mã cổng thanh toán</TableCell>
                 <TableCell sortDirection={sortOrder}>
                   <TableSortLabel
                     active
@@ -395,13 +405,13 @@ export const PaymentTransactionsManagementPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : overview.transactions.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
                     <Typography variant="body2" color="text.secondary">
                       Không có giao dịch nào phù hợp bộ lọc
                     </Typography>
@@ -458,7 +468,6 @@ export const PaymentTransactionsManagementPage = () => {
                         {formatCurrency(item.amount)}
                       </Typography>
                     </TableCell>
-                    <TableCell>{item.gatewayTransactionNo ?? "-"}</TableCell>
                     <TableCell>{formatDateTime(item.createdAt)}</TableCell>
                     <TableCell align="center">
                       {item.retryAttempt ?? 0}
