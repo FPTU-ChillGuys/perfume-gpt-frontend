@@ -385,6 +385,7 @@ export const PaymentTransactionsManagementPage = () => {
                 <TableCell>Phương thức</TableCell>
                 <TableCell>Trạng thái</TableCell>
                 <TableCell align="right">Số tiền</TableCell>
+                <TableCell>Mã cổng thanh toán</TableCell>
                 <TableCell sortDirection={sortOrder}>
                   <TableSortLabel
                     active
@@ -405,13 +406,13 @@ export const PaymentTransactionsManagementPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                     <CircularProgress />
                   </TableCell>
                 </TableRow>
               ) : overview.transactions.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                  <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                     <Typography variant="body2" color="text.secondary">
                       Không có giao dịch nào phù hợp bộ lọc
                     </Typography>
@@ -468,6 +469,7 @@ export const PaymentTransactionsManagementPage = () => {
                         {formatCurrency(item.amount)}
                       </Typography>
                     </TableCell>
+                    <TableCell>{item.gatewayTransactionNo ?? "-"}</TableCell>
                     <TableCell>{formatDateTime(item.createdAt)}</TableCell>
                     <TableCell align="center">
                       {item.retryAttempt ?? 0}

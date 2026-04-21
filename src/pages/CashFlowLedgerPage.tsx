@@ -102,7 +102,9 @@ const CATEGORY_CONFIG: Record<
 
 const formatDateTime = (iso: string) => {
   const d = new Date(iso);
-  return d.toLocaleString("vi-VN", {
+  if (isNaN(d.getTime())) return "-";
+  const adjusted = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  return adjusted.toLocaleString("vi-VN", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -565,14 +567,13 @@ export const CashFlowLedgerPage = () => {
                   <TableCell align="right">Số tiền</TableCell>
                   <TableCell>Mô tả</TableCell>
                   <TableCell>Mã tham chiếu</TableCell>
-                  <TableCell>Ref ID</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading && entries.length === 0
                   ? Array.from({ length: 8 }).map((_, i) => (
                       <TableRow key={`skel-${i}`}>
-                        {Array.from({ length: 7 }).map((__, j) => (
+                        {Array.from({ length: 6 }).map((__, j) => (
                           <TableCell key={j}>
                             <Skeleton variant="text" />
                           </TableCell>
@@ -687,30 +688,6 @@ export const CashFlowLedgerPage = () => {
                               </Typography>
                             )}
                           </TableCell>
-
-                          {/* Reference ID */}
-                          <TableCell>
-                            {entry.referenceId ? (
-                              <Typography
-                                variant="body2"
-                                fontSize="0.82rem"
-                                sx={{
-                                  fontFamily: "monospace",
-                                  color: "text.secondary",
-                                }}
-                              >
-                                {entry.referenceId}
-                              </Typography>
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                color="text.disabled"
-                                fontSize="0.82rem"
-                              >
-                                —
-                              </Typography>
-                            )}
-                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -718,7 +695,7 @@ export const CashFlowLedgerPage = () => {
                 {/* Empty state */}
                 {!loading && entries.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} sx={{ py: 8, textAlign: "center" }}>
+                    <TableCell colSpan={6} sx={{ py: 8, textAlign: "center" }}>
                       <WalletIcon
                         sx={{ fontSize: 48, color: "grey.300", mb: 1 }}
                       />
