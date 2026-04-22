@@ -173,45 +173,45 @@ class CartService {
   }
 
   async addItem(variantId: string, quantity: number) {
-    try {
-      const response = await apiInstance.POST(this.ADD_TO_CART_ENDPOINT, {
-        body: { variantId, quantity },
-      });
+    const response = await apiInstance.POST(this.ADD_TO_CART_ENDPOINT, {
+      body: { variantId, quantity },
+    });
 
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to add item to cart");
-      }
-    } catch (error: any) {
-      console.error("Error adding to cart:", error);
+    // openapi-fetch returns 4xx/5xx as response.error (not a thrown exception)
+    if (response.error) {
+      const serverMessage =
+        (response.error as { message?: string })?.message ||
+        "Không thể thêm sản phẩm vào giỏ hàng";
+      throw new Error(serverMessage);
+    }
+
+    if (!response.data?.success) {
       throw new Error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to add item to cart",
+        response.data?.message || "Không thể thêm sản phẩm vào giỏ hàng",
       );
     }
   }
 
   async updateCartItem(cartItemId: string, quantity: number) {
-    try {
-      const response = await apiInstance.PUT(`/api/cart/items/{id}`, {
-        params: {
-          path: {
-            id: cartItemId,
-          },
+    const response = await apiInstance.PUT(`/api/cart/items/{id}`, {
+      params: {
+        path: {
+          id: cartItemId,
         },
-        body: { quantity },
-      });
+      },
+      body: { quantity },
+    });
 
-      if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to update cart item");
-      }
-    } catch (error: any) {
-      console.error("Error updating cart item:", error);
-      throw new Error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to update cart item",
-      );
+    // openapi-fetch returns 4xx/5xx as response.error (not a thrown exception)
+    if (response.error) {
+      const serverMessage =
+        (response.error as { message?: string })?.message ||
+        "Không thể cập nhật số lượng";
+      throw new Error(serverMessage);
+    }
+
+    if (!response.data?.success) {
+      throw new Error(response.data?.message || "Không thể cập nhật số lượng");
     }
   }
 

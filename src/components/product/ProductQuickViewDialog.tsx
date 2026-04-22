@@ -10,10 +10,13 @@ import {
   Divider,
   IconButton,
   Stack,
+  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import CloseIcon from "@mui/icons-material/Close";
 import InfoIcon from "@mui/icons-material/Info";
 import { useNavigate } from "react-router-dom";
@@ -140,6 +143,8 @@ const ProductQuickViewDialog = ({
     null,
   );
   const [isAdding, setIsAdding] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [cartQtyForVariant, setCartQtyForVariant] = useState(0);
   const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
 
   type FastLookVariant = NonNullable<ProductFastLook["variants"]>[number];
@@ -167,7 +172,30 @@ const ProductQuickViewDialog = ({
     } else {
       setSelectedVariantId(null);
     }
+    // Reset quantity when product changes
+    setQuantity(1);
+    setCartQtyForVariant(0);
   }, [fastLook]);
+
+  // Fetch cart quantity for selected variant whenever variant changes
+  useEffect(() => {
+    if (!selectedVariantId || !isAuthenticated) {
+      setCartQtyForVariant(0);
+      setQuantity(1);
+      return;
+    }
+    let cancelled = false;
+    cartService.getItems().then((items) => {
+      if (cancelled) return;
+      const existing = items.find((item) => item.variantId === selectedVariantId);
+      const qty = existing?.quantity ?? 0;
+      setCartQtyForVariant(qty);
+      setQuantity(1); // reset to 1 each time variant switches
+    }).catch(() => {
+      if (!cancelled) setCartQtyForVariant(0);
+    });
+    return () => { cancelled = true; };
+  }, [selectedVariantId, isAuthenticated]);
 
   const selectedVariant = useMemo(
     () =>
@@ -273,6 +301,26 @@ const ProductQuickViewDialog = ({
     }
   };
 
+  const stockQuantity =
+    typeof selectedVariant?.stockQuantity === "number"
+      ? selectedVariant.stockQuantity
+      : null;
+
+  // Max the user can add = stock remaining after what's already in cart
+  const maxAddable =
+    stockQuantity !== null ? Math.max(0, stockQuantity - cartQtyForVariant) : 99;
+
+  const handleQuantityChange = (delta: number) => {
+    setQuantity((prev) => Math.min(maxAddable, Math.max(1, prev + delta)));
+  };
+
+  const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = parseInt(e.target.value, 10);
+    if (!Number.isNaN(val)) {
+      setQuantity(Math.min(maxAddable, Math.max(1, val)));
+    }
+  };
+
   const handleAddToCart = async (navigateAfterAdd = false) => {
     if (!isAuthenticated) {
       showToast("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng", "warning");
@@ -298,9 +346,24 @@ const ProductQuickViewDialog = ({
       return;
     }
 
+    if (quantity < 1) {
+      showToast("Số lượng phải ít nhất là 1", "warning");
+      return;
+    }
+
+    if (maxAddable <= 0) {
+      showToast(
+        cartQtyForVariant > 0
+          ? `Bạn đã có ${cartQtyForVariant} sản phẩm này trong giỏ và không thể thêm nữa.`
+          : "Sản phẩm đã hết hàng",
+        "warning",
+      );
+      return;
+    }
+
     setIsAdding(true);
     try {
-      await cartService.addItem(selectedVariant.id, 1);
+      await cartService.addItem(selectedVariant.id, quantity);
       await refreshCart();
       showToast("Đã thêm vào giỏ hàng", "success");
 
@@ -523,6 +586,61 @@ const ProductQuickViewDialog = ({
                 })(),
               )}
             </ToggleButtonGroup>
+
+            {/* Quantity selector */}
+            {!isSelectedVariantOutOfStock && !isBackOfficeRole && (
+              <Box mt={2}>
+                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                  Số lượng
+                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={quantity <= 1}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      p: 0.5,
+                    }}
+                  >
+                    <RemoveIcon fontSize="small" />
+                  </IconButton>
+                  <TextField
+                    size="small"
+                    value={quantity}
+                    onChange={handleQuantityInput}
+                    inputProps={{
+                      min: 1,
+                      max: maxAddable,
+                      style: { textAlign: "center", width: 48 },
+                    }}
+                    sx={{ width: 72 }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={() => handleQuantityChange(1)}
+                    disabled={quantity >= maxAddable}
+                    sx={{
+                      border: "1px solid",
+                      borderColor: "divider",
+                      borderRadius: 1,
+                      p: 0.5,
+                    }}
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                  {stockQuantity !== null && (
+                    <Typography variant="caption" color="text.secondary">
+                      {cartQtyForVariant > 0
+                        ? `Còn thể thêm tối đa ${maxAddable} (đã có ${cartQtyForVariant} trong giỏ)`
+                        : `Khả dụng: ${stockQuantity}`}
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+            )}
 
             <Stack direction="column" spacing={1} mt={3}>
               <Stack

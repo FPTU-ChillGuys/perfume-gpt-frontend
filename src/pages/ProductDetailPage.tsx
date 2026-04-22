@@ -17,10 +17,13 @@ import {
   Stack,
   Tab,
   Tabs,
+  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import ConfirmationNumberOutlinedIcon from "@mui/icons-material/ConfirmationNumberOutlined";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
@@ -139,6 +142,8 @@ const ProductDetailPage = () => {
     null,
   );
   const [isAdding, setIsAdding] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+  const [cartQtyForVariant, setCartQtyForVariant] = useState(0);
   const [variantMediaList, setVariantMediaList] = useState<MediaResponse[]>([]);
   const [activeSlide, setActiveSlide] = useState(0);
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
@@ -784,6 +789,26 @@ const ProductDetailPage = () => {
     setApplicableVouchers([]);
   }, [selectedVariantId]);
 
+  // Fetch existing cart quantity for selected variant (to cap addable quantity)
+  useEffect(() => {
+    if (!selectedVariantId || !isAuthenticated) {
+      setCartQtyForVariant(0);
+      setQuantity(1);
+      return;
+    }
+    let cancelled = false;
+    cartService.getItems().then((items) => {
+      if (cancelled) return;
+      const existing = items.find((item) => item.variantId === selectedVariantId);
+      const qty = existing?.quantity ?? 0;
+      setCartQtyForVariant(qty);
+      setQuantity(1); // reset to 1 whenever variant changes
+    }).catch(() => {
+      if (!cancelled) setCartQtyForVariant(0);
+    });
+    return () => { cancelled = true; };
+  }, [selectedVariantId, isAuthenticated]);
+
   const resolveReviewTargetForVariant = async (
     variantId: string,
   ): Promise<ReviewDialogTarget | null> => {
@@ -952,11 +977,46 @@ const ProductDetailPage = () => {
       return;
     }
 
+    const selectedStock =
+      typeof selectedVariant.stockQuantity === "number"
+        ? selectedVariant.stockQuantity
+        : null;
+    const maxAddable =
+      selectedStock !== null
+        ? Math.max(0, selectedStock - cartQtyForVariant)
+        : 99;
+
+    if (quantity < 1) {
+      showToast("Số lượng phải ít nhất là 1", "warning");
+      return;
+    }
+
+    if (maxAddable <= 0) {
+      showToast(
+        cartQtyForVariant > 0
+          ? `Bạn đã có ${cartQtyForVariant} sản phẩm này trong giỏ và không thể thêm nữa.`
+          : "Size này đã hết hàng",
+        "warning",
+      );
+      return;
+    }
+
+    if (quantity > maxAddable) {
+      showToast(
+        `Bạn chỉ có thể thêm tối đa ${maxAddable} sản phẩm này (tồn kho: ${selectedStock}, đã có ${cartQtyForVariant} trong giỏ)`,
+        "warning",
+      );
+      return;
+    }
+
     setIsAdding(true);
     try {
-      await cartService.addItem(selectedVariant.id, 1);
+      await cartService.addItem(selectedVariant.id, quantity);
       await refreshCart();
       showToast("Đã thêm sản phẩm vào giỏ hàng", "success");
+      // Update local cart qty tracking
+      setCartQtyForVariant((prev) => prev + quantity);
+      setQuantity(1);
 
       if (redirectToCheckout) {
         // Get updated cart to find the newly added item
@@ -1049,7 +1109,7 @@ const ProductDetailPage = () => {
         >
           <Tab value="details" label="Chi tiết sản phẩm" />
           <Tab value="usage" label="Sử dụng và bảo quản" />
-          <Tab value="shipping" label="Vận chuyển và đổi trả" />
+          <Tab value="shipping" label="Chính sách mua hàng" />
         </Tabs>
 
         <Box sx={{ pt: 3 }}>
@@ -2075,6 +2135,80 @@ const ProductDetailPage = () => {
                   Sản phẩm đã hết hàng
                 </Alert>
               )}
+
+              {/* Quantity selector */}
+              {!isSelectedVariantOutOfStock && !isBackOfficeRole && (() => {
+                const selStock =
+                  typeof selectedVariant?.stockQuantity === "number"
+                    ? selectedVariant.stockQuantity
+                    : null;
+                const maxAdd =
+                  selStock !== null
+                    ? Math.max(0, selStock - cartQtyForVariant)
+                    : 99;
+                return (
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600} mb={1}>
+                      Số lượng
+                    </Typography>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          setQuantity((p) => Math.max(1, p - 1))
+                        }
+                        disabled={quantity <= 1}
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                          p: 0.5,
+                        }}
+                      >
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                      <TextField
+                        size="small"
+                        value={quantity}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!Number.isNaN(val)) {
+                            setQuantity(Math.min(maxAdd, Math.max(1, val)));
+                          }
+                        }}
+                        inputProps={{
+                          min: 1,
+                          max: maxAdd,
+                          style: { textAlign: "center", width: 48 },
+                        }}
+                        sx={{ width: 72 }}
+                      />
+                      <IconButton
+                        size="small"
+                        onClick={() =>
+                          setQuantity((p) => Math.min(maxAdd, p + 1))
+                        }
+                        disabled={quantity >= maxAdd}
+                        sx={{
+                          border: "1px solid",
+                          borderColor: "divider",
+                          borderRadius: 1,
+                          p: 0.5,
+                        }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                      {selStock !== null && (
+                        <Typography variant="caption" color="text.secondary">
+                          {cartQtyForVariant > 0
+                            ? `Còn thể thêm tối đa ${maxAdd} (đã có ${cartQtyForVariant} trong giỏ)`
+                            : `Khả dụng: ${selStock}`}
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Box>
+                );
+              })()}
 
               {/* Action buttons */}
               {!isSelectedVariantOutOfStock && !isBackOfficeRole && (

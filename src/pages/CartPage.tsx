@@ -80,6 +80,8 @@ export const CartPage = () => {
   const [voucherError, setVoucherError] = useState<string | null>(null);
   const [voucherPickerOpen, setVoucherPickerOpen] = useState(false);
   const [loadingMyVouchers, setLoadingMyVouchers] = useState(false);
+  // Local draft quantities for the inline text inputs (keyed by cartItemId)
+  const [inputQuantities, setInputQuantities] = useState<Record<string, string>>({});
 
   const roundCheckboxSx = {
     p: 0.5,
@@ -152,6 +154,18 @@ export const CartPage = () => {
         const fetchedItems = await cartService.getItems();
 
         setItems(fetchedItems);
+
+        // Sync local draft quantities with the freshly-fetched data
+        setInputQuantities((prev) => {
+          const next: Record<string, string> = { ...prev };
+          fetchedItems.forEach((item) => {
+            if (item.cartItemId) {
+              next[item.cartItemId] = String(Math.max(1, item.quantity ?? 1));
+            }
+          });
+          return next;
+        });
+
         const fetchedItemIds = fetchedItems
           .map((item) => item.cartItemId)
           .filter(Boolean) as string[];
@@ -359,6 +373,9 @@ export const CartPage = () => {
       return;
     }
 
+    // Optimistically update the draft input so it feels instant
+    setInputQuantities((prev) => ({ ...prev, [cartItemId]: String(nextQuantity) }));
+
     setUpdatingItemId(cartItemId);
 
     // Removing quantity may invalidate voucher conditions — clear it proactively
@@ -371,6 +388,63 @@ export const CartPage = () => {
       await loadCart();
       await refreshCart();
     } catch (error) {
+      // Revert optimistic update on error
+      setInputQuantities((prev) => ({ ...prev, [cartItemId]: String(currentQuantity) }));
+      showToast(
+        error instanceof Error ? error.message : "Không thể cập nhật số lượng",
+        "error",
+      );
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+
+  /**
+   * Called when the user types directly into the quantity TextField.
+   * Only updates the local draft — no API call yet.
+   */
+  const handleQuantityInputChange = (cartItemId: string, value: string) => {
+    // Allow empty string while typing; clamp on commit
+    if (/^\d*$/.test(value)) {
+      setInputQuantities((prev) => ({ ...prev, [cartItemId]: value }));
+    }
+  };
+
+  /**
+   * Commits the draft quantity to the API when the user leaves the field
+   * or presses Enter.
+   */
+  const handleQuantityInputCommit = async (cartItemId: string) => {
+    const currentItem = items.find((item) => item.cartItemId === cartItemId);
+    if (!currentItem) return;
+
+    const draft = inputQuantities[cartItemId] ?? "";
+    const parsed = parseInt(draft, 10);
+    const currentQuantity = currentItem.quantity ?? 1;
+
+    // Reject invalid / zero values — revert to current
+    if (!Number.isFinite(parsed) || parsed < 1) {
+      setInputQuantities((prev) => ({ ...prev, [cartItemId]: String(currentQuantity) }));
+      return;
+    }
+
+    if (parsed === currentQuantity) {
+      return; // Nothing changed
+    }
+
+    setUpdatingItemId(cartItemId);
+
+    if (parsed < currentQuantity) {
+      clearVoucherOnCartChange();
+    }
+
+    try {
+      await cartService.updateCartItem(cartItemId, parsed);
+      await loadCart();
+      await refreshCart();
+    } catch (error) {
+      // Revert to the last confirmed quantity on error
+      setInputQuantities((prev) => ({ ...prev, [cartItemId]: String(currentQuantity) }));
       showToast(
         error instanceof Error ? error.message : "Không thể cập nhật số lượng",
         "error",
@@ -566,6 +640,17 @@ export const CartPage = () => {
                       ? Number(item.subTotal)
                       : Number(item.variantPrice ?? 0) * quantity;
 
+                  // Promotional breakdown
+                  const promoQty = Math.max(0, item.promotionalQuantity ?? 0);
+                  const regularQty = Math.max(0, item.regularQuantity ?? 0);
+                  const baseUnitPrice = Number(item.variantPrice ?? 0);
+                  // Promo unit price = (finalTotal - regularQty * baseUnitPrice) / promoQty
+                  const promoUnitPrice =
+                    promoQty > 0 && item.finalTotal != null && baseUnitPrice > 0
+                      ? (Number(item.finalTotal) - regularQty * baseUnitPrice) / promoQty
+                      : null;
+                  const showPromoBreakdown = promoQty > 0;
+
                   return (
                     <Box
                       key={itemKey}
@@ -654,16 +739,80 @@ export const CartPage = () => {
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
-                                mb={2}
+                                mb={showPromoBreakdown ? 1 : 2}
                               >
                                 {item.volumeMl ? `${item.volumeMl} ml` : ""}
                                 {item.volumeMl && item.variantPrice
-                                  ? " • "
+                                  ? " \u2022 "
                                   : ""}
                                 {item.variantPrice
                                   ? formatCurrency(item.variantPrice)
                                   : ""}
                               </Typography>
+
+                              {/* Promotional quantity breakdown */}
+                              {showPromoBreakdown && (
+                                <Box
+                                  display="flex"
+                                  flexWrap="wrap"
+                                  gap={1}
+                                  mb={2}
+                                  alignItems="center"
+                                >
+                                  {/* Promo items */}
+                                  <Box
+                                    sx={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                      px: 1.25,
+                                      py: 0.5,
+                                      borderRadius: "20px",
+                                      bgcolor: "error.50",
+                                      border: "1px solid",
+                                      borderColor: "error.200",
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="caption"
+                                      fontWeight={600}
+                                      color="error.main"
+                                    >
+                                      {promoQty} SP khuyến mãi
+                                      {promoUnitPrice !== null &&
+                                        promoUnitPrice > 0 &&
+                                        ` \u00d7 ${formatCurrency(promoUnitPrice)}`}
+                                    </Typography>
+                                  </Box>
+
+                                  {/* Regular items */}
+                                  {regularQty > 0 && (
+                                    <Box
+                                      sx={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                        px: 1.25,
+                                        py: 0.5,
+                                        borderRadius: "20px",
+                                        bgcolor: "grey.100",
+                                        border: "1px solid",
+                                        borderColor: "grey.300",
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="caption"
+                                        fontWeight={600}
+                                        color="text.secondary"
+                                      >
+                                        {regularQty} SP giá thường
+                                        {baseUnitPrice > 0 &&
+                                          ` \u00d7 ${formatCurrency(baseUnitPrice)}`}
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                </Box>
+                              )}
                               <Box
                                 display="flex"
                                 alignItems="center"
@@ -677,12 +826,12 @@ export const CartPage = () => {
                                 <Box
                                   display="flex"
                                   alignItems="center"
-                                  gap={1}
+                                  gap={0.5}
                                   border={1}
                                   borderColor="divider"
                                   borderRadius={"24px"}
-                                  px={2}
-                                  py={0.5}
+                                  px={1}
+                                  py={0.25}
                                 >
                                   <IconButton
                                     size="small"
@@ -697,14 +846,49 @@ export const CartPage = () => {
                                   >
                                     <RemoveIcon fontSize="small" />
                                   </IconButton>
-                                  <Typography
-                                    variant="body2"
-                                    fontWeight={600}
-                                    minWidth="2ch"
-                                    textAlign="center"
-                                  >
-                                    {quantity}
-                                  </Typography>
+                                  <TextField
+                                    size="small"
+                                    value={
+                                      item.cartItemId
+                                        ? (inputQuantities[item.cartItemId] ?? String(quantity))
+                                        : String(quantity)
+                                    }
+                                    onChange={(e) =>
+                                      item.cartItemId &&
+                                      handleQuantityInputChange(
+                                        item.cartItemId,
+                                        e.target.value,
+                                      )
+                                    }
+                                    onBlur={() =>
+                                      item.cartItemId &&
+                                      void handleQuantityInputCommit(item.cartItemId)
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" && item.cartItemId) {
+                                        void handleQuantityInputCommit(item.cartItemId);
+                                        (e.target as HTMLInputElement).blur();
+                                      }
+                                    }}
+                                    disabled={updatingItemId === item.cartItemId}
+                                    inputProps={{
+                                      min: 1,
+                                      style: {
+                                        textAlign: "center",
+                                        width: 32,
+                                        padding: "2px 4px",
+                                        fontWeight: 600,
+                                        fontSize: "0.875rem",
+                                      },
+                                    }}
+                                    sx={{
+                                      "& .MuiOutlinedInput-root": {
+                                        borderRadius: "8px",
+                                        "& fieldset": { border: "none" },
+                                      },
+                                      width: 52,
+                                    }}
+                                  />
                                   <IconButton
                                     size="small"
                                     aria-label="Tăng số lượng"
@@ -771,82 +955,210 @@ export const CartPage = () => {
 
                 {/* Voucher */}
                 <Box mb={2}>
-                  <Box display="flex" gap={1} alignItems="stretch">
-                    <TextField
-                      size="small"
-                      placeholder="Mã giảm giá"
-                      value={voucherCode}
-                      onChange={(e) => {
-                        setVoucherCode(e.target.value);
-                        if (voucherError) setVoucherError(null);
-                      }}
-                      disabled={!!appliedVoucher || isApplyingVoucher}
-                      error={!!voucherError}
-                      fullWidth
-                    />
-                    <Button
-                      variant="contained"
-                      size="small"
-                      onClick={() => applyVoucher(voucherCode)}
-                      disabled={
-                        !!appliedVoucher ||
-                        isApplyingVoucher ||
-                        !voucherCode.trim()
-                      }
-                      sx={{
-                        minWidth: 110,
-                        whiteSpace: "nowrap",
-                        px: 2,
-                      }}
-                    >
-                      {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
-                    </Button>
-                  </Box>
+                  {/* Code input row — hidden when a voucher is already applied */}
+                  {!appliedVoucher && (
+                    <Box display="flex" gap={1} alignItems="stretch" mb={1}>
+                      <TextField
+                        size="small"
+                        placeholder="Nhập mã giảm giá"
+                        value={voucherCode}
+                        onChange={(e) => {
+                          setVoucherCode(e.target.value);
+                          if (voucherError) setVoucherError(null);
+                        }}
+                        disabled={isApplyingVoucher}
+                        error={!!voucherError}
+                        fullWidth
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && voucherCode.trim()) {
+                            void applyVoucher(voucherCode);
+                          }
+                        }}
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            borderRadius: "8px",
+                          },
+                        }}
+                      />
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        size="small"
+                        onClick={() => applyVoucher(voucherCode)}
+                        disabled={
+                          isApplyingVoucher || !voucherCode.trim()
+                        }
+                        sx={{
+                          minWidth: 90,
+                          whiteSpace: "nowrap",
+                          borderRadius: "8px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
+                      </Button>
+                    </Box>
+                  )}
+
                   {voucherError && (
                     <Typography
                       variant="caption"
                       color="error"
-                      sx={{ mt: 0.5, display: "block" }}
+                      sx={{ mb: 1, display: "block" }}
                     >
                       {voucherError}
                     </Typography>
                   )}
+
+                  {/* Applied voucher — ticket style card */}
                   {appliedVoucher && (
                     <Box
                       sx={{
-                        p: 1.5,
-                        bgcolor: "success.lighter",
-                        borderRadius: 1,
                         display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
+                        borderRadius: 2,
+                        overflow: "hidden",
+                        border: "1px solid",
+                        borderColor: "error.200",
+                        bgcolor: "#fff",
+                        position: "relative",
+                        mb: 1,
+                        "&::before": {
+                          content: '""',
+                          position: "absolute",
+                          top: -6,
+                          left: 55,
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          bgcolor: "grey.100",
+                          border: "1px solid",
+                          borderColor: "error.100",
+                          zIndex: 1,
+                        },
+                        "&::after": {
+                          content: '""',
+                          position: "absolute",
+                          bottom: -6,
+                          left: 55,
+                          width: 12,
+                          height: 12,
+                          borderRadius: "50%",
+                          bgcolor: "grey.100",
+                          border: "1px solid",
+                          borderColor: "error.100",
+                          zIndex: 1,
+                        },
                       }}
                     >
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Typography
-                          variant="body2"
-                          color="success.main"
-                          fontWeight={600}
-                        >
-                          ✓ {appliedVoucher.voucherCode}
-                        </Typography>
-                        {totals.discount > 0 && (
-                          <Typography variant="caption" color="success.main">
-                            -{formatCurrency(totals.discount)}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={removeVoucher}
-                        disabled={isApplyingVoucher}
-                        sx={{ minWidth: 50, fontSize: "0.75rem" }}
+                      {/* Left strip */}
+                      <Box
+                        sx={{
+                          width: 62,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          bgcolor: "error.main",
+                          py: 1.5,
+                        }}
                       >
-                        Xóa
-                      </Button>
+                        <LocalOffer sx={{ color: "#fff", fontSize: 22 }} />
+                      </Box>
+                      {/* Dashed separator */}
+                      <Box
+                        sx={{
+                          width: "1px",
+                          borderLeft: "1.5px dashed",
+                          borderColor: "error.200",
+                          flexShrink: 0,
+                        }}
+                      />
+                      {/* Right: voucher info */}
+                      <Box
+                        sx={{
+                          flex: 1,
+                          px: 1.5,
+                          py: 1,
+                          minWidth: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 1,
+                        }}
+                      >
+                        <Box>
+                          <Box display="flex" alignItems="center" gap={0.75} mb={0.25}>
+                            <Typography
+                              sx={{
+                                fontWeight: 700,
+                                fontSize: "0.8rem",
+                                fontFamily: "monospace",
+                                color: "text.primary",
+                                letterSpacing: 0.5,
+                              }}
+                            >
+                              {appliedVoucher.voucherCode}
+                            </Typography>
+                            <Box
+                              sx={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 0.25,
+                                bgcolor: "success.50",
+                                border: "1px solid",
+                                borderColor: "success.200",
+                                borderRadius: "10px",
+                                px: 0.75,
+                                py: 0.15,
+                              }}
+                            >
+                              <Typography
+                                sx={{
+                                  fontSize: "0.65rem",
+                                  fontWeight: 600,
+                                  color: "success.dark",
+                                  lineHeight: 1.4,
+                                }}
+                              >
+                                ✓ Đã áp dụng
+                              </Typography>
+                            </Box>
+                          </Box>
+                          {totals.discount > 0 && (
+                            <Typography
+                              sx={{
+                                fontSize: "0.82rem",
+                                fontWeight: 700,
+                                color: "error.main",
+                              }}
+                            >
+                              -{formatCurrency(totals.discount)}
+                            </Typography>
+                          )}
+                        </Box>
+                        <Button
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          onClick={removeVoucher}
+                          disabled={isApplyingVoucher}
+                          sx={{
+                            minWidth: 48,
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            px: 1,
+                            py: 0.4,
+                            borderRadius: "8px",
+                            flexShrink: 0,
+                          }}
+                        >
+                          Xóa
+                        </Button>
+                      </Box>
                     </Box>
                   )}
+
+                  {/* Choose voucher button */}
                   <Button
                     variant="outlined"
                     size="small"
@@ -856,9 +1168,22 @@ export const CartPage = () => {
                       setLoadingMyVouchers(true);
                     }}
                     disabled={isApplyingVoucher}
-                    sx={{ mt: 1 }}
+                    sx={{
+                      borderRadius: "8px",
+                      borderStyle: "dashed",
+                      borderColor: "error.300",
+                      color: "error.main",
+                      fontWeight: 600,
+                      fontSize: "0.8rem",
+                      py: 0.75,
+                      "&:hover": {
+                        borderStyle: "dashed",
+                        bgcolor: "error.50",
+                        borderColor: "error.main",
+                      },
+                    }}
                   >
-                    {appliedVoucher ? "Đổi voucher" : "Chọn voucher"}
+                    {appliedVoucher ? "Đổi voucher khác" : "Chọn voucher"}
                   </Button>
                 </Box>
 

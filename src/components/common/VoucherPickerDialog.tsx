@@ -3,12 +3,10 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  TextField,
+  Chip,
   Button,
   Box,
-  Paper,
   Typography,
-  Chip,
   Divider,
   CircularProgress,
   Skeleton,
@@ -38,75 +36,288 @@ interface VoucherCardProps {
 const VoucherCard = ({ voucher, onApply, isApplying }: VoucherCardProps) => {
   const isApplicable = voucher.isApplicable;
   const hasReason = !isApplicable && voucher.ineligibleReason;
+  const accentColor = isApplicable ? "error.main" : "grey.400";
+  const borderColor = isApplicable ? "error.main" : "divider";
 
   return (
-    <Paper
-      variant="outlined"
+    <Box
       sx={{
-        p: 1.5,
-        borderRadius: 1.5,
-        opacity: isApplicable ? 1 : 0.7,
-        backgroundColor: isApplicable ? "background.paper" : "grey.50",
-        borderColor: isApplicable ? "error.main" : "grey.300",
-        borderWidth: 1,
-        position: "relative",
+        display: "flex",
+        borderRadius: 2,
         overflow: "hidden",
-        transition: "all 0.2s ease-in-out",
+        border: "1.5px solid",
+        borderColor,
+        opacity: isApplicable ? 1 : 0.65,
+        boxShadow: isApplicable ? "0 2px 8px rgba(0,0,0,0.07)" : "none",
+      }}
+    >
+      {/* Left panel — same as VoucherSection */}
+      <Box
+        sx={{
+          width: 48,
+          minWidth: 48,
+          bgcolor: accentColor,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white",
+          gap: 0.5,
+          py: 2,
+        }}
+      >
+        <LocalOffer sx={{ fontSize: 18 }} />
+        <Typography
+          variant="caption"
+          sx={{
+            writingMode: "vertical-rl",
+            transform: "rotate(180deg)",
+            fontSize: 8,
+            letterSpacing: 1,
+            opacity: 0.9,
+            textTransform: "uppercase",
+            fontWeight: 700,
+          }}
+        >
+          VOUCHER
+        </Typography>
+      </Box>
+
+      {/* Dashed separator */}
+      <Box
+        sx={{
+          width: 0,
+          borderLeft: "2px dashed",
+          borderColor: isApplicable ? "error.light" : "grey.300",
+          my: 1,
+        }}
+      />
+
+      {/* Right content */}
+      <Box sx={{ flex: 1, px: 1.5, py: 1.25 }}>
+        {/* Code + status chip */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 0.5,
+          }}
+        >
+          <Typography variant="subtitle2" fontWeight={700} letterSpacing={0.5}>
+            {voucher.code}
+          </Typography>
+          <Chip
+            label={isApplicable ? "Có thể dùng" : "Không khả dụng"}
+            size="small"
+            color={isApplicable ? "success" : "default"}
+            sx={{ fontSize: "0.68rem", height: 20 }}
+          />
+        </Box>
+
+        {/* Discount */}
+        <Typography
+          variant="h6"
+          fontWeight={800}
+          color={isApplicable ? "error.main" : "text.disabled"}
+          sx={{ lineHeight: 1.2 }}
+        >
+          Giảm {formatDiscount(voucher)}
+        </Typography>
+
+        {/* Ineligible reason */}
+        {hasReason && (
+          <Typography
+            variant="caption"
+            sx={{
+              display: "block",
+              mt: 0.5,
+              color: "warning.dark",
+              bgcolor: "warning.50",
+              border: "1px solid",
+              borderColor: "warning.200",
+              borderRadius: 0.5,
+              px: 1,
+              py: 0.25,
+            }}
+          >
+            {voucher.ineligibleReason}
+          </Typography>
+        )}
+
+        <Divider sx={{ my: 0.75 }} />
+
+        {/* Apply button */}
+        <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+          <Button
+            size="small"
+            variant={isApplicable ? "contained" : "outlined"}
+            color="error"
+            disabled={!isApplicable || isApplying}
+            onClick={() => voucher.code && onApply(voucher.code)}
+            startIcon={
+              isApplying ? (
+                <CircularProgress size={14} color="inherit" />
+              ) : undefined
+            }
+            sx={{ fontSize: 12, fontWeight: 600 }}
+          >
+            {isApplying ? "Đang áp dụng..." : "Áp dụng"}
+          </Button>
+        </Box>
+      </Box>
+    </Box>
+  );
+
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        borderRadius: 2,
+        overflow: "visible",
+        border: "1px solid",
+        borderColor,
+        bgcolor: isApplicable ? "#fff" : "grey.50",
+        position: "relative",
+        opacity: isApplicable ? 1 : 0.75,
+        transition: "box-shadow 0.2s",
         "&:hover": {
-          borderColor: isApplicable ? "error.dark" : "grey.300",
-          boxShadow: isApplicable ? 1 : 0,
+          boxShadow: isApplicable ? "0 2px 12px rgba(0,0,0,0.10)" : "none",
+        },
+        // Top notch
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: -6,
+          left: 55,
+          width: 12,
+          height: 12,
+          borderRadius: "50%",
+          bgcolor: "background.default",
+          border: "1px solid",
+          borderColor,
+          zIndex: 1,
+        },
+        // Bottom notch
+        "&::after": {
+          content: '""',
+          position: "absolute",
+          bottom: -6,
+          left: 55,
+          width: 12,
+          height: 12,
+          borderRadius: "50%",
+          bgcolor: "background.default",
+          border: "1px solid",
+          borderColor,
+          zIndex: 1,
         },
       }}
     >
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-        {/* Voucher Info */}
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+      {/* Left strip */}
+      <Box
+        sx={{
+          width: 62,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+          bgcolor: accentColor,
+          borderRadius: "8px 0 0 8px",
+        }}
+      >
+        <LocalOffer sx={{ color: "#fff", fontSize: 22 }} />
+      </Box>
+
+      {/* Dashed separator */}
+      <Box
+        sx={{
+          width: "1px",
+          borderLeft: "1.5px dashed",
+          borderColor,
+          flexShrink: 0,
+        }}
+      />
+
+      {/* Right: info + action */}
+      <Box
+        sx={{
+          flex: 1,
+          px: 1.5,
+          py: 1.25,
+          minWidth: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+        }}
+      >
+        {/* Voucher details */}
+        <Box flex={1} minWidth={0}>
+          {/* Code + chip row */}
+          <Box display="flex" alignItems="center" gap={0.75} mb={0.4} flexWrap="wrap">
             <Typography
-              variant="body2"
-              fontWeight={600}
-              fontFamily="monospace"
-              color={isApplicable ? "text.primary" : "text.disabled"}
-              sx={{ fontSize: "0.875rem" }}
+              sx={{
+                fontWeight: 700,
+                fontSize: "0.82rem",
+                fontFamily: "monospace",
+                letterSpacing: 0.5,
+                color: isApplicable ? "text.primary" : "text.disabled",
+              }}
             >
               {voucher.code}
             </Typography>
-            <Chip
-              label={isApplicable ? "Có thể dùng" : "Không khả dụng"}
-              size="small"
-              color={isApplicable ? "success" : "default"}
-              variant="filled"
+            <Box
               sx={{
-                height: 20,
-                fontSize: "0.7rem",
-                fontWeight: 500,
-                "& .MuiChip-label": { px: 1 },
+                display: "inline-flex",
+                alignItems: "center",
+                px: 0.75,
+                py: 0.15,
+                borderRadius: "10px",
+                bgcolor: isApplicable ? "success.50" : "grey.100",
+                border: "1px solid",
+                borderColor: isApplicable ? "success.200" : "grey.300",
               }}
-            />
+            >
+              <Typography
+                sx={{
+                  fontSize: "0.65rem",
+                  fontWeight: 600,
+                  color: isApplicable ? "success.dark" : "text.disabled",
+                  lineHeight: 1.4,
+                }}
+              >
+                {isApplicable ? "✓ Có thể dùng" : "Không khả dụng"}
+              </Typography>
+            </Box>
           </Box>
 
+          {/* Discount label */}
           <Typography
-            variant="body2"
-            fontWeight={600}
-            color={isApplicable ? "error.main" : "text.disabled"}
-            sx={{ fontSize: "0.875rem", mb: hasReason ? 0.5 : 0 }}
+            sx={{
+              fontWeight: 700,
+              fontSize: "0.875rem",
+              color: isApplicable ? "error.main" : "text.disabled",
+              mb: hasReason ? 0.5 : 0,
+            }}
           >
             Giảm {formatDiscount(voucher)}
           </Typography>
 
+          {/* Ineligible reason */}
           {hasReason && (
             <Typography
               variant="caption"
-              color="warning.dark"
               sx={{
-                fontSize: "0.75rem",
                 display: "block",
+                fontSize: "0.72rem",
+                color: "warning.dark",
                 bgcolor: "warning.50",
-                px: 1,
-                py: 0.25,
-                borderRadius: 0.5,
                 border: "1px solid",
                 borderColor: "warning.200",
+                borderRadius: 0.75,
+                px: 1,
+                py: 0.25,
               }}
             >
               {voucher.ineligibleReason}
@@ -114,28 +325,29 @@ const VoucherCard = ({ voucher, onApply, isApplying }: VoucherCardProps) => {
           )}
         </Box>
 
-        {/* Apply Button */}
+        {/* Apply button */}
         <Button
           size="small"
           variant={isApplicable ? "contained" : "outlined"}
           color="error"
           disabled={!isApplicable || isApplying}
           onClick={() => voucher.code && onApply(voucher.code)}
-          startIcon={isApplying ? <CircularProgress size={12} /> : undefined}
+          startIcon={isApplying ? <CircularProgress size={12} color="inherit" /> : undefined}
           sx={{
-            minWidth: 70,
-            height: 32,
-            fontSize: "0.75rem",
+            minWidth: 76,
+            height: 34,
+            fontSize: "0.78rem",
             fontWeight: 600,
             px: 1.5,
             flexShrink: 0,
             textTransform: "none",
+            borderRadius: "8px",
           }}
         >
-          {isApplying ? "Đang áp dụng..." : "Áp dụng"}
+          {isApplying ? "" : "Áp dụng"}
         </Button>
       </Box>
-    </Paper>
+    </Box>
   );
 };
 
