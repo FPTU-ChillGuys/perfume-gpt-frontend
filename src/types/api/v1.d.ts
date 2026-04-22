@@ -14902,11 +14902,15 @@ export interface components {
             quantity?: number;
             isAvailable?: boolean;
             /** Format: decimal */
+            subTotal?: number;
+            /** Format: int32 */
+            promotionalQuantity?: number;
+            /** Format: int32 */
+            regularQuantity?: number;
+            /** Format: decimal */
             discount?: number;
             /** Format: decimal */
             finalTotal?: number;
-            /** Format: decimal */
-            subTotal?: number;
         };
         GetCartItemsResponse: {
             items: components["schemas"]["GetCartItemResponse"][];
