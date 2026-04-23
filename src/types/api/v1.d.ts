@@ -13422,8 +13422,7 @@ export interface components {
             totalAmount?: number;
             /** Format: decimal */
             requiredDepositAmount?: number;
-            /** Format: decimal */
-            depositAmount?: number;
+            
             /** Format: decimal */
             paidAmount?: number;
             /** Format: decimal */
@@ -13460,8 +13459,6 @@ export interface components {
             totalAmount?: number;
             /** Format: decimal */
             requiredDepositAmount?: number;
-            /** Format: decimal */
-            depositAmount?: number;
             /** Format: decimal */
             paidAmount?: number;
             /** Format: decimal */
@@ -13947,6 +13944,7 @@ export interface components {
             /** Format: uuid */
             customerId?: null | string;
             sessionId?: null | string;
+            paymentMethod?: null | components["schemas"]["PaymentMethod"];
             recipient?: null | components["schemas"]["ContactAddressInformation"];
         };
         PreviewPosOrderResponse: {
@@ -13959,6 +13957,8 @@ export interface components {
             discount?: number;
             /** Format: decimal */
             totalPrice?: number;
+            /** Format: decimal */
+            requiredDepositAmount?: number;
         };
         ProblemDetails: {
             type?: null | string;

@@ -75,7 +75,7 @@ import { useToast } from "@/hooks/useToast";
 import ReviewDialog from "@/components/review/ReviewDialog";
 import type { UserCredentials } from "@/services/userService";
 import type { PaymentMethod } from "@/types/checkout";
-import type { OrderResponse, CarrierName, OrderStatus } from "@/types/order";
+import type { UserOrderResponse, CarrierName, OrderStatus } from "@/types/order";
 import type { components } from "@/types/api/v1";
 import type {
   AddressResponse,
@@ -715,7 +715,7 @@ const OrderVoucherTag = ({
 };
 
 interface OrderSummaryProps {
-  order: OrderResponse | null;
+  order: UserOrderResponse | null;
   depositGatewayLabel?: string | null;
 }
 
@@ -903,7 +903,7 @@ export const MyOrderDetailPage = () => {
 
   const { showToast } = useToast();
   const [userInfo, setUserInfo] = useState<UserCredentials | null>(null);
-  const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [order, setOrder] = useState<UserOrderResponse | null>(null);
   const [orderReturnRequest, setOrderReturnRequest] =
     useState<OrderReturnRequest | null>(null);
   const [orderCancelRequest, setOrderCancelRequest] =
@@ -1124,16 +1124,7 @@ export const MyOrderDetailPage = () => {
 
   const canReview = order?.status === "Delivered";
   const isOrderReturnable = Boolean(
-    (
-      order as
-        | (OrderResponse & { isReturnable?: boolean; isReturnalbe?: boolean })
-        | null
-    )?.isReturnable ??
-    (
-      order as
-        | (OrderResponse & { isReturnable?: boolean; isReturnalbe?: boolean })
-        | null
-    )?.isReturnalbe,
+    order?.isReturnable ?? (order as (UserOrderResponse & { isReturnalbe?: boolean }) | null)?.isReturnalbe,
   );
   const hasBlockingReturnRequest = Boolean(
     orderReturnRequest?.id &&
@@ -1144,7 +1135,7 @@ export const MyOrderDetailPage = () => {
     CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
   );
 
-  const getCancelBehavior = (currentOrder: OrderResponse | null) => {
+  const getCancelBehavior = (currentOrder: UserOrderResponse | null) => {
     if (!currentOrder?.status) {
       return null;
     }

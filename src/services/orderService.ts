@@ -7,6 +7,7 @@ import type {
   PaymentStatus,
   PagedOrderList,
   OrderResponse,
+  UserOrderResponse,
 } from "@/types/order";
 import type {
   CreateOrderRequest,
@@ -478,6 +479,28 @@ class OrderService {
 
     return {
       ...(item as OrderResponse),
+      id: fallbackId,
+      code: fallbackCode || fallbackId || "",
+    };
+  }
+
+  private normalizeUserOrderResponse(item: unknown): UserOrderResponse {
+    const fallbackId = this.getValue<string>(item, [
+      "id",
+      "Id",
+      "orderId",
+      "OrderId",
+    ]);
+
+    const fallbackCode = this.getValue<string>(item, [
+      "code",
+      "Code",
+      "orderCode",
+      "OrderCode",
+    ]);
+
+    return {
+      ...(item as UserOrderResponse),
       id: fallbackId,
       code: fallbackCode || fallbackId || "",
     };
@@ -1561,7 +1584,7 @@ class OrderService {
     }
   }
 
-  async getMyOrderById(orderId: string): Promise<OrderResponse> {
+  async getMyOrderById(orderId: string): Promise<UserOrderResponse> {
     try {
       const response = await apiInstance.GET(
         "/api/orders/my-orders/{orderId}",
@@ -1578,7 +1601,7 @@ class OrderService {
         );
       }
 
-      return this.normalizeOrderResponse(response.data.payload);
+      return this.normalizeUserOrderResponse(response.data.payload);
     } catch (error: any) {
       console.error("Error fetching my order details:", error);
       throw new Error(

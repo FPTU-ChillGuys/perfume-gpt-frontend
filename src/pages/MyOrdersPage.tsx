@@ -588,8 +588,7 @@ export const MyOrdersPage = () => {
     }
 
     if (isPreparingOrReadyToPick) {
-      const penaltyFee =
-        (order.depositAmount ?? order.requiredDepositAmount ?? 0);
+      const penaltyFee = order.requiredDepositAmount ?? 0;
       const isCODOrStore = (order.paymentTransactions ?? []).some(
         (t) =>
           t.paymentMethod === "CashOnDelivery" ||
