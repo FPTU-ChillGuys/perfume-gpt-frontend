@@ -1127,20 +1127,40 @@ export const MyOrderDetailPage = () => {
       currentOrder.status === "Preparing" ||
       currentOrder.status === "ReadyToPick";
     const isPaid = currentOrder.paymentStatus === "Paid";
+    const isPartialPaid = currentOrder.paymentStatus === "PartialPaid";
+    const hasPayment = isPaid || isPartialPaid;
 
-    if (isPending && !isPaid) {
+    // Case 1: Pending + chưa thanh toán → hủy trực tiếp, không cần thông tin ngân hàng
+    if (isPending && !hasPayment) {
       return {
         mode: "direct" as const,
         buttonLabel: "Hủy đơn hàng",
-        note: "Đơn chưa thanh toán nên sẽ bị hủy ngay sau khi xác nhận.",
+        note: "Đơn chưa thanh toán sẽ được hủy ngay sau khi xác nhận.",
+        requireBankInfo: false,
+        penaltyFee: null as number | null,
       };
     }
 
-    if ((isPending && isPaid) || isPreparingOrReadyToPick) {
+    // Case 2: Pending + đã thanh toán/cọc → yêu cầu hủy + nhập thông tin ngân hàng
+    if (isPending && hasPayment) {
       return {
         mode: "request" as const,
         buttonLabel: "Yêu cầu hủy đơn hàng",
-        note: "Đơn hàng này sẽ tạo yêu cầu hủy và chờ Staff/Admin duyệt.",
+        note: "Đơn đã có thanh toán. Vui lòng nhập thông tin ngân hàng để hỗ trợ hoàn tiền. Bộ phận Kế toán sẽ hoàn 100% trong 24–48 giờ làm việc.",
+        requireBankInfo: true,
+        penaltyFee: null as number | null,
+      };
+    }
+
+    // Case 3: Preparing / ReadyToPick → yêu cầu hủy + ngân hàng + phí phạt
+    if (isPreparingOrReadyToPick) {
+      const depositFee = currentOrder.requiredDepositAmount ?? 0;
+      return {
+        mode: "request" as const,
+        buttonLabel: "Yêu cầu hủy đơn hàng",
+        note: "Sản phẩm đã được xuất kho và đóng gói. Yêu cầu hủy sẽ chờ nhân viên phê duyệt.",
+        requireBankInfo: true,
+        penaltyFee: depositFee,
       };
     }
 
@@ -1306,8 +1326,7 @@ export const MyOrderDetailPage = () => {
   const isCurrentOnlineMethod =
     currentPaymentMethod === "VnPay" || currentPaymentMethod === "Momo";
 
-  const shouldRequireCancelRefundInfo =
-    cancelBehavior?.mode === "request" && isCurrentOnlineMethod;
+  const shouldRequireCancelRefundInfo = cancelBehavior?.requireBankInfo === true;
 
   const canSubmitCancelRequest =
     cancelReason.trim().length > 0 &&
@@ -2823,6 +2842,40 @@ export const MyOrderDetailPage = () => {
                 "Vui lòng chọn hoặc nhập lý do để tiếp tục."}
             </Typography>
 
+            {/* Penalty fee warning for Preparing/ReadyToPick */}
+            {cancelBehavior?.penaltyFee != null && (
+              <Alert
+                severity="warning"
+                icon={false}
+                sx={{ borderRadius: 2, border: "1.5px solid", borderColor: "warning.light" }}
+              >
+                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>
+                  Phí phạt hủy đơn theo chính sách
+                </Typography>
+                <Typography variant="body2" mb={0.75}>
+                  Đơn hàng đã được xuất kho và đóng gói. Theo chính sách của PerfumeGPT, nếu yêu cầu hủy được duyệt, quý khách sẽ chịu{" "}
+                  <b>phí phạt bồi thường tương đương tiền cọc quy định</b> để bù đắp chi phí vật tư đóng gói chống sốc chuyên dụng và xử lý đơn hàng.
+                </Typography>
+
+                {cancelBehavior.penaltyFee > 0 ? (
+                  <>
+                    <Box sx={{ bgcolor: "#fff3e0", borderRadius: 1, p: 1, display: "inline-block", mb: 0.75 }}>
+                      <Typography variant="body2" fontWeight={700} color="warning.dark">
+                        Khoản phí phạt: {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(cancelBehavior.penaltyFee)}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Nếu quý khách đã đặt cọc, cửa hàng sẽ thu hồi toàn bộ số tiền cọc. Nếu đã thanh toán 100%, Kế toán sẽ hoàn lại phần còn lại sau khi khấu trừ khoản phí trên.
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Khoản phí phạt cụ thể sẽ được nhân viên phụ trách xác nhận khi phê duyệt yêu cầu hủy. Kế toán sẽ hoàn lại phần tiền còn lại sau khi khấu trừ.
+                  </Typography>
+                )}
+              </Alert>
+            )}
+
             <TextField
               label="Lý do hủy *"
               value={cancelReason}
@@ -2857,9 +2910,7 @@ export const MyOrderDetailPage = () => {
                     Thông tin tài khoản nhận hoàn tiền
                   </Typography>
                   <Alert severity="info" sx={{ py: 0.5 }}>
-                    Đơn thanh toán online cần thông tin tài khoản để hỗ trợ hoàn
-                    tiền linh hoạt khi cổng hoàn tự động lỗi hoặc cần chuyển
-                    khoản thủ công.
+                    Vui lòng cung cấp thông tin ngân hàng để Bộ phận Kế toán có thể hoàn tiền qua chuyển khoản trong trường hợp cần thiết.
                   </Alert>
                   <Autocomplete
                     options={vietQrBanks}
