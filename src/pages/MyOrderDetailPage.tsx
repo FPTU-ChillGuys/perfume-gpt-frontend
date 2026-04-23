@@ -100,6 +100,7 @@ import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
+import payosIcon from "@/assets/payos.png";
 import transericon from "@/assets/transfer.png";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -132,6 +133,19 @@ const RETRY_PAYMENT_METHOD_OPTIONS: NonNullable<PaymentMethod>[] = [
   "CashInStore",
   "VnPay",
   "Momo",
+];
+
+const GATEWAY_METHODS: NonNullable<PaymentMethod>[] = ["VnPay", "Momo", "PayOs"];
+const CASH_METHODS: NonNullable<PaymentMethod>[] = ["CashOnDelivery", "CashInStore"];
+
+const GATEWAY_PAYMENT_METHOD_INFO: {
+  value: NonNullable<PaymentMethod>;
+  label: string;
+  icon: string;
+}[] = [
+  { value: "VnPay", label: "VNPay", icon: vnpayIcon },
+  { value: "Momo", label: "MoMo", icon: momoIcon },
+  { value: "PayOs", label: "PayOS", icon: payosIcon },
 ];
 
 const REVIEW_STATUS_CHIP: Record<
@@ -702,10 +716,11 @@ const OrderVoucherTag = ({
 
 interface OrderSummaryProps {
   order: OrderResponse | null;
+  depositGatewayLabel?: string | null;
 }
 
 /** Khu vực tóm tắt thanh toán */
-const OrderSummary = ({ order }: OrderSummaryProps) => {
+const OrderSummary = ({ order, depositGatewayLabel }: OrderSummaryProps) => {
   if (!order) return null;
 
   const getVoucherTypeLabel = (voucherType?: string | null): string => {
@@ -715,6 +730,10 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
   };
 
   const showVoucherDiscount = (order.voucherDiscountTotal ?? 0) > 0;
+  const isPartialPaid = order.paymentStatus === "PartialPaid";
+  const hasDepositInfo =
+    isPartialPaid &&
+    (order.requiredDepositAmount ?? 0) > 0;
 
   return (
     <Stack spacing={1}>
@@ -774,6 +793,97 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
           {fmt(order.totalAmount ?? 0)}
         </Typography>
       </Box>
+
+      {/* ── Deposit/Payment breakdown ── */}
+      {hasDepositInfo && (
+        <Box
+          sx={{
+            mt: 0.5,
+            borderRadius: 1.5,
+            border: "1.5px solid",
+            borderColor: "info.light",
+            overflow: "hidden",
+          }}
+        >
+          {/* Header */}
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1}
+            sx={{
+              px: 1.5,
+              py: 1,
+              bgcolor: "info.main",
+              color: "info.contrastText",
+            }}
+          >
+            <Typography variant="caption" fontWeight={700}>
+              Thông tin đặt cọc
+            </Typography>
+            <Box flex={1} />
+            <Chip
+              label="Đã đặt cọc"
+              size="small"
+              sx={{
+                height: 20,
+                fontSize: 11,
+                fontWeight: 700,
+                bgcolor: "rgba(255,255,255,0.25)",
+                color: "inherit",
+              }}
+            />
+          </Box>
+
+          {/* Body */}
+          <Stack spacing={0.75} sx={{ px: 1.5, py: 1.25 }}>
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">
+                Tiền cọc yêu cầu
+              </Typography>
+              <Typography variant="body2" fontWeight={600} color="info.dark">
+                {fmt(order.requiredDepositAmount)}
+              </Typography>
+            </Box>
+
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">
+                Đã thanh toán cọc
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="success.main">
+                {fmt(order.paidAmount)}
+              </Typography>
+            </Box>
+
+            {/* Deposit gateway */}
+            {depositGatewayLabel && (
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Cổng thanh toán cọc
+                </Typography>
+                <Typography variant="body2" fontWeight={600} color="info.dark">
+                  {depositGatewayLabel}
+                </Typography>
+              </Box>
+            )}
+
+            <Divider sx={{ my: 0.25 }} />
+
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="body2" fontWeight={600}>
+                Còn cần thanh toán
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                color="warning.dark"
+                fontSize="1rem"
+              >
+                {fmt(order.remainingAmount)}
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
+      )}
     </Stack>
   );
 };
@@ -825,6 +935,9 @@ export const MyOrderDetailPage = () => {
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
   const [selectedRetryPaymentMethod, setSelectedRetryPaymentMethod] =
     useState<NonNullable<PaymentMethod>>("CashOnDelivery");
+  const [retryDepositGateway, setRetryDepositGateway] =
+    useState<NonNullable<PaymentMethod>>("VnPay");
+  const [retryIsDepositOrder, setRetryIsDepositOrder] = useState(false);
 
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
   const [returnReason, setReturnReason] = useState<ReturnOrderReason | "">("");
@@ -1088,13 +1201,48 @@ export const MyOrderDetailPage = () => {
   const shippingFee = order?.shippingInfo?.shippingFee ?? 0;
   const total = order?.totalAmount ?? 0;
   const voucherDiscount = subtotal + shippingFee - total;
-  const paymentMethodLabel = useMemo(() => {
-    const paymentMethod = [...(order?.paymentTransactions ?? [])]
-      .reverse()
-      .find((transaction) => transaction?.paymentMethod)?.paymentMethod;
+  
+  const mainPaymentTransaction = useMemo(() => {
+    const txns = order?.paymentTransactions ?? [];
+    const depositAmount = order?.requiredDepositAmount ?? 0;
+    const onlineMethods = new Set(["VnPay", "Momo", "PayOs"]);
 
-    return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
-  }, [order?.paymentTransactions]);
+    const nonFailed = txns.filter((t) => t?.status !== "Failed");
+
+    // Separate deposit from main transactions
+    const nonDeposit = nonFailed.filter((t) => {
+      // A deposit transaction is an online-method tx whose amount == depositAmount
+      const isDepositTx =
+        depositAmount > 0 &&
+        onlineMethods.has(t?.paymentMethod ?? "") &&
+        Math.abs((t?.totalAmount ?? 0) - depositAmount) < 1;
+      return !isDepositTx;
+    });
+
+    // Pick the transaction with the largest amount (= main remaining payment)
+    const candidates = nonDeposit.length > 0 ? nonDeposit : nonFailed;
+    const best = candidates.reduce<typeof txns[number] | null>((b, t) => {
+      if (!b) return t;
+      return (t?.totalAmount ?? 0) >= (b?.totalAmount ?? 0) ? t : b;
+    }, null);
+
+    // Fallback: if all transactions are Failed, show the largest one (e.g. failed VnPay)
+    if (!best) {
+      return txns.reduce<typeof txns[number] | null>((b, t) => {
+        if (!b) return t;
+        return (t?.totalAmount ?? 0) >= (b?.totalAmount ?? 0) ? t : b;
+      }, null);
+    }
+
+    return best;
+  }, [order?.paymentTransactions, order?.requiredDepositAmount]);
+
+  const paymentMethodLabel = useMemo(() => {
+    const method = mainPaymentTransaction?.paymentMethod;
+    return method && PAYMENT_METHOD_LABELS[method]
+      ? PAYMENT_METHOD_LABELS[method]
+      : "N/A";
+  }, [mainPaymentTransaction]);
 
   const latestPaymentTransaction = useMemo(
     () =>
@@ -1105,11 +1253,8 @@ export const MyOrderDetailPage = () => {
   );
 
   const latestPaymentMethod = useMemo(
-    () =>
-      [...(order?.paymentTransactions ?? [])]
-        .reverse()
-        .find((transaction) => transaction?.paymentMethod)?.paymentMethod,
-    [order?.paymentTransactions],
+    () => mainPaymentTransaction?.paymentMethod,
+    [mainPaymentTransaction],
   );
 
   const currentPaymentMethod = useMemo<PaymentMethod | null>(() => {
@@ -1119,6 +1264,24 @@ export const MyOrderDetailPage = () => {
 
   const paymentId = latestPaymentTransaction?.id ?? null;
   const isCodPaymentOrder = currentPaymentMethod === "CashOnDelivery";
+
+  /** Label for the gateway used to pay the deposit (e.g. "Thanh toán qua VNPay") */
+  const depositGatewayLabel = useMemo(() => {
+    const txns = order?.paymentTransactions ?? [];
+    const depositAmount = order?.requiredDepositAmount ?? 0;
+    const onlineMethods = new Set(["VnPay", "Momo", "PayOs"]);
+
+    if (depositAmount <= 0) return null;
+
+    const depositTx = txns.find(
+      (t) =>
+        onlineMethods.has(t?.paymentMethod ?? "") &&
+        Math.abs((t?.totalAmount ?? 0) - depositAmount) < 1 &&
+        t?.status !== "Failed",
+    );
+    if (!depositTx?.paymentMethod) return null;
+    return PAYMENT_METHOD_LABELS[depositTx.paymentMethod] ?? null;
+  }, [order?.paymentTransactions, order?.requiredDepositAmount]);
 
   const isPendingUnpaid =
     order?.status === "Pending" && order?.paymentStatus === "Unpaid";
@@ -1164,23 +1327,37 @@ export const MyOrderDetailPage = () => {
   }, [order?.paymentExpiresAt]);
 
   useEffect(() => {
-    if (!canRetryPaymentInDetail) {
+    if (!canRetryPaymentInDetail) return;
+
+    const depositAmount = order?.requiredDepositAmount ?? 0;
+    const isDepositOrder = depositAmount > 0 && order?.paymentStatus !== "Paid";
+
+    setRetryIsDepositOrder(isDepositOrder);
+
+    if (isDepositOrder) {
+      const primaryMethod: NonNullable<PaymentMethod> = isPickupInStoreOrder ? "CashInStore" : "CashOnDelivery";
+      setSelectedRetryPaymentMethod(primaryMethod);
+      const depositTx = (order?.paymentTransactions ?? []).find(
+        (t) => GATEWAY_METHODS.includes((t?.paymentMethod ?? "") as NonNullable<PaymentMethod>) &&
+          Math.abs((t?.totalAmount ?? 0) - depositAmount) < 1 && t?.status !== "Failed",
+      );
+      setRetryDepositGateway((depositTx?.paymentMethod ?? "VnPay") as NonNullable<PaymentMethod>);
       return;
     }
 
-    if (
-      currentPaymentMethod &&
-      allowedRetryPaymentMethods.includes(currentPaymentMethod)
-    ) {
+    if (currentPaymentMethod && allowedRetryPaymentMethods.includes(currentPaymentMethod)) {
       setSelectedRetryPaymentMethod(currentPaymentMethod);
       return;
     }
-
     setSelectedRetryPaymentMethod(allowedRetryPaymentMethods[0] ?? "VnPay");
   }, [
     allowedRetryPaymentMethods,
     canRetryPaymentInDetail,
     currentPaymentMethod,
+    isPickupInStoreOrder,
+    order?.paymentTransactions,
+    order?.requiredDepositAmount,
+    order?.paymentStatus,
   ]);
 
   const returnMediaPreviews = useMemo(
@@ -1497,21 +1674,20 @@ export const MyOrderDetailPage = () => {
       return;
     }
 
+    const isCashMethod = CASH_METHODS.includes(selectedRetryPaymentMethod);
+    const newDepositMethod = isCashMethod ? retryDepositGateway : null;
+    const isOnlineOrDeposit = GATEWAY_METHODS.includes(selectedRetryPaymentMethod) || Boolean(newDepositMethod);
+
     try {
       setIsRetryingPayment(true);
       const response = await orderService.retryPayment(
         paymentId,
         selectedRetryPaymentMethod,
+        newDepositMethod,
       );
 
-      if (
-        selectedRetryPaymentMethod === "VnPay" ||
-        selectedRetryPaymentMethod === "Momo"
-      ) {
-        if (!response.url) {
-          throw new Error("Không lấy được đường dẫn thanh toán");
-        }
-
+      if (isOnlineOrDeposit) {
+        if (!response.url) throw new Error("Không lấy được đường dẫn thanh toán");
         window.location.href = response.url;
         return;
       }
@@ -1525,9 +1701,7 @@ export const MyOrderDetailPage = () => {
       }
     } catch (error) {
       showToast(
-        error instanceof Error
-          ? error.message
-          : "Không thể thanh toán lại đơn hàng",
+        error instanceof Error ? error.message : "Không thể thanh toán lại đơn hàng",
         "error",
       );
     } finally {
@@ -2495,7 +2669,7 @@ export const MyOrderDetailPage = () => {
                       </Typography>
 
                       <Stack spacing={1}>
-                        <OrderSummary order={order} />
+                        <OrderSummary order={order} depositGatewayLabel={depositGatewayLabel} />
 
                         <Divider />
 
@@ -2849,98 +3023,66 @@ export const MyOrderDetailPage = () => {
 
       <Dialog
         open={isRetryPaymentDialogOpen}
-        onClose={() => {
-          if (isRetryingPayment) return;
-          setIsRetryPaymentDialogOpen(false);
-        }}
+        onClose={() => { if (isRetryingPayment) return; setIsRetryPaymentDialogOpen(false); }}
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle>Thanh toán lại đơn hàng</DialogTitle>
         <DialogContent>
-          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
-            <Typography variant="body2" color="text.secondary">
-              Chọn phương thức thanh toán để tiếp tục.
-            </Typography>
-
+          <Stack spacing={2} sx={{ mt: 0.5 }}>
             {isCurrentOnlineMethod && paymentExpiresAtLabel && (
               <Alert severity="warning">
-                Giao dịch hiện tại sẽ hết hạn lúc <b>{paymentExpiresAtLabel}</b>
-                .
+                Giao dịch hiện tại sẽ hết hạn lúc <b>{paymentExpiresAtLabel}</b>.
               </Alert>
             )}
 
             <RadioGroup
               value={selectedRetryPaymentMethod}
-              onChange={(e) =>
-                setSelectedRetryPaymentMethod(
-                  e.target.value as NonNullable<PaymentMethod>,
-                )
-              }
+              onChange={(e) => setSelectedRetryPaymentMethod(e.target.value as NonNullable<PaymentMethod>)}
             >
               {allowedRetryPaymentMethods.map((method) => (
                 <FormControlLabel
-                  key={method}
-                  value={method}
+                  key={method} value={method}
                   control={<Radio size="small" />}
                   label={
-                    <Box
-                      display="flex"
-                      alignItems="center"
-                      gap={1.25}
-                      py={0.25}
-                    >
-                      <Box
-                        component="img"
-                        src={PAYMENT_METHOD_ICONS[method]}
-                        alt={PAYMENT_METHOD_LABELS[method]}
-                        sx={{
-                          width: 28,
-                          height: 28,
-                          objectFit: "contain",
-                          borderRadius: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                          bgcolor: "#fff",
-                          p: 0.4,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <Typography variant="body2" fontWeight={500}>
-                        {PAYMENT_METHOD_LABELS[method]}
-                      </Typography>
+                    <Box display="flex" alignItems="center" gap={1.25} py={0.25}>
+                      <Box component="img" src={PAYMENT_METHOD_ICONS[method]} alt={PAYMENT_METHOD_LABELS[method]}
+                        sx={{ width: 28, height: 28, objectFit: "contain", borderRadius: 1, border: "1px solid", borderColor: "divider", bgcolor: "#fff", p: 0.4, flexShrink: 0 }} />
+                      <Typography variant="body2" fontWeight={500}>{PAYMENT_METHOD_LABELS[method]}</Typography>
                     </Box>
                   }
-                  sx={{
-                    m: 0,
-                    mb: 0.75,
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    px: 1.25,
-                    py: 0.25,
-                  }}
+                  sx={{ m: 0, mb: 0.75, border: "1px solid", borderColor: "divider", borderRadius: 1, px: 1.25, py: 0.25 }}
                 />
               ))}
             </RadioGroup>
+
+            {CASH_METHODS.includes(selectedRetryPaymentMethod) && (
+              <Box>
+                <Typography variant="caption" fontWeight={700} color="text.secondary"
+                  display="block" mb={1} sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Cổng thanh toán tiền cọc
+                </Typography>
+                <Box display="flex" gap={1} flexWrap="wrap">
+                  {GATEWAY_PAYMENT_METHOD_INFO.map((gw) => {
+                    const isSel = retryDepositGateway === gw.value;
+                    return (
+                      <Box key={gw.value}
+                        onClick={() => setRetryDepositGateway(gw.value)}
+                        sx={{ flex: "1 1 70px", display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5, py: 1, px: 1, borderRadius: 1.5, border: "2px solid", borderColor: isSel ? "warning.main" : "divider", bgcolor: isSel ? "warning.50" : "background.paper", cursor: "pointer", transition: "all 0.15s", "&:hover": { borderColor: "warning.light" } }}>
+                        <Box component="img" src={gw.icon} alt={gw.label} sx={{ width: 32, height: 32, objectFit: "contain", borderRadius: 0.5 }} />
+                        <Typography variant="caption" fontWeight={isSel ? 700 : 400} color={isSel ? "warning.dark" : "text.secondary"}>{gw.label}</Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => setIsRetryPaymentDialogOpen(false)}
-            disabled={isRetryingPayment}
-          >
-            Đóng
-          </Button>
-          <Button
-            variant="contained"
-            color="warning"
-            onClick={handleRetryPaymentFromDetail}
-            disabled={
-              isRetryingPayment ||
-              !allowedRetryPaymentMethods.includes(selectedRetryPaymentMethod)
-            }
-          >
+          <Button onClick={() => setIsRetryPaymentDialogOpen(false)} disabled={isRetryingPayment}>Đóng</Button>
+          <Button variant="contained" color="warning" onClick={handleRetryPaymentFromDetail}
+            disabled={isRetryingPayment || !allowedRetryPaymentMethods.includes(selectedRetryPaymentMethod) && !GATEWAY_METHODS.includes(selectedRetryPaymentMethod)}>
             {isRetryingPayment ? "Đang xử lý..." : "Thanh toán ngay"}
           </Button>
         </DialogActions>

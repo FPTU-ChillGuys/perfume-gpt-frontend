@@ -33,6 +33,7 @@ import {
   CheckCircle,
   ArrowBack,
   LocalOffer,
+  InfoOutlined,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { orderService } from "@/services/orderService";
@@ -131,6 +132,7 @@ export const CheckoutPage = () => {
   const [isPickupInStore, setIsPickupInStore] = useState(false);
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("CashOnDelivery");
+  const [depositGateway, setDepositGateway] = useState<PaymentMethod>("VnPay");
   const [addresses, setAddresses] = useState<AddressResponse[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [useNewAddress, setUseNewAddress] = useState(false);
@@ -651,6 +653,12 @@ export const CheckoutPage = () => {
         recipient: null,
         payment: {
           method: paymentMethod,
+          depositGateway:
+            (paymentMethod === "CashOnDelivery" ||
+              paymentMethod === "CashInStore") &&
+            totals.depositPolicy?.isDepositRequired
+              ? depositGateway
+              : null,
           posSessionId: null,
         },
       };
@@ -693,11 +701,17 @@ export const CheckoutPage = () => {
       sessionStorage.removeItem("appliedVoucherCode");
 
       // Handle payment redirect
-      if (
+      const isOnlinePayment =
         paymentMethod === "VnPay" ||
         paymentMethod === "Momo" ||
-        paymentMethod === "PayOs"
-      ) {
+        paymentMethod === "PayOs";
+      const hasDepositGateway =
+        (paymentMethod === "CashOnDelivery" ||
+          paymentMethod === "CashInStore") &&
+        totals.depositPolicy?.isDepositRequired &&
+        depositGateway;
+
+      if (isOnlinePayment || hasDepositGateway) {
         if (response.url) {
           window.location.href = response.url;
         } else {
@@ -762,6 +776,11 @@ export const CheckoutPage = () => {
     <MainLayout>
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box display="flex" alignItems="center" gap={2} mb={4}>
+          <Box flex={1}>
+            <Typography variant="h4" fontWeight="bold">
+              Thanh toán
+            </Typography>
+          </Box>
           <Button
             startIcon={<ArrowBack />}
             component={RouterLink}
@@ -771,9 +790,6 @@ export const CheckoutPage = () => {
           >
             Quay lại
           </Button>
-          <Typography variant="h4" fontWeight="bold">
-            Thanh toán
-          </Typography>
         </Box>
 
         <Box
@@ -1265,14 +1281,21 @@ export const CheckoutPage = () => {
                     <Box display="flex" flexDirection="column" gap={0.5}>
                       <Box display="flex" alignItems="center" gap={1}>
                         <Typography
-                          variant="body2"
-                          color="success.main"
-                          fontWeight={600}
+                          sx={{
+                                  fontSize: "0.65rem",
+                                  fontWeight: 600,
+                                  color: "success.main",
+                                  lineHeight: 1.4,
+                                }}
                         >
                           ✓ {appliedVoucher.voucherCode}
                         </Typography>
                         {totals.discount > 0 && (
-                          <Typography variant="caption" color="success.main">
+                          <Typography  sx={{
+                                fontSize: "0.77rem",
+                                fontWeight: 600,
+                                color: "success.main",
+                              }}>
                             -{formatCurrency(totals.discount)}
                           </Typography>
                         )}
@@ -1283,7 +1306,15 @@ export const CheckoutPage = () => {
                       color="error"
                       onClick={removeVoucher}
                       disabled={isApplyingVoucher}
-                      sx={{ minWidth: 50, fontSize: "0.75rem" }}
+                      sx={{
+                            minWidth: 48,
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            px: 1,
+                            py: 0.4,
+                            borderRadius: "8px",
+                            flexShrink: 0,
+                          }}
                     >
                       Xóa
                     </Button>
@@ -1293,13 +1324,26 @@ export const CheckoutPage = () => {
                   variant="outlined"
                   size="small"
                   fullWidth
-                  startIcon={<LocalOffer />}
                   onClick={() => {
                     setVoucherPickerOpen(true);
                     setLoadingMyVouchers(true);
                   }}
                   disabled={isApplyingVoucher}
-                  sx={{ mt: 1 }}
+                  sx={{
+                      borderRadius: "8px",
+                      borderStyle: "dashed",
+                      borderColor: "error.300",
+                      color: "error.main",
+                      fontWeight: 600,
+                    fontSize: "0.8rem",
+                      mt:1,
+                      py: 0.75,
+                      "&:hover": {
+                        borderStyle: "dashed",
+                        bgcolor: "error.50",
+                        borderColor: "error.main",
+                      },
+                    }}
                 >
                   {appliedVoucher ? "Đổi voucher" : "Chọn voucher"}
                 </Button>
@@ -1338,6 +1382,297 @@ export const CheckoutPage = () => {
                   {formatCurrency(totals.totalPrice)}
                 </Typography>
               </Box>
+
+              {/* Deposit Policy Banner - shown for COD / CashInStore */}
+              {(paymentMethod === "CashOnDelivery" ||
+                paymentMethod === "CashInStore") &&
+                totals.depositPolicy?.isDepositRequired && (
+                  <Box
+                    sx={{
+                      mb: 2,
+                      borderRadius: 2,
+                      overflow: "hidden",
+                      border: "1.5px solid",
+                      borderColor: "warning.main",
+                    }}
+                  >
+                    {/* Header */}
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      gap={1}
+                      sx={{
+                        px: 2,
+                        py: 1.25,
+                        bgcolor: "warning.main",
+                        color: "warning.contrastText",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        fontWeight={700}
+                        letterSpacing={0.3}
+                      >
+                        Yêu cầu đặt cọc trước
+                      </Typography>
+                      <Box flex={1} />
+                      <Typography variant="caption" fontWeight={600}>
+                        {Math.round(totals.depositPolicy.depositRate)}%
+                      </Typography>
+                    </Box>
+
+                    {/* Body */}
+                    <Box sx={{ px: 2, py: 1.5, bgcolor: "warning.50" }}>
+                      {/* Deposit amount row */}
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        mb={0.75}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          Số tiền đặt cọc
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          fontWeight={700}
+                          color="warning.dark"
+                        >
+                          {formatCurrency(totals.depositPolicy.depositAmount)}
+                        </Typography>
+                      </Box>
+
+                      {/* Remaining amount row */}
+                      <Box
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        mb={1.25}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          Thanh toán khi{" "}
+                          {paymentMethod === "CashOnDelivery"
+                            ? "nhận hàng"
+                            : "đến cửa hàng"}
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {formatCurrency(totals.depositPolicy.remainingAmount)}
+                        </Typography>
+                      </Box>
+
+                      {/* Deposit Gateway Picker */}
+                      <Box
+                        sx={{
+                          mt: 0.5,
+                          mb: 1.25,
+                          pb: 1.25,
+                          borderBottom: "1px dashed",
+                          borderColor: "warning.light",
+                        }}
+                      >
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          fontWeight={600}
+                          display="block"
+                          mb={1}
+                        >
+                          Chọn cổng thanh toán tiền cọc
+                        </Typography>
+                        <Box display="flex" gap={1} flexWrap="wrap">
+
+                          {/* VnPay */}
+                          <Box
+                            onClick={() => setDepositGateway("VnPay")}
+                            sx={{
+                              flex: "1 1 auto",
+                              minWidth: 70,
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: 0.5,
+                              py: 1,
+                              px: 1.5,
+                              borderRadius: 1.5,
+                              border: "2px solid",
+                              borderColor:
+                                depositGateway === "VnPay"
+                                  ? "warning.dark"
+                                  : "divider",
+                              bgcolor:
+                                depositGateway === "VnPay"
+                                  ? "warning.100"
+                                  : "background.paper",
+                              cursor: "pointer",
+                              transition: "all 0.15s",
+                              "&:hover": { borderColor: "warning.main" },
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src={vnpayIcon}
+                              alt="VNPay"
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                objectFit: "contain",
+                                borderRadius: 0.5,
+                              }}
+                            />
+                            <Typography
+                              variant="caption"
+                              fontWeight={
+                                depositGateway === "VnPay" ? 700 : 400
+                              }
+                              color={
+                                depositGateway === "VnPay"
+                                  ? "warning.dark"
+                                  : "text.secondary"
+                              }
+                            >
+                              VNPay
+                            </Typography>
+                          </Box>
+
+                          {/* Momo */}
+                          <Box
+                            onClick={() => setDepositGateway("Momo")}
+                            sx={{
+                              flex: "1 1 auto",
+                              minWidth: 70,
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: 0.5,
+                              py: 1,
+                              px: 1.5,
+                              borderRadius: 1.5,
+                              border: "2px solid",
+                              borderColor:
+                                depositGateway === "Momo"
+                                  ? "warning.dark"
+                                  : "divider",
+                              bgcolor:
+                                depositGateway === "Momo"
+                                  ? "warning.100"
+                                  : "background.paper",
+                              cursor: "pointer",
+                              transition: "all 0.15s",
+                              "&:hover": { borderColor: "warning.main" },
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src={momoIcon}
+                              alt="MoMo"
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                objectFit: "contain",
+                                borderRadius: 0.5,
+                              }}
+                            />
+                            <Typography
+                              variant="caption"
+                              fontWeight={
+                                depositGateway === "Momo" ? 700 : 400
+                              }
+                              color={
+                                depositGateway === "Momo"
+                                  ? "warning.dark"
+                                  : "text.secondary"
+                              }
+                            >
+                              MoMo
+                            </Typography>
+                          </Box>
+
+                          {/* PayOS */}
+                          <Box
+                            onClick={() => setDepositGateway("PayOs")}
+                            sx={{
+                              flex: "1 1 auto",
+                              minWidth: 70,
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: 0.5,
+                              py: 1,
+                              px: 1.5,
+                              borderRadius: 1.5,
+                              border: "2px solid",
+                              borderColor:
+                                depositGateway === "PayOs"
+                                  ? "warning.dark"
+                                  : "divider",
+                              bgcolor:
+                                depositGateway === "PayOs"
+                                  ? "warning.100"
+                                  : "background.paper",
+                              cursor: "pointer",
+                              transition: "all 0.15s",
+                              "&:hover": { borderColor: "warning.main" },
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src={payOsIcon}
+                              alt="PayOS"
+                              sx={{
+                                width: 32,
+                                height: 32,
+                                objectFit: "contain",
+                                borderRadius: 0.5,
+                              }}
+                            />
+                            <Typography
+                              variant="caption"
+                              fontWeight={
+                                depositGateway === "PayOs" ? 700 : 400
+                              }
+                              color={
+                                depositGateway === "PayOs"
+                                  ? "warning.dark"
+                                  : "text.secondary"
+                              }
+                            >
+                              PayOS
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+
+                      {/* Info note */}
+                      <Box
+                        display="flex"
+                        alignItems="flex-start"
+                        gap={0.75}
+                      >
+                        <InfoOutlined
+                          sx={{ fontSize: 14, color: "text.secondary", mt: 0.2 }}
+                        />
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ lineHeight: 1.5 }}
+                        >
+                          Đơn hàng thanh toán{" "}
+                          {paymentMethod === "CashOnDelivery"
+                            ? "khi nhận hàng (COD)"
+                            : "tại cửa hàng"}{" "}
+                          yêu cầu đặt cọc{" "}
+                          <strong>
+                            {formatCurrency(totals.depositPolicy.depositAmount)}
+                          </strong>{" "}
+                          để xác nhận đơn. Phần còn lại sẽ thanh toán khi{" "}
+                          {paymentMethod === "CashOnDelivery"
+                            ? "nhận hàng"
+                            : "đến lấy hàng trực tiếp"}.
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                )}
 
               <Button
                 fullWidth

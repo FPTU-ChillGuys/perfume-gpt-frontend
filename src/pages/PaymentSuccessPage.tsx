@@ -58,7 +58,7 @@ export const PaymentSuccessPage = () => {
 
     return () => clearTimeout(timer);
   }, []);
-
+  const orderCode = searchParams.get("orderCode");
   const orderId = searchParams.get("orderId");
   const paymentId =
     searchParams.get("paymentId") || searchParams.get("vnp_TxnRef");
@@ -236,7 +236,7 @@ export const PaymentSuccessPage = () => {
           {orderId && (
             <Box display="flex" justifyContent="space-between" mb={1}>
               <Typography color="text.secondary">Mã đơn hàng:</Typography>
-              <Typography fontWeight={600}>{orderId}</Typography>
+              <Typography fontWeight={600}>{orderCode}</Typography>
             </Box>
           )}
 

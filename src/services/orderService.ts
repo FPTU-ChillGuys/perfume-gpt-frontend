@@ -1878,13 +1878,14 @@ class OrderService {
 
   async retryPayment(
     paymentId: string,
-    method: PaymentMethod,
+    newPaymentMethod: PaymentMethod,
+    newDepositMethod?: PaymentMethod | null,
     posSessionId?: string,
-    debugCallId?: string,
   ): Promise<CheckoutResponse> {
     try {
       const retryRequestPayload = {
-        method,
+        newPaymentMethod,
+        newDepositMethod: newDepositMethod ?? null,
         posSessionId: posSessionId || null,
       };
 
@@ -1923,17 +1924,15 @@ class OrderService {
         const normalized = payload.trim();
         const isRedirectUrl = /^https?:\/\//i.test(normalized);
 
-        const parsed = {
+        return {
           url: isRedirectUrl ? normalized : undefined,
           orderId: isRedirectUrl ? undefined : normalized,
           paymentId: isRedirectUrl ? undefined : normalized,
         };
-
-        return parsed;
       }
 
       if (payload && typeof payload === "object") {
-        const parsed = {
+        return {
           url:
             payload.url ||
             payload.paymentUrl ||
@@ -1942,8 +1941,6 @@ class OrderService {
           orderId: payload.orderId || payload.OrderId,
           paymentId: payload.paymentId || payload.PaymentId,
         };
-
-        return parsed;
       }
 
       return {

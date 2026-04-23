@@ -16,8 +16,9 @@ export const orderStatusLabels: Record<OrderStatus, string> = {
 // Vietnamese labels for payment status
 export const paymentStatusLabels: Record<PaymentStatus, string> = {
   Unpaid: "Chưa thanh toán",
+  PartialPaid: "Đã đặt cọc",
   Paid: "Đã thanh toán",
-  Partial_Refunded: "Hoàn tiền một phần",
+  PartialRefunded: "Hoàn tiền một phần",
   Refunded: "Đã hoàn tiền",
 };
 
@@ -56,15 +57,15 @@ export const getOrderStatusChipSx = (status?: OrderStatus) => {
   };
 };
 
-// Colors for payment status
 export const paymentStatusColors: Record<
   PaymentStatus,
   "default" | "primary" | "secondary" | "error" | "warning" | "info" | "success"
 > = {
-  Unpaid: "warning", // 🟠 Cam - Chưa thanh toán (thay vì đỏ)
-  Paid: "success", // 🟢 Xanh lá - Đã thanh toán
-  Partial_Refunded: "secondary", // 🟣 Tím nhạt - Hoàn tiền một phần
-  Refunded: "info", // 🔵 Xanh dương nhạt - Đã hoàn tiền
+  Unpaid: "warning",       // 🟠 Cam - Chưa thanh toán
+  PartialPaid: "info",     // 🔵 Xanh dương - Đã đặt cọc
+  Paid: "success",         // 🟢 Xanh lá - Đã thanh toán
+  PartialRefunded: "secondary", // 🟣 Tím nhạt - Hoàn tiền một phần
+  Refunded: "info",        // 🔵 Xanh dương nhạt - Đã hoàn tiền
 };
 
 // Colors for order type

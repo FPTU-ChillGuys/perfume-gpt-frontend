@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Link as RouterLink,
   useNavigate,
@@ -6,24 +6,15 @@ import {
 } from "react-router-dom";
 import {
   Box,
-  Container,
-  Typography,
   Button,
-  Paper,
-  Divider,
-  CircularProgress,
-  Alert,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  FormControl,
-  FormLabel,
-  Stack,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+  CircularProgress,
+  Container,
+  Divider,
+  Paper,
+  Stack,
+  Typography,
+  Alert,
 } from "@mui/material";
 import { Cancel } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
@@ -180,6 +171,9 @@ const PAYMENT_METHODS: {
   },
 ];
 
+const GATEWAY_METHODS: NonNullable<PaymentMethod>[] = ["VnPay", "Momo", "PayOs"];
+const CASH_METHODS: NonNullable<PaymentMethod>[] = ["CashOnDelivery", "CashInStore"];
+
 export const PaymentFailurePage = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -192,13 +186,28 @@ export const PaymentFailurePage = () => {
     useState<PaymentMethod>("CashOnDelivery");
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("CashOnDelivery");
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  // depositGateway: chỉ dùng khi paymentMethod là COD/CashInStore
+  const [depositGateway, setDepositGateway] = useState<PaymentMethod>("VnPay");
   const [orderType, setOrderType] = useState<OrderType | null>(null);
+  // isDepositOrder: true khi đơn COD/CashInStore có yêu cầu cọc và giao dịch lỗi là gateway cọc
+  const [isDepositOrder, setIsDepositOrder] = useState(false);
 
-  const allowedPaymentMethods = PAYMENT_METHODS.filter((method) =>
-    deliveryMethod === "PickupInStore"
-      ? method.value !== "CashOnDelivery"
-      : method.value !== "CashInStore",
+  // isDepositFailure: true khi:
+  // 1. PTTT gốc là COD/CashInStore (trước khi có fetch order)
+  // 2. Hoặc order detect là deposit order (gateway VnPay/Momo/PayOs dùng để cọc)
+  const isDepositFailure =
+    isDepositOrder ||
+    originalPaymentMethod === "CashOnDelivery" ||
+    originalPaymentMethod === "CashInStore";
+
+  const allowedPaymentMethods = useMemo(
+    () =>
+      PAYMENT_METHODS.filter((method) => {
+        if (deliveryMethod === "PickupInStore")
+          return method.value !== "CashOnDelivery";
+        return method.value !== "CashInStore";
+      }),
+    [deliveryMethod],
   );
 
   useEffect(() => {
@@ -235,9 +244,11 @@ export const PaymentFailurePage = () => {
     if (!allowedValues.includes(paymentMethod)) {
       setPaymentMethod(allowedValues[0] ?? "VnPay");
     }
-  }, [allowedPaymentMethods, originalPaymentMethod, paymentMethod]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryMethod]);
 
-  const orderId = searchParams.get("orderId") || searchParams.get("orderId");
+  const orderCode = searchParams.get("orderCode");
+  const orderId =  searchParams.get("orderId") || searchParams.get("orderId");
   const paymentId = searchParams.get("paymentId"); // Get paymentId from URL params
   const amount = searchParams.get("vnp_Amount");
   const bankCode = searchParams.get("vnp_BankCode");
@@ -248,8 +259,8 @@ export const PaymentFailurePage = () => {
 
   const decodedOrderInfo = decodeURIComponent(orderInfo || "");
   const hasPosSessionInOrderInfo = /PosSessionId\s*:/i.test(decodedOrderInfo);
-  const isInStoreByUrl =
-    deliveryMethod === "PickupInStore" || hasPosSessionInOrderInfo;
+  const isPickupInStore = Boolean(deliveryMethod === "PickupInStore");
+  const isInStoreByUrl = isPickupInStore || hasPosSessionInOrderInfo;
   const isInStoreOrder = orderType === "Offline" || isInStoreByUrl;
 
   useEffect(() => {
@@ -260,8 +271,32 @@ export const PaymentFailurePage = () => {
 
       try {
         const order = await orderService.getOrderById(orderId);
-        if (!isCancelled) {
-          setOrderType(order.type || null);
+        if (isCancelled) return;
+
+        setOrderType(order.type || null);
+
+        // Detect deposit flow: đơn có tiền cọc yêu cầu và chưa thanh toán xong
+        const hasDeposit = (order.requiredDepositAmount ?? 0) > 0;
+        const notFullyPaid = order.paymentStatus !== "Paid";
+        const gatewayFailed = GATEWAY_METHODS.includes(
+          originalPaymentMethod as NonNullable<PaymentMethod>,
+        );
+
+        if (hasDeposit && notFullyPaid && gatewayFailed) {
+          // Đây là thất bại cọ gateway dùng làm cổng cọc
+          setIsDepositOrder(true);
+
+          // PTTT chính của đơn: Offline = CashInStore, Online = CashOnDelivery
+          const primaryMethod: NonNullable<PaymentMethod> =
+            order.type === "Offline" ? "CashInStore" : "CashOnDelivery";
+
+          // Đặt paymentMethod = PTTT chính (COD/CashInStore)
+          setPaymentMethod(primaryMethod);
+
+          // Đặt depositGateway = gateway đã dùng cọc (VnPay/Momo/PayOs)
+          if (originalPaymentMethod) {
+            setDepositGateway(originalPaymentMethod);
+          }
         }
       } catch {
         if (!isCancelled) {
@@ -275,6 +310,7 @@ export const PaymentFailurePage = () => {
     return () => {
       isCancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   const errorMessage = getErrorMessage(responseCode);
@@ -296,33 +332,43 @@ export const PaymentFailurePage = () => {
       return;
     }
 
+    const isCashMethod =
+      paymentMethod === "CashOnDelivery" || paymentMethod === "CashInStore";
+
+    // newDepositMethod chỉ truyền khi PTTT chính là COD/CashInStore (cần cọc qua gateway)
+    // Khi chọn thanh toán toàn bộ online (VnPay/Momo/PayOs) → newDepositMethod = null
+    const newDepositMethod = isCashMethod ? depositGateway : null;
+
     try {
       setIsRetrying(true);
       const response = await orderService.retryPayment(
         paymentId,
-        paymentMethod,
+        paymentMethod,       // newPaymentMethod
+        newDepositMethod,    // newDepositMethod
       );
 
-      // Handle payment redirect
-      if (
+      // Cần redirect nếu: thanh toán online hoặc cọc qua gateway
+      const isOnlineMethod =
         paymentMethod === "VnPay" ||
         paymentMethod === "Momo" ||
-        paymentMethod === "PayOs"
-      ) {
+        paymentMethod === "PayOs";
+      const isDepositWithGateway = isCashMethod && newDepositMethod;
+
+      if (isOnlineMethod || isDepositWithGateway) {
         if (response.url) {
           window.location.href = response.url;
         } else {
           showToast("Không thể chuyển đến trang thanh toán", "error");
         }
       } else {
-        // COD or CashInStore - navigate to success page
+        // COD/CashInStore không cọc (đơn không yêu cầu cọc)
         showToast("Đơn hàng đã được xác nhận!", "success");
         navigate(`/payment/success?orderId=${orderId}&source=checkout`);
       }
     } catch (error) {
       showToast(
         error instanceof Error
-          ? "Đơn hàng đã hết hạn chờ thanh toán hoặc đã được xử lí thanh toán. Vui lòng đặt hàng mới."
+          ? error.message
           : (error as { message?: string }).message ||
               "Đơn hàng đã hết hạn chờ thanh toán hoặc đã được xử lí thanh toán. Vui lòng đặt hàng mới.",
         "error",
@@ -332,19 +378,8 @@ export const PaymentFailurePage = () => {
     }
   };
 
+  // With the new card-pick UI, user explicitly selects — no confirm modal needed
   const handleRetryPayment = async () => {
-    const isSameAsOriginal = paymentMethod === originalPaymentMethod;
-
-    if (isSameAsOriginal) {
-      await processRetryPayment();
-      return;
-    }
-
-    setIsConfirmModalOpen(true);
-  };
-
-  const handleConfirmSwitchMethod = async () => {
-    setIsConfirmModalOpen(false);
     await processRetryPayment();
   };
 
@@ -452,10 +487,10 @@ export const PaymentFailurePage = () => {
                   Thông tin giao dịch
                 </Typography>
 
-                {orderId && (
+                {orderCode && (
                   <Box display="flex" justifyContent="space-between" mb={1}>
                     <Typography color="text.secondary">Mã đơn hàng:</Typography>
-                    <Typography fontWeight={600}>{orderId}</Typography>
+                    <Typography fontWeight={600}>{orderCode}</Typography>
                   </Box>
                 )}
 
@@ -619,10 +654,10 @@ export const PaymentFailurePage = () => {
                 Thông tin giao dịch
               </Typography>
 
-              {orderId && (
+              {orderCode && (
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography color="text.secondary">Mã đơn hàng:</Typography>
-                  <Typography fontWeight={600}>{orderId}</Typography>
+                  <Typography fontWeight={600}>{orderCode}</Typography>
                 </Box>
               )}
 
@@ -718,76 +753,382 @@ export const PaymentFailurePage = () => {
                     mb: 2,
                   }}
                 >
-                  <FormControl component="fieldset" fullWidth>
-                    <FormLabel
-                      component="legend"
-                      sx={{ mb: 1, fontWeight: 700 }}
-                    >
-                      Chọn phương thức thanh toán mới
-                    </FormLabel>
-                    <RadioGroup
-                      value={paymentMethod}
-                      onChange={(e) =>
-                        setPaymentMethod(e.target.value as PaymentMethod)
-                      }
-                    >
-                      {allowedPaymentMethods.map((method) => (
-                        <FormControlLabel
-                          key={method.value}
-                          value={method.value}
-                          control={<Radio size="small" />}
-                          label={
+                  {/* ── Scenario A: Deposit failure (COD / CashInStore) ── */}
+                  {isDepositFailure ? (
+                    <>
+                      {/* Section 1: Retry with different deposit gateway */}
+                      <Typography
+                        variant="caption"
+                        fontWeight={700}
+                        color="text.secondary"
+                        display="block"
+                        mb={1}
+                        sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                      >
+                        Chọn cổng thanh toán tiền cọc
+                      </Typography>
+
+                      <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
+                        {GATEWAY_METHODS.map((gw) => {
+                          const info = PAYMENT_METHODS.find(
+                            (m) => m.value === gw,
+                          );
+                          if (!info) return null;
+                          const isSel =
+                            paymentMethod ===
+                              (originalPaymentMethod ?? "CashOnDelivery") &&
+                            depositGateway === gw;
+                          return (
                             <Box
-                              display="flex"
-                              alignItems="center"
-                              gap={1.5}
-                              py={0.5}
+                              key={gw}
+                              onClick={() => {
+                                setPaymentMethod(originalPaymentMethod);
+                                setDepositGateway(gw);
+                              }}
+                              sx={{
+                                flex: "1 1 70px",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 0.5,
+                                py: 1,
+                                px: 1,
+                                borderRadius: 1.5,
+                                border: "2px solid",
+                                borderColor: isSel ? "error.main" : "divider",
+                                bgcolor: isSel ? "error.50" : "background.paper",
+                                cursor: "pointer",
+                                transition: "all 0.15s",
+                                "&:hover": { borderColor: "error.light" },
+                              }}
                             >
                               <Box
                                 component="img"
-                                src={method.icon}
-                                alt={method.label}
+                                src={info.icon}
+                                alt={info.label}
                                 sx={{
-                                  width: 36,
-                                  height: 36,
+                                  width: 32,
+                                  height: 32,
                                   objectFit: "contain",
-                                  borderRadius: 1,
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                  bgcolor: "#fff",
-                                  p: 0.5,
-                                  flexShrink: 0,
+                                  borderRadius: 0.5,
                                 }}
-                              ></Box>
-                              <Box>
-                                <Typography variant="body2" fontWeight={600}>
-                                  {method.label}
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
-                                >
-                                  {method.description}
-                                </Typography>
-                              </Box>
+                              />
+                              <Typography
+                                variant="caption"
+                                fontWeight={isSel ? 700 : 400}
+                                color={isSel ? "error.main" : "text.secondary"}
+                              >
+                                {info.label}
+                              </Typography>
                             </Box>
-                          }
-                          sx={{
-                            mb: 0.75,
-                            border: 1,
-                            borderColor: "divider",
-                            borderRadius: 1,
-                            px: 1.25,
-                            py: 0.25,
-                            mx: 0,
-                            "&:hover": {
-                              bgcolor: "action.hover",
-                            },
-                          }}
-                        />
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
+                          );
+                        })}
+                      </Box>
+
+                      <Divider sx={{ mb: 1.5 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          hoặc thanh toán toàn bộ ngay
+                        </Typography>
+                      </Divider>
+
+                      {/* Section 2: Pay full amount online */}
+                      <Typography
+                        variant="caption"
+                        fontWeight={700}
+                        color="text.secondary"
+                        display="block"
+                        mb={1}
+                        sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                      >
+                        Thanh toán toàn bộ đơn hàng
+                      </Typography>
+
+                      <Box display="flex" gap={1} flexWrap="wrap">
+                        {GATEWAY_METHODS.map((gw) => {
+                          const info = PAYMENT_METHODS.find(
+                            (m) => m.value === gw,
+                          );
+                          if (!info) return null;
+                          const isSel =
+                            paymentMethod === gw &&
+                            !CASH_METHODS.includes(paymentMethod);
+                          return (
+                            <Box
+                              key={gw}
+                              onClick={() => setPaymentMethod(gw)}
+                              sx={{
+                                flex: "1 1 70px",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 0.5,
+                                py: 1,
+                                px: 1,
+                                borderRadius: 1.5,
+                                border: "2px solid",
+                                borderColor: isSel ? "primary.main" : "divider",
+                                bgcolor: isSel
+                                  ? "primary.50"
+                                  : "background.paper",
+                                cursor: "pointer",
+                                transition: "all 0.15s",
+                                "&:hover": { borderColor: "primary.light" },
+                              }}
+                            >
+                              <Box
+                                component="img"
+                                src={info.icon}
+                                alt={info.label}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  objectFit: "contain",
+                                  borderRadius: 0.5,
+                                }}
+                              />
+                              <Typography
+                                variant="caption"
+                                fontWeight={isSel ? 700 : 400}
+                                color={isSel ? "primary.main" : "text.secondary"}
+                              >
+                                {info.label}
+                              </Typography>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    </>
+                  ) : (
+                    /* ── Scenario B: Online payment failure ── */
+                    <>
+                      {/* Section 1: Retry with another online gateway */}
+                      <Typography
+                        variant="caption"
+                        fontWeight={700}
+                        color="text.secondary"
+                        display="block"
+                        mb={1}
+                        sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                      >
+                        Thử lại với cổng khác
+                      </Typography>
+
+                      <Box display="flex" gap={1} flexWrap="wrap" mb={2}>
+                        {GATEWAY_METHODS.map((gw) => {
+                          const info = PAYMENT_METHODS.find(
+                            (m) => m.value === gw,
+                          );
+                          if (!info) return null;
+                          const isSel =
+                            paymentMethod === gw &&
+                            GATEWAY_METHODS.includes(paymentMethod);
+                          return (
+                            <Box
+                              key={gw}
+                              onClick={() => setPaymentMethod(gw)}
+                              sx={{
+                                flex: "1 1 70px",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                gap: 0.5,
+                                py: 1,
+                                px: 1,
+                                borderRadius: 1.5,
+                                border: "2px solid",
+                                borderColor: isSel ? "error.main" : "divider",
+                                bgcolor: isSel ? "error.50" : "background.paper",
+                                cursor: "pointer",
+                                transition: "all 0.15s",
+                                "&:hover": { borderColor: "error.light" },
+                              }}
+                            >
+                              <Box
+                                component="img"
+                                src={info.icon}
+                                alt={info.label}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  objectFit: "contain",
+                                  borderRadius: 0.5,
+                                }}
+                              />
+                              <Typography
+                                variant="caption"
+                                fontWeight={isSel ? 700 : 400}
+                                color={isSel ? "error.main" : "text.secondary"}
+                              >
+                                {info.label}
+                              </Typography>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+
+                      <Divider sx={{ mb: 1.5 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          hoặc đổi phương thức
+                        </Typography>
+                      </Divider>
+
+                      {/* Section 2: Switch to COD/CashInStore with deposit gateway */}
+                      <Typography
+                        variant="caption"
+                        fontWeight={700}
+                        color="text.secondary"
+                        display="block"
+                        mb={1}
+                        sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}
+                      >
+                        {deliveryMethod === "PickupInStore"
+                          ? "Nhận tại cửa hàng"
+                          : "Thanh toán khi nhận hàng (COD)"}
+                      </Typography>
+
+                      {/* COD / CashInStore card */}
+                      {(() => {
+                        const cashMethod =
+                          deliveryMethod === "PickupInStore"
+                            ? "CashInStore"
+                            : "CashOnDelivery";
+                        const info = PAYMENT_METHODS.find(
+                          (m) => m.value === cashMethod,
+                        );
+                        const isCashSelected =
+                          paymentMethod === cashMethod;
+                        return (
+                          <Box
+                            onClick={() => setPaymentMethod(cashMethod)}
+                            display="flex"
+                            alignItems="center"
+                            gap={1.5}
+                            sx={{
+                              p: 1.25,
+                              borderRadius: 1.5,
+                              border: "2px solid",
+                              borderColor: isCashSelected
+                                ? "warning.main"
+                                : "divider",
+                              bgcolor: isCashSelected
+                                ? "warning.50"
+                                : "background.paper",
+                              cursor: "pointer",
+                              mb: isCashSelected ? 1.5 : 0,
+                              transition: "all 0.15s",
+                              "&:hover": { borderColor: "warning.light" },
+                            }}
+                          >
+                            <Box
+                              component="img"
+                              src={info?.icon}
+                              alt={info?.label}
+                              sx={{
+                                width: 36,
+                                height: 36,
+                                objectFit: "contain",
+                                borderRadius: 1,
+                                border: "1px solid",
+                                borderColor: "divider",
+                                p: 0.5,
+                              }}
+                            />
+                            <Box flex={1}>
+                              <Typography variant="body2" fontWeight={600}>
+                                {info?.label}
+                              </Typography>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {info?.description}
+                              </Typography>
+                            </Box>
+                            {isCashSelected && (
+                              <Chip
+                                label="Đã chọn"
+                                size="small"
+                                color="warning"
+                                sx={{ fontWeight: 700 }}
+                              />
+                            )}
+                          </Box>
+                        );
+                      })()}
+
+                      {/* Deposit gateway sub-selector */}
+                      {(paymentMethod === "CashOnDelivery" ||
+                        paymentMethod === "CashInStore") && (
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                            mb={0.75}
+                          >
+                            Chọn cổng thanh toán tiền cọc:
+                          </Typography>
+                          <Box display="flex" gap={1}>
+                            {GATEWAY_METHODS.map((gw) => {
+                              const info = PAYMENT_METHODS.find(
+                                (m) => m.value === gw,
+                              );
+                              if (!info) return null;
+                              const isSel = depositGateway === gw;
+                              return (
+                                <Box
+                                  key={gw}
+                                  onClick={() => setDepositGateway(gw)}
+                                  sx={{
+                                    flex: "1 1 60px",
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                    py: 0.75,
+                                    borderRadius: 1.5,
+                                    border: "2px solid",
+                                    borderColor: isSel
+                                      ? "warning.dark"
+                                      : "divider",
+                                    bgcolor: isSel
+                                      ? "warning.50"
+                                      : "background.paper",
+                                    cursor: "pointer",
+                                    transition: "all 0.15s",
+                                    "&:hover": {
+                                      borderColor: "warning.main",
+                                    },
+                                  }}
+                                >
+                                  <Box
+                                    component="img"
+                                    src={info.icon}
+                                    alt={info.label}
+                                    sx={{
+                                      width: 28,
+                                      height: 28,
+                                      objectFit: "contain",
+                                    }}
+                                  />
+                                  <Typography
+                                    variant="caption"
+                                    fontWeight={isSel ? 700 : 400}
+                                    fontSize={10}
+                                    color={
+                                      isSel ? "warning.dark" : "text.secondary"
+                                    }
+                                  >
+                                    {info.label}
+                                  </Typography>
+                                </Box>
+                              );
+                            })}
+                          </Box>
+                        </Box>
+                      )}
+                    </>
+                  )}
                 </Box>
               )}
 
@@ -841,49 +1182,6 @@ export const PaymentFailurePage = () => {
           </Box>
         )}
       </Container>
-
-      <Dialog
-        open={isConfirmModalOpen}
-        onClose={() => {
-          if (!isRetrying) {
-            setIsConfirmModalOpen(false);
-          }
-        }}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Xác nhận đổi phương thức thanh toán</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary">
-            Bạn đang đổi phương thức thanh toán từ{" "}
-            <Typography component="span" fontWeight={700} color="text.primary">
-              {getPaymentMethodLabel(originalPaymentMethod)}
-            </Typography>{" "}
-            sang{" "}
-            <Typography component="span" fontWeight={700} color="text.primary">
-              {getPaymentMethodLabel(paymentMethod)}
-            </Typography>
-            . Bạn có chắc chắn muốn tiếp tục?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={() => setIsConfirmModalOpen(false)}
-            disabled={isRetrying}
-          >
-            Hủy
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleConfirmSwitchMethod}
-            disabled={isRetrying}
-          >
-            Xác nhận
-          </Button>
-        </DialogActions>
-      </Dialog>
     </>
   );
 

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Alert,
@@ -72,6 +72,7 @@ import codIcon from "@/assets/cod.png";
 import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
+import payosIcon from "@/assets/payos.png";
 import transericon from "@/assets/transfer.png";
 
 type OrderListItemWithReturnable = OrderListItem & {
@@ -101,6 +102,19 @@ const RETRY_PAYMENT_METHOD_OPTIONS: NonNullable<PaymentMethod>[] = [
   "CashInStore",
   "VnPay",
   "Momo",
+];
+
+const GATEWAY_METHODS: NonNullable<PaymentMethod>[] = ["VnPay", "Momo", "PayOs"];
+const CASH_METHODS: NonNullable<PaymentMethod>[] = ["CashOnDelivery", "CashInStore"];
+
+const GATEWAY_PAYMENT_METHOD_INFO: {
+  value: NonNullable<PaymentMethod>;
+  label: string;
+  icon: string;
+}[] = [
+  { value: "VnPay", label: "VNPay", icon: vnpayIcon },
+  { value: "Momo", label: "MoMo", icon: momoIcon },
+  { value: "PayOs", label: "PayOS", icon: payosIcon },
 ];
 
 const STATUS_TABS: { label: string; value: OrderStatus | "" }[] = [
@@ -257,6 +271,9 @@ export const MyOrdersPage = () => {
   const [retryPaymentId, setRetryPaymentId] = useState<string | null>(null);
   const [selectedRetryMethod, setSelectedRetryMethod] =
     useState<NonNullable<PaymentMethod>>("CashOnDelivery");
+  const [retryDepositGateway, setRetryDepositGateway] =
+    useState<NonNullable<PaymentMethod>>("VnPay");
+  const [retryIsDepositOrder, setRetryIsDepositOrder] = useState(false);
   const [isRetryingPayment, setIsRetryingPayment] = useState(false);
   const [returnRequestStatusByOrderId, setReturnRequestStatusByOrderId] =
     useState<Record<string, ReturnRequestStatus>>({});
@@ -679,32 +696,52 @@ export const MyOrdersPage = () => {
   }, [cancelOrderId, shouldRequireCancelRefundInfo, vietQrBanks.length]);
 
   const openRetryPaymentDialog = (order: OrderListItemWithReturnable) => {
-    const latestPayment = [...(order.paymentTransactions ?? [])]
-      .reverse()
-      .find((transaction) => transaction?.id);
+    const txns = order.paymentTransactions ?? [];
+    const depositAmount = order.requiredDepositAmount ?? 0;
 
-    if (!latestPayment?.id) {
+    // Find the payment id: use the main (largest non-failed, non-deposit) transaction
+    const nonFailed = txns.filter((t) => t?.status !== "Failed");
+    const nonDeposit = nonFailed.filter((t) => {
+      const isDepositTx =
+        depositAmount > 0 &&
+        GATEWAY_METHODS.includes((t?.paymentMethod ?? "") as NonNullable<PaymentMethod>) &&
+        Math.abs((t?.totalAmount ?? 0) - depositAmount) < 1;
+      return !isDepositTx;
+    });
+    const mainTx =
+      (nonDeposit.length > 0 ? nonDeposit : nonFailed)
+        .reduce<typeof txns[number] | null>(
+          (best, t) => !best || (t?.totalAmount ?? 0) >= (best?.totalAmount ?? 0) ? t : best,
+          null,
+        )
+      // Fallback: all transactions failed → pick largest to get original payment method
+      ?? txns.reduce<typeof txns[number] | null>(
+        (best, t) => !best || (t?.totalAmount ?? 0) >= (best?.totalAmount ?? 0) ? t : best,
+        null,
+      );
+
+    const paymentIdToUse = mainTx?.id ?? [...txns].reverse().find(t => t?.id)?.id;
+    if (!paymentIdToUse) {
       showToast("Không tìm thấy giao dịch thanh toán", "error");
       return;
     }
 
-    const currentMethod = isSupportedPaymentMethod(latestPayment.paymentMethod)
-      ? latestPayment.paymentMethod
-      : null;
+    const isDepositOrder = depositAmount > 0 && order.paymentStatus !== "Paid";
+    const isOffline = order.type === "Offline";
+    const primaryCashMethod: NonNullable<PaymentMethod> = isOffline ? "CashInStore" : "CashOnDelivery";
 
-    const availableMethods = RETRY_PAYMENT_METHOD_OPTIONS.filter((method) =>
-      order.type === "Offline"
-        ? method !== "CashOnDelivery"
-        : method !== "CashInStore",
+    // Find current deposit gateway (the small online tx)
+    const depositTx = txns.find(
+      (t) => GATEWAY_METHODS.includes((t?.paymentMethod ?? "") as NonNullable<PaymentMethod>) &&
+        Math.abs((t?.totalAmount ?? 0) - depositAmount) < 1 && t?.status !== "Failed"
     );
+    const defaultGateway = (depositTx?.paymentMethod ?? "VnPay") as NonNullable<PaymentMethod>;
 
-    setSelectedRetryMethod(
-      currentMethod && availableMethods.includes(currentMethod)
-        ? currentMethod
-        : (availableMethods[0] ?? "VnPay"),
-    );
+    setRetryIsDepositOrder(isDepositOrder);
+    setRetryDepositGateway(defaultGateway);
+    setSelectedRetryMethod(isDepositOrder ? primaryCashMethod : (isSupportedPaymentMethod(mainTx?.paymentMethod) ? (mainTx!.paymentMethod as NonNullable<PaymentMethod>) : (isOffline ? "CashInStore" : "CashOnDelivery")));
     setRetryOrderId(order.id ?? null);
-    setRetryPaymentId(latestPayment.id ?? null);
+    setRetryPaymentId(paymentIdToUse);
   };
 
   const closeRetryPaymentDialog = () => {
@@ -721,18 +758,22 @@ export const MyOrdersPage = () => {
       return;
     }
 
+    const isCashMethod = CASH_METHODS.includes(selectedRetryMethod);
+    // Pass deposit gateway whenever user picks COD/CashInStore (backend decides if deposit needed)
+    const newDepositMethod = isCashMethod ? retryDepositGateway : null;
+    const isOnlineOrDeposit =
+      GATEWAY_METHODS.includes(selectedRetryMethod) || Boolean(newDepositMethod);
+
     try {
       setIsRetryingPayment(true);
       const response = await orderService.retryPayment(
         retryPaymentId,
         selectedRetryMethod,
+        newDepositMethod,
       );
 
-      if (selectedRetryMethod === "VnPay" || selectedRetryMethod === "Momo") {
-        if (!response.url) {
-          throw new Error("Không lấy được đường dẫn thanh toán");
-        }
-
+      if (isOnlineOrDeposit) {
+        if (!response.url) throw new Error("Không lấy được đường dẫn thanh toán");
         window.location.href = response.url;
         return;
       }
@@ -742,9 +783,7 @@ export const MyOrdersPage = () => {
       await loadOrders();
     } catch (error) {
       showToast(
-        error instanceof Error
-          ? error.message
-          : "Không thể thanh toán lại đơn hàng",
+        error instanceof Error ? error.message : "Không thể thanh toán lại đơn hàng",
         "error",
       );
     } finally {
@@ -1570,103 +1609,60 @@ export const MyOrdersPage = () => {
       >
         <DialogTitle>Thanh toán lại đơn hàng</DialogTitle>
         <DialogContent>
-          <Stack spacing={1.5} sx={{ mt: 0.5 }}>
-            <Typography variant="body2" color="text.secondary">
-              Chọn phương thức thanh toán để tiếp tục.
-            </Typography>
-
-            {retryOrder?.paymentStatus === "Unpaid" &&
-              retryPaymentExpiresAtLabel &&
-              (() => {
-                const method = [...(retryOrder.paymentTransactions ?? [])]
-                  .reverse()
-                  .find((transaction) => transaction?.id)?.paymentMethod;
-                const isOnlineMethod = method === "VnPay" || method === "Momo";
-
-                if (!isOnlineMethod) {
-                  return null;
-                }
-
-                return (
-                  <Alert severity="warning">
-                    Giao dịch hiện tại sẽ hết hạn lúc{" "}
-                    <b>{retryPaymentExpiresAtLabel}</b>.
-                  </Alert>
-                );
-              })()}
+          <Stack spacing={2} sx={{ mt: 0.5 }}>
+            {retryPaymentExpiresAtLabel && (
+              <Alert severity="warning">
+                Giao dịch sẽ hết hạn lúc <b>{retryPaymentExpiresAtLabel}</b>.
+              </Alert>
+            )}
 
             <RadioGroup
               value={selectedRetryMethod}
-              onChange={(e) =>
-                setSelectedRetryMethod(
-                  e.target.value as NonNullable<PaymentMethod>,
-                )
-              }
+              onChange={(e) => setSelectedRetryMethod(e.target.value as NonNullable<PaymentMethod>)}
             >
               {allowedRetryMethods.map((method) => (
                 <FormControlLabel
-                  key={method}
-                  value={method}
+                  key={method} value={method}
                   control={<Radio size="small" />}
                   label={
-                    <Box
-                      display="flex"
-                      alignItems="center"
-                      gap={1.25}
-                      py={0.25}
-                    >
-                      <Box
-                        component="img"
-                        src={PAYMENT_METHOD_ICONS[method]}
-                        alt={PAYMENT_METHOD_LABELS[method]}
-                        sx={{
-                          width: 28,
-                          height: 28,
-                          objectFit: "contain",
-                          borderRadius: 1,
-                          border: "1px solid",
-                          borderColor: "divider",
-                          bgcolor: "#fff",
-                          p: 0.4,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <Typography variant="body2" fontWeight={500}>
-                        {PAYMENT_METHOD_LABELS[method]}
-                      </Typography>
+                    <Box display="flex" alignItems="center" gap={1.25} py={0.25}>
+                      <Box component="img" src={PAYMENT_METHOD_ICONS[method]} alt={PAYMENT_METHOD_LABELS[method]}
+                        sx={{ width: 28, height: 28, objectFit: "contain", borderRadius: 1, border: "1px solid", borderColor: "divider", bgcolor: "#fff", p: 0.4, flexShrink: 0 }} />
+                      <Typography variant="body2" fontWeight={500}>{PAYMENT_METHOD_LABELS[method]}</Typography>
                     </Box>
                   }
-                  sx={{
-                    m: 0,
-                    mb: 0.75,
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                    px: 1.25,
-                    py: 0.25,
-                  }}
+                  sx={{ m: 0, mb: 0.75, border: "1px solid", borderColor: "divider", borderRadius: 1, px: 1.25, py: 0.25 }}
                 />
               ))}
             </RadioGroup>
+
+            {CASH_METHODS.includes(selectedRetryMethod) && (
+              <Box>
+                <Typography variant="caption" fontWeight={700} color="text.secondary"
+                  display="block" mb={1} sx={{ textTransform: "uppercase", letterSpacing: 0.5 }}>
+                  Cổng thanh toán tiền cọc
+                </Typography>
+                <Box display="flex" gap={1} flexWrap="wrap">
+                  {GATEWAY_PAYMENT_METHOD_INFO.map((gw) => {
+                    const isSel = retryDepositGateway === gw.value;
+                    return (
+                      <Box key={gw.value}
+                        onClick={() => setRetryDepositGateway(gw.value)}
+                        sx={{ flex: "1 1 70px", display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5, py: 1, px: 1, borderRadius: 1.5, border: "2px solid", borderColor: isSel ? "warning.main" : "divider", bgcolor: isSel ? "warning.50" : "background.paper", cursor: "pointer", transition: "all 0.15s", "&:hover": { borderColor: "warning.light" } }}>
+                        <Box component="img" src={gw.icon} alt={gw.label} sx={{ width: 32, height: 32, objectFit: "contain", borderRadius: 0.5 }} />
+                        <Typography variant="caption" fontWeight={isSel ? 700 : 400} color={isSel ? "warning.dark" : "text.secondary"}>{gw.label}</Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Box>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={closeRetryPaymentDialog}
-            disabled={isRetryingPayment}
-          >
-            Đóng
-          </Button>
-          <Button
-            variant="contained"
-            color="warning"
-            onClick={handleRetryPayment}
-            disabled={
-              isRetryingPayment ||
-              !retryPaymentId ||
-              !allowedRetryMethods.includes(selectedRetryMethod)
-            }
-          >
+          <Button onClick={closeRetryPaymentDialog} disabled={isRetryingPayment}>Đóng</Button>
+          <Button variant="contained" color="warning" onClick={handleRetryPayment}
+            disabled={isRetryingPayment || !retryPaymentId}>
             {isRetryingPayment ? "Đang xử lý..." : "Thanh toán ngay"}
           </Button>
         </DialogActions>

@@ -272,10 +272,11 @@ const OrderPriceChips = ({
 
 interface OrderSummaryProps {
   order: OrderResponse | null;
+  depositGatewayLabel?: string | null;
 }
 
 /** Khu vực tóm tắt thanh toán */
-const OrderSummaryBox = ({ order }: OrderSummaryProps) => {
+const OrderSummaryBox = ({ order, depositGatewayLabel }: OrderSummaryProps) => {
   if (!order) return null;
 
   const getVoucherTypeLabel = (voucherType?: string | null): string => {
@@ -285,6 +286,8 @@ const OrderSummaryBox = ({ order }: OrderSummaryProps) => {
   };
 
   const showVoucherDiscount = (order.voucherDiscountTotal ?? 0) > 0;
+  const isPartialPaid = order.paymentStatus === "PartialPaid";
+  const hasDepositInfo = isPartialPaid && (order.requiredDepositAmount ?? 0) > 0;
 
   return (
     <Stack spacing={1}>
@@ -343,6 +346,107 @@ const OrderSummaryBox = ({ order }: OrderSummaryProps) => {
           {fmt(order.totalAmount ?? 0)}
         </Typography>
       </Box>
+
+      {/* ── Deposit breakdown ── */}
+      {hasDepositInfo && (
+        <Box
+          sx={{
+            mt: 0.5,
+            borderRadius: 1.5,
+            border: "1.5px solid",
+            borderColor: "info.light",
+            overflow: "hidden",
+          }}
+        >
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1}
+            sx={{
+              px: 1.5,
+              py: 1,
+              bgcolor: "info.main",
+              color: "info.contrastText",
+            }}
+          >
+            <Typography variant="caption" fontWeight={700}>
+              Thông tin đặt cọc
+            </Typography>
+            <Box flex={1} />
+            <Chip
+              label="Đã đặt cọc"
+              size="small"
+              sx={{
+                height: 20,
+                fontSize: 11,
+                fontWeight: 700,
+                bgcolor: "rgba(255,255,255,0.25)",
+                color: "inherit",
+              }}
+            />
+          </Box>
+
+          <Stack spacing={0.75} sx={{ px: 1.5, py: 1.25 }}>
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">
+                Tiền cọc yêu cầu
+              </Typography>
+              <Typography variant="body2" fontWeight={600} color="info.dark">
+                {fmt(order.requiredDepositAmount)}
+              </Typography>
+            </Box>
+
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="body2" color="text.secondary">
+                Khách đã thanh toán cọc
+              </Typography>
+              <Typography variant="body2" fontWeight={700} color="success.main">
+                {fmt(order.paidAmount)}
+              </Typography>
+            </Box>
+
+            {/* Deposit gateway */}
+            {depositGatewayLabel && (
+              <Box display="flex" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  Cổng thanh toán cọc
+                </Typography>
+                <Typography variant="body2" fontWeight={600} color="info.dark">
+                  {depositGatewayLabel}
+                </Typography>
+              </Box>
+            )}
+
+            <Divider sx={{ my: 0.25 }} />
+
+            <Box display="flex" justifyContent="space-between">
+              <Typography variant="body2" fontWeight={600}>
+                Còn cần thu
+              </Typography>
+              <Typography
+                variant="body2"
+                fontWeight={700}
+                color="warning.dark"
+                fontSize="1rem"
+              >
+                {fmt(order.remainingAmount)}
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
+      )}
+
+      {/* Fully paid */}
+      {order.paymentStatus === "Paid" && (order.paidAmount ?? 0) > 0 && (
+        <Box display="flex" justifyContent="space-between">
+          <Typography variant="body2" color="text.secondary">
+            Đã thanh toán
+          </Typography>
+          <Typography variant="body2" fontWeight={600} color="success.main">
+            {fmt(order.paidAmount)}
+          </Typography>
+        </Box>
+      )}
     </Stack>
   );
 };
@@ -788,13 +892,48 @@ export const OrderManagementDetailPage = () => {
   const shippingFee = order?.shippingInfo?.shippingFee ?? 0;
   const total = order?.totalAmount ?? 0;
   const voucherDiscount = subtotal + shippingFee - total;
-  const paymentMethodLabel = useMemo(() => {
-    const paymentMethod = [...(order?.paymentTransactions ?? [])]
-      .reverse()
-      .find((transaction) => transaction?.paymentMethod)?.paymentMethod;
 
-    return paymentMethod ? PAYMENT_METHOD_LABELS[paymentMethod] : "N/A";
-  }, [order?.paymentTransactions]);
+  /**
+   * Find the "main" payment transaction (same logic as MyOrderDetailPage):
+   * skip Failed + skip deposit online tx, pick largest-amount survivor.
+   */
+  const mainPaymentTransaction = useMemo(() => {
+    const txns = order?.paymentTransactions ?? [];
+    const depositAmount = order?.requiredDepositAmount ?? 0;
+    const onlineMethods = new Set(["VnPay", "Momo", "PayOs"]);
+
+    const nonFailed = txns.filter((t) => t?.status !== "Failed");
+    const nonDeposit = nonFailed.filter((t) => {
+      const isDepositTx =
+        depositAmount > 0 &&
+        onlineMethods.has(t?.paymentMethod ?? "") &&
+        Math.abs((t?.totalAmount ?? 0) - depositAmount) < 1;
+      return !isDepositTx;
+    });
+
+    const candidates = nonDeposit.length > 0 ? nonDeposit : nonFailed;
+    const best = candidates.reduce<typeof txns[number] | null>((b, t) => {
+      if (!b) return t;
+      return (t?.totalAmount ?? 0) >= (b?.totalAmount ?? 0) ? t : b;
+    }, null);
+
+    // Fallback: if all transactions are Failed, show the largest one (e.g. failed VnPay)
+    if (!best) {
+      return txns.reduce<typeof txns[number] | null>((b, t) => {
+        if (!b) return t;
+        return (t?.totalAmount ?? 0) >= (b?.totalAmount ?? 0) ? t : b;
+      }, null);
+    }
+
+    return best;
+  }, [order?.paymentTransactions, order?.requiredDepositAmount]);
+
+  const paymentMethodLabel = useMemo(() => {
+    const method = mainPaymentTransaction?.paymentMethod;
+    return method && PAYMENT_METHOD_LABELS[method]
+      ? PAYMENT_METHOD_LABELS[method]
+      : "N/A";
+  }, [mainPaymentTransaction]);
 
   const latestPaymentTransaction = useMemo(
     () =>
@@ -805,11 +944,8 @@ export const OrderManagementDetailPage = () => {
   );
 
   const latestPaymentMethod = useMemo(
-    () =>
-      [...(order?.paymentTransactions ?? [])]
-        .reverse()
-        .find((transaction) => transaction?.paymentMethod)?.paymentMethod,
-    [order?.paymentTransactions],
+    () => mainPaymentTransaction?.paymentMethod,
+    [mainPaymentTransaction],
   );
 
   const currentPaymentMethod = useMemo<PaymentMethod | null>(() => {
@@ -817,6 +953,24 @@ export const OrderManagementDetailPage = () => {
       ? latestPaymentMethod
       : null;
   }, [latestPaymentMethod]);
+
+  /** Label for the gateway used to pay the deposit */
+  const depositGatewayLabel = useMemo(() => {
+    const txns = order?.paymentTransactions ?? [];
+    const depositAmount = order?.requiredDepositAmount ?? 0;
+    const onlineMethods = new Set(["VnPay", "Momo", "PayOs"]);
+
+    if (depositAmount <= 0) return null;
+
+    const depositTx = txns.find(
+      (t) =>
+        onlineMethods.has(t?.paymentMethod ?? "") &&
+        Math.abs((t?.totalAmount ?? 0) - depositAmount) < 1 &&
+        t?.status !== "Failed",
+    );
+    if (!depositTx?.paymentMethod) return null;
+    return PAYMENT_METHOD_LABELS[depositTx.paymentMethod] ?? null;
+  }, [order?.paymentTransactions, order?.requiredDepositAmount]);
 
   const paymentId = latestPaymentTransaction?.id ?? null;
   const isPickupInStoreOrder = Boolean(
@@ -2341,7 +2495,7 @@ export const OrderManagementDetailPage = () => {
                     <Typography variant="subtitle1" fontWeight={700} mb={2}>
                       Chi tiết thanh toán
                     </Typography>
-                    <OrderSummaryBox order={order} />
+                    <OrderSummaryBox order={order} depositGatewayLabel={depositGatewayLabel} />
                     <Divider sx={{ my: 2 }} />
                     <Box display="flex" justifyContent="space-between" gap={2}>
                       <Typography variant="body2" color="text.secondary">

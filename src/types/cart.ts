@@ -6,6 +6,13 @@ export type CartItemsApiResponse =
 export type CartTotalsApiResponse =
   components["schemas"]["GetCartTotalResponse"];
 
+export interface DepositPolicy {
+  isDepositRequired: boolean;
+  depositRate: number;
+  depositAmount: number;
+  remainingAmount: number;
+}
+
 export interface CartTotals {
   subtotal: number;
   shippingFee: number;
@@ -13,6 +20,7 @@ export interface CartTotals {
   totalPrice: number;
   warningMessage?: string;
   responseMessage?: string;
+  depositPolicy?: DepositPolicy;
 }
 
 export interface ApplyVoucherRequest {

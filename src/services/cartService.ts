@@ -126,21 +126,35 @@ class CartService {
         : undefined;
 
       if (payload) {
+        const rawPayload = payload as {
+          subtotal?: number;
+          subTotal?: number;
+          shippingFee?: number;
+          discount?: number;
+          totalPrice?: number;
+          total?: number;
+          depositPolicy?: {
+            isDepositRequired?: boolean;
+            depositRate?: number;
+            depositAmount?: number;
+            remainingAmount?: number;
+          };
+        };
         return {
-          subtotal: Number(
-            (payload as { subtotal?: number; subTotal?: number }).subtotal ??
-              (payload as { subTotal?: number }).subTotal ??
-              0,
-          ),
-          shippingFee: Number(payload.shippingFee ?? 0),
-          discount: Number(payload.discount ?? 0),
-          totalPrice: Number(
-            (payload as { totalPrice?: number; total?: number }).totalPrice ??
-              (payload as { total?: number }).total ??
-              0,
-          ),
+          subtotal: Number(rawPayload.subtotal ?? rawPayload.subTotal ?? 0),
+          shippingFee: Number(rawPayload.shippingFee ?? 0),
+          discount: Number(rawPayload.discount ?? 0),
+          totalPrice: Number(rawPayload.totalPrice ?? rawPayload.total ?? 0),
           warningMessage,
           responseMessage: rawMessage || undefined,
+          depositPolicy: rawPayload.depositPolicy?.isDepositRequired
+            ? {
+                isDepositRequired: true,
+                depositRate: Number(rawPayload.depositPolicy.depositRate ?? 0),
+                depositAmount: Number(rawPayload.depositPolicy.depositAmount ?? 0),
+                remainingAmount: Number(rawPayload.depositPolicy.remainingAmount ?? 0),
+              }
+            : undefined,
         };
       }
 

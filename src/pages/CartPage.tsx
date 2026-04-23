@@ -537,6 +537,14 @@ export const CartPage = () => {
     <MainLayout>
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box display="flex" alignItems="center" gap={2} mb={4}>
+          <Box flex={1}>
+            <Typography variant="h4" fontWeight="bold">
+              Giỏ hàng của bạn
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              ({items.length} sản phẩm)
+            </Typography>
+          </Box>
           <Button
             startIcon={<ArrowBack />}
             component={RouterLink}
@@ -546,14 +554,6 @@ export const CartPage = () => {
           >
             Tiếp tục mua hàng
           </Button>
-          <Box flex={1}>
-            <Typography variant="h4" fontWeight="bold">
-              Giỏ hàng của bạn
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              ({items.length} sản phẩm)
-            </Typography>
-          </Box>
         </Box>
 
         {items.length === 0 ? (
@@ -955,50 +955,49 @@ export const CartPage = () => {
 
                 {/* Voucher */}
                 <Box mb={2}>
-                  {/* Code input row — hidden when a voucher is already applied */}
-                  {!appliedVoucher && (
-                    <Box display="flex" gap={1} alignItems="stretch" mb={1}>
-                      <TextField
-                        size="small"
-                        placeholder="Nhập mã giảm giá"
-                        value={voucherCode}
-                        onChange={(e) => {
-                          setVoucherCode(e.target.value);
-                          if (voucherError) setVoucherError(null);
-                        }}
-                        disabled={isApplyingVoucher}
-                        error={!!voucherError}
-                        fullWidth
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && voucherCode.trim()) {
-                            void applyVoucher(voucherCode);
-                          }
-                        }}
-                        sx={{
-                          "& .MuiOutlinedInput-root": {
-                            borderRadius: "8px",
-                          },
-                        }}
-                      />
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        size="small"
-                        onClick={() => applyVoucher(voucherCode)}
-                        disabled={
-                          isApplyingVoucher || !voucherCode.trim()
+                  {/* Code input row — always visible, disabled when voucher applied */}
+                  <Box display="flex" gap={1} alignItems="stretch" mb={1}>
+                    <TextField
+                      size="small"
+                      placeholder="Nhập mã giảm giá"
+                      value={voucherCode}
+                      onChange={(e) => {
+                        setVoucherCode(e.target.value);
+                        if (voucherError) setVoucherError(null);
+                      }}
+                      disabled={!!appliedVoucher || isApplyingVoucher}
+                      error={!!voucherError}
+                      fullWidth
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && voucherCode.trim()) {
+                          void applyVoucher(voucherCode);
                         }
-                        sx={{
-                          minWidth: 90,
-                          whiteSpace: "nowrap",
+                      }}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
                           borderRadius: "8px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
-                      </Button>
-                    </Box>
-                  )}
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={() => applyVoucher(voucherCode)}
+                      disabled={
+                      !!appliedVoucher ||
+                      isApplyingVoucher ||
+                      !voucherCode.trim()
+                    }
+                      sx={{
+                        minWidth: 90,
+                        whiteSpace: "nowrap",
+                        borderRadius: "8px",
+                        fontWeight: 600,
+                      }}
+                    >
+                      {isApplyingVoucher ? "Xử lý..." : "Áp dụng"}
+                    </Button>
+                  </Box>
 
                   {voucherError && (
                     <Typography
@@ -1010,151 +1009,62 @@ export const CartPage = () => {
                     </Typography>
                   )}
 
-                  {/* Applied voucher — ticket style card */}
+                  {/* Applied voucher */}
                   {appliedVoucher && (
                     <Box
                       sx={{
+                        mt: 1,
+                        p: 1.5,
+                        bgcolor: "success.lighter",
+                        borderRadius: 1,
                         display: "flex",
-                        borderRadius: 2,
-                        overflow: "hidden",
-                        border: "1px solid",
-                        borderColor: "error.200",
-                        bgcolor: "#fff",
-                        position: "relative",
+                        alignItems: "center",
+                        justifyContent: "space-between",
                         mb: 1,
-                        "&::before": {
-                          content: '""',
-                          position: "absolute",
-                          top: -6,
-                          left: 55,
-                          width: 12,
-                          height: 12,
-                          borderRadius: "50%",
-                          bgcolor: "grey.100",
-                          border: "1px solid",
-                          borderColor: "error.100",
-                          zIndex: 1,
-                        },
-                        "&::after": {
-                          content: '""',
-                          position: "absolute",
-                          bottom: -6,
-                          left: 55,
-                          width: 12,
-                          height: 12,
-                          borderRadius: "50%",
-                          bgcolor: "grey.100",
-                          border: "1px solid",
-                          borderColor: "error.100",
-                          zIndex: 1,
-                        },
                       }}
                     >
-                      {/* Left strip */}
-                      <Box
-                        sx={{
-                          width: 62,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          bgcolor: "error.main",
-                          py: 1.5,
-                        }}
-                      >
-                        <LocalOffer sx={{ color: "#fff", fontSize: 22 }} />
-                      </Box>
-                      {/* Dashed separator */}
-                      <Box
-                        sx={{
-                          width: "1px",
-                          borderLeft: "1.5px dashed",
-                          borderColor: "error.200",
-                          flexShrink: 0,
-                        }}
-                      />
-                      {/* Right: voucher info */}
-                      <Box
-                        sx={{
-                          flex: 1,
-                          px: 1.5,
-                          py: 1,
-                          minWidth: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 1,
-                        }}
-                      >
-                        <Box>
-                          <Box display="flex" alignItems="center" gap={0.75} mb={0.25}>
-                            <Typography
-                              sx={{
-                                fontWeight: 700,
-                                fontSize: "0.8rem",
-                                fontFamily: "monospace",
-                                color: "text.primary",
-                                letterSpacing: 0.5,
-                              }}
-                            >
-                              {appliedVoucher.voucherCode}
-                            </Typography>
-                            <Box
-                              sx={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 0.25,
-                                bgcolor: "success.50",
-                                border: "1px solid",
-                                borderColor: "success.200",
-                                borderRadius: "10px",
-                                px: 0.75,
-                                py: 0.15,
-                              }}
-                            >
-                              <Typography
-                                sx={{
-                                  fontSize: "0.65rem",
-                                  fontWeight: 600,
-                                  color: "success.dark",
-                                  lineHeight: 1.4,
-                                }}
-                              >
-                                ✓ Đã áp dụng
-                              </Typography>
-                            </Box>
-                          </Box>
+                      <Box display="flex" flexDirection="column" gap={0.5}>
+                        <Box display="flex" alignItems="center" gap={1}>
+                          <Typography
+                            sx={{
+                              fontSize: "0.65rem",
+                              fontWeight: 600,
+                              color: "success.main",
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            ✓ {appliedVoucher.voucherCode}
+                          </Typography>
                           {totals.discount > 0 && (
                             <Typography
                               sx={{
-                                fontSize: "0.82rem",
-                                fontWeight: 700,
-                                color: "error.main",
+                                fontSize: "0.77rem",
+                                fontWeight: 600,
+                                color: "success.main",
                               }}
                             >
                               -{formatCurrency(totals.discount)}
                             </Typography>
                           )}
                         </Box>
-                        <Button
-                          size="small"
-                          color="error"
-                          variant="outlined"
-                          onClick={removeVoucher}
-                          disabled={isApplyingVoucher}
-                          sx={{
-                            minWidth: 48,
-                            fontSize: "0.72rem",
-                            fontWeight: 600,
-                            px: 1,
-                            py: 0.4,
-                            borderRadius: "8px",
-                            flexShrink: 0,
-                          }}
-                        >
-                          Xóa
-                        </Button>
                       </Box>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={removeVoucher}
+                        disabled={isApplyingVoucher}
+                        sx={{
+                          minWidth: 48,
+                          fontSize: "0.72rem",
+                          fontWeight: 600,
+                          px: 1,
+                          py: 0.4,
+                          borderRadius: "8px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        Xóa
+                      </Button>
                     </Box>
                   )}
 

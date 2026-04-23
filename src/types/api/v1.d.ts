@@ -31,26 +31,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfAddressResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfAddressResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfAddressResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfAddressResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfAddressResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfAddressResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfAddressResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -82,26 +70,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -141,26 +117,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfAddressResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfAddressResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfAddressResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfAddressResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfAddressResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfAddressResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfAddressResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -193,48 +157,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -262,48 +192,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -340,26 +236,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfAddressResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfAddressResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfAddressResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfAddressResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfAddressResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfAddressResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfAddressResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -402,37 +286,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Forbidden */
-                403: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -471,15 +332,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfProvinceResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfProvinceResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfProvinceResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfProvinceResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -521,26 +381,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfDistrictResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfDistrictResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfDistrictResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfDistrictResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfDistrictResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfDistrictResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfDistrictResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -582,26 +430,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfWardResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfWardResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfWardResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfWardResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfWardResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfWardResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfWardResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -645,26 +481,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfAddressLevel4Response"];
-                        "application/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
-                        "text/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfAddressLevel4Response"];
-                        "application/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
-                        "text/json": components["schemas"]["BaseResponseOfAddressLevel4Response"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -707,15 +531,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfRevenueSummaryResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -757,15 +580,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfInventoryLevelsResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -809,15 +631,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -863,15 +684,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -913,15 +733,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfAttributeLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -963,15 +782,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfAttributeValueLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1019,15 +837,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1074,15 +891,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1110,15 +926,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1165,15 +980,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1220,15 +1034,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1256,15 +1069,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1309,48 +1121,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1396,37 +1174,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1474,37 +1229,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1545,37 +1277,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1623,37 +1332,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1693,37 +1379,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfTokenResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfTokenResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1769,26 +1432,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1834,15 +1485,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1880,6 +1530,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfBannerResponse"];
                         "application/json": components["schemas"]["BaseResponseOfListOfBannerResponse"];
                         "text/json": components["schemas"]["BaseResponseOfListOfBannerResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -1928,6 +1588,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfBannerResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -1957,15 +1627,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2005,15 +1674,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBannerResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBannerResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBannerResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBannerResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2046,26 +1714,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2093,15 +1749,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2146,26 +1801,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2213,15 +1856,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfBatchDetailResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2263,26 +1905,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBatchDetailResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2359,6 +1989,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfBrandLookupItem"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -2396,6 +2036,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfBrandResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -2423,6 +2073,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfBrandResponse"];
                         "application/json": components["schemas"]["BaseResponseOfBrandResponse"];
                         "text/json": components["schemas"]["BaseResponseOfBrandResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2462,15 +2122,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBrandResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBrandResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBrandResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBrandResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2503,15 +2162,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBrandResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBrandResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBrandResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBrandResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2539,15 +2197,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2593,15 +2250,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfCampaignResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2633,37 +2289,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2701,15 +2334,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2749,15 +2381,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2799,26 +2430,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfCampaignResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCampaignResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCampaignResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCampaignResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCampaignResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCampaignResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCampaignResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2851,37 +2470,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2909,26 +2505,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -2967,26 +2551,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignPromotionItemResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3029,26 +2601,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfCampaignPromotionItemResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCampaignPromotionItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCampaignPromotionItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCampaignPromotionItemResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCampaignPromotionItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCampaignPromotionItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCampaignPromotionItemResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3097,37 +2657,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3176,37 +2713,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3254,37 +2768,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3313,26 +2804,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3371,26 +2850,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfVoucherResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3424,48 +2891,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3506,26 +2939,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3559,48 +2980,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3629,26 +3016,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3693,6 +3068,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPreviewPosOrderResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -3735,26 +3120,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfGetCartItemsResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfGetCartItemsResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfGetCartItemsResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfGetCartItemsResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfGetCartItemsResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfGetCartItemsResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfGetCartItemsResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3786,37 +3159,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3867,26 +3217,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfGetCartTotalResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfGetCartTotalResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfGetCartTotalResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfGetCartTotalResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfGetCartTotalResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfGetCartTotalResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfGetCartTotalResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3931,26 +3269,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -3996,37 +3322,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4054,48 +3357,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4130,6 +3399,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfCategoriesLookupItem"];
                         "application/json": components["schemas"]["BaseResponseOfListOfCategoriesLookupItem"];
                         "text/json": components["schemas"]["BaseResponseOfListOfCategoriesLookupItem"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4169,6 +3448,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfCategoryResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -4196,6 +3485,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfCategoryResponse"];
                         "application/json": components["schemas"]["BaseResponseOfCategoryResponse"];
                         "text/json": components["schemas"]["BaseResponseOfCategoryResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4235,15 +3534,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfCategoryResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCategoryResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCategoryResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCategoryResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4276,15 +3574,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfCategoryResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCategoryResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCategoryResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCategoryResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4312,15 +3609,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4355,6 +3651,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfConcentrationLookupDto"];
                         "application/json": components["schemas"]["BaseResponseOfListOfConcentrationLookupDto"];
                         "text/json": components["schemas"]["BaseResponseOfListOfConcentrationLookupDto"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4394,6 +3700,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfConcentrationResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -4421,6 +3737,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfConcentrationResponse"];
                         "application/json": components["schemas"]["BaseResponseOfConcentrationResponse"];
                         "text/json": components["schemas"]["BaseResponseOfConcentrationResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4460,15 +3786,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfConcentrationResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfConcentrationResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfConcentrationResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfConcentrationResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4501,15 +3826,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfConcentrationResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfConcentrationResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfConcentrationResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfConcentrationResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4537,15 +3861,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4593,15 +3916,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfImportTicketListItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfImportTicketListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfImportTicketListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfImportTicketListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4633,37 +3955,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4711,37 +4010,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
-                        "application/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
-                        "text/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
-                        "application/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
-                        "text/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
-                        "application/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
-                        "text/json": components["schemas"]["BaseResponseOfCreateImportTicketRequest"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4781,15 +4057,14 @@ export interface paths {
                         "text/json": components["schemas"]["FileContentResult"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfExcelTemplateResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfExcelTemplateResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfExcelTemplateResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4839,37 +4114,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4909,26 +4161,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfImportTicketResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfImportTicketResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfImportTicketResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfImportTicketResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfImportTicketResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfImportTicketResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfImportTicketResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -4961,37 +4201,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5019,37 +4236,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5095,37 +4289,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5175,15 +4346,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfStockResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfStockResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfStockResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfStockResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5225,26 +4395,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfStockResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfStockResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfStockResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfStockResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfStockResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfStockResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfStockResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5284,15 +4442,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfInventorySummaryResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfInventorySummaryResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfInventorySummaryResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfInventorySummaryResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5344,15 +4501,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfCashFlowLedgerItemResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5405,15 +4561,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfInventoryLedgerItemResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5460,15 +4615,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5508,15 +4662,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfLoyaltyTransactionTotalsResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5564,15 +4717,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfLoyaltyTransactionHistoryItemResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5622,15 +4774,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5675,6 +4826,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfPagedResultOfNotificationListItemResponse"];
                         "application/json": components["schemas"]["BaseResponseOfPagedResultOfNotificationListItemResponse"];
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfNotificationListItemResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5722,26 +4883,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5781,15 +4930,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5823,15 +4971,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfOlfactoryLookupResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5871,6 +5018,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfOlfactoryFamilyResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -5898,6 +5055,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
                         "application/json": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
                         "text/json": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5937,15 +5104,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -5978,15 +5144,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOlfactoryFamilyResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6014,15 +5179,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6065,6 +5229,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
                         "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6112,6 +5286,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderCancelRequestResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -6151,26 +5335,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
                     };
                 };
-                /** @description Forbidden */
-                403: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderCancelRequestResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6220,6 +5392,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -6264,15 +5446,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6302,6 +5483,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfstring"];
                         "application/json": components["schemas"]["BaseResponseOfstring"];
                         "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6347,15 +5538,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderReturnRequestResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6397,37 +5587,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
                     };
                 };
-                /** @description Forbidden */
-                403: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderReturnRequestResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6458,6 +5625,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfstring"];
                         "application/json": components["schemas"]["BaseResponseOfstring"];
                         "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6498,6 +5675,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfstring"];
                         "application/json": components["schemas"]["BaseResponseOfstring"];
                         "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6545,6 +5732,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -6588,6 +5785,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfstring"];
                         "application/json": components["schemas"]["BaseResponseOfstring"];
                         "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6635,6 +5842,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -6678,6 +5895,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfstring"];
                         "application/json": components["schemas"]["BaseResponseOfstring"];
                         "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6725,6 +5952,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -6769,26 +6006,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6840,15 +6065,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6890,26 +6114,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfUserOrderResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -6951,26 +6163,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7024,15 +6224,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfOrderListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7074,37 +6273,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7146,26 +6322,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfOrderResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfOrderResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7207,26 +6371,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfReceiptResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfReceiptResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfReceiptResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7274,37 +6426,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7350,37 +6479,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "application/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
-                        "text/json": components["schemas"]["BaseResponseOfCreatePaymentResponseDto"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7421,37 +6527,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPickListResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPickListResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPickListResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPickListResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPickListResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPickListResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPickListResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPickListResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPickListResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPickListResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7500,37 +6583,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7578,48 +6638,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7659,37 +6685,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPickListResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7739,37 +6742,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7816,37 +6796,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -7895,37 +6852,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8047,6 +6981,17 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
             };
         };
         put?: never;
@@ -8119,11 +7064,11 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: {
+            requestBody: {
                 content: {
-                    "application/json": null | components["schemas"]["PaymentInformation"];
-                    "text/json": null | components["schemas"]["PaymentInformation"];
-                    "application/*+json": null | components["schemas"]["PaymentInformation"];
+                    "application/json": components["schemas"]["RetryOrChangePaymentRequest"];
+                    "text/json": components["schemas"]["RetryOrChangePaymentRequest"];
+                    "application/*+json": components["schemas"]["RetryOrChangePaymentRequest"];
                 };
             };
             responses: {
@@ -8138,37 +7083,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8215,26 +7137,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8283,15 +7193,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPaymentTransactionOverviewResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8333,26 +7242,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8385,26 +7282,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSystemPolicyResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8445,15 +7330,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfProductInforResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductInforResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductInforResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductInforResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8495,15 +7379,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfProductFastLookResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductFastLookResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductFastLookResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductFastLookResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8556,15 +7439,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8596,26 +7478,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8653,15 +7523,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfProductLookupItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfProductLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfProductLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfProductLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8703,26 +7572,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPublicProductResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPublicProductResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPublicProductResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPublicProductResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPublicProductResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPublicProductResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPublicProductResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8755,37 +7612,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8813,37 +7647,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8882,26 +7693,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfProductResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -8949,26 +7748,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9008,26 +7795,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9069,26 +7844,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfMediaResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9131,26 +7894,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9189,6 +7940,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfProductDailySaleFigureResponse"];
                         "application/json": components["schemas"]["BaseResponseOfListOfProductDailySaleFigureResponse"];
                         "text/json": components["schemas"]["BaseResponseOfListOfProductDailySaleFigureResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9241,15 +8002,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9302,15 +8062,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9365,15 +8124,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfProductListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9419,15 +8177,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9459,26 +8216,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9524,26 +8269,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfVariantPagedItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9586,15 +8319,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfVariantLookupItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfVariantLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfVariantLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfVariantLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9636,26 +8368,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfProductVariantResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductVariantResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductVariantResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductVariantResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductVariantResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductVariantResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductVariantResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9688,37 +8408,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9746,37 +8443,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9815,37 +8489,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfProductVariantForPosResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9887,26 +8538,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -9948,26 +8587,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfMediaResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10010,26 +8637,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10076,26 +8691,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10133,26 +8736,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfProfileResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10199,37 +8790,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10268,15 +8836,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfReviewResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfReviewResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfReviewResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfReviewResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10327,26 +8894,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfReviewListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10378,37 +8933,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
-                    };
-                };
-                /** @description Forbidden */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfGuid"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10456,37 +8988,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10526,26 +9035,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfReviewDetailResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfReviewDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfReviewDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfReviewDetailResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfReviewDetailResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfReviewDetailResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfReviewDetailResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10574,37 +9071,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Forbidden */
-                403: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10643,15 +9117,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfReviewResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfReviewResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfReviewResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfReviewResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10693,15 +9166,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfReviewStatisticsResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfReviewStatisticsResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfReviewStatisticsResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfReviewStatisticsResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10749,26 +9221,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10808,26 +9268,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfMediaResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10867,15 +9315,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfScentNoteLookupResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10915,6 +9362,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfScentNoteResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -10942,6 +9399,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfScentNoteResponse"];
                         "application/json": components["schemas"]["BaseResponseOfScentNoteResponse"];
                         "text/json": components["schemas"]["BaseResponseOfScentNoteResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -10981,15 +9448,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfScentNoteResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfScentNoteResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfScentNoteResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfScentNoteResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11022,15 +9488,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfScentNoteResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfScentNoteResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfScentNoteResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfScentNoteResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11058,15 +9523,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11116,26 +9580,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11186,26 +9638,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfShippingInfoListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11249,6 +9689,59 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shippings/ghn/webhook-order-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["GhnOrderStatusWebhookRequest"];
+                    "text/json": components["schemas"]["GhnOrderStatusWebhookRequest"];
+                    "application/*+json": components["schemas"]["GhnOrderStatusWebhookRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
@@ -11262,6 +9755,51 @@ export interface paths {
                 };
                 /** @description Internal Server Error */
                 500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shippings/ghn/webhook-order-status/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["GhnOrderStatusWebhookRequest"];
+                    "text/json": components["schemas"]["GhnOrderStatusWebhookRequest"];
+                    "application/*+json": components["schemas"]["GhnOrderStatusWebhookRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -11351,26 +9889,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11411,15 +9937,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfIEnumerableOfCatalogItemResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfIEnumerableOfCatalogItemResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfIEnumerableOfCatalogItemResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfIEnumerableOfCatalogItemResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11451,37 +9976,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11528,37 +10030,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11586,26 +10065,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11645,26 +10112,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11713,15 +10168,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfStockAdjustmentListItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfStockAdjustmentListItem"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfStockAdjustmentListItem"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfStockAdjustmentListItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11753,37 +10207,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11831,37 +10262,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11901,26 +10309,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfStockAdjustmentResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfStockAdjustmentResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfStockAdjustmentResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfStockAdjustmentResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfStockAdjustmentResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfStockAdjustmentResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfStockAdjustmentResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -11949,37 +10345,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12025,37 +10398,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12092,6 +10442,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfSupplierLookupItem"];
                         "application/json": components["schemas"]["BaseResponseOfListOfSupplierLookupItem"];
                         "text/json": components["schemas"]["BaseResponseOfListOfSupplierLookupItem"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12131,6 +10491,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfSupplierResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -12158,6 +10528,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfSupplierResponse"];
                         "application/json": components["schemas"]["BaseResponseOfSupplierResponse"];
                         "text/json": components["schemas"]["BaseResponseOfSupplierResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12197,15 +10577,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfSupplierResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSupplierResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSupplierResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSupplierResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12238,15 +10617,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfSupplierResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfSupplierResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfSupplierResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfSupplierResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12274,15 +10652,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfboolean"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfboolean"];
-                        "application/json": components["schemas"]["BaseResponseOfboolean"];
-                        "text/json": components["schemas"]["BaseResponseOfboolean"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12319,15 +10696,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfUserCredentialsResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12358,26 +10734,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12418,26 +10782,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfCustomerForPosResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12477,15 +10829,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfStaffLookupItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfStaffLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfStaffLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfStaffLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12525,15 +10876,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfStaffManageItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfStaffManageItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfStaffManageItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfStaffManageItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12573,15 +10923,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfUserManageItem"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfUserManageItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfUserManageItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfUserManageItem"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12624,26 +10973,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12682,6 +11019,16 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfMediaResponse"];
                     };
                 };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
             };
         };
         put?: never;
@@ -12712,26 +11059,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12756,26 +11091,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12814,26 +11137,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12882,15 +11193,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfVoucherResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfVoucherResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12922,37 +11232,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -12992,26 +11279,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfVoucherResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -13044,48 +11319,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -13113,26 +11354,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Not Found */
-                404: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -13173,6 +11402,16 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfRedeemableVoucherResponse"];
                         "application/json": components["schemas"]["BaseResponseOfListOfRedeemableVoucherResponse"];
                         "text/json": components["schemas"]["BaseResponseOfListOfRedeemableVoucherResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -13220,48 +11459,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -13301,15 +11506,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -13360,15 +11564,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfPagedResultOfUserVoucherResponse"];
                     };
                 };
-                /** @description Internal Server Error */
-                500: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfUserVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfUserVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfUserVoucherResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -13416,15 +11619,14 @@ export interface paths {
                         "text/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
                     };
                 };
-                /** @description Bad Request */
-                400: {
+                default: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfApplicableVoucherResponse"];
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
                     };
                 };
             };
@@ -13524,6 +11726,12 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: null | string;
+        };
+        BaseResponse: {
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
         };
         BaseResponseOfAddressLevel4Response: {
             payload?: null | components["schemas"]["AddressLevel4Response"];
@@ -13639,13 +11847,6 @@ export interface components {
         };
         BaseResponseOfCustomerForPosResponse: {
             payload?: null | components["schemas"]["CustomerForPosResponse"];
-            success?: boolean;
-            message?: string;
-            errors?: null | string[];
-            errorType?: null | components["schemas"]["ResponseErrorType"];
-        };
-        BaseResponseOfExcelTemplateResponse: {
-            payload?: null | components["schemas"]["ExcelTemplateResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -14821,6 +13022,15 @@ export interface components {
         };
         /** @enum {string} */
         DeliveryMethod: "Delivery" | "PickupInStore";
+        DepositPolicyPreviewResponse: {
+            isDepositRequired?: boolean;
+            /** Format: decimal */
+            depositRate?: number;
+            /** Format: decimal */
+            depositAmount?: number;
+            /** Format: decimal */
+            remainingAmount?: number;
+        };
         /** @enum {string} */
         DiscountType: "Percentage" | "FixedAmount";
         DistrictResponse: {
@@ -14847,12 +13057,6 @@ export interface components {
         EntityTagHeaderValue: {
             tag?: components["schemas"]["StringSegment"];
             isWeak?: boolean;
-        };
-        ExcelTemplateResponse: {
-            /** Format: byte */
-            fileContent: string;
-            fileName: string;
-            contentType?: string;
         };
         FileContentResult: {
             /** Format: byte */
@@ -14924,9 +13128,15 @@ export interface components {
             discount?: number;
             /** Format: decimal */
             totalPrice?: number;
+            depositPolicy?: components["schemas"]["DepositPolicyPreviewResponse"];
         };
         GetOrderInfoRequest: {
             trackingNumbers: string[];
+        };
+        GhnOrderStatusWebhookRequest: {
+            OrderCode: string;
+            Status: string;
+            Type?: null | string;
         };
         GoogleLoginRequest: {
             idToken: string;
@@ -15212,6 +13422,12 @@ export interface components {
             paymentStatus?: components["schemas"]["PaymentStatus"];
             /** Format: decimal */
             totalAmount?: number;
+            /** Format: decimal */
+            requiredDepositAmount?: number;
+            /** Format: decimal */
+            paidAmount?: number;
+            /** Format: decimal */
+            remainingAmount?: number;
             /** Format: int32 */
             itemCount?: number;
             isReturnalbe?: boolean;
@@ -15242,6 +13458,12 @@ export interface components {
             paymentStatus?: components["schemas"]["PaymentStatus"];
             /** Format: decimal */
             totalAmount?: number;
+            /** Format: decimal */
+            requiredDepositAmount?: number;
+            /** Format: decimal */
+            paidAmount?: number;
+            /** Format: decimal */
+            remainingAmount?: number;
             /** Format: decimal */
             subTotal?: number;
             /** Format: decimal */
@@ -15602,12 +13824,13 @@ export interface components {
         };
         PaymentInformation: {
             method?: components["schemas"]["PaymentMethod"];
+            depositGateway?: null | components["schemas"]["PaymentMethod"];
             posSessionId?: null | string;
         };
         /** @enum {null|string} */
         PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer" | "PayOs" | null;
         /** @enum {string} */
-        PaymentStatus: "Unpaid" | "Paid" | "Partial_Refunded" | "Refunded";
+        PaymentStatus: "Unpaid" | "PartialPaid" | "Paid" | "Refunded" | "PartialRefunded";
         PaymentTransactionAdminItemResponse: {
             /** Format: uuid */
             id?: string;
@@ -15915,7 +14138,8 @@ export interface components {
             productName: string;
             media: components["schemas"]["MediaResponse"][];
             campaignName?: null | string;
-            voucherCode?: null | string;
+            /** Format: int32 */
+            promotionalStockQuantity?: number;
             /** Format: decimal */
             discountedPrice?: null | number;
             attributes?: null | components["schemas"]["ProductAttributeResponse"][];
@@ -16100,6 +14324,11 @@ export interface components {
         };
         /** @enum {null|string} */
         ResponseErrorType: "BadRequest" | "Unauthorized" | "Forbidden" | "NotFound" | "Conflict" | "InternalError" | null;
+        RetryOrChangePaymentRequest: {
+            newPaymentMethod?: null | components["schemas"]["PaymentMethod"];
+            newDepositMethod?: null | components["schemas"]["PaymentMethod"];
+            posSessionId?: null | string;
+        };
         ReturnItemDto: {
             /** Format: uuid */
             orderDetailId?: string;
@@ -16745,6 +14974,12 @@ export interface components {
             paymentStatus?: components["schemas"]["PaymentStatus"];
             /** Format: decimal */
             totalAmount?: number;
+            /** Format: decimal */
+            requiredDepositAmount?: number;
+            /** Format: decimal */
+            paidAmount?: number;
+            /** Format: decimal */
+            remainingAmount?: number;
             /** Format: decimal */
             subTotal?: number;
             /** Format: decimal */
