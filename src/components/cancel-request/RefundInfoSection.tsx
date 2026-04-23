@@ -10,6 +10,8 @@ interface RefundInfoSectionProps {
   refundAccountNumber?: string | null;
   isRefunded?: boolean;
   status?: string;
+  /** Số tiền cọc đã thanh toán của đơn (dùng để hiển thị cảnh báo mất cọc khi hủy) */
+  paidDepositAmount?: number;
 }
 
 const fmt = (value?: number | null) => {
@@ -26,6 +28,7 @@ export const RefundInfoSection = ({
   refundAccountNumber,
   isRefunded,
   status,
+  paidDepositAmount = 0,
 }: RefundInfoSectionProps) => {
   const getRefundStatusChip = () => {
     if (!isRefundRequired) return null;
@@ -59,28 +62,42 @@ export const RefundInfoSection = ({
 
   // Case 1: Không cần hoàn tiền
   if (!isRefundRequired) {
+    const hasDepositForfeited = (paidDepositAmount ?? 0) > 0;
     return (
       <Paper
         variant="outlined"
         sx={{
           p: 2,
           borderRadius: 2,
-          bgcolor: "grey.50",
+          bgcolor: hasDepositForfeited ? "#fff8e1" : "grey.50",
           border: "1px solid",
-          borderColor: "grey.200",
+          borderColor: hasDepositForfeited ? "warning.light" : "grey.200",
         }}
       >
         <Typography
           variant="subtitle2"
           fontWeight={700}
           mb={1.5}
-          color="text.secondary"
+          color={hasDepositForfeited ? "warning.dark" : "text.secondary"}
         >
           Thông tin Hoàn tiền
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Đơn hàng chưa thanh toán. Không phát sinh hoàn tiền.
-        </Typography>
+
+        {hasDepositForfeited ? (
+          <>
+            <Typography variant="body2" color="warning.dark" fontWeight={600} mb={0.5}>
+              Tiền cọc bị khấu trừ theo chính sách hủy đơn
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Đơn hàng đã được xuất kho và đóng gói. Theo chính sách của PerfumeGPT, khoản tiền cọc{" "}
+              <b>{fmt(paidDepositAmount)}</b> sẽ được giữ lại làm phí bồi thường vật tư đóng gói và xử lý đơn hàng. Không phát sinh hoàn tiền thêm.
+            </Typography>
+          </>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Đơn hàng chưa thanh toán. Không phát sinh hoàn tiền.
+          </Typography>
+        )}
       </Paper>
     );
   }

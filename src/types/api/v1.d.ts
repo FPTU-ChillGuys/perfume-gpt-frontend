@@ -13086,8 +13086,6 @@ export interface components {
         /** @enum {string} */
         Gender: "Male" | "Female" | "Unisex";
         GetApplicableVouchersRequest: {
-            /** Format: uuid */
-            customerId?: null | string;
             cartItems: components["schemas"]["ApplicableVoucherCartItemRequest"][];
         };
         GetCartItemResponse: {
@@ -13425,6 +13423,8 @@ export interface components {
             /** Format: decimal */
             requiredDepositAmount?: number;
             /** Format: decimal */
+            depositAmount?: number;
+            /** Format: decimal */
             paidAmount?: number;
             /** Format: decimal */
             remainingAmount?: number;
@@ -13460,6 +13460,8 @@ export interface components {
             totalAmount?: number;
             /** Format: decimal */
             requiredDepositAmount?: number;
+            /** Format: decimal */
+            depositAmount?: number;
             /** Format: decimal */
             paidAmount?: number;
             /** Format: decimal */
@@ -14976,6 +14978,8 @@ export interface components {
             totalAmount?: number;
             /** Format: decimal */
             requiredDepositAmount?: number;
+            /** Format: decimal */
+            depositAmount?: number;
             /** Format: decimal */
             paidAmount?: number;
             /** Format: decimal */

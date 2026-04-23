@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Button,
+  Chip,
   CircularProgress,
   Container,
   Paper,
@@ -284,7 +285,7 @@ export const MyCancelRequestDetailPage = () => {
                               </Typography>
                             </Box>
 
-                            {request?.staffNote && (
+                        {request?.staffNote && (
                               <Box
                                 display="flex"
                                 justifyContent="space-between"
@@ -330,6 +331,7 @@ export const MyCancelRequestDetailPage = () => {
                           refundAccountNumber={request?.refundAccountNumber}
                           isRefunded={request?.isRefunded}
                           status={request?.status}
+                          paidDepositAmount={order?.paidAmount ?? 0}
                         />
                       </Box>
 
@@ -343,6 +345,81 @@ export const MyCancelRequestDetailPage = () => {
                           totalAmount={order.totalAmount}
                         />
                       )}
+
+                      {/* Thông tin thanh toán — hiển thị bên dưới bảng sản phẩm */}
+                      {order && (() => {
+                        const txns = order.paymentTransactions ?? [];
+                        const paidAmount = order.paidAmount ?? 0;
+                        if (paidAmount <= 0) return null;
+
+                        const requiredDeposit = order.requiredDepositAmount ?? 0;
+                        const isDepositOrder = requiredDeposit > 0;
+
+                        const successTx = txns.find(
+                          (t) => t.transactionType === "Payment" && t.status === "Success",
+                        );
+                        const mainTx =
+                          successTx ??
+                          [...txns]
+                            .filter((t) => t.transactionType === "Payment")
+                            .sort((a, b) => (b.totalAmount ?? 0) - (a.totalAmount ?? 0))[0];
+
+                        const GATEWAY_LABELS: Record<string, string> = {
+                          CashOnDelivery: "Thanh toán khi nhận hàng",
+                          CashInStore: "Thanh toán tại quầy",
+                          VnPay: "VNPay",
+                          Momo: "MoMo",
+                          ExternalBankTransfer: "Chuyển khoản ngân hàng",
+                          PayOs: "PayOS",
+                        };
+                        const gatewayLabel = mainTx?.paymentMethod
+                          ? (GATEWAY_LABELS[mainTx.paymentMethod] ?? mainTx.paymentMethod)
+                          : null;
+                        const fmt = (v: number) =>
+                          new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(v);
+
+                        return (
+                          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                            <Stack spacing={1}>
+                              <Typography variant="subtitle2" fontWeight={700}>
+                                Thông tin thanh toán
+                              </Typography>
+                              <Divider />
+
+                              {isDepositOrder && (
+                                <Box display="flex" justifyContent="space-between">
+                                  <Typography variant="body2" color="text.secondary">
+                                    Tiền cọc yêu cầu
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight={600} color="info.dark">
+                                    {fmt(requiredDeposit)}
+                                  </Typography>
+                                </Box>
+                              )}
+
+                              <Box display="flex" justifyContent="space-between">
+                                <Typography variant="body2" color="text.secondary">
+                                  {isDepositOrder ? "Đã đặt cọc" : "Đã thanh toán"}
+                                </Typography>
+                                <Typography variant="body2" fontWeight={700} color="success.main">
+                                  {fmt(paidAmount)}
+                                </Typography>
+                              </Box>
+
+                              {gatewayLabel && (
+                                <Box display="flex" justifyContent="space-between">
+                                  <Typography variant="body2" color="text.secondary">
+                                    Qua cổng thanh toán
+                                  </Typography>
+                                  <Typography variant="body2" fontWeight={600}>
+                                    {gatewayLabel}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Stack>
+                          </Paper>
+                        );
+                      })()}
 
                       {/* ═══════════════════════════════════════════════════════════
                           Khu vực 4: Action Bar (Thao tác - Chỉ khách)

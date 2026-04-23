@@ -897,7 +897,8 @@ export const MyOrderDetailPage = () => {
   const locationState = (location.state as {
     status?: string;
     requestReturn?: boolean;
-  } | null) ?? { status: "", requestReturn: false };
+    requestCancel?: boolean;
+  } | null) ?? { status: "", requestReturn: false, requestCancel: false };
   const backStatus: string = locationState.status ?? "";
 
   const { showToast } = useToast();
@@ -981,6 +982,7 @@ export const MyOrderDetailPage = () => {
   const [isSubmittingReturnRequest, setIsSubmittingReturnRequest] =
     useState(false);
   const hasHandledRequestReturnRef = useRef(false);
+  const hasHandledRequestCancelRef = useRef(false);
 
   useEffect(() => {
     void userService.getUserMe().then(setUserInfo).catch(console.error);
@@ -1069,6 +1071,31 @@ export const MyOrderDetailPage = () => {
             )[0];
 
           setOrderCancelRequest(matchedCancelRequest ?? null);
+
+          // Auto-open cancel dialog nếu navigate từ MyOrdersPage với requestCancel: true
+          if (
+            locationState.requestCancel &&
+            !hasHandledRequestCancelRef.current
+          ) {
+            hasHandledRequestCancelRef.current = true;
+            const latestCancelStatus = (matchedCancelRequest ?? null)?.status;
+            const hasBlockingCancel = Boolean(
+              latestCancelStatus &&
+                CANCEL_REQUEST_BLOCKED_STATUSES.has(latestCancelStatus),
+            );
+            if (hasBlockingCancel) {
+              showToast(
+                `Đơn hàng này đã có yêu cầu hủy. ${cancelRequestStatusLabel(latestCancelStatus)}`,
+                "info",
+              );
+            } else {
+              setIsCancelDialogOpen(true);
+              setSelectedCancelRefundBank(null);
+              setCancelRefundBankName("");
+              setCancelRefundAccountNumber("");
+              setCancelRefundAccountName("");
+            }
+          }
         } catch {
           setOrderCancelRequest(null);
         }
@@ -1085,7 +1112,7 @@ export const MyOrderDetailPage = () => {
     void load();
     // `showToast` identity can change between renders; keep load stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [locationState.requestReturn, orderId]);
+  }, [locationState.requestReturn, locationState.requestCancel, orderId]);
 
   const reviewsIndex = useMemo(() => {
     const map: Record<string, ReviewResponse> = {};
@@ -1152,15 +1179,24 @@ export const MyOrderDetailPage = () => {
       };
     }
 
-    // Case 3: Preparing / ReadyToPick → yêu cầu hủy + ngân hàng + phí phạt
+    // Case 3: Preparing / ReadyToPick → yêu cầu hủy + phí phạt
     if (isPreparingOrReadyToPick) {
-      const depositFee = currentOrder.requiredDepositAmount ?? 0;
+      // depositAmount: backend tính sẵn phí phạt cho đơn này (cả đơn 100%)
+      // fallback về requiredDepositAmount nếu depositAmount chưa có
+      const penaltyFee =
+        (currentOrder.depositAmount ?? currentOrder.requiredDepositAmount ?? 0);
+      // COD / CashInStore: chưa thu tiền (hoặc cọc bị khấu trừ) → không cần thông tin ngân hàng
+      const isCODOrStore = (currentOrder.paymentTransactions ?? []).some(
+        (t) =>
+          t.paymentMethod === "CashOnDelivery" ||
+          t.paymentMethod === "CashInStore",
+      );
       return {
         mode: "request" as const,
         buttonLabel: "Yêu cầu hủy đơn hàng",
         note: "Sản phẩm đã được xuất kho và đóng gói. Yêu cầu hủy sẽ chờ nhân viên phê duyệt.",
-        requireBankInfo: true,
-        penaltyFee: depositFee,
+        requireBankInfo: !isCODOrStore,
+        penaltyFee,
       };
     }
 
@@ -2842,40 +2878,7 @@ export const MyOrderDetailPage = () => {
                 "Vui lòng chọn hoặc nhập lý do để tiếp tục."}
             </Typography>
 
-            {/* Penalty fee warning for Preparing/ReadyToPick */}
-            {cancelBehavior?.penaltyFee != null && (
-              <Alert
-                severity="warning"
-                icon={false}
-                sx={{ borderRadius: 2, border: "1.5px solid", borderColor: "warning.light" }}
-              >
-                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>
-                  Phí phạt hủy đơn theo chính sách
-                </Typography>
-                <Typography variant="body2" mb={0.75}>
-                  Đơn hàng đã được xuất kho và đóng gói. Theo chính sách của PerfumeGPT, nếu yêu cầu hủy được duyệt, quý khách sẽ chịu{" "}
-                  <b>phí phạt bồi thường tương đương tiền cọc quy định</b> để bù đắp chi phí vật tư đóng gói chống sốc chuyên dụng và xử lý đơn hàng.
-                </Typography>
-
-                {cancelBehavior.penaltyFee > 0 ? (
-                  <>
-                    <Box sx={{ bgcolor: "#fff3e0", borderRadius: 1, p: 1, display: "inline-block", mb: 0.75 }}>
-                      <Typography variant="body2" fontWeight={700} color="warning.dark">
-                        Khoản phí phạt: {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(cancelBehavior.penaltyFee)}
-                      </Typography>
-                    </Box>
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      Nếu quý khách đã đặt cọc, cửa hàng sẽ thu hồi toàn bộ số tiền cọc. Nếu đã thanh toán 100%, Kế toán sẽ hoàn lại phần còn lại sau khi khấu trừ khoản phí trên.
-                    </Typography>
-                  </>
-                ) : (
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Khoản phí phạt cụ thể sẽ được nhân viên phụ trách xác nhận khi phê duyệt yêu cầu hủy. Kế toán sẽ hoàn lại phần tiền còn lại sau khi khấu trừ.
-                  </Typography>
-                )}
-              </Alert>
-            )}
-
+            
             <TextField
               label="Lý do hủy *"
               value={cancelReason}
@@ -2884,7 +2887,9 @@ export const MyOrderDetailPage = () => {
               multiline
               minRows={3}
               size="small"
-              placeholder="Nhập lý do hủy đơn hàng"
+              placeholder="Chọn lý do từ các gợi ý bên dưới"
+              InputProps={{ readOnly: true }}
+              sx={{ cursor: "default", "& .MuiInputBase-input": { cursor: "default" } }}
             />
 
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -2902,6 +2907,41 @@ export const MyOrderDetailPage = () => {
                 );
               })}
             </Stack>
+{/* Phí phạt hủy đơn - Preparing/ReadyToPick */}
+            {cancelBehavior?.penaltyFee != null && (
+              <Alert
+                severity="warning"
+                icon={false}
+                sx={{ borderRadius: 2, border: "1.5px solid", borderColor: "warning.light" }}
+              >
+                <Typography variant="subtitle2" fontWeight={700} mb={0.5}>
+                  Phí phạt hủy đơn theo chính sách
+                </Typography>
+                <Typography variant="body2" mb={0.75}>
+                  Đơn hàng đã được xuất kho và đóng gói. Theo chính sách của PerfumeGPT, nếu yêu cầu hủy được duyệt, quý khách sẽ chịu{" "}
+                  <b>phí phạt bồi thường</b> để bù đắp chi phí vật tư đóng gói chống sốc chuyên dụng và xử lý đơn hàng.
+                </Typography>
+
+                {cancelBehavior.penaltyFee > 0 ? (
+                  <>
+                    <Box sx={{ bgcolor: "#fff3e0", borderRadius: 1, p: 1, display: "inline-block", mb: 0.75 }}>
+                      <Typography variant="body2" fontWeight={700} color="warning.dark">
+                        Khoản phí phạt: {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(cancelBehavior.penaltyFee)}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {(order?.requiredDepositAmount ?? 0) > 0
+                        ? "Nếu quý khách đã đặt cọc, cửa hàng sẽ thu hồi toàn bộ số tiền cọc. Nếu đã thanh toán 100%, Kế toán sẽ hoàn lại phần còn lại sau khi khấu trừ khoản phí trên."
+                        : "Khách hàng đã thanh toán 100% — Kế toán sẽ hoàn lại phần còn lại sau khi khấu trừ khoản phí trên."}
+                    </Typography>
+                  </>
+                ) : (
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Khoản phí phạt cụ thể sẽ được nhân viên phụ trách xác nhận khi phê duyệt yêu cầu hủy. Kế toán sẽ hoàn lại phần tiền còn lại sau khi khấu trừ.
+                  </Typography>
+                )}
+              </Alert>
+            )}
 
             {shouldRequireCancelRefundInfo && (
               <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>

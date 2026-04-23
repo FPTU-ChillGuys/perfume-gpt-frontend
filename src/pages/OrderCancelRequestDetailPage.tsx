@@ -642,6 +642,8 @@ export const OrderCancelRequestDetailPage = () => {
                 </Paper>
 
                 {/* ──── Cột Phải: Thông tin Hoàn tiền (Logic Động) ──── */}
+
+
                 <Paper
                   variant="outlined"
                   sx={{
@@ -657,12 +659,28 @@ export const OrderCancelRequestDetailPage = () => {
                       Thông tin Hoàn tiền
                     </Typography>
 
-                    {/* TRƯỜNG HỢP 1: Chưa thanh toán */}
-                    {!selected?.isRefundRequired && (
-                      <Typography variant="body2" color="text.secondary">
-                        Đơn hàng chưa thanh toán. Không phát sinh hoàn tiền.
-                      </Typography>
-                    )}
+                    {/* TRƯỜNG HỢP 1: Không cần hoàn tiền */}
+                    {!selected?.isRefundRequired && (() => {
+                      const depositPaid = selectedOrder?.paidAmount ?? 0;
+                      if (depositPaid > 0) {
+                        return (
+                          <>
+                            <Typography variant="body2" color="warning.dark" fontWeight={600}>
+                              Tiền cọc bị khấu trừ theo chính sách hủy đơn
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              Đơn hàng đã được xuất kho và đóng gói. Khoản tiền cọc{" "}
+                              <b>{formatCurrency(depositPaid)}</b> sẽ được giữ lại làm phí bồi thường vật tư đóng gói và xử lý đơn hàng. Không phát sinh hoàn tiền thêm.
+                            </Typography>
+                          </>
+                        );
+                      }
+                      return (
+                        <Typography variant="body2" color="text.secondary">
+                          Đơn hàng chưa thanh toán. Không phát sinh hoàn tiền.
+                        </Typography>
+                      );
+                    })()}
 
                     {/* TRƯỜNG HỢP 2: Hoàn qua cổng thanh toán */}
                     {selected?.isRefundRequired &&
@@ -1036,10 +1054,76 @@ export const OrderCancelRequestDetailPage = () => {
                   </Paper>
                 </Box>
               )}
-            </Box>
-          </>
-        )}
-      </Paper>
+
+                {/* Thông tin thanh toán — bên dưới bảng sản phẩm */}
+                {selectedOrder && (() => {
+                  const txns = selectedOrder.paymentTransactions ?? [];
+                  const paidAmount = selectedOrder.paidAmount ?? 0;
+                  if (paidAmount <= 0) return null;
+
+                  const requiredDeposit = selectedOrder.requiredDepositAmount ?? 0;
+                  const isDepositOrder = requiredDeposit > 0;
+
+                  const successTx = txns.find(
+                    (t) => t.transactionType === "Payment" && t.status === "Success",
+                  );
+                  const mainTx =
+                    successTx ??
+                    [...txns]
+                      .filter((t) => t.transactionType === "Payment")
+                      .sort((a, b) => (b.totalAmount ?? 0) - (a.totalAmount ?? 0))[0];
+
+                  const gatewayLabel = mainTx?.paymentMethod
+                    ? (PAYMENT_METHOD_LABELS[mainTx.paymentMethod as NonNullable<PaymentMethod>] ?? mainTx.paymentMethod)
+                    : null;
+
+                  return (
+                    <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+                      <Stack spacing={1}>
+                        <Typography variant="subtitle2" fontWeight={700}>
+                          Thông tin thanh toán
+                        </Typography>
+                        <Divider />
+
+                        {isDepositOrder && (
+                          <Box display="flex" justifyContent="space-between">
+                            <Typography variant="body2" color="text.secondary">
+                              Tiền cọc yêu cầu
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600} color="info.dark">
+                              {formatCurrency(requiredDeposit)}
+                            </Typography>
+                          </Box>
+                        )}
+
+                        <Box display="flex" justifyContent="space-between">
+                          <Typography variant="body2" color="text.secondary">
+                            {isDepositOrder ? "Đã đặt cọc" : "Đã thanh toán"}
+                          </Typography>
+                          <Typography variant="body2" fontWeight={700} color="success.main">
+                            {formatCurrency(paidAmount)}
+                          </Typography>
+                        </Box>
+
+                        {gatewayLabel && (
+                          <Box display="flex" justifyContent="space-between">
+                            <Typography variant="body2" color="text.secondary">
+                              Qua cổng thanh toán
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              {gatewayLabel}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Stack>
+                    </Paper>
+                  );
+                })()}
+              </Box>
+            </>
+          )}
+        </Paper>
+
 
       <Dialog
         open={rejectDialogOpen}

@@ -554,25 +554,9 @@ export const MyOrdersPage = () => {
 
   const openCancelDialog = (orderId?: string | null) => {
     if (!orderId) return;
-
-    const cancelRequestStatus = cancelRequestStatusByOrderId[orderId];
-    if (
-      cancelRequestStatus &&
-      CANCEL_REQUEST_BLOCKED_STATUSES.has(cancelRequestStatus)
-    ) {
-      showToast(
-        `Đơn hàng này đã có yêu cầu hủy. ${cancelRequestStatusLabel(cancelRequestStatus)}`,
-        "info",
-      );
-      return;
-    }
-
-    setCancelOrderId(orderId);
-    setCancelReason("");
-    setSelectedCancelRefundBank(null);
-    setCancelRefundBankName("");
-    setCancelRefundAccountNumber("");
-    setCancelRefundAccountName("");
+    navigate(`/my-orders/${orderId}`, {
+      state: { requestCancel: true, status },
+    });
   };
 
   const getCancelBehavior = (order: OrderListItem) => {
@@ -604,13 +588,19 @@ export const MyOrdersPage = () => {
     }
 
     if (isPreparingOrReadyToPick) {
-      const depositFee = order.requiredDepositAmount ?? 0;
+      const penaltyFee =
+        (order.depositAmount ?? order.requiredDepositAmount ?? 0);
+      const isCODOrStore = (order.paymentTransactions ?? []).some(
+        (t) =>
+          t.paymentMethod === "CashOnDelivery" ||
+          t.paymentMethod === "CashInStore",
+      );
       return {
         mode: "request" as const,
         buttonLabel: "Yêu cầu hủy đơn hàng",
         note: "Sản phẩm đã được xuất kho và đóng gói. Yêu cầu hủy sẽ chờ nhân viên phê duyệt.",
-        requireBankInfo: true,
-        penaltyFee: depositFee,
+        requireBankInfo: !isCODOrStore,
+        penaltyFee,
       };
     }
 
@@ -1424,7 +1414,9 @@ export const MyOrdersPage = () => {
               multiline
               minRows={3}
               size="small"
-              placeholder="Nhập lý do hủy đơn hàng"
+              placeholder="Chọn lý do từ các gợi ý bên dưới"
+              InputProps={{ readOnly: true }}
+              sx={{ cursor: "default", "& .MuiInputBase-input": { cursor: "default" } }}
             />
 
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
@@ -1455,7 +1447,7 @@ export const MyOrdersPage = () => {
                 </Typography>
                 <Typography variant="body2" mb={0.75}>
                   Đơn hàng đã được xuất kho và đóng gói. Theo chính sách của PerfumeGPT, nếu yêu cầu hủy được duyệt, quý khách sẽ chịu{" "}
-                  <b>phí phạt bồi thường tương đương tiền cọc quy định</b> để bù đắp chi phí vật tư đóng gói chống sốc chuyên dụng và xử lý đơn hàng.
+                  <b>phí phạt bồi thường</b> để bù đắp chi phí vật tư đóng gói chống sốc chuyên dụng và xử lý đơn hàng.
                 </Typography>
 
                 {cancelBehavior.penaltyFee > 0 ? (
@@ -1466,7 +1458,9 @@ export const MyOrdersPage = () => {
                       </Typography>
                     </Box>
                     <Typography variant="caption" color="text.secondary" display="block">
-                      Nếu quý khách đã đặt cọc, cửa hàng sẽ thu hồi toàn bộ số tiền cọc. Nếu đã thanh toán 100%, Kế toán sẽ hoàn lại phần còn lại sau khi khấu trừ khoản phí trên.
+                      {(selectedOrder?.requiredDepositAmount ?? 0) > 0
+                        ? "Nếu quý khách đã đặt cọc, cửa hàng sẽ thu hồi toàn bộ số tiền cọc. Nếu đã thanh toán 100%, Kế toán sẽ hoàn lại phần còn lại sau khi khấu trừ khoản phí trên."
+                        : "Khách hàng đã thanh toán 100% — Kế toán sẽ hoàn lại phần còn lại sau khi khấu trừ khoản phí trên."}
                     </Typography>
                   </>
                 ) : (
