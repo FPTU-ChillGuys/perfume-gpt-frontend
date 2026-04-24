@@ -40,7 +40,10 @@ export type BopisOnlineOrderPayload = {
   subTotal: number;
   discount: number;
   totalPrice: number;
+  paidAmount: number;
+  remainingAmount: number;
   paymentStatus: string;
+  paymentUrl?: string;
 };
 
 export type OrderDeliveredPayload = {
@@ -138,6 +141,9 @@ const mapOrderToBopisPayload = (order: any): BopisOnlineOrderPayload => ({
   discount: order.voucherDiscountTotal ?? 0,
   totalPrice: order.totalAmount ?? 0,
   paymentStatus: order.paymentStatus ?? "Unpaid",
+  paidAmount: order.paidAmount ?? 0,
+  remainingAmount: order.remainingAmount ?? order.totalAmount ?? 0,
+  paymentUrl: order.paymentUrl ?? undefined,
 });
 
 const addCandidate = (set: Set<string>, value?: string | null) => {

@@ -2115,6 +2115,83 @@ class OrderService {
       );
     }
   }
+
+  
+  async createPickupPayment(
+    orderId: string,
+    paymentMethod: PaymentMethod,
+    posSessionId?: string,
+  ): Promise<CheckoutResponse> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/payments/{orderId}/pickup-payment" as never,
+        {
+          params: { path: { orderId } },
+          body: {
+            paymentMethod,
+            posSessionId: posSessionId || null,
+          },
+        } as never,
+      );
+
+      const data = response.data as
+        | {
+            success?: boolean;
+            message?: string;
+            payload?: unknown;
+          }
+        | undefined;
+
+      if (!data?.success) {
+        const err = response.error as { message?: string } | undefined;
+        throw new Error(
+          data?.message || err?.message || "Không thể tạo thanh toán pickup",
+        );
+      }
+
+      const payload = data.payload as
+        | string
+        | {
+            url?: string;
+            paymentId?: string;
+            paymentUrl?: string;
+            orderId?: string;
+            Url?: string;
+            PaymentId?: string;
+            PaymentUrl?: string;
+            OrderId?: string;
+          }
+        | null
+        | undefined;
+
+      if (typeof payload === "string") {
+        const isUrl = /^https?:\/\//i.test(payload.trim());
+        return {
+          url: isUrl ? payload.trim() : undefined,
+          paymentId: isUrl ? undefined : payload.trim(),
+          orderId: isUrl ? undefined : orderId,
+        };
+      }
+
+      if (payload && typeof payload === "object") {
+        return {
+          url:
+            payload.url ||
+            payload.paymentUrl ||
+            payload.Url ||
+            payload.PaymentUrl,
+          paymentId: payload.paymentId || payload.PaymentId,
+          orderId: payload.orderId || payload.OrderId || orderId,
+        };
+      }
+
+      // CashInStore thường không trả URL, trả về paymentId rỗng để caller tự confirm
+      return { url: undefined, paymentId: undefined, orderId };
+    } catch (error: unknown) {
+      const err = error as { message?: string };
+      throw new Error(err.message || "Không thể tạo thanh toán pickup");
+    }
+  }
 }
 
 export const orderService = new OrderService();

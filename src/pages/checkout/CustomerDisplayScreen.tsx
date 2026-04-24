@@ -70,6 +70,10 @@ export const CustomerDisplayScreen = () => {
   >(null);
   const [successOrderId, setSuccessOrderId] = useState<string | null>(null);
   const [activePaymentUrl, setActivePaymentUrl] = useState("");
+  // Track đơn BOPIS deposit đã thanh toán đủ — để override paymentStatus hiển thị
+  const [bopisFullyPaidOrderId, setBopisFullyPaidOrderId] = useState<string | null>(null);
+  // Block QR hiển thị khi payment fail trong ONLINE_ORDER mode
+  const [bopisQrBlockedOrderId, setBopisQrBlockedOrderId] = useState<string | null>(null);
   const lastFailedOrderIdRef = useRef("");
   const lastSuccessfulOrderIdRef = useRef("");
   const latestPaymentOrderIdRef = useRef("");
@@ -183,6 +187,11 @@ export const CustomerDisplayScreen = () => {
     ).trim();
   }, [customerDisplayData]);
 
+  // paymentUrl từ kênh BOPIS (onlineOrderData) — dùng khi staff tạo QR cho đơn deposit
+  const onlineOrderPaymentUrl = useMemo(() => {
+    return (onlineOrderData?.paymentUrl || "").trim();
+  }, [onlineOrderData?.paymentUrl]);
+
   useEffect(() => {
     if (!paymentUrl) return;
 
@@ -194,6 +203,23 @@ export const CustomerDisplayScreen = () => {
       window.cancelAnimationFrame(frameId);
     };
   }, [paymentUrl]);
+
+  // Khi onlineOrderData có paymentUrl mới (staff tạo QR pickup-payment) → hiện QR
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      if (onlineOrderPaymentUrl) {
+        setActivePaymentUrl(onlineOrderPaymentUrl);
+        // QR mới: reset block (staff có thể tạo lại QR sau khi fail)
+        setBopisQrBlockedOrderId(null);
+      } else {
+        // paymentUrl bị xóa (thanh toán xong / đơn mới) → ẩn QR
+        setActivePaymentUrl((prev) =>
+          prev === onlineOrderPaymentUrl || !onlineOrderPaymentUrl ? "" : prev,
+        );
+      }
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [onlineOrderPaymentUrl]);
 
   useEffect(() => {
     // A new non-empty cart with no payment URL indicates a new checkout flow.
@@ -221,7 +247,14 @@ export const CustomerDisplayScreen = () => {
     };
   }, [items.length, paymentUrl]);
 
-  const displayPaymentUrl = activePaymentUrl || paymentUrl;
+  // Ẩn QR khi bị block (payment fail) hoặc đơn đã paid
+  const isOnlineOrderQrBlocked =
+    bopisQrBlockedOrderId != null &&
+    bopisQrBlockedOrderId === onlineOrderData?.orderId;
+
+  const displayPaymentUrl = isOnlineOrderQrBlocked
+    ? ""                                        // block → force ẩn
+    : activePaymentUrl || paymentUrl || onlineOrderPaymentUrl;
 
   const displayMode = useMemo<"IDLE" | "OFFLINE_CART" | "ONLINE_ORDER">(() => {
     if (onlineOrderData) return "ONLINE_ORDER";
@@ -311,6 +344,10 @@ export const CustomerDisplayScreen = () => {
       setActivePaymentUrl("");
       setSuccessOrderId(rawOrderId || null);
       setCheckoutSuccessType("PAYMENT");
+      // Nếu đang ở chế độ ONLINE_ORDER (BOPIS), đánh dấu đơn này đã thanh toán đủ
+      if (displayModeRef.current === "ONLINE_ORDER" && rawOrderId) {
+        setBopisFullyPaidOrderId(rawOrderId);
+      }
     });
 
     return () => {
@@ -360,6 +397,10 @@ export const CustomerDisplayScreen = () => {
 
     const frameId = window.requestAnimationFrame(() => {
       setActivePaymentUrl("");
+      // Nếu đang ở chế độ ONLINE_ORDER, block QR cho đơn này
+      if (displayModeRef.current === "ONLINE_ORDER" && rawOrderId) {
+        setBopisQrBlockedOrderId(rawOrderId);
+      }
     });
 
     return () => {
@@ -434,13 +475,25 @@ export const CustomerDisplayScreen = () => {
     };
   }, [orderDeliveredData]);
 
+  // Reset trạng thái "đã thanh toán đủ" khi đơn BOPIS mới được load
+  useEffect(() => {
+    if (!onlineOrderData?.orderId) return;
+    setBopisFullyPaidOrderId((prev) => {
+      // Nếu state đang giữ ID của đơn khác thì reset
+      if (prev && prev !== onlineOrderData.orderId) return null;
+      return prev;
+    });
+  }, [onlineOrderData?.orderId]);
+
   return (
     <div className="h-screen w-full overflow-hidden bg-slate-950 text-white">
       <style>{SUCCESS_OVERLAY_KEYFRAMES}</style>
 
       {displayPaymentUrl &&
         (displayMode !== "ONLINE_ORDER" ||
-          onlineOrderData?.paymentStatus !== "Paid") && (
+          (onlineOrderData?.paymentStatus !== "Paid" &&
+            bopisFullyPaidOrderId !== onlineOrderData?.orderId &&
+            !isOnlineOrderQrBlocked)) && (
           <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-950/45 backdrop-blur-[2px]">
             <div className="mx-4 w-full max-w-md rounded-3xl bg-white p-7 text-center text-slate-900 shadow-2xl">
               <p className="text-2xl font-black text-sky-700">
@@ -699,11 +752,20 @@ export const CustomerDisplayScreen = () => {
           )}
 
           {/* ONLINE_ORDER (BOPIS) */}
-          {displayMode === "ONLINE_ORDER" && onlineOrderData && (
+          {displayMode === "ONLINE_ORDER" && onlineOrderData && (() => {
+            // Override paymentStatus nếu đã nhận PaymentCompleted cho đơn này
+            const isFullyPaid =
+              bopisFullyPaidOrderId != null &&
+              bopisFullyPaidOrderId === onlineOrderData.orderId;
+            const effectivePaymentStatus = isFullyPaid
+              ? "Paid"
+              : onlineOrderData.paymentStatus;
+
+            return (
             <>
               {/* Payment status banner */}
               <div className="mx-6 mt-4">
-                {onlineOrderData.paymentStatus === "Paid" ? (
+                {effectivePaymentStatus === "Paid" ? (
                   <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                     <CheckCircleRounded
                       className="text-emerald-500"
@@ -711,6 +773,16 @@ export const CustomerDisplayScreen = () => {
                     />
                     <span className="font-bold text-emerald-700">
                       ĐƠN HÀNG ĐÃ THANH TOÁN (100%)
+                    </span>
+                  </div>
+                ) : effectivePaymentStatus === "PartialPaid" || onlineOrderData.paidAmount > 0 ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+                    <CheckCircleRounded
+                      className="text-orange-500"
+                      fontSize="small"
+                    />
+                    <span className="font-bold text-orange-700">
+                      ĐÃ ĐẶT CỌC TRƯỚC (CHỜ THANH TOÁN THÊM)
                     </span>
                   </div>
                 ) : (
@@ -815,25 +887,54 @@ export const CustomerDisplayScreen = () => {
                       {formatCurrency(onlineOrderData.subTotal)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-600">
-                    <span>Giảm giá</span>
-                    <span className="font-semibold text-slate-800">
-                      {formatCurrency(onlineOrderData.discount)}
-                    </span>
-                  </div>
+                  {onlineOrderData.discount > 0 && (
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>Giảm giá</span>
+                      <span className="font-semibold text-slate-800">
+                        -{formatCurrency(onlineOrderData.discount)}
+                      </span>
+                    </div>
+                  )}
+                  {/* Show deposit breakdown only when still PartialPaid (chưa thanh toán đủ) */}
+                  {effectivePaymentStatus === "PartialPaid" && (
+                    <>
+                      <div className="flex items-center justify-between font-semibold text-slate-900 pt-1">
+                        <span>Tổng đơn hàng</span>
+                        <span>{formatCurrency(onlineOrderData.totalPrice)}</span>
+                      </div>
+                      <div className="flex font-bold items-center justify-between text-emerald-900">
+                        <span>Đã thanh toán (Cọc)</span>
+                        <span className="font-bold">
+                          -{formatCurrency(onlineOrderData.paidAmount)}
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
-                <div className="flex items-end justify-between border-t border-slate-200 pt-3">
-                  <span className="text-lg font-semibold text-slate-700">
-                    Tổng thanh toán
-                  </span>
-                  <span className="text-5xl font-extrabold leading-none text-red-600">
-                    {formatCurrency(onlineOrderData.totalPrice)}
-                  </span>
-                </div>
+                {effectivePaymentStatus === "PartialPaid" ? (
+                  <div className="flex items-end justify-between border-t border-slate-200 pt-3">
+                    <span className="text-3xl font-bold text-slate-900">
+                      CẦN THANH TOÁN
+                    </span>
+                    <span className="text-5xl font-extrabold leading-none text-red-600">
+                      {formatCurrency(onlineOrderData.remainingAmount)}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-end justify-between border-t border-slate-200 pt-3">
+                    <span className="text-3xl font-bold text-emerald-700">
+                      TỔNG ĐƠN HÀNG
+                    </span>
+                    <span className="text-5xl font-extrabold leading-none text-emerald-600">
+                      {formatCurrency(onlineOrderData.totalPrice)}
+                    </span>
+                  </div>
+                )}
               </div>
             </>
-          )}
+            );
+          })()}
         </aside>
       </div>
     </div>

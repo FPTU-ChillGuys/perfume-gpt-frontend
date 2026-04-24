@@ -7046,6 +7046,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/payments/{orderId}/pickup-payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreatePickupPaymentRequest"];
+                    "text/json": components["schemas"]["CreatePickupPaymentRequest"];
+                    "application/*+json": components["schemas"]["CreatePickupPaymentRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/payments/{paymentId}/retry": {
         parameters: {
             query?: never;
@@ -12881,6 +12926,10 @@ export interface components {
             paymentUrl?: null | string;
             /** Format: uuid */
             orderId?: null | string;
+        };
+        CreatePickupPaymentRequest: {
+            paymentMethod?: components["schemas"]["PaymentMethod"];
+            posSessionId?: null | string;
         };
         CreateProductRequest: {
             name: string;

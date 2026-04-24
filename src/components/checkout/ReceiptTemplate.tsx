@@ -222,7 +222,7 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, ReceiptTemplateProps>(
           </Stack>
 
           {/* THÔNG TIN ĐẶT CỌC — chỉ hiện khi có đặt cọc */}
-          {(invoice.depositeAmount ?? 0) > 0 && (
+          {(invoice.remainingAmount ?? 0) > 0 && (
             <>
               <Divider
                 sx={{ my: 0.5, borderStyle: "dashed", borderColor: "#000" }}

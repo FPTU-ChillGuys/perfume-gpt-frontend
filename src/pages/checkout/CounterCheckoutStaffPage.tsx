@@ -347,6 +347,7 @@ export const CounterCheckoutStaffPage = () => {
   const [isBopisDeliveryConfirmOpen, setIsBopisDeliveryConfirmOpen] =
     useState(false);
   const [bopisCashReceived, setBopisCashReceived] = useState("");
+  const [bopisCashMode, setBopisCashMode] = useState<"normal" | "deposit">("normal");
 
   // Cash Payment Dialog states
   const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
@@ -536,6 +537,7 @@ export const CounterCheckoutStaffPage = () => {
     setIsBopisQrConfirmOpen(false);
     setIsBopisDeliveryConfirmOpen(false);
     setBopisCashReceived("");
+    setBopisCashMode("normal");
 
     // Clear payment states
     paymentQrUrlRef.current = null;
@@ -1779,6 +1781,24 @@ export const CounterCheckoutStaffPage = () => {
       rawMessage,
     ].join(":");
 
+    // ── BOPIS Tab 1: luôn clear QR ngay khi nhận PaymentFailed cho đúng order ──
+    // Phải đặt TRƯỚC các guard để đảm bảo staff screen tắt QR kể cả khi
+    // guard logic skip event (duplicate key, stale paymentId, v.v.)
+    if (
+      activeTab === 1 &&
+      bopisOrder &&
+      rawOrderId &&
+      rawOrderId === bopisOrder.id
+    ) {
+      paymentQrUrlRef.current = null;
+      setPaymentQrUrl(null);
+      // Đồng thời sync clear sang màn customer
+      void syncOnlineOrderToCustomerRef.current({
+        ...bopisOrder,
+        paymentUrl: null,
+      });
+    }
+
     if (handledPaymentFailedEventRef.current === failedEventKey) {
       return;
     }
@@ -1853,9 +1873,8 @@ export const CounterCheckoutStaffPage = () => {
       }
     }
 
-    // Use refs to access current preview data and callbacks
-    // This prevents effect re-runs when cart changes
-    // Chỉ sync cart offline lên customer display khi đang ở Tab 0
+
+    // Tab 0: sync cart offline lên customer display
     if (activeTab === 0) {
       const currentPreview = previewDataRef.current;
       if (currentPreview) {
@@ -2375,6 +2394,7 @@ export const CounterCheckoutStaffPage = () => {
     }
   }, [bopisOrder, openSuccessDialog, showToast]);
 
+  // ─── Handler BOPIS thường (Paid) — Tiền mặt ─────────────────────────────
   const handleConfirmBopisCash = useCallback(async () => {
     if (!bopisOrder?.id) return;
 
@@ -2403,6 +2423,73 @@ export const CounterCheckoutStaffPage = () => {
     }
   }, [bopisOrder, bopisCashReceived, openSuccessDialog, showToast]);
 
+  // ─── Handler BOPIS deposit (PartialPaid) — Tiền mặt ─────────────────────
+  const handleBopisDepositCash = useCallback(async () => {
+    if (!bopisOrder?.id) return;
+
+    const required = bopisOrder.remainingAmount ?? bopisOrder.totalAmount ?? 0;
+    const received = Number(bopisCashReceived) || 0;
+    if (received < required) {
+      showToast("Số tiền nhận chưa đủ số tiền còn lại", "warning");
+      return;
+    }
+
+    setIsProcessingBopis(true);
+    setIsBopisCashDialogOpen(false);
+    try {
+      // 1. Tạo pickup payment
+      const result = await orderService.createPickupPayment(
+        bopisOrder.id,
+        "CashInStore",
+        POS_SESSION_ID,
+      );
+
+      // 2. Xác nhận ngầm — dùng paymentId từ response hoặc fallback activePaymentId
+      const paymentIdToConfirm =
+        result.paymentId || bopisActivePaymentId || "";
+      if (paymentIdToConfirm) {
+        await orderService.confirmPayment(
+          paymentIdToConfirm,
+          true,
+          undefined,
+          POS_SESSION_ID,
+        );
+      }
+
+      // 3. Xác nhận giao hàng tại quầy
+      await orderService.deliverInStoreOrder(bopisOrder.id, POS_SESSION_ID);
+
+      showToast("Đã xác nhận thanh toán tiền mặt (cọc + phần còn lại)", "success");
+      void openSuccessDialog(bopisOrder.id);
+      void notifyPaymentSuccess({
+        orderId: bopisOrder.id,
+        paymentId: paymentIdToConfirm,
+        status: "Success",
+        message: "Thanh toán thành công",
+      }).catch((err) => {
+        console.error("[BOPIS][DepositCash] notifyPaymentSuccess failed", err);
+      });
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "Không thể xác nhận thanh toán tiền mặt",
+        "error",
+      );
+    } finally {
+      setIsProcessingBopis(false);
+      setBopisCashReceived("");
+    }
+  }, [
+    bopisOrder,
+    bopisCashReceived,
+    bopisActivePaymentId,
+    notifyPaymentSuccess,
+    openSuccessDialog,
+    showToast,
+  ]);
+
+  // ─── Handler BOPIS thường (Paid) — QR / Gateway ──────────────────────────
   const handleGenerateBopisQR = useCallback(async () => {
     if (!bopisOrder?.id) return;
     const paymentId = bopisActivePaymentId;
@@ -2420,6 +2507,10 @@ export const CounterCheckoutStaffPage = () => {
       );
       if (result.paymentId) {
         setBopisActivePaymentId(result.paymentId);
+        // Reset guard refs: paymentId mới — event fail tiếp theo phải được xử lý
+        handledPaymentFailedEventRef.current = "";
+        latestRetryOrderIdRef.current = bopisOrder?.id ?? "";
+        latestRetryPaymentIdRef.current = result.paymentId;
       }
       if (result.url) {
         setPaymentQrUrl(result.url);
@@ -2435,7 +2526,48 @@ export const CounterCheckoutStaffPage = () => {
     }
   }, [bopisActivePaymentId, bopisOrder, bopisPaymentMethod, showToast]);
 
-  // Auto-deliver BOPIS order after QR payment completed via SignalR
+  // ─── Handler BOPIS deposit (PartialPaid) — QR / Gateway ─────────────────
+  const handleBopisDepositQR = useCallback(async () => {
+    if (!bopisOrder?.id) return;
+    setIsProcessingBopis(true);
+    try {
+      const result = await orderService.createPickupPayment(
+        bopisOrder.id,
+        bopisPaymentMethod,
+        POS_SESSION_ID,
+      );
+
+      if (result.paymentId) {
+        setBopisActivePaymentId(result.paymentId);
+        // Reset guard refs: paymentId mới — event fail tiếp theo phải được xử lý
+        handledPaymentFailedEventRef.current = "";
+        latestRetryOrderIdRef.current = bopisOrder.id;
+        latestRetryPaymentIdRef.current = result.paymentId;
+      }
+
+      if (result.url) {
+        setPaymentQrUrl(result.url);
+        paymentQrUrlRef.current = result.url;
+        // Đồng bộ order + QR URL sang màn customer
+        // syncOnlineOrderToCustomer nhận any và hook sẽ map qua mapOrderToBopisPayload
+        void syncOnlineOrderToCustomerRef.current({
+          ...bopisOrder,
+          paymentUrl: result.url,
+        });
+      } else {
+        showToast("Không nhận được URL thanh toán từ server", "warning");
+      }
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : "Không thể tạo mã QR",
+        "error",
+      );
+    } finally {
+      setIsProcessingBopis(false);
+    }
+  }, [bopisOrder, bopisPaymentMethod, showToast]);
+
+  // Auto-handle BOPIS order after QR payment completed via SignalR
   useEffect(() => {
     if (activeTab !== 1) return;
     if (!paymentCompletedData || !bopisOrder?.id) return;
@@ -2459,24 +2591,34 @@ export const CounterCheckoutStaffPage = () => {
     if (bopisAutoDeliverRef.current) return;
     bopisAutoDeliverRef.current = true;
 
+    const isDepositOrder = bopisOrder.paymentStatus === "PartialPaid";
+
     (async () => {
       try {
         const orderId = bopisOrder.id!;
-        await orderService.deliverInStoreOrder(orderId, POS_SESSION_ID);
-        setPaymentQrUrl(null);
-        paymentQrUrlRef.current = null;
-        void openSuccessDialog(orderId);
 
-        // Cực kỳ quan trọng: Xóa event SignalR sau khi đã xử lý xong
+        if (isDepositOrder) {
+          // Deposit flow: gọi deliver-in-store rồi mở success
+          await orderService.deliverInStoreOrder(orderId, POS_SESSION_ID);
+          setPaymentQrUrl(null);
+          paymentQrUrlRef.current = null;
+          void openSuccessDialog(orderId);
+        } else {
+          // Normal BOPIS flow: gọi deliver-in-store rồi mở success
+          await orderService.deliverInStoreOrder(orderId, POS_SESSION_ID);
+          setPaymentQrUrl(null);
+          paymentQrUrlRef.current = null;
+          void openSuccessDialog(orderId);
+        }
+
         clearPaymentSignalREvents();
       } catch (error) {
         showToast(
           error instanceof Error
             ? error.message
-            : "Thanh toán QR thành công nhưng không thể giao hàng tự động",
+            : "Thanh toán QR thành công nhưng không thể hoàn tất đơn hàng",
           "error",
         );
-        // Nếu lỗi thật sự thì mới mở khóa cho phép thử lại
         bopisAutoDeliverRef.current = false;
       }
     })();
@@ -3243,11 +3385,11 @@ export const CounterCheckoutStaffPage = () => {
                       {!isPickupInStore && (
                         <Stack spacing={1.25} sx={{ mt: 1.5 }}>
                           <TextField
-  label="Tên người nhận"
-  value={recipientName}
-  onChange={(e) => setRecipientName(e.target.value)}
-  fullWidth
-/>
+                            label="Tên người nhận"
+                            value={recipientName}
+                            onChange={(e) => setRecipientName(e.target.value)}
+                            fullWidth
+                          />
                           <TextField
                             label="Số điện thoại người nhận"
                             value={recipientPhone}
@@ -3660,14 +3802,40 @@ export const CounterCheckoutStaffPage = () => {
                           </Typography>
                         </Stack>
                       )}
+                     
+                        <>
+                          <Stack direction="row" justifyContent="space-between" sx={{ pt: 0.5 }}>
+                            <Typography fontWeight={600} color="text.primary">
+                              Tổng đơn hàng
+                            </Typography>
+                            <Typography fontWeight={600} color="text.primary">
+                              {formatCurrency(bopisOrder.totalAmount)}
+                            </Typography>
+                        </Stack>
+                         {(bopisOrder.paymentStatus === "PartialPaid") && (
+                          <Stack direction="row" justifyContent="space-between">
+                            <Typography color="text.secondary">
+                              Đã thanh toán (Cọc)
+                            </Typography>
+                            <Typography fontWeight={600} color="success.main">
+                              -{formatCurrency(bopisOrder.paidAmount)}
+                            </Typography>
+                          </Stack>
+                           )}
+                        </>
+                     
                       <Divider />
-                      <Stack direction="row" justifyContent="space-between">
-                        <Typography fontWeight={700}>Tổng cộng</Typography>
-                        <Typography fontWeight={700} color="primary.main">
-                          {formatCurrency(bopisOrder.totalAmount)}
+                      {bopisOrder.paymentStatus === "PartialPaid" && (
+                        <Stack direction="row" justifyContent="space-between">
+                        <Typography fontWeight={700}>
+                            Cần thu thêm
                         </Typography>
+                        <Typography fontWeight={700} color="primary.main" sx={{ fontSize: "1.1rem" }}>
+                            {formatCurrency(bopisOrder.remainingAmount)}
+                        </Typography>
+                        </Stack>
+                      )}
                       </Stack>
-                    </Stack>
 
                     {bopisOrder.paymentStatus === "Paid" ? (
                       <>
@@ -3691,6 +3859,111 @@ export const CounterCheckoutStaffPage = () => {
                             : "Xác nhận giao hàng tại quầy"}
                         </Button>
                       </>
+                    ) : bopisOrder.paymentStatus === "PartialPaid" ? (
+                        <>
+                          <Alert severity="success" sx={{ mb: 2 }}>
+                          Đơn hàng đã cọc trước
+                          </Alert>
+                          <RadioGroup
+                          value={bopisPaymentMethod}
+                          onChange={(e) =>
+                            setBopisPaymentMethod(
+                              e.target.value as NonNullable<PaymentMethod>,
+                            )
+                          }
+                          sx={{ mb: 2 }}
+                        >
+                          {(
+                            [
+                              "CashInStore",
+                              "VnPay",
+                              "Momo",
+                              "PayOs",
+                            ] as NonNullable<PaymentMethod>[]
+                          ).map((m) => (
+                            <FormControlLabel
+                              key={m}
+                              value={m}
+                              control={<Radio size="small" />}
+                              label={renderPaymentMethodOption(m)}
+                            />
+                          ))}
+                        </RadioGroup>
+                        {bopisPaymentMethod === "CashInStore" ? (
+                          <Button
+                            fullWidth
+                            variant="contained"
+                            disabled={isProcessingBopis}
+                            startIcon={
+                              isProcessingBopis ? (
+                                <CircularProgress size={18} color="inherit" />
+                              ) : undefined
+                            }
+                            onClick={() => {
+                              setBopisCashReceived("");
+                              setBopisCashMode("deposit");
+                              setIsBopisCashDialogOpen(true);
+                            }}
+                          >
+                            {isProcessingBopis
+                              ? "Đang xử lý..."
+                              : "Xác nhận tiền mặt"}
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              fullWidth
+                              variant="contained"
+                              disabled={isProcessingBopis}
+                              startIcon={
+                                isProcessingBopis ? (
+                                  <CircularProgress size={18} color="inherit" />
+                                ) : undefined
+                              }
+                              onClick={() => void handleBopisDepositQR()}
+                            >
+                              {isProcessingBopis
+                                ? "Đang tạo mã..."
+                                : "Tạo mã QR thanh toán"}
+                            </Button>
+                            {paymentQrUrl && (
+                              <Box
+                                display="flex"
+                                flexDirection="column"
+                                alignItems="center"
+                                sx={{
+                                  mt: 2.5,
+                                  p: 3,
+                                  borderRadius: 3,
+                                  bgcolor: "white",
+                                  border: "1px solid",
+                                  borderColor: "divider",
+                                }}
+                              >
+                                <Typography
+                                  variant="subtitle2"
+                                  fontWeight={700}
+                                  color="primary.main"
+                                  mb={2}
+                                >
+                                  Quét mã QR để thanh toán phần còn lại
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    borderRadius: 3,
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    p: 1.5,
+                                    bgcolor: "white",
+                                  }}
+                                >
+                                  <QRCodeSVG value={paymentQrUrl} size={200} />
+                                </Box>
+                              </Box>
+                            )}
+                          </>
+                        )}
+                        </>
                     ) : (
                       <>
                         <Alert severity="warning" sx={{ mb: 2 }}>
@@ -4315,39 +4588,64 @@ export const CounterCheckoutStaffPage = () => {
             if (!isProcessingBopis) {
               setIsBopisCashDialogOpen(false);
               setBopisCashReceived("");
+              setBopisCashMode("normal");
             }
           }}
           maxWidth="sm"
           fullWidth
         >
-          <DialogTitle>Xác nhận thanh toán tiền mặt (BOPIS)</DialogTitle>
+          <DialogTitle>
+            {bopisCashMode === "deposit"
+              ? "Xác nhận thu tiền mặt (Thanh toán cọc còn lại)"
+              : "Xác nhận thanh toán tiền mặt (BOPIS)"}
+          </DialogTitle>
           <DialogContent dividers>
             <Stack spacing={2}>
-              <Stack direction="row" justifyContent="space-between">
-                <Typography color="text.secondary">Tổng tiền:</Typography>
-                <Typography fontWeight={700} fontSize="1.1rem">
-                  {formatCurrency(bopisOrder?.totalAmount ?? 0)}
-                </Typography>
-              </Stack>
-              {bopisCashReceived &&
-                Number(bopisCashReceived) >= (bopisOrder?.totalAmount ?? 0) && (
+              {bopisCashMode === "deposit" ? (
+                // Deposit mode: hiển thị breakdown rõ ràng
+                <>
                   <Stack direction="row" justifyContent="space-between">
-                    <Typography color="text.secondary">Tiền thừa:</Typography>
-                    <Typography
-                      fontWeight={700}
-                      fontSize="1.1rem"
-                      color="error"
-                    >
-                      {formatCurrency(
-                        Math.max(
-                          0,
-                          Number(bopisCashReceived) -
-                            (bopisOrder?.totalAmount ?? 0),
-                        ),
-                      )}
+                    <Typography color="text.secondary">Tổng đơn hàng:</Typography>
+                    <Typography fontWeight={600}>
+                      {formatCurrency(bopisOrder?.totalAmount ?? 0)}
                     </Typography>
                   </Stack>
-                )}
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Đã đặt cọc:</Typography>
+                    <Typography fontWeight={600} color="success.main">
+                      -{formatCurrency(bopisOrder?.paidAmount ?? 0)}
+                    </Typography>
+                  </Stack>
+                  <Stack direction="row" justifyContent="space-between" sx={{ borderTop: "2px solid", borderColor: "divider", pt: 1 }}>
+                    <Typography color="text.secondary" fontWeight={700}>Cần thu thêm:</Typography>
+                    <Typography fontWeight={700} fontSize="1.1rem" color="primary.main">
+                      {formatCurrency(bopisOrder?.remainingAmount ?? 0)}
+                    </Typography>
+                  </Stack>
+                </>
+              ) : (
+                // Normal mode
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography color="text.secondary">Tổng tiền:</Typography>
+                  <Typography fontWeight={700} fontSize="1.1rem">
+                    {formatCurrency(bopisOrder?.totalAmount ?? 0)}
+                  </Typography>
+                </Stack>
+              )}
+              {(() => {
+                const required = bopisCashMode === "deposit"
+                  ? (bopisOrder?.remainingAmount ?? 0)
+                  : (bopisOrder?.totalAmount ?? 0);
+                const received = Number(bopisCashReceived) || 0;
+                return bopisCashReceived && received >= required ? (
+                  <Stack direction="row" justifyContent="space-between">
+                    <Typography color="text.secondary">Tiền thừa:</Typography>
+                    <Typography fontWeight={700} fontSize="1.1rem" color="error">
+                      {formatCurrency(Math.max(0, received - required))}
+                    </Typography>
+                  </Stack>
+                ) : null;
+              })()}
               <Box>
                 <Typography variant="caption" color="text.secondary" mb={0.5}>
                   Số tiền khách đưa
@@ -4497,12 +4795,21 @@ export const CounterCheckoutStaffPage = () => {
             </Button>
             <Button
               variant="contained"
-              onClick={() => void handleConfirmBopisCash()}
-              disabled={
-                isProcessingBopis ||
-                !bopisCashReceived ||
-                Number(bopisCashReceived) < (bopisOrder?.totalAmount ?? 0)
+              onClick={() =>
+                void (bopisCashMode === "deposit"
+                  ? handleBopisDepositCash()
+                  : handleConfirmBopisCash())
               }
+              disabled={(() => {
+                const required = bopisCashMode === "deposit"
+                  ? (bopisOrder?.remainingAmount ?? 0)
+                  : (bopisOrder?.totalAmount ?? 0);
+                return (
+                  isProcessingBopis ||
+                  !bopisCashReceived ||
+                  Number(bopisCashReceived) < required
+                );
+              })()}
             >
               {isProcessingBopis ? "Đang xử lý..." : "Xác nhận"}
             </Button>
