@@ -104,6 +104,7 @@ const PICKUP_PAYMENT_METHODS: NonNullable<PaymentMethod>[] = [
   "PayOs",
 ];
 const DELIVERY_PAYMENT_METHODS: NonNullable<PaymentMethod>[] = [
+  "CashInStore", // Thu tiền mặt 100% tại quầy trước khi giao
   "CashOnDelivery",
   "VnPay",
   "Momo",
@@ -182,8 +183,10 @@ type CartDisplaySyncPayload = {
   items: CartDisplaySyncItem[];
   subTotal: number;
   discount: number;
+  shippingFee?: number;
   totalPrice: number;
   paymentUrl?: string | null;
+  requiredDepositAmount?: number;
 };
 
 type FailedPaymentAction = {
@@ -281,6 +284,8 @@ export const CounterCheckoutStaffPage = () => {
   const [isPickupInStore, setIsPickupInStore] = useState(true);
   const [paymentMethod, setPaymentMethod] =
     useState<NonNullable<PaymentMethod>>("CashInStore");
+  const [depositGateway, setDepositGateway] =
+    useState<NonNullable<PaymentMethod>>("CashInStore");
   const [customerLookupKeyword, setCustomerLookupKeyword] = useState("");
   const [customerLookupResults, setCustomerLookupResults] = useState<
     PosCustomerForLookup[]
@@ -313,6 +318,8 @@ export const CounterCheckoutStaffPage = () => {
   const latestRetryPaymentIdRef = useRef<string>("");
   // Flag to prevent processing failed events during retry operation
   const isRetryInProgressRef = useRef(false);
+  // Flag to prevent React re-render from breaking Vietnamese IME composition
+  const isComposingRef = useRef(false);
   const syncCartToCustomerRef = useRef(syncCartToCustomer);
   const syncOnlineOrderToCustomerRef = useRef(syncOnlineOrderToCustomer);
   const [failedPaymentAction, setFailedPaymentAction] =
@@ -896,12 +903,28 @@ export const CounterCheckoutStaffPage = () => {
     }
 
     if (!isPickupInStore) {
-      if (
-        !recipientName.trim() ||
-        !recipientPhone.trim() ||
-        !streetAddress.trim()
-      ) {
-        showToast("Vui lòng điền đầy đủ thông tin người nhận", "warning");
+      if (!recipientName.trim()) {
+        showToast("Vui lòng nhập tên người nhận", "warning");
+        return false;
+      }
+
+      const phoneRaw = recipientPhone.trim();
+      if (!phoneRaw) {
+        showToast("Vui lòng nhập số điện thoại người nhận", "warning");
+        return false;
+      }
+      // Chấp nhận: 10 chữ số bắt đầu bằng 0, hoặc +84 + 9 chữ số
+      const phoneRegex = /^(0\d{9}|\+84\d{9})$/;
+      if (!phoneRegex.test(phoneRaw)) {
+        showToast(
+          "Số điện thoại không hợp lệ (VD: 0912345678)",
+          "warning",
+        );
+        return false;
+      }
+
+      if (!streetAddress.trim()) {
+        showToast("Vui lòng nhập địa chỉ cụ thể", "warning");
         return false;
       }
 
@@ -1373,8 +1396,33 @@ export const CounterCheckoutStaffPage = () => {
       voucherCode: appliedVoucherCode.trim() || undefined,
       customerId: selectedCustomer?.id || undefined,
       sessionId: POS_SESSION_ID,
+      // --- BỔ SUNG 2 TRƯỜNG NÀY ĐỂ BACKEND TÍNH SHIP VÀ CỌC ---
+      paymentMethod: paymentMethod,
+      recipient: isPickupInStore
+        ? undefined
+        : {
+            contactName: "", // Không cần cho tính phí ship
+            contactPhoneNumber: "", // Không cần cho tính phí ship
+            districtId: selectedDistrict?.DistrictID || 0,
+            districtName: selectedDistrict?.DistrictName || "",
+            wardCode: selectedWard?.WardCode || "",
+            wardName: selectedWard?.WardName || "",
+            provinceId: selectedProvince?.ProvinceID || 0,
+            provinceName: selectedProvince?.ProvinceName || "",
+            fullAddress: "", // Không cần cho tính phí ship
+          },
+      // --------------------------------------------------------
     }),
-    [appliedVoucherCode, cartItems, selectedCustomer?.id],
+    [
+      appliedVoucherCode,
+      cartItems,
+      selectedCustomer?.id,
+      paymentMethod,
+      isPickupInStore,
+      selectedDistrict,
+      selectedWard,
+      selectedProvince,
+    ],
   );
 
   const debouncedPreviewPayload = useDebounce(previewPayload, 500);
@@ -1436,8 +1484,10 @@ export const CounterCheckoutStaffPage = () => {
         items: mappedItems,
         subTotal: toSafeNumber(data.subTotal ?? computedSubTotal),
         discount: toSafeNumber(data.discount ?? computedDiscount),
+        shippingFee: toSafeNumber(data.shippingFee ?? 0),
         totalPrice: toSafeNumber(data.totalPrice ?? computedTotal),
         paymentUrl: paymentQrUrlRef.current,
+        requiredDepositAmount: toSafeNumber(data.requiredDepositAmount ?? 0),
       };
     },
     [cartItems],
@@ -1488,7 +1538,7 @@ export const CounterCheckoutStaffPage = () => {
   const executeRetryFailedPayment = useCallback(
     async (requiresCashConfirm: boolean) => {
       if (!failedPaymentAction?.paymentId) {
-        showToast("Không tìm thấy paymentId để thử lại", "warning");
+        showToast("Không tìm thấy mã giao dịch để thử lại", "warning");
         return;
       }
 
@@ -1501,10 +1551,14 @@ export const CounterCheckoutStaffPage = () => {
 
         const retryCallId = createDebugCallId("pos-retry");
 
+        // Tính depositMethod cho retry theo schema:
+        const retryDepositMethod: PaymentMethod =
+          paymentMethod === "CashOnDelivery" ? depositGateway : null;
+
         const result = await orderService.retryPayment(
           failedPaymentAction.paymentId,
           paymentMethod,
-          null,
+          retryDepositMethod,
           POS_SESSION_ID,
         );
 
@@ -1539,27 +1593,91 @@ export const CounterCheckoutStaffPage = () => {
             POS_SESSION_ID,
           );
 
-          // Clear payment failed states - để SignalR event tự động mở success dialog
           paymentQrUrlRef.current = null;
           setPaymentQrUrl(null);
           lastPaidOrderIdRef.current = failedPaymentAction.orderId;
           setFailedPaymentAction(null);
 
-          showToast("Đã xác nhận thanh toán tiền mặt", "success");
-          // SignalR event sẽ tự động trigger openSuccessDialog
+          void openSuccessDialog(failedPaymentAction.orderId);
+          void notifyPaymentSuccess({
+            orderId: failedPaymentAction.orderId,
+            paymentId: paymentIdForRetry,
+            status: "Success",
+            message: "Thanh toán thành công",
+          }).catch((err) => {
+            console.error("[POS][CashInStoreRetry] notifyPaymentSuccess failed", err);
+          });
           return;
         }
 
-        // Nếu chọn thanh toán tiền mặt nhưng không require confirm
-        if (paymentMethod === "CashInStore") {
-          // Clear payment failed states
+        // COD + đặt cọc bằng CashInStore: confirm deposit ngầm sau retry
+        if (retryDepositMethod === "CashInStore") {
+          try {
+            await orderService.confirmPayment(
+              paymentIdForRetry,
+              true,
+              undefined,
+              POS_SESSION_ID,
+            );
+          } catch (confirmErr) {
+            console.error("[POS][DepositRetry] confirmPayment failed", confirmErr);
+          }
+
           paymentQrUrlRef.current = null;
           setPaymentQrUrl(null);
           lastPaidOrderIdRef.current = failedPaymentAction.orderId;
           setFailedPaymentAction(null);
 
-          showToast("Đã chuyển sang thanh toán tiền mặt", "success");
-          // SignalR event sẽ tự động trigger openSuccessDialog
+          // Sync paymentUrl=null vào customer trước khi notify để clear QR cũ
+          const currentCartPayload = previewData
+            ? toCartDisplaySyncPayload(previewData)
+            : null;
+          if (currentCartPayload) {
+            void syncCartToCustomerRef.current({
+              ...currentCartPayload,
+              paymentUrl: null,
+            } satisfies CartDisplaySyncPayload);
+          }
+
+          void openSuccessDialog(failedPaymentAction.orderId);
+          void notifyPaymentSuccess({
+            orderId: failedPaymentAction.orderId,
+            paymentId: paymentIdForRetry,
+            status: "Success",
+            message: "Thanh toán thành công",
+          }).catch((err) => {
+            console.error("[POS][DepositRetry] notifyPaymentSuccess failed", err);
+          });
+          return;
+        }
+
+        // Chuyển sang CashInStore full (không qua cash dialog): confirm ngầm
+        if (paymentMethod === "CashInStore") {
+          try {
+            await orderService.confirmPayment(
+              paymentIdForRetry,
+              true,
+              undefined,
+              POS_SESSION_ID,
+            );
+          } catch (confirmErr) {
+            console.error("[POS][CashRetry] confirmPayment failed", confirmErr);
+          }
+
+          paymentQrUrlRef.current = null;
+          setPaymentQrUrl(null);
+          lastPaidOrderIdRef.current = failedPaymentAction.orderId;
+          setFailedPaymentAction(null);
+
+          void openSuccessDialog(failedPaymentAction.orderId);
+          void notifyPaymentSuccess({
+            orderId: failedPaymentAction.orderId,
+            paymentId: paymentIdForRetry,
+            status: "Success",
+            message: "Thanh toán thành công",
+          }).catch((err) => {
+            console.error("[POS][CashRetry] notifyPaymentSuccess failed", err);
+          });
           return;
         }
 
@@ -1622,8 +1740,11 @@ export const CounterCheckoutStaffPage = () => {
     },
     [
       cartItems,
+      depositGateway,
       failedPaymentAction,
       localSubtotal,
+      notifyPaymentSuccess,
+      openSuccessDialog,
       paymentMethod,
       previewData,
       showToast,
@@ -1887,6 +2008,8 @@ export const CounterCheckoutStaffPage = () => {
 
   useEffect(() => {
     setPaymentMethod(isPickupInStore ? "CashInStore" : "CashOnDelivery");
+    // Reset deposit gateway to default whenever delivery mode changes
+    setDepositGateway("CashInStore");
   }, [isPickupInStore]);
 
   useEffect(() => {
@@ -1970,6 +2093,19 @@ export const CounterCheckoutStaffPage = () => {
   const handleOpenCheckoutConfirm = () => {
     if (!validateCheckoutInputs()) return;
 
+    // Tính depositGateway theo schema:
+    // - isPickupInStore: luôn null
+    // - !isPickupInStore + CashInStore: null (thu 100% tiền mặt, không cọc)
+    // - !isPickupInStore + CashOnDelivery: dùng depositGateway đã chọn
+    // - !isPickupInStore + method khác (VnPay/Momo/PayOs): dùng chính method đó
+    const resolvedDepositGateway: PaymentMethod = isPickupInStore
+      ? null
+      : paymentMethod === "CashOnDelivery"
+        ? depositGateway
+        : paymentMethod === "CashInStore"
+          ? null
+          : paymentMethod;
+
     // Nếu là CashInStore -> Mở luôn cash payment dialog
     if (paymentMethod === "CashInStore") {
       const expectedTotal = Number(previewData?.totalPrice ?? localSubtotal);
@@ -1987,6 +2123,8 @@ export const CounterCheckoutStaffPage = () => {
         isPickupInStore,
         payment: {
           method: paymentMethod,
+          depositGateway: null,
+          posSessionId: POS_SESSION_ID,
         },
         expectedTotalPrice: expectedTotal,
         posSessionId: POS_SESSION_ID,
@@ -2029,16 +2167,8 @@ export const CounterCheckoutStaffPage = () => {
     }
 
     if (paymentMethod === "CashInStore") {
-      // Mở cash payment dialog cho retry
-      const expectedTotal = Number(previewData?.totalPrice ?? localSubtotal);
-      setPendingCheckoutPayload({
-        scannedItems: [],
-        payment: { method: "CashInStore" },
-        expectedTotalPrice: expectedTotal,
-        posSessionId: POS_SESSION_ID,
-      } as CreateInStoreOrderRequest);
-      setCashDialogMode("retry");
-      setIsCashPaymentDialogOpen(true);
+      // Thu tiền mặt 100% tại quầy cho đơn giao hàng: gọi retryPayment rồi confirmPayment ngầm
+      void executeRetryFailedPayment(true);
       return;
     }
 
@@ -2050,6 +2180,17 @@ export const CounterCheckoutStaffPage = () => {
 
     const paymentMethodAtCheckout = paymentMethod;
     const expectedTotal = Number(previewData?.totalPrice ?? localSubtotal);
+
+    // Tính depositGateway theo schema:
+    // - isPickupInStore: luôn null
+    // - !isPickupInStore + CashOnDelivery: dùng depositGateway đã chọn
+    // - !isPickupInStore + method khác: dùng chính method đó
+    const resolvedDepositGateway: PaymentMethod = isPickupInStore
+      ? null
+      : paymentMethod === "CashOnDelivery"
+        ? depositGateway
+        : paymentMethod;
+
     const payload: CreateInStoreOrderRequest = {
       scannedItems: cartItems.map((item) => ({
         barcode: item.barcode,
@@ -2064,6 +2205,8 @@ export const CounterCheckoutStaffPage = () => {
       isPickupInStore,
       payment: {
         method: paymentMethod,
+        depositGateway: resolvedDepositGateway,
+        posSessionId: POS_SESSION_ID,
       },
       expectedTotalPrice: expectedTotal,
       posSessionId: POS_SESSION_ID,
@@ -2151,7 +2294,22 @@ export const CounterCheckoutStaffPage = () => {
         return;
       }
 
-      showToast("Thanh toán thành công!", "success");
+      // Nếu đặt cọc bằng tiền mặt tại quầy (COD + depositGateway = CashInStore): confirm deposit ngầm
+      if (resolvedDepositGateway === "CashInStore" && result.paymentId) {
+        try {
+          await orderService.confirmPayment(
+            result.paymentId,
+            true,
+            undefined,
+            POS_SESSION_ID,
+          );
+        } catch (confirmErr) {
+          console.error("[POS][Deposit] confirmPayment failed", confirmErr);
+          // Không block luồng chính, chỉ log lỗi
+        }
+      }
+
+      showToast("Ðã đặt hàng thành công!", "success");
       void openSuccessDialog(orderIdForSuccess);
       void notifyPaymentSuccess({
         orderId: orderIdForSuccess,
@@ -2162,10 +2320,11 @@ export const CounterCheckoutStaffPage = () => {
         console.error("[POS][Checkout] notifyPaymentSuccess failed", error);
       });
     } catch (error) {
-      showToast(
-        error instanceof Error ? error.message : "Checkout thất bại",
-        "error",
-      );
+      const errMsg =
+        error instanceof Error
+          ? error.message
+          : "Checkout thất bại, vui lòng thử lại";
+      showToast(errMsg, "error");
     } finally {
       setIsSubmittingCheckout(false);
     }
@@ -2742,12 +2901,23 @@ export const CounterCheckoutStaffPage = () => {
                         )}
                       </Typography>
                     </Stack>
+                    {Number(previewData?.shippingFee ?? 0) > 0 && (
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography color="text.secondary">
+                          Phí giao hàng
+                        </Typography>
+                        <Typography>
+                          {formatCurrency(Number(previewData?.shippingFee ?? 0))}
+                        </Typography>
+                      </Stack>
+                    )}
                     <Stack direction="row" justifyContent="space-between">
                       <Typography color="text.secondary">Giảm giá</Typography>
                       <Typography>
                         {formatCurrency(Number(previewData?.discount ?? 0))}
                       </Typography>
                     </Stack>
+                    
                     <Divider sx={{ my: 0.5 }} />
                     <Stack direction="row" justifyContent="space-between">
                       <Typography fontWeight={800}>Tổng tiền</Typography>
@@ -3073,11 +3243,11 @@ export const CounterCheckoutStaffPage = () => {
                       {!isPickupInStore && (
                         <Stack spacing={1.25} sx={{ mt: 1.5 }}>
                           <TextField
-                            label="Tên người nhận"
-                            value={recipientName}
-                            onChange={(e) => setRecipientName(e.target.value)}
-                            fullWidth
-                          />
+  label="Tên người nhận"
+  value={recipientName}
+  onChange={(e) => setRecipientName(e.target.value)}
+  fullWidth
+/>
                           <TextField
                             label="Số điện thoại người nhận"
                             value={recipientPhone}
@@ -3171,6 +3341,41 @@ export const CounterCheckoutStaffPage = () => {
                       </MenuItem>
                     ))}
                   </TextField>
+
+                  {/* Cổng thanh toán cọc — chỉ hiện khi giao hàng + CashOnDelivery */}
+                  {!isPickupInStore && paymentMethod === "CashOnDelivery" && (
+                    <TextField
+                      select
+                      fullWidth
+                      label="Cổng thanh toán cọc"
+                      value={depositGateway}
+                      onChange={(e) =>
+                        setDepositGateway(
+                          e.target.value as NonNullable<PaymentMethod>,
+                        )
+                      }
+                      SelectProps={{
+                        renderValue: (selected) =>
+                          renderPaymentMethodOption(
+                            selected as NonNullable<PaymentMethod>,
+                          ),
+                      }}
+                      sx={{ mt: 1.5 }}
+                      helperText={
+                        previewData?.requiredDepositAmount
+                          ? `Số tiền cọc cần thu: ${formatCurrency(previewData.requiredDepositAmount)}`
+                          : "Khách thanh toán COD — chọn cổng để thu cọc"
+                      }
+                    >
+                      {(["CashInStore", "VnPay", "Momo", "PayOs"] as NonNullable<PaymentMethod>[]).map(
+                        (method) => (
+                          <MenuItem key={method} value={method}>
+                            {renderPaymentMethodOption(method)}
+                          </MenuItem>
+                        ),
+                      )}
+                    </TextField>
+                  )}
 
                   {failedPaymentAction ? (
                     <>
@@ -3662,6 +3867,52 @@ export const CounterCheckoutStaffPage = () => {
               )}
 
               <Divider sx={{ my: 0.5 }} />
+
+              {/* Phí giao hàng */}
+              {Number(previewData?.shippingFee ?? 0) > 0 && (
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography color="text.secondary">Phí giao hàng</Typography>
+                  <Typography fontWeight={600}>
+                    {formatCurrency(Number(previewData?.shippingFee ?? 0))}
+                  </Typography>
+                </Stack>
+              )}
+
+              {/* Cổng thu cọc — chỉ khi giao hàng + COD */}
+              {!isPickupInStore && paymentMethod === "CashOnDelivery" && (
+                <Stack direction="row" justifyContent="space-between">
+                  <Typography color="text.secondary">Cổng thu cọc</Typography>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    {renderPaymentMethodOption(depositGateway)}
+                  </Stack>
+                </Stack>
+              )}
+
+              {/* Số tiền cọc cần thu */}
+              {Number(previewData?.requiredDepositAmount ?? 0) > 0 && (
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  sx={{
+                    bgcolor: "warning.lighter",
+                    border: "1px solid",
+                    borderColor: "warning.light",
+                    borderRadius: 1.5,
+                    px: 1.5,
+                    py: 1,
+                  }}
+                >
+                  <Typography color="warning.dark" fontWeight={600}>
+                    Tiền cọc cần thu ngay
+                  </Typography>
+                  <Typography fontWeight={800} color="warning.dark">
+                    {formatCurrency(
+                      Number(previewData?.requiredDepositAmount ?? 0),
+                    )}
+                  </Typography>
+                </Stack>
+              )}
+
               <Stack direction="row" justifyContent="space-between">
                 <Typography color="text.secondary">Tổng thanh toán</Typography>
                 <Typography fontWeight={800} color="error.main">

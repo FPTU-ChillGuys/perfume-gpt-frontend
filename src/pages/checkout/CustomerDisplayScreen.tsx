@@ -64,6 +64,7 @@ export const CustomerDisplayScreen = () => {
     sessionId: "COUNTER_01",
     requireAuth: false,
   });
+
   const [checkoutSuccessType, setCheckoutSuccessType] = useState<
     "PAYMENT" | "DELIVERY" | null
   >(null);
@@ -137,6 +138,16 @@ export const CustomerDisplayScreen = () => {
     return items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   }, [customerDisplayData, items]);
 
+  const shippingFee = useMemo(() => {
+    const raw = readProp<number>(customerDisplayData, "shippingFee", "ShippingFee");
+    return Number(raw ?? 0);
+  }, [customerDisplayData]);
+
+  const requiredDeposit = useMemo(() => {
+    const raw = readProp<number>(customerDisplayData, "requiredDepositAmount", "RequiredDepositAmount");
+    return Number(raw ?? 0);
+  }, [customerDisplayData]);
+
   const discount = useMemo(() => {
     const raw = readProp<number>(customerDisplayData, "discount", "Discount");
     return Number(raw ?? 0);
@@ -155,6 +166,15 @@ export const CustomerDisplayScreen = () => {
     );
 
     return Number(totalPrice ?? subTotal ?? 0);
+  }, [customerDisplayData]);
+
+  const requiredDepositAmount = useMemo(() => {
+    const raw = readProp<number>(
+      customerDisplayData,
+      "requiredDepositAmount",
+      "RequiredDepositAmount",
+    );
+    return Number(raw ?? 0);
   }, [customerDisplayData]);
 
   const paymentUrl = useMemo(() => {
@@ -639,6 +659,14 @@ export const CustomerDisplayScreen = () => {
                       {formatCurrency(subTotal)}
                     </span>
                   </div>
+                  {shippingFee > 0 && (
+                    <div className="flex items-center justify-between text-slate-600">
+                      <span>Phí giao hàng</span>
+                      <span className="font-semibold text-slate-800">
+                        {formatCurrency(shippingFee)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Giảm giá</span>
                     <span className="font-semibold text-slate-800">
@@ -646,6 +674,17 @@ export const CustomerDisplayScreen = () => {
                     </span>
                   </div>
                 </div>
+
+                {requiredDepositAmount > 0 && (
+                  <div className="mb-3 flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+                    <span className="text-sm font-semibold text-amber-800">
+                      Tiền cọc cần thanh toán
+                    </span>
+                    <span className="text-base font-extrabold text-amber-700">
+                      {formatCurrency(requiredDepositAmount)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex items-end justify-between border-t border-slate-200 pt-3">
                   <span className="text-lg font-semibold text-slate-700">

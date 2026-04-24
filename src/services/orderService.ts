@@ -1480,7 +1480,16 @@ class OrderService {
       });
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Checkout failed");
+        // openapi-fetch đặt body của 4xx vào response.error, không phải response.data
+        const apiError = response.error as
+          | { message?: string; errors?: string[] }
+          | undefined;
+        throw new Error(
+          response.data?.message ||
+            apiError?.message ||
+            apiError?.errors?.join(", ") ||
+            "Checkout failed",
+        );
       }
 
       const payload = response.data.payload as

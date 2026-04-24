@@ -13422,7 +13422,6 @@ export interface components {
             totalAmount?: number;
             /** Format: decimal */
             requiredDepositAmount?: number;
-            
             /** Format: decimal */
             paidAmount?: number;
             /** Format: decimal */
@@ -14240,6 +14239,10 @@ export interface components {
             items: components["schemas"]["ReceiptItemDto"][];
             /** Format: decimal */
             subtotal?: number;
+            /** Format: decimal */
+            depositeAmount?: number;
+            /** Format: decimal */
+            remainingAmount?: number;
             /** Format: decimal */
             shippingFee?: number;
             /** Format: decimal */

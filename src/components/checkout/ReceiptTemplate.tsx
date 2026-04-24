@@ -188,6 +188,12 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, ReceiptTemplateProps>(
             <Box>Tạm tính</Box>
             <Box>{formatCurrency(invoice.subtotal)}</Box>
           </Stack>
+          {(invoice.shippingFee ?? 0) > 0 && (
+            <Stack direction="row" justifyContent="space-between">
+              <Box>Phí vận chuyển</Box>
+              <Box>{formatCurrency(invoice.shippingFee)}</Box>
+            </Stack>
+          )}
           <Stack direction="row" justifyContent="space-between">
             <Box>Giảm giá</Box>
             <Box>{formatCurrency(invoice.discount)}</Box>
@@ -214,6 +220,40 @@ export const ReceiptTemplate = forwardRef<HTMLDivElement, ReceiptTemplateProps>(
               {formatCurrency(invoice.total)}
             </Typography>
           </Stack>
+
+          {/* THÔNG TIN ĐẶT CỌC — chỉ hiện khi có đặt cọc */}
+          {(invoice.depositeAmount ?? 0) > 0 && (
+            <>
+              <Divider
+                sx={{ my: 0.5, borderStyle: "dashed", borderColor: "#000" }}
+              />
+
+              <Stack direction="row" justifyContent="space-between">
+                <Box>Đã đặt cọc</Box>
+                <Box sx={{ color: "#000" }}>
+                  - {formatCurrency(invoice.depositeAmount)}
+                </Box>
+              </Stack>
+
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                sx={{
+                  mt: 0.5,
+                  pt: 0.5,
+                  borderTop: "2px solid #000",
+                }}
+              >
+                <Typography fontSize="13px" fontWeight={800}>
+                  CÒN LẠI
+                </Typography>
+                <Typography fontSize="16px" fontWeight={800}>
+                  {formatCurrency(invoice.remainingAmount)}
+                </Typography>
+              </Stack>
+            </>
+          )}
         </Stack>
 
         <Divider sx={{ mb: 1.5, borderStyle: "dashed", borderColor: "#000" }} />
