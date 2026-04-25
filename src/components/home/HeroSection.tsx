@@ -129,15 +129,17 @@ const mapBannerToSlide = (banner: Banner): HeroSlide => {
     .map((segment) => segment.trim())
     .filter(Boolean);
   const href = resolveBannerLink(banner);
-  // Only use altText as the overline label — never expose internal enum values
-  const label = banner.altText?.trim() || "";
+  // altText is used as the slide description (not the overline label)
+  const description =
+    banner.altText?.trim() ||
+    "Khám phá hương thơm được tuyển chọn dành riêng cho bạn.";
   return {
     id: banner.id,
-    label,
+    label: "PERFUMEGPT", // overline is always the brand name
     title: normalizedTitle.length
       ? normalizedTitle
       : [banner.title || "PerfumeGPT"],
-    description: label || "Khám phá hương thơm được tuyển chọn dành riêng cho bạn.",
+    description,
     primaryCta: {
       label: FALLBACK_PRIMARY_CTA.label,
       href,
@@ -330,22 +332,25 @@ export const HeroSection = () => {
                 fontWeight: 600,
               }}
             >
-              {activeSlide.label || "PERFUMEGPT"}
+              PERFUMEGPT
             </Typography>
             <Typography
               variant="h1"
               sx={{
-                fontSize: { xs: "3rem", md: "4.2rem" },
+                fontSize: { xs: "2.2rem", md: "3.6rem" },
                 fontWeight: 700,
-                lineHeight: 1.1,
+                lineHeight: 1.15,
                 mb: 3,
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+                maxWidth: { xs: "100%", md: 560 },
               }}
               aria-live="polite"
             >
               {activeSlide.title.map((line, index) => (
                 <span key={`${activeSlide.id}-${line}`}>
                   {line}
-                  {index === 0 && <br />}
+                  {index < activeSlide.title.length - 1 && <br />}
                 </span>
               ))}
             </Typography>
@@ -362,37 +367,45 @@ export const HeroSection = () => {
             </Typography>
             <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
               <Button
-                variant="contained"
-                size="large"
-                color="inherit"
-                component="a"
-                href={activeSlide.primaryCta.href}
-                sx={{
-                  bgcolor: "white",
-                  color: "grey.900",
-                  px: 4,
-                  "&:hover": { bgcolor: "grey.100" },
-                }}
-              >
-                {activeSlide.primaryCta.label}
-              </Button>
-              <Button
                 variant="outlined"
                 size="large"
                 component="a"
-                href={activeSlide.secondaryCta.href}
+                href={activeSlide.primaryCta.href}
                 sx={{
-                  borderColor: "rgba(255,255,255,0.7)",
+                  position: "relative",
+                  overflow: "hidden",
+                  px: 4.5,
+                  py: 1.5,
+                  fontSize: "0.95rem",
+                  fontWeight: 600,
+                  letterSpacing: 1.2,
                   color: "white",
-                  borderWidth: 2,
-                  px: 4,
+                  border: "1px solid rgba(255,255,255,0.45)",
+                  borderRadius: "4px",
+                  background: "rgba(255,255,255,0.08)",
+                  backdropFilter: "blur(12px)",
+                  WebkitBackdropFilter: "blur(12px)",
+                  boxShadow: "0 2px 20px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
+                  textTransform: "uppercase",
+                  transition: "all 0.35s ease",
+                  "&::before": {
+                    content: '""',
+                    position: "absolute",
+                    inset: 0,
+                    background:
+                      "linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%)",
+                    transform: "translateX(-100%)",
+                    transition: "transform 0.6s ease",
+                  },
                   "&:hover": {
-                    borderWidth: 2,
-                    bgcolor: "rgba(255, 255, 255, 0.1)",
+                    background: "rgba(255,255,255,0.18)",
+                    borderColor: "rgba(255,255,255,0.8)",
+                    boxShadow: "0 4px 30px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.25)",
+                    "&::before": { transform: "translateX(100%)" },
                   },
                 }}
               >
-                {activeSlide.secondaryCta.label}
+                {activeSlide.primaryCta.label}
               </Button>
             </Box>
           </Grid>
