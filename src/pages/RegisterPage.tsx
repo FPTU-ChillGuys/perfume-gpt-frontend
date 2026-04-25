@@ -70,6 +70,8 @@ export const RegisterPage = () => {
       errors.password = "Mật khẩu không được để trống";
     } else if (formData.password.length < 6) {
       errors.password = "Mật khẩu phải có ít nhất 6 ký tự";
+    } else if (!/[A-Z]/.test(formData.password) || !/\d/.test(formData.password) || !/[^a-zA-Z0-9]/.test(formData.password)) {
+      errors.password = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 số và 1 ký tự đặc biệt";
     }
     if (!formData.confirmPassword) {
       errors.confirmPassword = "Vui lòng nhập lại mật khẩu";
@@ -79,6 +81,14 @@ export const RegisterPage = () => {
     if (!formData.agreeTerms)
       errors.agreeTerms = "Bạn cần đồng ý với điều khoản";
     return errors;
+  };
+
+  const handleBlur = (field: string) => () => {
+    const errors = validate();
+    setFieldErrors((prev) => ({
+      ...prev,
+      [field]: errors[field] || "",
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,9 +138,10 @@ export const RegisterPage = () => {
       >
         <Typography
           variant="h5"
-          component="h1"
+          component={RouterLink}
           color="primary"
           fontWeight="bold"
+          to="/"
         >
           PerfumeGPT
         </Typography>
@@ -232,6 +243,7 @@ export const RegisterPage = () => {
                     placeholder="Nguyễn Văn A"
                     value={formData.fullName}
                     onChange={handleChange("fullName")}
+                    onBlur={handleBlur("fullName")}
                     size="small"
                     disabled={isLoading}
                     error={!!fieldErrors.fullName}
@@ -255,6 +267,7 @@ export const RegisterPage = () => {
                     placeholder="example@gmail.com"
                     value={formData.email}
                     onChange={handleChange("email")}
+                    onBlur={handleBlur("email")}
                     size="small"
                     disabled={isLoading}
                     error={!!fieldErrors.email}
@@ -277,6 +290,7 @@ export const RegisterPage = () => {
                     placeholder="09xx xxx xxx"
                     value={formData.phone}
                     onChange={handleChange("phone")}
+                    onBlur={handleBlur("phone")}
                     size="small"
                     disabled={isLoading}
                     error={!!fieldErrors.phone}
@@ -300,6 +314,7 @@ export const RegisterPage = () => {
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={handleChange("password")}
+                    onBlur={handleBlur("password")}
                     size="small"
                     disabled={isLoading}
                     error={!!fieldErrors.password}
@@ -337,6 +352,7 @@ export const RegisterPage = () => {
                     placeholder="••••••••"
                     value={formData.confirmPassword}
                     onChange={handleChange("confirmPassword")}
+                    onBlur={handleBlur("confirmPassword")}
                     size="small"
                     disabled={isLoading}
                     error={!!fieldErrors.confirmPassword}
@@ -380,7 +396,7 @@ export const RegisterPage = () => {
                       color="text.secondary"
                       sx={{ fontSize: "0.7rem", lineHeight: 1.3, pt: 0.8 }}
                     >
-                      Đăng ký đồng nghĩa đã đọc và đồng ý với{" "}
+                      Đồng ý với{" "}
                       <Link href="#" underline="hover" color="primary">
                         Điều khoản
                       </Link>{" "}
@@ -388,6 +404,7 @@ export const RegisterPage = () => {
                       <Link href="#" underline="hover" color="primary">
                         Chính sách
                       </Link>
+                      {" "} của <strong>PerfumeGPT</strong>
                     </Typography>
                   }
                   sx={{ mb: 0.5, alignItems: "flex-start", ml: 0 }}
@@ -409,13 +426,20 @@ export const RegisterPage = () => {
                   variant="contained"
                   fullWidth
                   size="medium"
-                  disabled={isLoading}
+                  disabled={isLoading || Object.keys(validate()).length > 0}
                   sx={{
                     mb: 1,
                     py: 1,
                     bgcolor: "primary.main",
                     fontWeight: 600,
                     "&:hover": { bgcolor: "primary.dark" },
+                    ...(isLoading && {
+                      "&.Mui-disabled": {
+                        bgcolor: "primary.main",
+                        color: "white",
+                        opacity: 0.7,
+                      },
+                    }),
                   }}
                 >
                   {isLoading ? (

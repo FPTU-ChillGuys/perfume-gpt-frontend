@@ -755,7 +755,7 @@ const ReceiveImportStock: React.FC = () => {
                         </div>
                         <div className="col-span-2 text-center">
                           <span className="text-xs font-bold text-gray-600 uppercase">
-                            Hỏng hóc
+                            Từ chối
                           </span>
                         </div>
                       </div>
@@ -903,6 +903,7 @@ const ReceiveImportStock: React.FC = () => {
                                           <input
                                             type="date"
                                             value={batch.manufactureDate}
+                                            max={batch.expiryDate}
                                             onChange={(e) =>
                                               updateBatch(
                                                 product.id,
@@ -921,6 +922,7 @@ const ReceiveImportStock: React.FC = () => {
                                           <input
                                             type="date"
                                             value={batch.expiryDate}
+                                            min={batch.manufactureDate}
                                             onChange={(e) =>
                                               updateBatch(
                                                 product.id,

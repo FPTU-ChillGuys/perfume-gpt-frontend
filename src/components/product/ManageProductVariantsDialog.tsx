@@ -89,6 +89,12 @@ const VARIANT_STATUS: { value: VariantStatus; label: string }[] = [
   { value: "Discontinued", label: "Ngừng bán" },
 ];
 
+const RESTOCK_POLICIES = [
+  { value: "AutoRestock", label: "Tự động nhập hàng" },
+  { value: "ManualOnly", label: "Chỉ nhập thủ công" },
+  { value: "DoNotRestock", label: "Không nhập hàng" },
+];
+
 const createEmptyAttributeSelection = (): AttributeSelection => ({
   attribute: null,
   values: [],
@@ -245,6 +251,7 @@ const createInitialFormValues = () => ({
   lowStockThreshold: "",
   type: VARIANT_TYPES[0]?.value ?? "FullBox",
   status: VARIANT_STATUS[0]?.value ?? "Active",
+  restockPolicy: RESTOCK_POLICIES[0]?.value ?? "AutoRestock",
 });
 
 export default function ManageProductVariantsDialog({
@@ -529,6 +536,9 @@ export default function ManageProductVariantsDialog({
         status:
           (variant.status as VariantStatus) ||
           (VARIANT_STATUS[0]?.value ?? "Active"),
+        restockPolicy:
+          (variant as any).restockPolicy ||
+          (RESTOCK_POLICIES[0]?.value ?? "AutoRestock"),
       });
       await hydrateAttributeSelectionsFromVariant(variant);
       setUploadedImages((prev) => {
@@ -945,6 +955,7 @@ export default function ManageProductVariantsDialog({
         ? Number(formValues.retailPrice)
         : null,
       status: formValues.status as VariantStatus,
+      restockPolicy: formValues.restockPolicy as any,
       lowStockThreshold: Number(formValues.lowStockThreshold),
       temporaryMediaIds: buildOrderedTemporaryMediaIds(),
       attributes: buildAttributePayload(),
@@ -989,6 +1000,7 @@ export default function ManageProductVariantsDialog({
         ? Number(formValues.retailPrice)
         : null,
       status: formValues.status as VariantStatus,
+      restockPolicy: formValues.restockPolicy as any,
       ...(formValues.lowStockThreshold
         ? { lowStockThreshold: Number(formValues.lowStockThreshold) }
         : {}),
@@ -1960,6 +1972,24 @@ export default function ManageProductVariantsDialog({
                           disabled={saving}
                         >
                           {VARIANT_STATUS.map((option) => (
+                            <MenuItem key={option.value} value={option.value}>
+                              {option.label}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </Box>
+                      <Box>
+                        <TextField
+                          label="Chính sách nhập hàng"
+                          name="restockPolicy"
+                          select
+                          value={formValues.restockPolicy}
+                          onChange={handleInputChange}
+                          fullWidth
+                          required
+                          disabled={saving}
+                        >
+                          {RESTOCK_POLICIES.map((option) => (
                             <MenuItem key={option.value} value={option.value}>
                               {option.label}
                             </MenuItem>

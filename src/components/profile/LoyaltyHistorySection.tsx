@@ -39,7 +39,7 @@ export const LoyaltyHistorySection = () => {
     setLoading(true);
     try {
       const [historyResult, balanceResult] = await Promise.all([
-        loyaltyService.getMyHistory(page + 1, PAGE_SIZE, filter || undefined),
+        loyaltyService.getMyHistory(page + 1, PAGE_SIZE, filter || undefined, "createdAt", "desc"),
         balance === null
           ? loyaltyService.getMyBalance()
           : Promise.resolve(null),

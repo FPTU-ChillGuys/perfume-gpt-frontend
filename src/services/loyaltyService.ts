@@ -69,6 +69,8 @@ class LoyaltyService {
     page = 1,
     pageSize = 10,
     transactionType?: LoyaltyTransactionType,
+    sortBy?: string,
+    sortOrder?: string,
   ): Promise<{ items: LoyaltyHistoryItem[]; totalCount: number }> {
     const response = await apiInstance.GET(
       "/api/loyaltytransactions/me/history",
@@ -78,6 +80,8 @@ class LoyaltyService {
             PageNumber: page,
             PageSize: pageSize,
             ...(transactionType ? { TransactionType: transactionType } : {}),
+            ...(sortBy ? { SortBy: sortBy } : {}),
+            ...(sortOrder ? { SortOrder: sortOrder } : {}),
           },
         },
       },
