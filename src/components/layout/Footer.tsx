@@ -115,7 +115,7 @@ export const Footer = () => {
       <div className="border-t border-gray-300">
         <div className="container mx-auto px-4 py-4">
           <p className="text-center text-gray-600 text-sm">
-            © 2026 PerfumeGPT. All rights reserved.
+            © 2026 PerfumeGPT. Made by <strong>ChillGuys</strong>.
           </p>
         </div>
       </div>

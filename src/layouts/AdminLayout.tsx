@@ -727,6 +727,19 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               </Typography>
             </MenuItem>
             <Divider />
+            <MenuItem
+              component={RouterLink}
+              to="/"
+              onClick={() => {
+                handleMenuClose();
+              }}
+              sx={{ py: 1.5 }}
+            >
+              <ListItemIcon>
+                <DashboardIcon fontSize="small" />
+              </ListItemIcon>
+              <Typography variant="body2">Website</Typography>
+            </MenuItem>
             {user?.role === "staff" && (
               <MenuItem
                 component={RouterLink}
@@ -757,19 +770,6 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                 <Typography variant="body2">Màn hình khách tại quầy</Typography>
               </MenuItem>
             )}
-            <MenuItem
-              component={RouterLink}
-              to="/"
-              onClick={() => {
-                handleMenuClose();
-              }}
-              sx={{ py: 1.5 }}
-            >
-              <ListItemIcon>
-                <DashboardIcon fontSize="small" />
-              </ListItemIcon>
-              <Typography variant="body2">Website</Typography>
-            </MenuItem>
             <MenuItem onClick={handleLogout} sx={{ py: 1.5 }}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />

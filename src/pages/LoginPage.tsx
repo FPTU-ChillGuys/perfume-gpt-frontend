@@ -136,9 +136,10 @@ export const LoginPage = () => {
       >
         <Typography
           variant="h5"
-          component="h1"
           color="primary"
           fontWeight="bold"
+          component={RouterLink}
+          to="/"
         >
           PerfumeGPT
         </Typography>
@@ -357,7 +358,7 @@ export const LoginPage = () => {
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          © 2026 PERFUMEGPT — THE ART OF OLFACTORY INTELLIGENCE
+          © 2026 PerfumeGPT. Made by <strong>ChillGuys</strong>.
         </Typography>
       </Box>
     </Box>

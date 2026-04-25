@@ -4,9 +4,13 @@ import type { components } from "@/types/api/v1";
 export type NotificationItem =
   components["schemas"]["NotificationListItemResponse"];
 
+export type NotifiReferenceType =
+  components["schemas"]["NotifiReferecneType"];
+
 export interface GetNotificationsParams {
   targetRole?: string;
   isRead?: boolean;
+  referenceType?: NotifiReferenceType;
   pageNumber?: number;
   pageSize?: number;
 }
@@ -41,12 +45,23 @@ class NotificationService {
       );
     }
     const p = response.data.payload;
+
+    // Client-side referenceType filter (API may not support it yet)
+    let items = p.items ?? [];
+    if (params.referenceType) {
+      items = items.filter(
+        (item) => item.referenceType === params.referenceType,
+      );
+    }
+
     return {
-      items: p.items ?? [],
-      totalCount: p.totalCount ?? 0,
+      items,
+      totalCount: params.referenceType ? items.length : (p.totalCount ?? 0),
       pageNumber: p.pageNumber ?? 1,
       pageSize: p.pageSize ?? 20,
-      totalPages: p.totalPages,
+      totalPages: params.referenceType
+        ? Math.ceil(items.length / (p.pageSize ?? 20))
+        : p.totalPages,
     };
   }
 

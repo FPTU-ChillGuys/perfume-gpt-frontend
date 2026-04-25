@@ -14260,6 +14260,8 @@ export interface components {
             productName: string;
             media: components["schemas"]["MediaResponse"][];
             campaignName?: null | string;
+            /** Format: int32 */
+            campaignQuota?: null | number;
             voucherCode?: null | string;
             /** Format: decimal */
             discountedPrice?: null | number;

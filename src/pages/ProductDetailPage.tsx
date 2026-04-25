@@ -442,6 +442,10 @@ const ProductDetailPage = () => {
       mediaList: variant.media || [],
       sku: variant.sku || null,
       campaignName: variant.campaignName || null,
+      campaignQuota:
+        typeof variant.campaignQuota === "number"
+          ? variant.campaignQuota
+          : null,
       voucherCode: variant.voucherCode || null,
       discountedPrice:
         typeof variant.discountedPrice === "number"
@@ -700,6 +704,10 @@ const ProductDetailPage = () => {
       : 0;
   const selectedCampaignName = selectedVariant?.campaignName?.trim() || "";
   const selectedVoucherCode = selectedVariant?.voucherCode?.trim() || "";
+  const selectedCampaignQuota =
+    typeof selectedVariant?.campaignQuota === "number"
+      ? selectedVariant.campaignQuota
+      : null;
   const shouldShowCampaignCard =
     hasCampaignDiscount &&
     (Boolean(selectedCampaignName) || Boolean(selectedVoucherCode));
@@ -1751,26 +1759,52 @@ const ProductDetailPage = () => {
                   {selectedCampaignName && (
                     <Box
                       sx={{
-                        px: 2,
-                        py: 0.75,
-                        borderRadius: 1.5,
-                        bgcolor: "error.main",
                         display: "inline-flex",
-                        alignItems: "center",
+                        flexDirection: "column",
+                        gap: 0.5,
                       }}
                     >
-                      <Typography
-                        component="span"
+                      <Box
                         sx={{
-                          fontSize: "0.875rem",
-                          fontWeight: 700,
-                          color: "white",
-                          textTransform: "uppercase",
-                          letterSpacing: 0.5,
+                          px: 2,
+                          py: 0.75,
+                          borderRadius: 1.5,
+                          bgcolor: "error.main",
+                          display: "inline-flex",
+                          alignItems: "center",
                         }}
                       >
-                        {selectedCampaignName}
-                      </Typography>
+                        <Typography
+                          component="span"
+                          sx={{
+                            fontSize: "0.875rem",
+                            fontWeight: 700,
+                            color: "white",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                          }}
+                        >
+                          {selectedCampaignName}
+                        </Typography>
+                      </Box>
+
+                      {selectedCampaignQuota !== null && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color:
+                              selectedCampaignQuota <= 10
+                                ? "error.main"
+                                : "text.secondary",
+                            fontWeight:
+                              selectedCampaignQuota <= 10 ? 600 : 400,
+                          }}
+                        >
+                          Còn{" "}
+                          <strong>{selectedCampaignQuota}</strong> suất với ưu
+                          đãi này
+                        </Typography>
+                      )}
                     </Box>
                   )}
 
@@ -2202,7 +2236,7 @@ const ProductDetailPage = () => {
                         <Typography variant="caption" color="text.secondary">
                           {cartQtyForVariant > 0
                             ? `Còn thể thêm tối đa ${maxAdd} (đã có ${cartQtyForVariant} trong giỏ)`
-                            : `Khả dụng: ${selStock}`}
+                            : `Kho khả dụng: ${selStock}`}
                         </Typography>
                       )}
                     </Stack>

@@ -635,7 +635,7 @@ const ProductQuickViewDialog = ({
                     <Typography variant="caption" color="text.secondary">
                       {cartQtyForVariant > 0
                         ? `Còn thể thêm tối đa ${maxAddable} (đã có ${cartQtyForVariant} trong giỏ)`
-                        : `Khả dụng: ${stockQuantity}`}
+                        : `Kho khả dụng: ${stockQuantity}`}
                     </Typography>
                   )}
                 </Stack>
