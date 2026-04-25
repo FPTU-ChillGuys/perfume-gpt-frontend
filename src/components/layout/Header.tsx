@@ -367,6 +367,7 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
                   anchorEl={anchorEl}
                   open={Boolean(anchorEl)}
                   onClose={handleMenuClose}
+                  disableScrollLock
                   anchorOrigin={{
                     vertical: "bottom",
                     horizontal: "right",
@@ -564,6 +565,7 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
                 anchorEl={moreAnchorEl}
                 open={Boolean(moreAnchorEl)}
                 onClose={() => setMoreAnchorEl(null)}
+                disableScrollLock
                 anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
                 transformOrigin={{ vertical: "top", horizontal: "left" }}
                 PaperProps={{ sx: { mt: 1, minWidth: 180 } }}

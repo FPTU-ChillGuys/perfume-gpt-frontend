@@ -2399,31 +2399,56 @@ const ProductDetailPage = () => {
               </Typography>
             </Box>
 
-            {/* Size */}
+            {/* Sizes — all variants, selected = red, rest = grey */}
             <Box
               sx={{
                 display: { xs: "none", sm: "flex" },
                 alignItems: "center",
-                justifyContent: "center",
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                border: "2px solid",
-                borderColor: "error.main",
-                flexShrink: 0,
+                gap: 0.75,
+                flexWrap: "nowrap",
+                overflowX: "auto",
+                flexShrink: 1,
+                "&::-webkit-scrollbar": { display: "none" },
               }}
             >
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 600,
-                  color: "error.main",
-                  fontSize: "0.75rem",
-                }}
-              >
-                {selectedVariant?.displayName?.match(/(\d+)\s*ml/i)?.[1] || "—"}
-                ml
-              </Typography>
+              {displayVariants.map((v) => {
+                const isSelected = v.id === selectedVariant?.id;
+                const mlMatch = v.displayName?.match(/(\d+)\s*ml/i);
+                const sizeLabel = mlMatch
+                  ? `${mlMatch[1]}ml`
+                  : v.displayName?.split(" - ").pop()?.trim() || "—";
+                return (
+                  <Box
+                    key={v.id}
+                    component="button"
+                    type="button"
+                    onClick={() => setSelectedVariantId(v.id)}
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 48,
+                      height: 48,
+                      borderRadius: "50%",
+                      border: "2px solid",
+                      borderColor: isSelected ? "error.main" : "divider",
+                      bgcolor: "background.paper",
+                      color: isSelected ? "error.main" : "text.disabled",
+                      fontWeight: isSelected ? 700 : 400,
+                      fontSize: "0.7rem",
+                      cursor: "pointer",
+                      flexShrink: 0,
+                      transition: "all 0.18s",
+                      "&:hover": {
+                        borderColor: "error.main",
+                        color: "error.main",
+                      },
+                    }}
+                  >
+                    {sizeLabel}
+                  </Box>
+                );
+              })}
             </Box>
 
             {/* Price */}
