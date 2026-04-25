@@ -1093,7 +1093,7 @@ export const CartPage = () => {
                       },
                     }}
                   >
-                    {appliedVoucher ? "Đổi voucher khác" : "Chọn voucher"}
+                    {appliedVoucher ? "Đổi Voucher" : "Chọn Voucher"}
                   </Button>
                 </Box>
 

@@ -81,13 +81,13 @@ export const Footer = () => {
             <p className="text-sm font-semibold text-gray-700 mb-2">Thanh toán</p>
             <div className="flex items-center gap-2 flex-wrap">
               <img src="/src/assets/cash.png" alt="Cash" title="Tiền mặt"
-                className="h-7 w-auto object-contain rounded border border-gray-200 bg-white p-0.5" />
+                className="h-8 w-8 object-contain rounded border border-gray-200 bg-white" />
               <img src="/src/assets/vnpay.jpg" alt="VNPay" title="VNPay"
-                className="h-7 w-auto object-contain rounded border border-gray-200 bg-white p-0.5" />
+                className="h-8 w-8 object-contain rounded border border-gray-200 bg-white" />
               <img src="/src/assets/momo.png" alt="MoMo" title="MoMo"
-                className="h-7 w-auto object-contain rounded border border-gray-200 bg-white p-0.5" />
+                className="h-8 w-8 object-contain rounded border border-gray-200 bg-white" />
               <img src="/src/assets/payos.png" alt="PayOS" title="PayOS"
-                className="h-7 w-auto object-contain rounded border border-gray-200 bg-white p-0.5" />
+                className="h-8 w-8 object-contain rounded border border-gray-200 bg-white" />
             </div>
           </div>
 

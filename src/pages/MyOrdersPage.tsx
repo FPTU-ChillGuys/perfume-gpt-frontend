@@ -295,7 +295,7 @@ export const MyOrdersPage = () => {
         orderService.getMyOrders({
           PageNumber: page,
           PageSize: pageSize,
-          SearchTerm: searchTerm || undefined,
+          OrderCode: searchTerm || undefined,
           Status: status || undefined,
           PaymentStatus: paymentStatus || undefined,
           Type: type || undefined,
@@ -860,24 +860,59 @@ export const MyOrdersPage = () => {
                   gap: 2,
                 }}
               >
-                {/* Search */}
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Tìm theo mã đơn hàng, tên sản phẩm..."
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSearch();
+                {/* Search and Filters */}
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      md: "2fr 1fr 1fr",
+                    },
+                    gap: 2,
                   }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" color="action" />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
+                >
+                  <TextField
+                    fullWidth
+                    size="small"
+                    placeholder="Tìm theo mã đơn hàng"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSearch();
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon fontSize="small" color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Từ ngày"
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => {
+                      setFromDate(e.target.value);
+                      setPage(1);
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    fullWidth
+                    size="small"
+                    label="Đến ngày"
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => {
+                      setToDate(e.target.value);
+                      setPage(1);
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Box>
 
                 {/* Order list */}
                 {isLoading ? (

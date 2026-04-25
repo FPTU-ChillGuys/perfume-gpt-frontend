@@ -1345,7 +1345,7 @@ export const CheckoutPage = () => {
                       },
                     }}
                 >
-                  {appliedVoucher ? "Đổi voucher" : "Chọn voucher"}
+                  {appliedVoucher ? "Đổi Voucher" :   "Chọn voucher"}
                 </Button>
               </Box>
 

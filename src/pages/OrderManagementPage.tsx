@@ -29,12 +29,10 @@ import {
   Search as SearchIcon,
   Clear as ClearIcon,
   ContentCopy as ContentCopyIcon,
-  Download as DownloadIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
-import { exportToCsv } from "@/utils/exportCsv";
 import { formatDateTimeVN } from "@/utils/dateTime";
 import type { OrderListItem, OrderStatus, OrderType } from "@/types/order";
 import {
@@ -114,7 +112,7 @@ export const OrderManagementPage = () => {
         orderService.getAllOrders({
           PageNumber: page + 1,
           PageSize: rowsPerPage,
-          SearchTerm: searchTerm || undefined,
+          OrderCode: searchTerm || undefined,
           Status: status || undefined,
           Type: type || undefined,
           FromDate: fromDate || undefined,
@@ -157,19 +155,7 @@ export const OrderManagementPage = () => {
     setPage(0);
   };
 
-  const handleExportCsv = () => {
-    exportToCsv(orders, `don-hang-${new Date().toISOString().slice(0, 10)}`, [
-      { key: "code", header: "Mã đơn hàng" },
-      { key: "customerName", header: "Khách hàng" },
-      { key: "customerId", header: "Mã khách hàng" },
-      { key: "status", header: "Trạng thái" },
-      { key: "totalAmount", header: "Tổng tiền" },
-      { key: "type", header: "Loại" },
-      { key: "createdAt", header: "Ngày tạo" },
-    ]);
-  };
-
-  const handleCopyOrderCode = async (orderCode?: string | null) => {
+    const handleCopyOrderCode = async (orderCode?: string | null) => {
     if (!orderCode) return;
 
     try {
@@ -277,7 +263,7 @@ export const OrderManagementPage = () => {
               <TextField
                 fullWidth
                 label="Tìm kiếm"
-                placeholder="Mã đơn, tên khách hàng..."
+                placeholder="Tìm theo mã đơn hàng"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -363,17 +349,6 @@ export const OrderManagementPage = () => {
                 sx={{ height: 56 }}
               >
                 Xóa bộ lọc
-              </Button>
-              <Button
-                fullWidth
-                variant="outlined"
-                color="success"
-                startIcon={<DownloadIcon />}
-                onClick={handleExportCsv}
-                disabled={orders.length === 0}
-                sx={{ height: 56 }}
-              >
-                Xuất CSV
               </Button>
             </Box>
           </Box>

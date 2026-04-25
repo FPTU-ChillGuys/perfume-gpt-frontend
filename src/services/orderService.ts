@@ -29,6 +29,7 @@ interface GetMyOrdersParams {
   FromDate?: string;
   ToDate?: string;
   SearchTerm?: string;
+  OrderCode?: string;
   PageNumber?: number;
   PageSize?: number;
   SortBy?: string;

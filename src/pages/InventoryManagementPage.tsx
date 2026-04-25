@@ -38,14 +38,12 @@ import {
   ContentCopy as ContentCopyIcon,
   Add as AddIcon,
   Remove as RemoveIcon,
-  CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
   PlayArrow as PlayArrowIcon,
   Inventory2 as Inventory2Icon,
   WarningAmber as WarningAmberIcon,
   Category as CategoryIcon,
   ViewList as ViewListIcon,
-  Download as DownloadIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
@@ -64,7 +62,6 @@ import {
   type StockAdjustmentStatus,
 } from "@/services/stockAdjustmentService";
 import { useToast } from "@/hooks/useToast";
-import { exportToCsv } from "@/utils/exportCsv";
 
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type ExpiryDaysFilter = "" | "30" | "60" | "90";
@@ -454,16 +451,7 @@ export const InventoryManagementPage = () => {
     setPage(0);
   };
 
-  const handleExportCsv = () => {
-    exportToCsv(stocks, `ton-kho-${new Date().toISOString().slice(0, 10)}`, [
-      { key: "variantId", header: "Variant ID" },
-      { key: "variantSku", header: "SKU" },
-      { key: "productName", header: "Sản phẩm" },
-      { key: "totalQuantity", header: "Tổng nhập" },
-      { key: "availableQuantity", header: "Khả dụng" },
-      { key: "status", header: "Trạng thái" },
-    ]);
-  };
+  
 
   const loadBatchesByVariantId = useCallback(async (variantId: string) => {
     setBatchByVariantId((current) => ({
@@ -828,15 +816,15 @@ export const InventoryManagementPage = () => {
 
   const handleCopyVariantId = async (variantId?: string) => {
     if (!variantId) {
-      showToast("Không có Variant ID để sao chép", "warning");
+      showToast("Không có mã sản phẩm để sao chép", "warning");
       return;
     }
 
     try {
       await navigator.clipboard.writeText(variantId);
-      showToast("Đã sao chép Variant ID", "success");
+      showToast("Đã sao chép mã sản phẩm", "success");
     } catch {
-      showToast("Không thể sao chép Variant ID", "error");
+      showToast("Không thể sao chép mã sản phẩm", "error");
     }
   };
 
@@ -852,22 +840,22 @@ export const InventoryManagementPage = () => {
       icon: <Inventory2Icon color="success" />,
     },
     {
-      title: "Variant sắp hết",
+      title: "Sản phẩm sắp hết",
       value: summary?.lowStockVariantsCount ?? 0,
       icon: <WarningAmberIcon color="warning" />,
     },
     {
-      title: "Tổng batch",
+      title: "Tổng lô",
       value: summary?.totalBatches ?? 0,
       icon: <ViewListIcon color="info" />,
     },
     {
-      title: "Batch hết hạn",
+      title: "Lô hết hạn",
       value: summary?.expiredBatchesCount ?? 0,
       icon: <WarningAmberIcon color="error" />,
     },
     {
-      title: "Batch sắp hết hạn",
+      title: "Lô sắp hết hạn",
       value: summary?.expiringSoonCount ?? 0,
       icon: <WarningAmberIcon sx={{ color: "#f59e0b" }} />,
     },
@@ -1045,16 +1033,6 @@ export const InventoryManagementPage = () => {
                 >
                   Xóa lọc
                 </Button>
-                <Button
-                  variant="outlined"
-                  color="success"
-                  startIcon={<DownloadIcon />}
-                  onClick={handleExportCsv}
-                  disabled={stocks.length === 0}
-                  sx={{ height: 56 }}
-                >
-                  Xuất CSV
-                </Button>
               </Box>
             </Paper>
 
@@ -1063,9 +1041,9 @@ export const InventoryManagementPage = () => {
                 <TableHead>
                   <TableRow sx={{ bgcolor: "grey.50" }}>
                     <TableCell>Ảnh</TableCell>
-                    <TableCell>Sản phẩm / Batch</TableCell>
-                    <TableCell>Mã SKU / Batch code</TableCell>
-                    <TableCell>Variant ID</TableCell>
+                    <TableCell>Sản phẩm / Lô</TableCell>
+                    <TableCell>Mã SKU / Mã Lô</TableCell>
+                    <TableCell>Mã sản phẩm</TableCell>
                     <TableCell align="right">Tổng nhập</TableCell>
                     <TableCell align="right">Khả dụng / Còn lại</TableCell>
                     <TableCell align="right">Ngưỡng thấp / NSX - HSD</TableCell>
@@ -1522,7 +1500,7 @@ export const InventoryManagementPage = () => {
                     <TableCell>Người tạo</TableCell>
                     <TableCell>Ngày tạo</TableCell>
                     <TableCell>Lý do</TableCell>
-                    <TableCell align="center">Số item</TableCell>
+                    <TableCell align="center">Số lượng điều chỉnh</TableCell>
                     <TableCell align="center">Trạng thái</TableCell>
                     <TableCell align="center">Thao tác</TableCell>
                   </TableRow>
