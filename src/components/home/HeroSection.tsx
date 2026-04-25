@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Box,
   Container,
@@ -129,13 +129,15 @@ const mapBannerToSlide = (banner: Banner): HeroSlide => {
     .map((segment) => segment.trim())
     .filter(Boolean);
   const href = resolveBannerLink(banner);
+  // Only use altText as the overline label — never expose internal enum values
+  const label = banner.altText?.trim() || "";
   return {
     id: banner.id,
-    label: banner.altText || banner.position,
+    label,
     title: normalizedTitle.length
       ? normalizedTitle
       : [banner.title || "PerfumeGPT"],
-    description: banner.altText || "Khám phá hương thơm được tuyển chọn dành riêng cho bạn.",
+    description: label || "Khám phá hương thơm được tuyển chọn dành riêng cho bạn.",
     primaryCta: {
       label: FALLBACK_PRIMARY_CTA.label,
       href,
@@ -147,12 +149,64 @@ const mapBannerToSlide = (banner: Banner): HeroSlide => {
   };
 };
 
+/**
+ * Module-level cache of URLs that are already in the browser's HTTP cache.
+ * Persists across component re-mounts so we never shimmer a cached image.
+ */
+const imageLoadCache = new Set<string>();
+
+/** Download an image URL imperatively; marks it in the cache when done. */
+const preloadImage = (src: string): Promise<void> =>
+  new Promise((resolve) => {
+    if (imageLoadCache.has(src)) {
+      resolve();
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      imageLoadCache.add(src);
+      resolve();
+    };
+    img.onerror = () => resolve(); // resolve anyway — gradient fallback covers it
+    img.src = src;
+  });
+
 export const HeroSection = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [activeIndex, setActiveIndex] = useState(0);
   const [slides, setSlides] = useState<HeroSlide[]>([...heroSlides]);
   const totalSlides = slides.length;
+
+  /**
+   * loadedUrls: a STATE Set so that when a new URL finishes downloading,
+   * React re-renders and `isImageLoaded` / slide opacity reads fresh data.
+   * Seeded from the module-level cache so already-downloaded images show
+   * immediately on re-mount.
+   */
+  const [loadedUrls, setLoadedUrls] = useState<Set<string>>(
+    () => new Set(imageLoadCache),
+  );
+
+  /** Preload all slide images whenever the slides list changes. */
+  useEffect(() => {
+    let cancelled = false;
+    slides.forEach((slide) => {
+      const urls = [slide.backgroundImage, slide.mobileImage].filter(Boolean);
+      urls.forEach((url) => {
+        if (loadedUrls.has(url)) return; // already known — skip
+        void preloadImage(url).then(() => {
+          if (cancelled) return;
+          // Produce a NEW Set reference so React detects the state change
+          setLoadedUrls((prev) => new Set([...prev, url]));
+        });
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slides]);
 
   useEffect(() => {
     if (!totalSlides) {
@@ -178,23 +232,23 @@ export const HeroSection = () => {
         console.error("Failed to load hero banners", error);
       }
     };
-    loadBanners();
+    void loadBanners();
     return () => {
       mounted = false;
     };
   }, []);
 
-  const goToSlide = (index: number) => {
+  const goToSlide = useCallback((index: number) => {
     setActiveIndex(index);
-  };
+  }, []);
 
-  const goNext = () => {
+  const goNext = useCallback(() => {
     setActiveIndex((prev) => (prev + 1) % totalSlides);
-  };
+  }, [totalSlides]);
 
-  const goPrev = () => {
+  const goPrev = useCallback(() => {
     setActiveIndex((prev) => (prev - 1 + totalSlides) % totalSlides);
-  };
+  }, [totalSlides]);
 
   const activeSlide = slides[activeIndex % totalSlides];
   if (!activeSlide) {
@@ -205,39 +259,78 @@ export const HeroSection = () => {
     ? activeSlide.mobileImage
     : activeSlide.backgroundImage;
 
+  const isImageLoaded = loadedUrls.has(currentBg);
+
   return (
     <Box
       sx={{
         position: "relative",
-        minHeight: { xs: 520, md: 560 },
+        // Fixed height prevents layout shift when switching slides
+        height: { xs: 520, md: 560 },
         overflow: "hidden",
         color: "white",
-        backgroundImage: `linear-gradient(135deg, rgba(15,23,42,0.72) 0%, rgba(15,23,42,0.55) 45%, rgba(15,23,42,0.35) 100%), url(${currentBg})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        transition: "background-image 0.8s ease",
+        // Dark shimmer skeleton while the first image downloads
+        background: `linear-gradient(110deg, #0f172a 30%, #1e293b 50%, #0f172a 70%)`,
+        backgroundSize: "200% 100%",
+        animation: isImageLoaded ? "none" : "heroShimmer 1.6s linear infinite",
+        "@keyframes heroShimmer": {
+          "0%": { backgroundPosition: "200% center" },
+          "100%": { backgroundPosition: "-200% center" },
+        },
       }}
     >
+      {/* Per-slide image layer — absolute stack enables real CSS cross-fade */}
+      {slides.map((slide, idx) => {
+        const bgUrl = isMobile ? slide.mobileImage : slide.backgroundImage;
+        const loaded = loadedUrls.has(bgUrl);
+        return (
+          <Box
+            key={slide.id}
+            aria-hidden="true"
+            sx={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 0,
+              backgroundImage: loaded
+                ? `linear-gradient(135deg, rgba(15,23,42,0.72) 0%, rgba(15,23,42,0.55) 45%, rgba(15,23,42,0.35) 100%), url("${bgUrl}")`
+                : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              opacity: idx === activeIndex && loaded ? 1 : 0,
+              transition: "opacity 0.8s ease",
+              pointerEvents: "none",
+            }}
+          />
+        );
+      })}
       <Container
         maxWidth="xl"
         sx={{
           height: "100%",
           position: "relative",
-          py: { xs: 6, md: 10 },
+          zIndex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          pt: { xs: 5, md: 8 },
+          pb: { xs: 3, md: 4 },
         }}
       >
-        <Grid container spacing={6} sx={{ alignItems: "center" }}>
+        <Grid container spacing={6} sx={{ alignItems: "flex-start" }}>
           <Grid size={{ xs: 12, md: 8 }}>
+            {/* Overline: use banner altText if set, otherwise show slide counter */}
             <Typography
               variant="overline"
               sx={{
-                color: "rgba(255,255,255,0.7)",
-                letterSpacing: 4,
-                mb: 2,
+                color: "rgba(255,255,255,0.6)",
+                letterSpacing: 5,
+                mb: 1.5,
                 display: "block",
+                fontSize: "0.65rem",
+                fontWeight: 600,
               }}
             >
-              {activeSlide.label}
+              {activeSlide.label || "PERFUMEGPT"}
             </Typography>
             <Typography
               variant="h1"
@@ -305,24 +398,22 @@ export const HeroSection = () => {
           </Grid>
         </Grid>
 
+        {/* Controls: dot indicators + prev/next — pinned to bottom via flexbox */}
         <Box
           sx={{
-            mt: { xs: 4, md: 6 },
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 2,
           }}
         >
-          <Box sx={{ display: "flex", gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             {slides.map((slide, index) => (
               <Box
                 key={slide.id}
                 component="button"
                 type="button"
                 onClick={() => goToSlide(index)}
-                aria-label={`Chuyển đến banner ${slide.title.join(" ")}`}
+                aria-label={`Chuyển đến banner ${index + 1}`}
                 sx={{
                   width: index === activeIndex ? 36 : 12,
                   height: 12,
@@ -332,6 +423,7 @@ export const HeroSection = () => {
                   backgroundColor:
                     index === activeIndex ? "white" : "rgba(255,255,255,0.35)",
                   transition: "all 0.3s ease",
+                  p: 0,
                 }}
               />
             ))}
