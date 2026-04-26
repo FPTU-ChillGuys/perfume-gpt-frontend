@@ -7,6 +7,13 @@ interface VoucherQuery {
   SavedAddressId?: string;
   "Recipient.DistrictId"?: number;
   "Recipient.WardCode"?: string;
+  "Recipient.ContactName"?: string;
+  "Recipient.ContactPhoneNumber"?: string;
+  "Recipient.DistrictName"?: string;
+  "Recipient.WardName"?: string;
+  "Recipient.ProvinceId"?: number;
+  "Recipient.ProvinceName"?: string;
+  "Recipient.FullAddress"?: string;
 }
 
 const DEFAULT_TOTALS: CartTotals = {
@@ -291,10 +298,17 @@ class CartService {
 
     if (typeof districtId === "number" && districtId > 0) {
       query["Recipient.DistrictId"] = districtId;
+      // Inject dummy values to satisfy [FromQuery] validation for required fields
+      query["Recipient.ContactName"] = "Guest";
+      query["Recipient.ContactPhoneNumber"] = "0999999999";
+      query["Recipient.DistrictName"] = "N/A";
+      query["Recipient.ProvinceName"] = "N/A";
+      query["Recipient.FullAddress"] = "N/A";
     }
 
     if (wardCode && wardCode.trim()) {
       query["Recipient.WardCode"] = wardCode.trim();
+      query["Recipient.WardName"] = "N/A";
     }
 
     return Object.keys(query).length > 0 ? query : undefined;

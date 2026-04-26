@@ -679,7 +679,16 @@ export const CheckoutPage = () => {
             provinceId: newAddress.provinceId || 0,
             provinceName: newAddress.provinceName,
             fullAddress: newAddress.street,
-          };
+            ContactName: newAddress.recipientName,
+            ContactPhoneNumber: newAddress.recipientPhoneNumber,
+            DistrictId: newAddress.districtId || 0,
+            DistrictName: newAddress.districtName,
+            WardCode: newAddress.wardCode,
+            WardName: newAddress.wardName,
+            ProvinceId: newAddress.provinceId || 0,
+            ProvinceName: newAddress.provinceName,
+            FullAddress: newAddress.street,
+          } as any;
         } else {
           // Chọn địa chỉ có sẵn -> truyền savedAddressId để backend resolve địa chỉ
           request.savedAddressId = selectedAddressId || null;

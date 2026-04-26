@@ -262,7 +262,7 @@ export const OrderManagementPage = () => {
             >
               <TextField
                 fullWidth
-                label="Tìm kiếm"
+                label="Tìm theo mã đơn hàng"
                 placeholder="Tìm theo mã đơn hàng"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
