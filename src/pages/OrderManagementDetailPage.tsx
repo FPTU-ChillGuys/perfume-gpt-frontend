@@ -1091,7 +1091,7 @@ export const OrderManagementDetailPage = () => {
     }
 
     if (autoFulfillItems.length === 0) {
-      return "Không tìm thấy order detail để đóng gói";
+      return "Không tìm thấy chi tiết đơn hàng để đóng gói";
     }
 
     const missingBatch = autoFulfillItems.find(
@@ -1227,7 +1227,7 @@ export const OrderManagementDetailPage = () => {
         items: fulfillPayload,
       });
       showToast(
-        "Đóng gói thành công, đơn hàng đã chuyển sang Sẵn sàng bàn giao",
+        "Đóng gói thành công, đơn hàng đã chuyển sang Chờ giao hàng",
         "success",
       );
       await loadOrder();
