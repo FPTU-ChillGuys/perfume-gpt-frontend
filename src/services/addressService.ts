@@ -193,6 +193,28 @@ class AddressService {
       );
     }
   }
+  async deleteAddress(id: string): Promise<string> {
+    try {
+      const response = await apiInstance.DELETE("/api/address/{id}", {
+        params: {
+          path: { id },
+        },
+      });
+
+      if (!response.data?.success || !response.data.payload) {
+        throw new Error(response.data?.message || "Failed to delete address");
+      }
+
+      return response.data.payload;
+    } catch (error: any) {
+      console.error("Error deleting address:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to delete address",
+      );
+    }
+  }
 }
 
 export const addressService = new AddressService();

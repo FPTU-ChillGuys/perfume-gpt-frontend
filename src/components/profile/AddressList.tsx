@@ -10,6 +10,11 @@ import {
   IconButton,
   Stack,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import HomeIcon from "@mui/icons-material/Home";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -17,10 +22,12 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
+import DeleteIcon from "@mui/icons-material/Delete";
 import type { AddressResponse } from "@/types/address";
 import AddAddressDialog from "./AddAddressDialog";
 import EditAddressDialog from "./EditAddressDialog";
 import { addressService } from "@/services/addressService";
+import { useToast } from "@/hooks/useToast";
 
 interface AddressListProps {
   addresses: AddressResponse[];
@@ -34,6 +41,10 @@ const AddressList = ({ addresses, isLoading, onRefresh }: AddressListProps) => {
   const [selectedAddress, setSelectedAddress] =
     useState<AddressResponse | null>(null);
   const [settingDefault, setSettingDefault] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [addressToDelete, setAddressToDelete] = useState<AddressResponse | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { showToast } = useToast();
 
   const handleAddSuccess = () => {
     onRefresh();
@@ -60,6 +71,28 @@ const AddressList = ({ addresses, isLoading, onRefresh }: AddressListProps) => {
       // Optionally show error message to user
     } finally {
       setSettingDefault(null);
+    }
+  };
+
+  const handleDeleteClick = (address: AddressResponse) => {
+    setAddressToDelete(address);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!addressToDelete?.id) return;
+    setIsDeleting(true);
+    try {
+      await addressService.deleteAddress(addressToDelete.id);
+      showToast("Xóa địa chỉ thành công", "success");
+      setDeleteDialogOpen(false);
+      setAddressToDelete(null);
+      onRefresh();
+    } catch (err: any) {
+      console.error("Error deleting address:", err);
+      showToast(err.message || "Xóa địa chỉ thất bại", "error");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -144,6 +177,19 @@ const AddressList = ({ addresses, isLoading, onRefresh }: AddressListProps) => {
                         <StarBorderIcon fontSize="small" />
                       )}
                     </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDeleteClick(address)}
+                      disabled={address.isDefault}
+                      title={
+                        address.isDefault
+                          ? "Không thể xóa địa chỉ mặc định"
+                          : "Xóa địa chỉ"
+                      }
+                      color="error"
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
                   </Box>
                 </Box>
                 <Typography variant="body2" color="text.secondary">
@@ -180,6 +226,36 @@ const AddressList = ({ addresses, isLoading, onRefresh }: AddressListProps) => {
         }}
         onSuccess={handleEditSuccess}
       />
+
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => !isDeleting && setDeleteDialogOpen(false)}
+      >
+        <DialogTitle>Xác nhận xóa</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Bạn có chắc chắn muốn xóa địa chỉ của{" "}
+            <strong>{addressToDelete?.recipientName}</strong> không?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setDeleteDialogOpen(false)}
+            disabled={isDeleting}
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleDeleteConfirm}
+            color="error"
+            variant="contained"
+            disabled={isDeleting}
+            startIcon={isDeleting ? <CircularProgress size={20} /> : undefined}
+          >
+            Xóa
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };

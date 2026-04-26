@@ -1,4 +1,12 @@
 import { MapPin, Phone, Mail } from "lucide-react";
+import tiktokIcon from "../../assets/tiktok.png";
+import facebookIcon from "../../assets/facebook.png";
+import instagramIcon from "../../assets/instagram.png";
+import zaloIcon from "../../assets/zalo.png";
+import cashIcon from "../../assets/cash.png";
+import vnpayIcon from "../../assets/vnpay.jpg";
+import momoIcon from "../../assets/momo.png";
+import payosIcon from "../../assets/payos.png";
 
 export const Footer = () => {
   return (
@@ -61,32 +69,32 @@ export const Footer = () => {
             <div className="flex items-center gap-3 mb-5">
               <a href="https://www.tiktok.com/@fptuniversity" target="_blank" rel="noopener noreferrer" aria-label="TikTok"
                 className="w-8 h-8 rounded-full overflow-hidden hover:opacity-75 transition-opacity flex-shrink-0">
-                <img src="/src/assets/tiktok.png" alt="TikTok" className="w-full h-full object-cover" />
+                <img src={tiktokIcon} alt="TikTok" className="w-full h-full object-cover" />
               </a>
               <a href="https://www.facebook.com/FPTU.HCM" target="_blank" rel="noopener noreferrer" aria-label="Facebook"
                 className="w-8 h-8 rounded-full overflow-hidden hover:opacity-75 transition-opacity flex-shrink-0">
-                <img src="/src/assets/facebook.png" alt="Facebook" className="w-full h-full object-cover" />
+                <img src={facebookIcon} alt="Facebook" className="w-full h-full object-cover" />
               </a>
               <a href="https://www.instagram.com/fptuniversityhcm/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
                 className="w-8 h-8 rounded-full overflow-hidden hover:opacity-75 transition-opacity flex-shrink-0">
-                <img src="/src/assets/instagram.png" alt="Instagram" className="w-full h-full object-cover" />
+                <img src={instagramIcon} alt="Instagram" className="w-full h-full object-cover" />
               </a>
               <a href="https://miniapp.zaloplatforms.com/apps/4234808768914057878/" target="_blank" rel="noopener noreferrer" aria-label="Zalo"
                 className="w-8 h-8 rounded-full overflow-hidden hover:opacity-75 transition-opacity flex-shrink-0">
-                <img src="/src/assets/zalo.png" alt="Zalo" className="w-full h-full object-cover" />
+                <img src={zaloIcon} alt="Zalo" className="w-full h-full object-cover" />
               </a>
             </div>
 
             {/* Thanh toán */}
             <p className="text-sm font-semibold text-gray-700 mb-2">Thanh toán</p>
             <div className="flex items-center gap-2 flex-wrap">
-              <img src="/src/assets/cash.png" alt="Cash" title="Tiền mặt"
+              <img src={cashIcon} alt="Cash" title="Tiền mặt"
                 className="h-8 w-8 object-contain rounded border border-gray-200 bg-white" />
-              <img src="/src/assets/vnpay.jpg" alt="VNPay" title="VNPay"
+              <img src={vnpayIcon} alt="VNPay" title="VNPay"
                 className="h-8 w-8 object-contain rounded border border-gray-200 bg-white" />
-              <img src="/src/assets/momo.png" alt="MoMo" title="MoMo"
+              <img src={momoIcon} alt="MoMo" title="MoMo"
                 className="h-8 w-8 object-contain rounded border border-gray-200 bg-white" />
-              <img src="/src/assets/payos.png" alt="PayOS" title="PayOS"
+              <img src={payosIcon} alt="PayOS" title="PayOS"
                 className="h-8 w-8 object-contain rounded border border-gray-200 bg-white" />
             </div>
           </div>
