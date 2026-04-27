@@ -190,13 +190,13 @@ export const ProductCard = ({
           </h3>
         </Link>
         <div className="mt-auto w-full">
-          <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 shrink-0 min-h-[1.5rem]">
+          <div className="text-center min-h-[1.5rem] leading-snug px-1">
             {originalPrice && (
-              <span className="text-[11px] sm:text-xs text-gray-400 line-through">
+              <span className="inline-block mr-1.5 text-[11px] sm:text-xs text-gray-400 line-through">
                 {formatPrice(originalPrice)}
               </span>
             )}
-            <span className="text-[13px] sm:text-sm font-bold leading-snug text-red-600 text-center">
+            <span className="inline text-[13px] sm:text-sm font-bold text-red-600">
               {hasPriceRange
                 ? `${formatPrice(salePrice)} - ${formatPrice(maxPrice)}`
                 : formatPrice(salePrice)}

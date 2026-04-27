@@ -484,7 +484,7 @@ export const RegisterPage = () => {
         }}
       >
         <Typography variant="caption" color="text.secondary">
-          © 2026 PERFUMEGPT — THE ART OF OLFACTORY INTELLIGENCE
+          © 2026 PerfumeGPT. Made by <strong>ChillGuys</strong>.
         </Typography>
       </Box>
     </Box>

@@ -233,6 +233,18 @@ export const ProductListPage = () => {
   const [selectedVolume, setSelectedVolume] = useState<string>(
     searchParams.get("volume") || "all",
   );
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMobileFilterOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileFilterOpen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -1127,36 +1139,53 @@ export const ProductListPage = () => {
 
   return (
     <MainLayout>
-      <section className="relative overflow-hidden bg-slate-950 pb-12 pt-20 text-white">
+      <section className="relative overflow-hidden bg-slate-950 pb-8 lg:pb-12 pt-16 lg:pt-20 text-white">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-linear-to-b from-rose-500/20 via-transparent to-transparent" />
-        <div className="container mx-auto px-4">
+        <div className="container mx-auto px-4 flex flex-col items-center text-center lg:items-start lg:text-left">
           <p className="text-xs uppercase tracking-[0.4em] text-white/60">
-            Curated Catalog 2026
+            PerfumeGPT
           </p>
           <h1 className="mt-3 text-3xl font-semibold leading-tight md:text-5xl">
             {isHomeSourceMode
-              ? `Danh sách nước hoa — ${sourceLabel || HOME_SOURCE_LABELS[source!]}`
+              ? `${sourceLabel || HOME_SOURCE_LABELS[source!]}`
               : categoryNameParam
-                ? `Danh sách nước hoa — ${toVietnameseCategoryName(categoryNameParam)}`
+                ? toVietnameseCategoryName(categoryNameParam)
                 : "Danh sách nước hoa"}
           </h1>
           <p className="mt-3 text-sm font-medium text-white/85 md:text-base">
             {new Intl.NumberFormat("vi-VN").format(effectiveTotalCount)} kết quả
           </p>
-          <p className="mt-4 max-w-3xl text-base text-white/70 md:text-lg">
-            Lọc theo thương hiệu, tìm kiếm nốt hương yêu thích và đặt giữ chỗ
-            ngay trong cùng một trang.
-          </p>
         </div>
       </section>
 
-      <section className="-mt-12 pb-16">
+      <section className="pt-6 pb-16">
         <div className="container mx-auto px-4">
           <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-            <aside className="h-fit rounded-3xl border border-slate-100 bg-white/90 p-5 shadow-sm">
-              <div className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
-                <SlidersHorizontal size={16} />
-                Bộ lọc
+            {/* Mobile Filter Backdrop */}
+            {isMobileFilterOpen && (
+              <div 
+                className="fixed inset-0 z-[9999] bg-black/50 transition-opacity lg:hidden"
+                onClick={() => setIsMobileFilterOpen(false)}
+              />
+            )}
+
+            <aside 
+              className={`
+                fixed inset-y-0 right-0 z-[10000] flex h-[100dvh] w-[300px] max-w-[85vw] flex-col overflow-y-auto bg-white p-6 shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:block lg:h-fit lg:w-auto lg:translate-x-0 lg:overflow-visible lg:rounded-3xl lg:border lg:border-slate-100 lg:bg-white lg:p-5 lg:shadow-sm lg:z-auto lg:col-start-1 lg:row-start-2 lg:mt-0
+                ${isMobileFilterOpen ? "translate-x-0" : "translate-x-full"}
+              `}
+            >
+              <div className="mb-6 flex items-center justify-between lg:hidden">
+                <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-slate-500">
+                  <SlidersHorizontal size={16} />
+                  Bộ lọc
+                </div>
+                <button 
+                  onClick={() => setIsMobileFilterOpen(false)}
+                  className="rounded-full p-2 text-slate-500 hover:bg-slate-100"
+                >
+                  <X size={20} />
+                </button>
               </div>
 
               <div className="space-y-4">
@@ -1252,8 +1281,8 @@ export const ProductListPage = () => {
               </div>
             </aside>
 
-            <div>
-              <div className="mb-6 rounded-3xl border border-slate-100 bg-white/90 p-6 shadow-sm">
+            <div className="lg:col-start-2 lg:row-start-1">
+              <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
                 <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div className="text-sm text-slate-500">
                     {effectiveTotalCount > 0
@@ -1297,9 +1326,17 @@ export const ProductListPage = () => {
                     />
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex flex-nowrap md:flex-wrap items-center gap-2 md:gap-4 w-full md:w-auto overflow-x-auto md:overflow-visible pb-1 md:pb-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    <button
+                      type="button"
+                      onClick={() => setIsMobileFilterOpen(true)}
+                      className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-slate-700 transition hover:bg-slate-50 lg:hidden shrink-0"
+                    >
+                      <SlidersHorizontal size={14} className="md:w-4 md:h-4" />
+                      <span className="hidden min-[360px]:inline">Bộ lọc</span>
+                    </button>
                     {categoryIdParam && (
-                      <span className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-700">
+                      <span className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-1 md:px-3 md:py-1.5 text-xs md:text-sm font-medium text-rose-700 shrink-0">
                         {toVietnameseCategoryName(categoryNameParam)}
                         <button
                           type="button"
@@ -1310,20 +1347,20 @@ export const ProductListPage = () => {
                             setSearchParams(searchParams);
                             setPage(1);
                           }}
-                          className="ml-1 rounded-full p-0.5 hover:bg-rose-200"
+                          className="ml-0.5 md:ml-1 rounded-full p-0.5 hover:bg-rose-200"
                         >
                           <X size={12} />
                         </button>
                       </span>
                     )}
-                    <label className="flex items-center gap-2 text-sm text-slate-500">
-                      Sắp xếp theo
+                    <label className="flex items-center gap-1.5 text-xs md:text-sm text-slate-500 shrink-0">
+                      <span className="hidden md:inline">Sắp xếp theo</span>
                       <select
                         value={sort}
                         onChange={(event) =>
                           setSort(event.target.value as SortValue)
                         }
-                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 focus:border-slate-900"
+                        className="rounded-full border border-slate-200 bg-white px-2 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-slate-700 focus:border-slate-900 outline-none"
                       >
                         {sortOptions.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -1333,15 +1370,15 @@ export const ProductListPage = () => {
                       </select>
                     </label>
 
-                    <label className="flex items-center gap-2 text-sm text-slate-500">
-                      Hiển thị
+                    <label className="flex items-center gap-1.5 text-xs md:text-sm text-slate-500 shrink-0">
+                      <span className="hidden md:inline">Hiển thị</span>
                       <select
                         value={pageSize}
                         onChange={(event) => {
                           setPageSize(Number(event.target.value));
                           setPage(1);
                         }}
-                        className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 focus:border-slate-900"
+                        className="rounded-full border border-slate-200 bg-white px-2 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold text-slate-700 focus:border-slate-900 outline-none"
                       >
                         {PAGE_SIZE_OPTIONS.map((size) => (
                           <option key={size} value={size}>
@@ -1353,7 +1390,9 @@ export const ProductListPage = () => {
                   </div>
                 </div>
               </div>
+            </div>
 
+            <div className="flex min-w-0 flex-1 flex-col lg:col-start-2 lg:row-start-2">
               {error && (
                 <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                   {error}
