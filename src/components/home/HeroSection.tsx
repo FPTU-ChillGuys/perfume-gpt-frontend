@@ -177,7 +177,8 @@ export const HeroSection = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [activeIndex, setActiveIndex] = useState(0);
-  const [slides, setSlides] = useState<HeroSlide[]>([...heroSlides]);
+  const [slides, setSlides] = useState<HeroSlide[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const totalSlides = slides.length;
 
   /**
@@ -226,12 +227,23 @@ export const HeroSection = () => {
       try {
         const data = await bannerService.getHomeBanners("HomeHeroSlider");
         const activeBanners = data.filter((banner) => banner.isActive);
-        if (mounted && activeBanners.length > 0) {
-          setSlides(ensureMinimumSlides(activeBanners.map(mapBannerToSlide)));
+        if (mounted) {
+          if (activeBanners.length > 0) {
+            setSlides(ensureMinimumSlides(activeBanners.map(mapBannerToSlide)));
+          } else {
+            setSlides([...heroSlides]);
+          }
           setActiveIndex(0);
         }
       } catch (error) {
         console.error("Failed to load hero banners", error);
+        if (mounted) {
+          setSlides([...heroSlides]);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
     void loadBanners();
@@ -253,8 +265,24 @@ export const HeroSection = () => {
   }, [totalSlides]);
 
   const activeSlide = slides[activeIndex % totalSlides];
-  if (!activeSlide) {
-    return null;
+
+  if (isLoading || !activeSlide) {
+    return (
+      <Box
+        sx={{
+          position: "relative",
+          height: { xs: 520, md: 560 },
+          overflow: "hidden",
+          background: `linear-gradient(110deg, #0f172a 30%, #1e293b 50%, #0f172a 70%)`,
+          backgroundSize: "200% 100%",
+          animation: "heroShimmer 1.6s linear infinite",
+          "@keyframes heroShimmer": {
+            "0%": { backgroundPosition: "200% center" },
+            "100%": { backgroundPosition: "-200% center" },
+          },
+        }}
+      />
+    );
   }
 
   const currentBg = isMobile
