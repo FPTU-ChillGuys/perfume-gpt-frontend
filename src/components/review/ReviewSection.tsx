@@ -332,9 +332,9 @@ export const ReviewSection = ({
     return (
       <Box mt={4}>
         <Skeleton variant="rounded" height={32} width={260} sx={{ mb: 3 }} />
-        <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
-          <Skeleton variant="rounded" height={320} sx={{ flex: "0 0 280px", borderRadius: 2 }} />
-          <Box flex={1}>
+        <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems={{ xs: "stretch", md: "flex-start" }}>
+          <Skeleton variant="rounded" height={320} sx={{ flex: { xs: "none", md: "0 0 280px" }, width: { xs: "100%", md: "auto" }, borderRadius: 2 }} />
+          <Box flex={1} width={{ xs: "100%", md: "auto" }}>
             {Array.from({ length: 3 }).map((_, idx) => (
               <Box key={idx} sx={{ mb: 2.5 }}>
                 <Stack direction="row" spacing={1.5} mb={1}>
@@ -388,9 +388,9 @@ export const ReviewSection = ({
           sẻ cảm nhận của bạn!
         </Alert>
       ) : (
-        <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems="flex-start">
+        <Stack direction={{ xs: "column", md: "row" }} spacing={3} alignItems={{ xs: "stretch", md: "flex-start" }}>
           {/* Left: Stats + filter */}
-          <Box sx={{ flex: "0 0 260px", position: { md: "sticky" }, top: { md: 90 } }}>
+          <Box sx={{ flex: { xs: "none", md: "0 0 260px" }, width: { xs: "100%", md: "auto" }, position: { md: "sticky" }, top: { md: 90 } }}>
             <ReviewStatistics
               stats={stats}
               activeFilter={ratingFilter}
@@ -411,7 +411,7 @@ export const ReviewSection = ({
           </Box>
 
           {/* Right: Review list */}
-          <Box flex={1} minWidth={0}>
+          <Box flex={1} minWidth={0} width={{ xs: "100%", md: "auto" }}>
             {/* Filter summary */}
             {ratingFilter !== 0 && (
               <Stack direction="row" alignItems="center" spacing={1} mb={2}>

@@ -111,7 +111,7 @@ export const ProductCard = ({
   const hasSaleTag = tags?.some(tag => tag?.toLowerCase() === 'sale') ?? (discount || (originalPrice && originalPrice > salePrice));
 
   return (
-    <div className="group relative bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+    <div className="group relative bg-white rounded-xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
       {/* Badges */}
       <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
         {hasNewTag && (
@@ -176,7 +176,7 @@ export const ProductCard = ({
       </Link>
 
       {/* Info */}
-      <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col" style={{ minHeight: '144px' }}>
+      <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col flex-grow">
         <Link
           to={detailHref}
           onClick={handleProductLinkClick}
@@ -185,23 +185,23 @@ export const ProductCard = ({
           <p className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer text-center">
             {brand}
           </p>
-          <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2  min-h-10 cursor-pointer text-center">
+          <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[2.5rem] cursor-pointer text-center">
             {name}
           </h3>
         </Link>
-        <div className="flex h-6 items-center justify-center gap-1 shrink-0">
-
-          {originalPrice && (
-            <span className="text-xs text-gray-400 line-through">
-              {formatPrice(originalPrice)}
+        <div className="mt-auto w-full">
+          <div className="flex flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 shrink-0 min-h-[1.5rem]">
+            {originalPrice && (
+              <span className="text-[11px] sm:text-xs text-gray-400 line-through">
+                {formatPrice(originalPrice)}
+              </span>
+            )}
+            <span className="text-[13px] sm:text-sm font-bold leading-snug text-red-600 text-center">
+              {hasPriceRange
+                ? `${formatPrice(salePrice)} - ${formatPrice(maxPrice)}`
+                : formatPrice(salePrice)}
             </span>
-          )}
-          <span className="whitespace-nowrap text-sm font-bold leading-5 text-red-600">
-            {hasPriceRange
-              ? `${formatPrice(salePrice)} - ${formatPrice(maxPrice)}`
-              : formatPrice(salePrice)}
-          </span>
-        </div>
+          </div>
         <p className="mt-1 text-xs text-gray-500 text-center">
           {(numberOfVariants ?? 0) > 0
             ? (numberOfVariants ?? 0) > 1
@@ -209,6 +209,7 @@ export const ProductCard = ({
               : `${numberOfVariants} Size`
             : "Chưa có size"}
         </p>
+        </div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductCard, type ProductCardProps } from "../product/ProductCard";
@@ -30,12 +30,29 @@ const renderSkeletonItems = () =>
 
 export const ProductSection = ({
   title,
-  products,
+  products: rawProducts,
   isLoading = false,
   emptyMessage = "Hiện chưa có sản phẩm để hiển thị.",
   viewMoreHref = "/products",
-  enableInfiniteScroll = false,
+  enableInfiniteScroll = true,
 }: ProductSectionProps) => {
+  const displayProducts = useMemo(() => {
+    if (!enableInfiniteScroll || rawProducts.length === 0) return rawProducts;
+
+    const repeatCount = Math.max(
+      3,
+      Math.ceil(18 / rawProducts.length),
+    );
+
+    const result: ProductCardProps[] = [];
+    for (let repeat = 0; repeat < repeatCount; repeat++) {
+      rawProducts.forEach((product) => {
+        result.push({ ...product });
+      });
+    }
+    return result;
+  }, [rawProducts, enableInfiniteScroll]);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -54,7 +71,7 @@ export const ProductSection = ({
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
 
     // For infinite scroll, always show buttons if products exist
-    if (enableInfiniteScroll && products.length > 0) {
+    if (enableInfiniteScroll && rawProducts.length > 0) {
       setCanScrollLeft(true);
       setCanScrollRight(true);
     } else {
@@ -63,12 +80,12 @@ export const ProductSection = ({
     }
 
     // Handle infinite scroll loop
-    if (enableInfiniteScroll && !isDragging && !isResettingRef.current) {
-      const itemWidth = scrollWidth / products.length;
-      const originalCount = products.length / 3; // Assuming 3x repeat
+    if (enableInfiniteScroll && !isDragging && !isResettingRef.current && rawProducts.length > 0) {
+      const itemWidth = scrollWidth / displayProducts.length;
+      const originalCount = rawProducts.length;
       const oneSetWidth = itemWidth * originalCount;
 
-      // If scrolled past 2/3 (near end), jump back to 1/3
+      // If scrolled past the first two sets, jump back
       if (scrollLeft >= oneSetWidth * 2) {
         isResettingRef.current = true;
         scrollContainerRef.current.scrollLeft = scrollLeft - oneSetWidth;
@@ -76,7 +93,7 @@ export const ProductSection = ({
           isResettingRef.current = false;
         }, 50);
       }
-      // If scrolled before 1/3 (near start), jump forward to 2/3
+      // If scrolled before 1/3 (near start), jump forward
       else if (scrollLeft <= oneSetWidth * 0.3) {
         isResettingRef.current = true;
         scrollContainerRef.current.scrollLeft = scrollLeft + oneSetWidth;
@@ -219,13 +236,13 @@ export const ProductSection = ({
   };
 
   useEffect(() => {
-    if (!isLoading && products.length > 0) {
+    if (!isLoading && rawProducts.length > 0) {
       setTimeout(() => {
         // Initialize scroll position at middle set for infinite scroll
         if (enableInfiniteScroll && scrollContainerRef.current) {
           const { scrollWidth } = scrollContainerRef.current;
-          const itemWidth = scrollWidth / products.length;
-          const originalCount = products.length / 3; // Assuming 3x repeat
+          const itemWidth = scrollWidth / displayProducts.length;
+          const originalCount = rawProducts.length;
           const oneSetWidth = itemWidth * originalCount;
 
           // Start at the middle set (1/3 position)
@@ -282,7 +299,7 @@ export const ProductSection = ({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, products.length, enableInfiniteScroll, isDragging, startX, scrollLeft]);
+  }, [isLoading, rawProducts.length, displayProducts.length, enableInfiniteScroll, isDragging, startX, scrollLeft]);
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
@@ -298,33 +315,33 @@ export const ProductSection = ({
         </div>
 
         {/* Products Carousel */}
-        <div className="relative px-16">
+        <div className="relative px-6 md:px-16">
           {/* Navigation Buttons */}
-          {!isLoading && products.length > ITEMS_PER_PAGE && canScrollLeft && (
+          {!isLoading && displayProducts.length > ITEMS_PER_PAGE && canScrollLeft && (
             <button
               onClick={() => scroll("left")}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition"
+              className="flex absolute left-0 md:left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full shadow-md md:shadow-lg items-center justify-center hover:bg-gray-100 transition"
               aria-label="Scroll left"
             >
-              <ChevronLeft size={20} />
+              <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
             </button>
           )}
-          {!isLoading && products.length > ITEMS_PER_PAGE && canScrollRight && (
+          {!isLoading && displayProducts.length > ITEMS_PER_PAGE && canScrollRight && (
             <button
               onClick={() => scroll("right")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition"
+              className="flex absolute right-0 md:right-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 md:w-10 md:h-10 bg-white rounded-full shadow-md md:shadow-lg items-center justify-center hover:bg-gray-100 transition"
               aria-label="Scroll right"
             >
-              <ChevronRight size={20} />
+              <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
             </button>
           )}
 
           {/* Products Container */}
           {isLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
               {renderSkeletonItems()}
             </div>
-          ) : products.length > 0 ? (
+          ) : displayProducts.length > 0 ? (
             <div
               ref={scrollContainerRef}
               onScroll={updateScrollButtons}
@@ -334,7 +351,7 @@ export const ProductSection = ({
               onMouseLeave={handleMouseLeave}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
-              className="flex gap-4 overflow-x-auto scrollbar-hide"
+              className="flex gap-4 overflow-x-auto scrollbar-hide items-stretch"
               style={{
                 scrollbarWidth: "none",
                 msOverflowStyle: "none",
@@ -344,14 +361,10 @@ export const ProductSection = ({
                 WebkitOverflowScrolling: "touch",
               }}
             >
-              {products.map((product, index) => (
+              {displayProducts.map((product, index) => (
                 <div
                   key={`${product.id}-${index}`}
-                  className="shrink-0"
-                  style={{
-                    width: "calc((100% - 5 * 1rem) / 6)",
-                    minWidth: "150px",
-                  }}
+                  className="shrink-0 w-[calc((100%-1rem)/2)] md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-4rem)/5)] 2xl:w-[calc((100%-5rem)/6)] flex flex-col"
                 >
                   <ProductCard {...product} />
                 </div>

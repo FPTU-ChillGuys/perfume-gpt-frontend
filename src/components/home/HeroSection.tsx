@@ -365,7 +365,7 @@ export const HeroSection = () => {
             <Typography
               variant="h1"
               sx={{
-                fontSize: { xs: "2.2rem", md: "3.6rem" },
+                fontSize: { xs: "1.75rem", md: "3.6rem" },
                 fontWeight: 700,
                 lineHeight: 1.15,
                 mb: 3,
@@ -389,6 +389,7 @@ export const HeroSection = () => {
                 mb: 4,
                 maxWidth: 520,
                 lineHeight: 1.7,
+                fontSize: { xs: "0.9rem", md: "1rem" },
               }}
             >
               {activeSlide.description}
@@ -402,9 +403,9 @@ export const HeroSection = () => {
                 sx={{
                   position: "relative",
                   overflow: "hidden",
-                  px: 4.5,
-                  py: 1.5,
-                  fontSize: "0.95rem",
+                  px: { xs: 3, md: 4.5 },
+                  py: { xs: 1, md: 1.5 },
+                  fontSize: { xs: "0.85rem", md: "0.95rem" },
                   fontWeight: 600,
                   letterSpacing: 1.2,
                   color: "white",

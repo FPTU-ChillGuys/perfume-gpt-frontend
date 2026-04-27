@@ -932,9 +932,22 @@ export const CheckoutPage = () => {
                           setSelectedAddressId(e.target.value);
                         }
                       }}
+                      sx={{
+                        "& .MuiSelect-select": {
+                          whiteSpace: "normal",
+                          wordBreak: "break-word",
+                        },
+                      }}
                     >
                       {addresses.map((addr) => (
-                        <MenuItem key={addr.id} value={addr.id}>
+                        <MenuItem 
+                          key={addr.id} 
+                          value={addr.id}
+                          sx={{
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
+                          }}
+                        >
                           {addr.street}, {addr.ward}, {addr.district},{" "}
                           {addr.city} {addr.isDefault && "(Mặc định)"}
                         </MenuItem>

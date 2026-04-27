@@ -473,13 +473,19 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
               </>
             ) : (
               <Button
-                startIcon={<PersonOutline />}
                 component={RouterLink}
                 to="/login"
                 color="inherit"
-                sx={{ fontWeight: 500 }}
+                sx={{
+                  fontWeight: 500,
+                  minWidth: { xs: "auto", sm: 64 },
+                  px: { xs: 1, sm: 2 },
+                }}
               >
-                Đăng nhập
+                <PersonOutline sx={{ mr: { xs: 0, sm: 1 } }} />
+                <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+                  Đăng nhập
+                </Box>
               </Button>
             )}
           </Box>
@@ -491,7 +497,7 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
         <Box
           sx={{
             display: "flex",
-            justifyContent: "center",
+            justifyContent: { xs: "flex-start", md: "center" },
             gap: { xs: 1, sm: 2, md: 4 },
             py: { xs: 1, sm: 2 },
             overflowX: "auto",
