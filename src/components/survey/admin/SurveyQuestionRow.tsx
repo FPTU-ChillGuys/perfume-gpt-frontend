@@ -17,6 +17,8 @@ import {
     Edit as EditIcon,
     ExpandLess as ExpandLessIcon,
     ExpandMore as ExpandMoreIcon,
+    ArrowUpward as ArrowUpwardIcon,
+    ArrowDownward as ArrowDownwardIcon,
 } from "@mui/icons-material";
 import { QuestionType, getAnswerDisplayText, tryParseQueryAnswer } from "@/types/survey";
 import type { SurveyQuestion } from "@/types/survey";
@@ -25,12 +27,16 @@ import dayjs from "dayjs";
 interface Props {
     item: SurveyQuestion;
     isExpanded: boolean;
+    isFirst: boolean;
+    isLast: boolean;
     onToggle: (id: string) => void;
     onEdit: (item: SurveyQuestion) => void;
     onDelete: (item: SurveyQuestion) => void;
+    onMoveUp: (item: SurveyQuestion) => void;
+    onMoveDown: (item: SurveyQuestion) => void;
 }
 
-function SurveyQuestionRow({ item, isExpanded, onToggle, onEdit, onDelete }: Props) {
+function SurveyQuestionRow({ item, isExpanded, isFirst, isLast, onToggle, onEdit, onDelete, onMoveUp, onMoveDown }: Props) {
     return (
         <>
             <TableRow
@@ -75,6 +81,34 @@ function SurveyQuestionRow({ item, isExpanded, onToggle, onEdit, onDelete }: Pro
                 </TableCell>
                 <TableCell align="center" onClick={(e) => e.stopPropagation()}>
                     <Box sx={{ display: "flex", gap: 0.5, justifyContent: "center" }}>
+                        <Tooltip title="Di chuyển lên">
+                            <IconButton
+                                size="small"
+                                color="default"
+                                onClick={() => onMoveUp(item)}
+                                disabled={isFirst}
+                                sx={{
+                                    bgcolor: "rgba(0,0,0,0.04)",
+                                    "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
+                                }}
+                            >
+                                <ArrowUpwardIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Di chuyển xuống">
+                            <IconButton
+                                size="small"
+                                color="default"
+                                onClick={() => onMoveDown(item)}
+                                disabled={isLast}
+                                sx={{
+                                    bgcolor: "rgba(0,0,0,0.04)",
+                                    "&:hover": { bgcolor: "rgba(0,0,0,0.08)" },
+                                }}
+                            >
+                                <ArrowDownwardIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
                         <Tooltip title="Chỉnh sửa">
                             <IconButton
                                 size="small"

@@ -51,7 +51,7 @@ export default function SurveyManagementPage() {
     setLoading(true);
     try {
       const response = await surveyService.getQuestions();
-      setQuestions(response.data.reverse());
+      setQuestions(response.data);
     } catch (error) {
       console.error("Failed to fetch survey questions:", error);
       showToast("Lỗi khi tải danh sách câu hỏi Survey", "error");
@@ -191,6 +191,41 @@ export default function SurveyManagementPage() {
     }
   }, [deletingItem, showToast, handleCloseDelete]);
 
+  // ── Reorder ───────────────────────────────────────────────────
+  const handleMoveUp = useCallback(async (item: SurveyQuestion) => {
+    const index = questions.findIndex(q => q.id === item.id);
+    if (index <= 0) return;
+    const prevItem = questions[index - 1]!;
+    const newOrders = [
+      { id: item.id, order: prevItem.order },
+      { id: prevItem.id, order: item.order },
+    ];
+    try {
+      await surveyService.reorderQuestions(newOrders);
+      fetchQuestions();
+    } catch (error) {
+      console.error("Error reordering:", error);
+      showToast("Lỗi khi sắp xếp câu hỏi", "error");
+    }
+  }, [questions, showToast, fetchQuestions]);
+
+  const handleMoveDown = useCallback(async (item: SurveyQuestion) => {
+    const index = questions.findIndex(q => q.id === item.id);
+    if (index === questions.length - 1 || index === -1) return;
+    const nextItem = questions[index + 1]!;
+    const newOrders = [
+      { id: item.id, order: nextItem.order },
+      { id: nextItem.id, order: item.order },
+    ];
+    try {
+      await surveyService.reorderQuestions(newOrders);
+      fetchQuestions();
+    } catch (error) {
+      console.error("Error reordering:", error);
+      showToast("Lỗi khi sắp xếp câu hỏi", "error");
+    }
+  }, [questions, showToast, fetchQuestions]);
+
   // ── Render ────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -275,14 +310,18 @@ export default function SurveyManagementPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredQuestions.map((item) => (
+                filteredQuestions.map((item, index) => (
                   <SurveyQuestionRow
                     key={item.id}
                     item={item}
                     isExpanded={expandedRows.has(item.id)}
+                    isFirst={index === 0}
+                    isLast={index === filteredQuestions.length - 1}
                     onToggle={handleToggleRow}
                     onEdit={handleOpenEdit}
                     onDelete={handleOpenDelete}
+                    onMoveUp={handleMoveUp}
+                    onMoveDown={handleMoveDown}
                   />
                 ))
               )}

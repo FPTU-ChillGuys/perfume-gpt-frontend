@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     Drawer,
     Box,
@@ -8,6 +8,7 @@ import {
     Divider,
     List,
     ListItem,
+    ListItemText,
     Accordion,
     AccordionSummary,
     AccordionDetails,
@@ -36,13 +37,7 @@ export default function SurveyHistoryDrawer({ open, onClose, userId }: SurveyHis
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (open && userId) {
-            fetchHistory();
-        }
-    }, [open, userId]);
-
-    const fetchHistory = async () => {
+    const fetchHistory = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
@@ -53,7 +48,13 @@ export default function SurveyHistoryDrawer({ open, onClose, userId }: SurveyHis
         } finally {
             setLoading(false);
         }
-    };
+    }, [userId]);
+
+    useEffect(() => {
+        if (open && userId) {
+            fetchHistory();
+        }
+    }, [open, userId, fetchHistory]);
 
     return (
         <Drawer
@@ -127,6 +128,42 @@ export default function SurveyHistoryDrawer({ open, onClose, userId }: SurveyHis
                                             </ListItem>
                                         ))}
                                     </List>
+                                    {record.aiResult && (() => {
+                                        try {
+                                            const aiData = JSON.parse(record.aiResult);
+                                            if (aiData?.products && Array.isArray(aiData.products) && aiData.products.length > 0) {
+                                                return (
+                                                    <>
+                                                        <Divider sx={{ my: 1.5 }} />
+                                                        <Typography variant="subtitle2" fontWeight="bold" color="text.secondary" sx={{ mb: 1 }}>
+                                                            Gợi ý nước hoa:
+                                                        </Typography>
+                                                        <List disablePadding dense>
+                                                            {aiData.products.slice(0, 5).map((product: any, idx: number) => (
+                                                                <ListItem key={idx} disablePadding sx={{ py: 0.25 }}>
+                                                                    <ListItemText
+                                                                        primary={
+                                                                            <Typography variant="body2">
+                                                                                {idx + 1}. {product.name || product.brandName || 'Sản phẩm'}
+                                                                                {product.reasoning && (
+                                                                                    <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+                                                                                        — {product.reasoning}
+                                                                                    </Typography>
+                                                                                )}
+                                                                            </Typography>
+                                                                        }
+                                                                    />
+                                                                </ListItem>
+                                                            ))}
+                                                        </List>
+                                                    </>
+                                                );
+                                            }
+                                        } catch {
+                                            // ignore parse errors
+                                        }
+                                        return null;
+                                    })()}
                                 </AccordionDetails>
                             </Accordion>
                         ))}

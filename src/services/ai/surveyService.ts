@@ -265,7 +265,22 @@ class SurveyService {
             throw new Error(error.response?.data?.error || error.message || "Failed to submit survey V4");
         }
     }
+
+    // 14. PATCH /surveys/questions/reorder — reorder survey questions
+    async reorderQuestions(orders: { id: string; order: number }[]): Promise<{ success: boolean }> {
+        try {
+            const response = await aiApiInstance.PATCH("/surveys/questions/reorder", {
+                body: { orders }
+            });
+            if (!response.data?.success) {
+                throw new Error(response.data?.error || "Failed to reorder survey questions");
+            }
+            return response.data as { success: boolean };
+        } catch (error: any) {
+            console.error("Error reordering survey questions:", error);
+            throw new Error(error.response?.data?.error || error.message || "Failed to reorder survey questions");
+        }
+    }
 }
 
 export const surveyService = new SurveyService();
-
