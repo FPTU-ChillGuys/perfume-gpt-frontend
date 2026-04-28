@@ -12,14 +12,17 @@ import {
     Accordion,
     AccordionSummary,
     AccordionDetails,
-    Chip
+    Chip,
+    Button
 } from "@mui/material";
 import {
     Close as CloseIcon,
     History as HistoryIcon,
     CalendarToday as CalendarIcon,
-    ExpandMore as ExpandMoreIcon
+    ExpandMore as ExpandMoreIcon,
+    ArrowForward as ArrowForwardIcon
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { surveyService } from "@/services/ai/surveyService";
 import { getAnswerDisplayText } from "@/types/survey";
 import type { UserSurveyRecord } from "@/types/survey";
@@ -33,6 +36,7 @@ interface SurveyHistoryDrawerProps {
 }
 
 export default function SurveyHistoryDrawer({ open, onClose, userId }: SurveyHistoryDrawerProps) {
+    const navigate = useNavigate();
     const [history, setHistory] = useState<UserSurveyRecord[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -75,6 +79,18 @@ export default function SurveyHistoryDrawer({ open, onClose, userId }: SurveyHis
                 <IconButton onClick={onClose} size="small">
                     <CloseIcon />
                 </IconButton>
+            </Box>
+
+            <Box sx={{ px: 2, pt: 1, pb: 0 }}>
+                <Button
+                    variant="outlined"
+                    fullWidth
+                    size="small"
+                    endIcon={<ArrowForwardIcon />}
+                    onClick={() => { onClose(); navigate("/survey/history"); }}
+                >
+                    Xem tất cả lịch sử
+                </Button>
             </Box>
 
             <Box sx={{ p: 2, flex: 1, overflowY: "auto" }}>
