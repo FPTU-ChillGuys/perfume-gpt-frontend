@@ -797,9 +797,9 @@ export const InventoryManagementPage = () => {
       setSelectedAdjustmentDetail(latestDetail);
 
       if (nextStatus === "InProgress") {
-        showToast("Request đã chuyển sang Đang xử lý", "success");
+        showToast("Yêu cầu đã chuyển sang Đang xử lý", "success");
       } else {
-        showToast("Request đã được hủy", "success");
+        showToast("Yều cầu đã được hủy", "success");
       }
 
       void loadAdjustments();
@@ -807,7 +807,7 @@ export const InventoryManagementPage = () => {
       const message =
         error instanceof Error
           ? error.message
-          : "Không thể cập nhật trạng thái request";
+          : "Không thể cập nhật trạng thái yêu cầu";
       showToast(message, "error");
     } finally {
       setStatusSubmitting(false);
@@ -830,7 +830,7 @@ export const InventoryManagementPage = () => {
 
   const summaryCards = [
     {
-      title: "Tổng variant",
+      title: "Tổng sản phẩm",
       value: summary?.totalVariants ?? 0,
       icon: <CategoryIcon color="primary" />,
     },
@@ -1277,7 +1277,7 @@ export const InventoryManagementPage = () => {
                                 }}
                               >
                                 <Alert severity="info">
-                                  Chưa có batch cho variant này.
+                                  Chưa có lô cho sản phẩm này.
                                 </Alert>
                               </TableCell>
                             </TableRow>
@@ -1388,7 +1388,7 @@ export const InventoryManagementPage = () => {
                                         }
                                         disabled={!stock.variantId || !batch.id}
                                       >
-                                        Tạo request
+                                        Tạo yêu cầu
                                       </Button>
                                     )}
                                   </Stack>
@@ -1496,7 +1496,7 @@ export const InventoryManagementPage = () => {
               <Table>
                 <TableHead>
                   <TableRow sx={{ bgcolor: "grey.50" }}>
-                    <TableCell>Mã request</TableCell>
+                    <TableCell>Mã yêu cầu</TableCell>
                     <TableCell>Người tạo</TableCell>
                     <TableCell>Ngày tạo</TableCell>
                     <TableCell>Lý do</TableCell>
@@ -1522,7 +1522,7 @@ export const InventoryManagementPage = () => {
                     <TableRow>
                       <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                         <Typography variant="body2" color="text.secondary">
-                          Chưa có stock adjustment request.
+                          Chưa có yêu cầu điều chỉnh số lượng.
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -1620,8 +1620,8 @@ export const InventoryManagementPage = () => {
             >
               <DialogTitle>
                 {isAdmin
-                  ? "Duyệt Stock Adjustment"
-                  : "Chi tiết Stock Adjustment"}
+                  ? "Duyệt yêu cầu điều chỉnh số lượng"
+                  : "Chi tiết yêu cầu điều chỉnh số lượng"}
               </DialogTitle>
               <DialogContent>
                 {!selectedAdjustmentDetail ? (
@@ -1631,7 +1631,7 @@ export const InventoryManagementPage = () => {
                     <Grid container spacing={1.5}>
                       <Grid size={{ xs: 12, md: 6 }}>
                         <Typography variant="body2" color="text.secondary">
-                          Mã request: {selectedAdjustmentDetail.id}
+                          Mã yêu cầu: {selectedAdjustmentDetail.id}
                         </Typography>
                       </Grid>
                       <Grid size={{ xs: 12, md: 6 }}>
@@ -1674,7 +1674,7 @@ export const InventoryManagementPage = () => {
                       </Grid>
                       <Grid size={12}>
                         <Alert severity="info" sx={{ py: 0.5 }}>
-                          Ghi chú request:{" "}
+                          Ghi chú yêu cầu:{" "}
                           {selectedAdjustmentDetail.note || "N/A"}
                         </Alert>
                       </Grid>
@@ -1698,10 +1698,10 @@ export const InventoryManagementPage = () => {
                             <TableCell sx={{ width: 170 }}>SKU</TableCell>
                             <TableCell sx={{ width: 190 }}>Batch</TableCell>
                             <TableCell align="center" sx={{ width: 110 }}>
-                              SL request
+                              SL yêu cầu
                             </TableCell>
                             <TableCell sx={{ width: 240 }}>
-                              Ghi chú request (detail)
+                              Ghi chú yêu cầu
                             </TableCell>
                             {isAdmin && (
                               <TableCell align="center" sx={{ width: 190 }}>
@@ -1961,7 +1961,7 @@ export const InventoryManagementPage = () => {
               {!isStaff && (
                 <>
                   <TextField
-                    label="ID Sản phẩm"
+                    label="Mã sản phẩm"
                     value={createPayload.variantId}
                     onChange={(event) =>
                       setCreatePayload((current) => ({
@@ -1972,7 +1972,7 @@ export const InventoryManagementPage = () => {
                     fullWidth
                   />
                   <TextField
-                    label="Batch ID"
+                    label="Mã lô"
                     value={createPayload.batchId}
                     onChange={(event) =>
                       setCreatePayload((current) => ({

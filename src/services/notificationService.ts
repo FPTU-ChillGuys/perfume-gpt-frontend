@@ -34,7 +34,7 @@ class NotificationService {
           IsRead: params.isRead,
           PageNumber: params.pageNumber ?? 1,
           PageSize: params.pageSize ?? 20,
-          SortBy: "CreatedAt",
+          SortBy: "createdat",
           IsDescending: true,
         },
       },

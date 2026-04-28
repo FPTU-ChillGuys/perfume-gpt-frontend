@@ -1674,6 +1674,34 @@ class OrderService {
     }
   }
 
+  async syncShippingStatusByTrackingNumber(trackingNumber: string): Promise<string> {
+    try {
+      const response = await apiInstance.POST(
+        "/api/shippings/sync/shipping-status/{trackingNumber}",
+        {
+          params: {
+            path: { trackingNumber },
+          },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to sync shipping status",
+        );
+      }
+
+      return response.data.message || "Shipping status synced successfully";
+    } catch (error: any) {
+      console.error("Error syncing shipping status by tracking number:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to sync shipping status",
+      );
+    }
+  }
+
   async getShippingOrderInfoUrl(trackingNumbers: string[]): Promise<string> {
     const normalizedTrackingNumbers = trackingNumbers
       .map((tracking) => tracking.trim())
