@@ -21,6 +21,7 @@ import {
 } from "@mui/icons-material";
 import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 import { useNavigate, useLocation } from "react-router-dom";
+import Draggable from "react-draggable";
 import AiLogo from "@/assets/AI_LOGO.png";
 
 import { chatbotService } from "@/services/ai/chatbotService";
@@ -79,6 +80,8 @@ export default function ChatbotWidget() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastInputTimeRef = useRef<number>(Date.now());
+  // nodeRef is required for React 19 compatibility (findDOMNode was removed)
+  const draggableNodeRef = useRef<HTMLDivElement>(null);
 
   // Initialize voices
   useEffect(() => {
@@ -354,37 +357,50 @@ export default function ChatbotWidget() {
   );
 
   return (
-    <>
-      {/* Chat Window */}
-      {open && (
-        <Paper
-          elevation={10}
-          sx={{
-            position: "fixed",
-            bottom: 96,
-            right: 24,
-            width: {
-              xs: "calc(100vw - 32px)",
-              sm: "65vw",
-              md: "60vw",
-              lg: "55vw",
-            },
-            maxWidth: 700,
-            minWidth: 320,
-            height: { xs: "70vh", sm: "72vh" },
-            display: "flex",
-            flexDirection: "column",
-            borderRadius: 3,
-            overflow: "hidden",
-            zIndex: 1300,
-            boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-            animation: "slideUp 0.25s ease-out",
-            "@keyframes slideUp": {
-              from: { opacity: 0, transform: "translateY(20px)" },
-              to: { opacity: 1, transform: "translateY(0)" },
-            },
-          }}
-        >
+    <Draggable handle=".chat-widget-handle" bounds="body" nodeRef={draggableNodeRef}>
+      <Box
+        ref={draggableNodeRef}
+        sx={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          zIndex: 1300,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          pointerEvents: "none", // Let clicks pass through the empty area
+        }}
+      >
+        {/* Chat Window */}
+        {open && (
+          <Paper
+            elevation={10}
+            className="chat-widget-handle"
+            sx={{
+              mb: 2, // Replaces the 96px bottom gap (24px bottom + 56px icon + 16px margin)
+              pointerEvents: "auto",
+              cursor: "move", // Indicate draggability
+              width: {
+                xs: "calc(100vw - 32px)",
+                sm: "65vw",
+                md: "60vw",
+                lg: "55vw",
+              },
+              maxWidth: 700,
+              minWidth: 320,
+              height: { xs: "70vh", sm: "72vh" },
+              display: "flex",
+              flexDirection: "column",
+              borderRadius: 3,
+              overflow: "hidden",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              animation: "slideUp 0.25s ease-out",
+              "@keyframes slideUp": {
+                from: { opacity: 0, transform: "translateY(20px)" },
+                to: { opacity: 1, transform: "translateY(0)" },
+              },
+            }}
+          >
           <ChatHeader
             onSettingsClick={(e) => setSettingsAnchor(e.currentTarget)}
             onClose={() => setOpen(false)}
@@ -476,27 +492,24 @@ export default function ChatbotWidget() {
 
       {/* Toggle Button */}
       <Tooltip title={open ? "Đóng chat" : "Hỏi PerfumeGPT"} placement="left">
-        <IconButton
-          onClick={() => setOpen((prev) => !prev)}
-          sx={{
-            position: "fixed",
-            bottom: 24,
-            right: 24,
-            width: 56,
-            height: 56,
-            zIndex: 1300,
-            background: open
-              ? "linear-gradient(135deg, #374151 0%, #1f2937 100%)"
-              : "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
-            color: "#fff",
-            boxShadow: "0 4px 20px rgba(220,38,38,0.5)",
-            transition: "all 0.3s ease",
-            "&:hover": {
-              transform: "scale(1.08)",
-              boxShadow: "0 6px 24px rgba(220,38,38,0.6)",
-            },
-          }}
-        >
+        <Box sx={{ pointerEvents: "auto", cursor: "move" }} className="chat-widget-handle">
+          <IconButton
+            onClick={() => setOpen((prev) => !prev)}
+            sx={{
+              width: 56,
+              height: 56,
+              background: open
+                ? "linear-gradient(135deg, #374151 0%, #1f2937 100%)"
+                : "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
+              color: "#fff",
+              boxShadow: "0 4px 20px rgba(220,38,38,0.5)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                transform: "scale(1.08)",
+                boxShadow: "0 6px 24px rgba(220,38,38,0.6)",
+              },
+            }}
+          >
           {open ? (
             <Box
               component="img"
@@ -512,8 +525,10 @@ export default function ChatbotWidget() {
               sx={{ width: 32, height: 32, objectFit: "contain" }}
             />
           )}
-        </IconButton>
+          </IconButton>
+        </Box>
       </Tooltip>
-    </>
+      </Box>
+    </Draggable>
   );
 }

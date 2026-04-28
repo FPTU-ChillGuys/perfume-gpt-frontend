@@ -793,8 +793,21 @@ export const OrderManagementDetailPage = () => {
   const isShippingManagedStatus = order?.status === "Delivering";
   const hasTrackingNumber = Boolean(order?.shippingInfo?.trackingNumber);
   const canPrepareOrder = order?.status === "Pending";
+  // Đơn In-Store nhưng có địa chỉ giao hàng → hàng đã gửi đơn vị vận chuyển
+  const isInStoreWithShipping = Boolean(
+    order &&
+    order.type === "Offline" &&
+    (order.recipientInfo || order.shippingInfo),
+  );
+  const isCarrierHandled =
+    isInStoreWithShipping &&
+    (order?.status === "ReadyToPick" ||
+      order?.status === "Delivering" ||
+      order?.status === "Delivered");
   const canCancelOrder =
-    !!order?.status && STAFF_CANCELABLE_STATUSES.includes(order.status);
+    !!order?.status &&
+    STAFF_CANCELABLE_STATUSES.includes(order.status) &&
+    !isCarrierHandled;
   const hasBlockingCancelRequest = Boolean(
     orderCancelRequest?.id &&
     CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
@@ -973,9 +986,12 @@ export const OrderManagementDetailPage = () => {
   }, [order?.paymentTransactions, order?.requiredDepositAmount]);
 
   const paymentId = latestPaymentTransaction?.id ?? null;
+  // Đơn nhận tại cửa hàng thực sự: Offline type VÀ không có địa chỉ giao hàng
   const isPickupInStoreOrder = Boolean(
     order &&
-    (order.type === "Offline" || (!order.recipientInfo && !order.shippingInfo)),
+    (order.type === "Offline" || (!order.recipientInfo && !order.shippingInfo)) &&
+    !order.recipientInfo &&
+    !order.shippingInfo,
   );
   const canCompleteInStoreOrder =
     order?.status === "ReadyToPick" && isPickupInStoreOrder;
@@ -1242,14 +1258,19 @@ export const OrderManagementDetailPage = () => {
   };
 
   const handleSyncShippingStatus = async () => {
-    if (!orderId || !order?.customerId) {
-      showToast("Không tìm thấy thông tin khách hàng để đồng bộ đơn", "error");
+    const trackingNumber = order?.shippingInfo?.trackingNumber;
+
+    if (!trackingNumber) {
+      showToast(
+        "Đơn hàng chưa có mã vận đơn để đồng bộ trạng thái",
+        "warning",
+      );
       return;
     }
 
     try {
       setIsSyncingShipping(true);
-      await orderService.syncShippingStatusByUserId(order.customerId);
+      await orderService.syncShippingStatusByTrackingNumber(trackingNumber);
       await loadOrder();
       showToast("Đã đồng bộ trạng thái vận chuyển", "success");
     } catch (err) {

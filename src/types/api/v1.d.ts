@@ -9752,116 +9752,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/shippings/ghn/webhook-order-status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["GhnOrderStatusWebhookRequest"];
-                    "text/json": components["schemas"]["GhnOrderStatusWebhookRequest"];
-                    "application/*+json": components["schemas"]["GhnOrderStatusWebhookRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-                /** @description Internal Server Error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/shippings/ghn/webhook-order-status/{token}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    token: string;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["GhnOrderStatusWebhookRequest"];
-                    "text/json": components["schemas"]["GhnOrderStatusWebhookRequest"];
-                    "application/*+json": components["schemas"]["GhnOrderStatusWebhookRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfstring"];
-                        "application/json": components["schemas"]["BaseResponseOfstring"];
-                        "text/json": components["schemas"]["BaseResponseOfstring"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/shippings/me/sync-shipping-status": {
         parameters: {
             query?: never;
@@ -9876,6 +9766,45 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shippings/sync/shipping-status/{trackingNumber}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    trackingNumber: string;
+                };
                 cookie?: never;
             };
             requestBody?: never;
@@ -13180,11 +13109,6 @@ export interface components {
         GetOrderInfoRequest: {
             trackingNumbers: string[];
         };
-        GhnOrderStatusWebhookRequest: {
-            OrderCode: string;
-            Status: string;
-            Type?: null | string;
-        };
         GoogleLoginRequest: {
             idToken: string;
         };
@@ -14028,6 +13952,8 @@ export interface components {
             staffNote?: null | string;
         };
         ProcessRefundRequest: {
+            /** Format: decimal */
+            approvedRefundAmount?: number;
             refundMethod?: components["schemas"]["PaymentMethod"];
             manualTransactionReference?: null | string;
             note?: null | string;
@@ -15092,6 +15018,7 @@ export interface components {
         VariantFastLookResponse: {
             /** Format: uuid */
             id?: string;
+            barcode: string;
             sku: string;
             displayName: string;
             /** Format: decimal */
