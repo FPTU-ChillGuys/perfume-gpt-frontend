@@ -65,10 +65,7 @@ function groupByDate(
 function getPreviewText(item: ConversationHistoryItem): string {
   const firstUserMsg = item.messages?.find((m) => m.sender === "user");
   if (firstUserMsg?.message) {
-    const text =
-      typeof firstUserMsg.message === "string"
-        ? firstUserMsg.message
-        : JSON.stringify(firstUserMsg.message);
+    const text = firstUserMsg.message;
     return text.length > 60 ? text.slice(0, 60) + "…" : text;
   }
   return "(Không có tin nhắn)";

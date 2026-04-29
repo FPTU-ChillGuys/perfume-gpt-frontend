@@ -1,11 +1,16 @@
-import type { ChatMessage } from "./chatbot";
+export interface ServerMessage {
+    id: string;
+    sender: "user" | "assistant";
+    message: string;
+    createdAt: string;
+}
 
 export interface AdminConversation {
     id: string;
     createdAt: string;
     updatedAt: string;
     userId: string;
-    messages: ChatMessage[];
+    messages: ServerMessage[];
 }
 
 export interface AdminConversationListResponse {
@@ -18,7 +23,7 @@ export interface ConversationHistoryItem {
     id: string;
     userId: string;
     updatedAt: string;
-    messages: ChatMessage[];
+    messages: ServerMessage[];
 }
 
 export interface ConversationHistoryResponse {

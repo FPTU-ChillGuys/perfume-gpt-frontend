@@ -32,7 +32,7 @@ import { authService } from "@/services/authService";
 import { getOrCreateGuestUserId } from "@/utils/guestUserId";
 import { conversationStorage } from "@/utils/conversationStorage";
 import type { ChatMessage } from "@/types/chatbot";
-import type { ConversationHistoryItem } from "@/types/conversation";
+import type { ConversationHistoryItem, ServerMessage } from "@/types/conversation";
 
 import { parseAssistantPayload, SILENCE_TIMEOUT } from "./helpers";
 import { ChatHeader } from "./Header";
@@ -178,7 +178,6 @@ export default function ChatbotWidget() {
       const finalText = text.trim();
       if (!finalText || loading) return;
 
-      // Stop listening immediately when sending
       void stopListening();
 
       const newUserMsg: ChatMessage = { sender: "user", message: finalText };
@@ -188,31 +187,28 @@ export default function ChatbotWidget() {
       setLoading(true);
 
       try {
-        const data = await chatbotService.sendMessage(
+        const data = await chatbotService.sendMessageV11(
           conversationId.current,
           userId.current,
           updatedMessages,
           isStaffMode
         );
 
-        setMessages(data.messages);
+        const aiMsg: ChatMessage = { sender: "assistant", message: data.aiMessage.message };
+        const finalMessages = [...updatedMessages, aiMsg];
+        setMessages(finalMessages);
 
-        // Auto-speak last response
-        if (data.messages.length > 0) {
-          const lastMsg = data.messages[data.messages.length - 1];
-          if (lastMsg && lastMsg.sender === "assistant") {
-            const payload = parseAssistantPayload(lastMsg.message);
-            setTextToSpeak(payload.message);
-          }
-        }
+        void conversationStorage.save(conversationId.current, finalMessages);
+
+        const payload = parseAssistantPayload(data.aiMessage.message);
+        setTextToSpeak(payload.message);
       } catch {
-        showToast("Không thể kết nối chatbot. Vui lòng thử lại.", "error");
         setMessages(messages);
+        setInput(finalText);
+        showToast("Không thể kết nối chatbot. Vui lòng thử lại.", "error");
       } finally {
         setLoading(false);
 
-        // Resume listening if in persistent conversation mode AND voice is disabled
-        // (If voice is enabled, utterance.onend will handle resuming)
         if (conversationActive && !voiceEnabled) {
           setTimeout(() => startListening(true), 300);
         }
@@ -495,8 +491,11 @@ export default function ChatbotWidget() {
             <ChatHistoryPanel
               onSelectConversation={(conversation: ConversationHistoryItem) => {
                 conversationId.current = conversation.id;
-                setMessages(conversation.messages || []);
-                void conversationStorage.save(conversation.id, conversation.messages || []);
+                const chatMsgs: ChatMessage[] = (conversation.messages || []).map(
+                  (m: ServerMessage) => ({ sender: m.sender, message: m.message })
+                );
+                setMessages(chatMsgs);
+                void conversationStorage.save(conversation.id, chatMsgs);
                 setHistoryOpen(false);
               }}
               onNewChat={handleNewConversation}

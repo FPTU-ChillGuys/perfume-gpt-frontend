@@ -66,3 +66,20 @@ export interface ConversationResponse {
     data: ConversationResponseData;
     __httpStatusCode: number;
 }
+
+export interface ChatV11AiMessage {
+    sender: "assistant";
+    message: string;
+    createdAt: string;
+}
+
+export interface ChatV11ResponseData {
+    conversationId: string;
+    aiMessage: ChatV11AiMessage;
+}
+
+export interface ChatV11Response {
+    success: boolean;
+    data: ChatV11ResponseData;
+    __httpStatusCode?: number;
+}
