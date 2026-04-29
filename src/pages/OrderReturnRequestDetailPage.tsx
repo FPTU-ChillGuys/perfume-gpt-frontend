@@ -297,6 +297,7 @@ export const OrderReturnRequestDetailPage = () => {
     useState("");
   const [copiedRefundInfo, setCopiedRefundInfo] = useState(false);
   const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
+  const [adminRefundAmountInput, setAdminRefundAmountInput] = useState("");
 
   const hasRefundBankInfo = Boolean(
     request?.refundBankName ||
@@ -352,6 +353,10 @@ export const OrderReturnRequestDetailPage = () => {
       request?.requestedRefundAmount ??
       request?.refundableAmount,
   );
+  const effectiveAdminRefundAmount =
+    refundConfirmOpen && adminRefundAmountInput.trim() !== ""
+      ? toNumber(adminRefundAmountInput)
+      : refundAmount;
   const orderCodeForRefund = request?.orderCode || request?.orderId || "-";
 
   useEffect(() => {
@@ -431,7 +436,7 @@ export const OrderReturnRequestDetailPage = () => {
       effectiveRefundMethod !== "ExternalBankTransfer" ||
       !matchedRefundBankBin ||
       !request?.refundAccountNumber ||
-      refundAmount <= 0
+      effectiveAdminRefundAmount <= 0
     ) {
       return "";
     }
@@ -439,12 +444,12 @@ export const OrderReturnRequestDetailPage = () => {
     const addInfo = encodeURIComponent(`Hoan tien don ${orderCodeForRefund}`);
     const accountName = encodeURIComponent(request.refundAccountName || "");
 
-    return `https://img.vietqr.io/image/${matchedRefundBankBin}-${request.refundAccountNumber}-compact2.jpg?amount=${refundAmount}&addInfo=${addInfo}&accountName=${accountName}`;
+    return `https://img.vietqr.io/image/${matchedRefundBankBin}-${request.refundAccountNumber}-compact2.jpg?amount=${effectiveAdminRefundAmount}&addInfo=${addInfo}&accountName=${accountName}`;
   }, [
     effectiveRefundMethod,
     matchedRefundBankBin,
     orderCodeForRefund,
-    refundAmount,
+    effectiveAdminRefundAmount,
     request?.refundAccountName,
     request?.refundAccountNumber,
   ]);
@@ -456,7 +461,7 @@ export const OrderReturnRequestDetailPage = () => {
       `- Ngan hang: ${request?.refundBankName || "-"}`,
       `- STK: ${request?.refundAccountNumber || "-"}`,
       `- Chu TK: ${request?.refundAccountName || "-"}`,
-      `- So tien: ${refundAmount}đ`,
+      `- So tien: ${effectiveAdminRefundAmount}đ`,
       `- Noi dung CK: Hoan tien don ${orderCodeForRefund}`,
     ].join("\n");
 
@@ -712,6 +717,7 @@ export const OrderReturnRequestDetailPage = () => {
         effectiveRefundMethod,
         isManualTransferRefund ? trimmedManualTransactionReference : null,
         null,
+        effectiveAdminRefundAmount
       );
       await refreshAfterAction("Đã hoàn tiền cho khách hàng");
       setManualTransactionReference("");
@@ -1031,25 +1037,6 @@ export const OrderReturnRequestDetailPage = () => {
                     </Typography>
                     <Typography>{formatDate(request.createdAt)}</Typography>
                   </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Tiền ước tính hoàn
-                    </Typography>
-                    <Typography fontWeight={700} color="#ee4d2d">
-                      {formatCurrency(request.requestedRefundAmount)}
-                    </Typography>
-                  </Box>
-                  {request.approvedRefundAmount != null &&
-                    request.approvedRefundAmount > 0 && (
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          Tiền được duyệt hoàn
-                        </Typography>
-                        <Typography fontWeight={700} color="success.main">
-                          {formatCurrency(request.approvedRefundAmount)}
-                        </Typography>
-                      </Box>
-                    )}
                   {request.returnShippingInfo && (
                     <>
                       <Box>
@@ -1597,7 +1584,7 @@ export const OrderReturnRequestDetailPage = () => {
                       }}
                     >
                       <Typography variant="h6" fontWeight={700}>
-                        TỔNG TIỀN YÊU CẦU HOÀN:
+                        TỔNG TIỀN ƯỚC TÍNH HOÀN: 
                       </Typography>
                       <Typography
                         variant="h6"
@@ -1607,6 +1594,33 @@ export const OrderReturnRequestDetailPage = () => {
                         {formatCurrency(refundSummary.totalAmount)}
                       </Typography>
                     </Box>
+
+                    {request.approvedRefundAmount != null &&
+                      request.approvedRefundAmount > 0 && (
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            mt: 0.5,
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            color="success.main"
+                          >
+                            Số tiền được duyệt hoàn:
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            color="success.main"
+                          >
+                            {formatCurrency(request.approvedRefundAmount)}
+                          </Typography>
+                        </Box>
+                      )}
                   </Stack>
                 </Box>
               </Paper>
@@ -1889,6 +1903,9 @@ export const OrderReturnRequestDetailPage = () => {
                             setSelectedRefundMethod(
                               originalOnlineRefundMethod ??
                                 "ExternalBankTransfer",
+                            );
+                            setAdminRefundAmountInput(
+                              (request?.approvedRefundAmount ?? request?.requestedRefundAmount ?? request?.refundableAmount ?? 0).toString()
                             );
                             setRefundConfirmOpen(true);
                           }}
@@ -2287,28 +2304,27 @@ export const OrderReturnRequestDetailPage = () => {
             </Box>
           )}
 
-          <Box
-            sx={{
-              mb: 2,
-              p: 1.25,
-              borderRadius: 1,
-              border: "1px solid",
-              borderColor: "divider",
-              bgcolor: "grey.50",
-            }}
-          >
-            <Box display="flex" justifyContent="space-between" gap={2}>
-              <Typography variant="body2" color="text.secondary">
-                Số tiền cần hoàn
-              </Typography>
-              <Typography
-                variant="body2"
-                fontWeight={700}
-                sx={{ color: "#16a34a" }}
-              >
-                {formatCurrency(refundAmount)}
-              </Typography>
-            </Box>
+          <Box sx={{ mb: 2 }}>
+            <TextField
+              label="Số tiền cần hoàn *"
+              fullWidth
+              size="small"
+              value={formatMoneyInput(adminRefundAmountInput)}
+              onChange={(e) =>
+                setAdminRefundAmountInput(normalizeMoneyInput(e.target.value))
+              }
+              helperText={
+                toNumber(adminRefundAmountInput) <= 0
+                  ? "Vui lòng nhập số tiền cần hoàn"
+                  : toNumber(adminRefundAmountInput) > inspectionEstimatedRefundAmount
+                    ? `Số tiền không được vượt quá ${formatCurrency(inspectionEstimatedRefundAmount)}`
+                    : ""
+              }
+              error={toNumber(adminRefundAmountInput) <= 0 || toNumber(adminRefundAmountInput) > inspectionEstimatedRefundAmount}
+              InputProps={{
+                endAdornment: <Typography variant="body2">đ</Typography>,
+              }}
+            />
           </Box>
 
           <Typography variant="body2">{REFUND_DIALOG_CONFIRM_NOTE}</Typography>
@@ -2328,6 +2344,8 @@ export const OrderReturnRequestDetailPage = () => {
             }}
             disabled={
               isSaving ||
+              toNumber(adminRefundAmountInput) <= 0 ||
+              toNumber(adminRefundAmountInput) > inspectionEstimatedRefundAmount ||
               (isManualTransferRefund &&
                 (!hasRefundBankInfo || isManualReferenceTooShort))
             }

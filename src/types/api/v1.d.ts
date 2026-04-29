@@ -4944,6 +4944,45 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/notifications/test-send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SendPushNotificationRequest"];
+                    "text/json": components["schemas"]["SendPushNotificationRequest"];
+                    "application/*+json": components["schemas"]["SendPushNotificationRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/olfactoryfamilies/lookup": {
         parameters: {
             query?: never;
@@ -6850,6 +6889,320 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
                         "application/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
                         "text/json": components["schemas"]["BaseResponseOfSwapDamagedStockResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    SearchTerm?: string;
+                    PageNumber?: number;
+                    PageSize?: number;
+                    SortBy?: string;
+                    SortOrder?: string;
+                    IsDescending?: boolean;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPagedResultOfPageResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPagedResultOfPageResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPagedResultOfPageResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreatePageRequest"];
+                    "text/json": components["schemas"]["CreatePageRequest"];
+                    "application/*+json": components["schemas"]["CreatePageRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPageResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPageResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPageResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPageResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPageResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPageResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePageRequest"];
+                    "text/json": components["schemas"]["UpdatePageRequest"];
+                    "application/*+json": components["schemas"]["UpdatePageRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPageResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPageResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPageResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/{slug}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfPageResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfPageResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfPageResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pages/images/temporary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/x-www-form-urlencoded": {
+                        Images?: components["schemas"]["IFormFile"][];
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfBulkActionResultOfListOfTemporaryMediaResponse"];
                     };
                 };
                 default: {
@@ -12232,6 +12585,13 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
+        BaseResponseOfPagedResultOfPageResponse: {
+            payload?: null | components["schemas"]["PagedResultOfPageResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
         BaseResponseOfPagedResultOfProductListItem: {
             payload?: null | components["schemas"]["PagedResultOfProductListItem"];
             success?: boolean;
@@ -12283,6 +12643,13 @@ export interface components {
         };
         BaseResponseOfPagedResultOfVoucherResponse: {
             payload?: null | components["schemas"]["PagedResultOfVoucherResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfPageResponse: {
+            payload?: null | components["schemas"]["PageResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -12849,6 +13216,14 @@ export interface components {
             recipient?: null | components["schemas"]["ContactAddressInformation"];
             payment: components["schemas"]["PaymentInformation"];
         };
+        CreatePageRequest: {
+            title: string;
+            slug: string;
+            htmlContent: string;
+            isPublished?: boolean;
+            metaDescription?: null | string;
+            temporaryMediaIds?: null | string[];
+        };
         CreatePaymentResponseDto: {
             /** Format: uuid */
             paymentId?: null | string;
@@ -13111,6 +13486,8 @@ export interface components {
         };
         GoogleLoginRequest: {
             idToken: string;
+            fcmToken?: null | string;
+            deviceType?: null | string;
         };
         /** Format: binary */
         IFormFile: string;
@@ -13226,6 +13603,8 @@ export interface components {
         LoginRequest: {
             credential: string;
             password: string;
+            fcmToken?: null | string;
+            deviceType?: null | string;
         };
         LoyaltyTransactionHistoryItemResponse: {
             /** Format: uuid */
@@ -13666,6 +14045,19 @@ export interface components {
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
         };
+        PagedResultOfPageResponse: {
+            items: components["schemas"]["PageResponse"][];
+            /** Format: int32 */
+            pageNumber: number;
+            /** Format: int32 */
+            pageSize: number;
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            totalPages?: number;
+            hasPreviousPage?: boolean;
+            hasNextPage?: boolean;
+        };
         PagedResultOfPaymentTransactionAdminItemResponse: {
             items: components["schemas"]["PaymentTransactionAdminItemResponse"][];
             /** Format: int32 */
@@ -13782,6 +14174,16 @@ export interface components {
             totalPages?: number;
             hasPreviousPage?: boolean;
             hasNextPage?: boolean;
+        };
+        PageResponse: {
+            slug: string;
+            title: string;
+            htmlContent: string;
+            isPublished?: boolean;
+            metaDescription?: null | string;
+            images: components["schemas"]["MediaResponse"][];
+            /** Format: date-time */
+            updatedAt?: string;
         };
         PaymentInfoResponse: {
             /** Format: uuid */
@@ -14462,6 +14864,14 @@ export interface components {
             id?: number;
             name: string;
         };
+        SendPushNotificationRequest: {
+            deviceToken: string;
+            title: string;
+            body: string;
+            data?: null | {
+                [key: string]: string;
+            };
+        };
         ShippingInfoListItem: {
             /** Format: uuid */
             id?: string;
@@ -14815,6 +15225,14 @@ export interface components {
         };
         UpdateOlfactoryFamilyRequest: {
             name: string;
+        };
+        UpdatePageRequest: {
+            title: string;
+            slug: string;
+            htmlContent: string;
+            metaDescription?: null | string;
+            temporaryMediaIdsToAdd?: null | string[];
+            mediaIdsToDelete?: null | string[];
         };
         UpdateProductRequest: {
             name: string;

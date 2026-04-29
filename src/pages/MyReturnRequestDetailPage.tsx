@@ -736,28 +736,6 @@ export const MyReturnRequestDetailPage = () => {
                             {formatDate(request.createdAt)}
                           </Typography>
                         </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Tiền ước tính hoàn
-                          </Typography>
-                          <Typography fontWeight={700} color="#ee4d2d">
-                            {formatCurrency(request.requestedRefundAmount)}
-                          </Typography>
-                        </Box>
-                        {request.approvedRefundAmount != null &&
-                          request.approvedRefundAmount > 0 && (
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                Tiền được duyệt hoàn
-                              </Typography>
-                              <Typography fontWeight={700} color="success.main">
-                                {formatCurrency(request.approvedRefundAmount)}
-                              </Typography>
-                            </Box>
-                          )}
                         {request.processedByName && (
                           <Box>
                             <Typography
@@ -1348,7 +1326,7 @@ export const MyReturnRequestDetailPage = () => {
                               fontWeight={700}
                               sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
                             >
-                              TỔNG TIỀN HOÀN:
+                              TỔNG TIỀN ƯỚC TÍNH HOÀN: 
                             </Typography>
                             <Typography
                               variant="h6"
@@ -1359,6 +1337,33 @@ export const MyReturnRequestDetailPage = () => {
                               {formatCurrency(refundSummary.totalAmount)}
                             </Typography>
                           </Box>
+
+                          {request.approvedRefundAmount != null &&
+                            request.approvedRefundAmount > 0 && (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  mt: 0.5,
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={600}
+                                  color="success.main"
+                                >
+                                  Số tiền được duyệt hoàn:
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={700}
+                                  color="success.main"
+                                >
+                                  {formatCurrency(request.approvedRefundAmount)}
+                                </Typography>
+                              </Box>
+                            )}
                         </Stack>
                       </Box>
                     </Paper>
