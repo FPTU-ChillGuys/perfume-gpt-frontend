@@ -22,6 +22,7 @@ export interface SurveyQuestion {
     updatedAt: string;
     question: string;
     questionType: QuestionType;
+    order: number;
     answers: SurveyAnswer[];
 }
 
@@ -32,7 +33,9 @@ export interface SurveyAnswerRequest {
 export interface SurveyQuestionRequest {
     question: string;
     questionType?: QuestionType;
+    order?: number;
     answers: SurveyAnswerRequest[];
+    budgetMode?: boolean;
 }
 
 export interface SurveyQuestionsResponse {
@@ -81,6 +84,7 @@ export interface UserSurveyRecord {
     createdAt: string;
     updatedAt: string;
     userId: string;
+    aiResult?: string;
     details: UserSurveyDetail[];
 }
 
@@ -100,6 +104,11 @@ export interface UserSurveyHistoryResponse {
     success: boolean;
     error: string | null;
     data: UserSurveyRecord[];
+}
+
+export interface ReorderQuestionItem {
+    id: string;
+    order: number;
 }
 
 // ============ AI Output Schemas & Parsers ============
@@ -189,4 +198,3 @@ export function getAnswerDisplayText(answerText: string): string {
     const parsed = tryParseQueryAnswer(answerText);
     return parsed ? parsed.displayText : answerText;
 }
-

@@ -99,7 +99,7 @@ export const UserProfileSidebar = ({ userInfo, avatarUrl }: UserProfileSidebarPr
     {
       label: "Lịch Sử Khảo Sát",
       icon: <SurveyIcon fontSize="small" />,
-      path: "/profile/survey-history",
+      path: "/survey/history",
     },
   ];
 
