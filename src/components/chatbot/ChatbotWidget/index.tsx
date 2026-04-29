@@ -30,7 +30,9 @@ import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
 import { authService } from "@/services/authService";
 import { getOrCreateGuestUserId } from "@/utils/guestUserId";
+import { conversationStorage } from "@/utils/conversationStorage";
 import type { ChatMessage } from "@/types/chatbot";
+import type { ConversationHistoryItem } from "@/types/conversation";
 
 import { parseAssistantPayload, SILENCE_TIMEOUT } from "./helpers";
 import { ChatHeader } from "./Header";
@@ -38,6 +40,7 @@ import { ChatMessages } from "./Messages";
 import { ChatInput } from "./Input";
 import { MessageBubble } from "./MessageBubble";
 import { TypingIndicator } from "./TypingIndicator";
+import { ChatHistoryPanel } from "./ChatHistoryPanel";
 
 
 // ─── Main Widget ─────────────────────────────────────────────────────────────
@@ -50,10 +53,11 @@ export default function ChatbotWidget() {
   const [conversationActive, setConversationActive] = useState(false);
   const [textToSpeak, setTextToSpeak] = useState<string | null>(null);
   const [aiSpeaking, setAiSpeaking] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   // Settings states
   const [voiceEnabled, setVoiceEnabled] = useState(() => {
-    return localStorage.getItem("chatbot_voice_enabled") !== "false";
+    return localStorage.getItem("chatbot_voice_enabled") === "true";
   });
   const [selectedVoiceURI, setSelectedVoiceURI] = useState(() => {
     return localStorage.getItem("chatbot_selected_voice") || null;
@@ -112,6 +116,19 @@ export default function ChatbotWidget() {
   const userId = useRef(
     authService.getCurrentUser()?.id ?? getOrCreateGuestUserId(),
   );
+  const [restored, setRestored] = useState(false);
+
+  // Restore latest conversation from Dexie on mount
+  useEffect(() => {
+    if (restored) return;
+    conversationStorage.getLatest().then((record) => {
+      if (record) {
+        conversationId.current = record.id;
+        setMessages(record.messages);
+      }
+      setRestored(true);
+    });
+  }, [restored]);
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -245,6 +262,12 @@ export default function ChatbotWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
+  // Persist messages to Dexie whenever they change
+  useEffect(() => {
+    if (!restored || messages.length === 0) return;
+    void conversationStorage.save(conversationId.current, messages);
+  }, [messages, restored]);
+
   // Handle text-to-speech
   useEffect(() => {
     if (textToSpeak && voiceEnabled && "speechSynthesis" in window) {
@@ -326,6 +349,16 @@ export default function ChatbotWidget() {
     }
   }, [conversationActive, resetTranscript, startListening, stopListening]);
 
+  const handleNewConversation = useCallback(() => {
+    const oldId = conversationId.current;
+    conversationId.current = uuid();
+    setMessages([]);
+    setConversationActive(false);
+    setHistoryOpen(false);
+    window.speechSynthesis.cancel();
+    void conversationStorage.remove(oldId);
+  }, []);
+
   const handleAddToCart = useCallback(
     async (variantId: string, productName: string, aiAcceptanceId?: string) => {
       try {
@@ -403,8 +436,11 @@ export default function ChatbotWidget() {
           >
           <ChatHeader
             onSettingsClick={(e) => setSettingsAnchor(e.currentTarget)}
+            onHistoryClick={() => setHistoryOpen((prev) => !prev)}
+            onNewConversation={handleNewConversation}
             onClose={() => setOpen(false)}
             isStaffMode={isStaffMode}
+            historyOpen={historyOpen}
           />
 
           <Menu
@@ -455,38 +491,52 @@ export default function ChatbotWidget() {
 
           <Divider />
 
-          <ChatMessages
-            messages={messages}
-            loading={loading}
-            onMessageClick={(s) => setInput(s)}
-            messagesEndRef={messagesEndRef}
-            isStaffMode={isStaffMode}
-            renderMessage={(msg, idx, isLastMessage) => (
-              <MessageBubble
-                key={idx}
-                msg={msg}
-                onAddToCart={handleAddToCart}
-                onNavigate={handleNavigate}
-                onSuggestionClick={sendMessageText}
-                isLastMessage={isLastMessage}
+          {historyOpen ? (
+            <ChatHistoryPanel
+              onSelectConversation={(conversation: ConversationHistoryItem) => {
+                conversationId.current = conversation.id;
+                setMessages(conversation.messages || []);
+                void conversationStorage.save(conversation.id, conversation.messages || []);
+                setHistoryOpen(false);
+              }}
+              onNewChat={handleNewConversation}
+            />
+          ) : (
+            <>
+              <ChatMessages
+                messages={messages}
+                loading={loading}
+                onMessageClick={(s) => setInput(s)}
+                messagesEndRef={messagesEndRef}
+                isStaffMode={isStaffMode}
+                renderMessage={(msg, idx, isLastMessage) => (
+                  <MessageBubble
+                    key={idx}
+                    msg={msg}
+                    onAddToCart={handleAddToCart}
+                    onNavigate={handleNavigate}
+                    onSuggestionClick={sendMessageText}
+                    isLastMessage={isLastMessage}
+                  />
+                )}
+                renderTypingIndicator={() => <TypingIndicator />}
               />
-            )}
-            renderTypingIndicator={() => <TypingIndicator />}
-          />
 
-          <ChatInput
-            conversationActive={conversationActive}
-            input={input}
-            transcript={transcript}
-            loading={loading}
-            listening={listening}
-            browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
-            onVoiceInput={handleVoiceInput}
-            onConversationToggle={handleConversationToggle}
-            onInputChange={setInput}
-            onKeyDown={handleKeyDown}
-            onSend={handleSend}
-          />
+              <ChatInput
+                conversationActive={conversationActive}
+                input={input}
+                transcript={transcript}
+                loading={loading}
+                listening={listening}
+                browserSupportsSpeechRecognition={browserSupportsSpeechRecognition}
+                onVoiceInput={handleVoiceInput}
+                onConversationToggle={handleConversationToggle}
+                onInputChange={setInput}
+                onKeyDown={handleKeyDown}
+                onSend={handleSend}
+              />
+            </>
+          )}
         </Paper>
       )}
 

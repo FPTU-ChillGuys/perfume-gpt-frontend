@@ -13,3 +13,21 @@ export interface AdminConversationListResponse {
     data: AdminConversation[];
     __httpStatusCode?: number;
 }
+
+export interface ConversationHistoryItem {
+    id: string;
+    userId: string;
+    updatedAt: string;
+    messages: ChatMessage[];
+}
+
+export interface ConversationHistoryResponse {
+    success: boolean;
+    data: {
+        items: ConversationHistoryItem[];
+        pageNumber: number;
+        pageSize: number;
+        totalCount: number;
+        totalPages: number;
+    };
+}
