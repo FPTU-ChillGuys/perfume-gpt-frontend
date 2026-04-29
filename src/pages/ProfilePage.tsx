@@ -23,7 +23,6 @@ import { UserProfileSidebar } from "../components/profile/UserProfileSidebar";
 import { LoyaltyHistorySection } from "../components/profile/LoyaltyHistorySection";
 import { VoucherSection } from "../components/profile/VoucherSection";
 import { ScentPreferencesSection } from "../components/profile/ScentPreferencesSection";
-import { SurveyHistorySection } from "../components/profile/SurveyHistorySection";
 import { NotificationSection } from "../components/profile/NotificationSection";
 
 const ProfilePage = () => {
@@ -66,7 +65,7 @@ const ProfilePage = () => {
     if (pathname === "/profile/vouchers") return "vouchers";
     if (pathname === "/profile/loyalty") return "loyalty";
     if (pathname === "/profile/scent-preferences") return "scent-preferences";
-    if (pathname === "/profile/survey-history") return "survey-history";
+
     return "profile";
   };
   const activeSection = getActiveSection();
@@ -286,8 +285,7 @@ const ProfilePage = () => {
             onProfileUpdated={loadProfile}
           />
         );
-      case "survey-history":
-        return <SurveyHistorySection />;
+
       case "change-password":
         return (
           <Box py={4} textAlign="center">

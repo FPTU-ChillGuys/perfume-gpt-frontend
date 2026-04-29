@@ -119,6 +119,7 @@ const ContentManagementPage = lazy(() =>
 const AIInstructionPage = lazy(() => import("./pages/AIInstructionPage"));
 const SurveyManagementPage = lazy(() => import("./pages/SurveyManagementPage"));
 const SurveyPage = lazy(() => import("./pages/SurveyPage"));
+const SurveyHistoryPage = lazy(() => import("./pages/SurveyHistoryPage"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const UserLogsManagementPage = lazy(() =>
   import("./pages/UserLogsManagementPage").then((m) => ({
@@ -289,6 +290,7 @@ function App() {
                       />
                       <Route path="/products" element={<ProductListPage />} />
                       <Route path="/survey" element={<SurveyPage />} />
+                      <Route path="/survey/history" element={<SurveyHistoryPage />} />
                       <Route
                         path="/products/:productId"
                         element={<ProductDetailPage />}
@@ -373,14 +375,6 @@ function App() {
                       />
                       <Route
                         path="/profile/scent-preferences"
-                        element={
-                          <RoleBasedRoute allowedRoles={["user"]}>
-                            <ProfilePage />
-                          </RoleBasedRoute>
-                        }
-                      />
-                      <Route
-                        path="/profile/survey-history"
                         element={
                           <RoleBasedRoute allowedRoles={["user"]}>
                             <ProfilePage />

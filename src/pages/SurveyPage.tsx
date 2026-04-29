@@ -15,6 +15,7 @@ import {
     NavigateBefore as PrevIcon,
     NavigateNext as NextIcon,
 } from "@mui/icons-material";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "@/contexts/AuthContextType";
 import { surveyService } from "@/services/ai/surveyService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
@@ -24,7 +25,6 @@ import type { AssistantPayload } from "@/types/chatbot";
 import { Header } from "@/components/layout/Header";
 import SurveyQuestionCard from "@/components/survey/user/SurveyQuestionCard";
 import SurveyResultView from "@/components/survey/user/SurveyResultView";
-import SurveyHistoryDrawer from "@/components/survey/user/SurveyHistoryDrawer";
 import { dexieCache } from "@/utils/dexieCache";
 import { CACHE_KEYS, CACHE_TTL } from "@/constants/cache";
 
@@ -73,6 +73,7 @@ function parseAiResponse(raw: string): AssistantPayload {
 export default function SurveyPage() {
     const authCtx = useContext(AuthContext);
     const userId = authCtx?.user?.id ?? getOrCreateGuestUserId();
+    const navigate = useNavigate();
 
     const [questions, setQuestions] = useState<SurveyQuestion[]>([]);
     const [loading, setLoading] = useState(true);
@@ -82,7 +83,6 @@ export default function SurveyPage() {
     const [result, setResult] = useState<AssistantPayload | null>(null);
     const [lastResult, setLastResult] = useState<AssistantPayload | null>(null);
     const [hydrated, setHydrated] = useState(false);
-    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const surveyResultCacheKey = `${CACHE_KEYS.SURVEY_RESULT}_${userId}`;
 
     // ── Fetch ─────────────────────────────────────────────────────
@@ -298,11 +298,10 @@ export default function SurveyPage() {
                         onReviewAnswers={handleReviewAnswers}
                         onReanalyze={handleReanalyze}
                         onRestart={handleRestart}
-                        onOpenHistory={() => setIsHistoryOpen(true)}
+                        onOpenHistory={() => navigate("/survey/history")}
                         isSubmitting={submitting}
                     />
                 </Container>
-                <SurveyHistoryDrawer open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} userId={userId} />
             </>
         );
     }
@@ -326,7 +325,7 @@ export default function SurveyPage() {
                         <Button
                             variant="outlined"
                             size="small"
-                            onClick={() => setIsHistoryOpen(true)}
+                            onClick={() => navigate("/survey/history")}
                             sx={{ textTransform: "none", borderRadius: 4 }}
                         >
                             Xem lịch sử khảo sát
@@ -423,7 +422,6 @@ export default function SurveyPage() {
                     </Typography>
                 )}
             </Container>
-            <SurveyHistoryDrawer open={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} userId={userId} />
         </>
     );
 }

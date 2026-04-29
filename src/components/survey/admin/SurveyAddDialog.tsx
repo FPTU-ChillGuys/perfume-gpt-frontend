@@ -2,18 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { v4 as uuid } from "uuid";
 import {
     Alert,
-    Autocomplete,
     Box,
     Button,
-    Checkbox,
     Chip,
     CircularProgress,
     Dialog,
     DialogActions,
     DialogContent,
+    DialogContentText,
     DialogTitle,
+    DialogTitle as ConfirmDialogTitle,
     Divider,
-    FormControlLabel,
     IconButton,
     MenuItem,
     Paper,
@@ -31,12 +30,70 @@ import {
     RemoveCircleOutline as RemoveAnswerIcon,
     DeleteOutline as DeleteIcon,
     DataObject as QueryIcon,
+    SwapHoriz as SwitchModeIcon,
+    AttachMoney as BudgetIcon,
 } from "@mui/icons-material";
-import { QuestionType, getAnswerDisplayText } from "@/types/survey";
-import type { SurveyQuestionRequest, SurveyAttributeTypeInfo, SurveyAttributeValueItem } from "@/types/survey";
+import { QuestionType } from "@/types/survey";
+import type { SurveyQuestionRequest, SurveyAttributeTypeInfo, SurveyAttributeValueItem, SurveyAttributeType } from "@/types/survey";
 import { surveyService } from "@/services/ai/surveyService";
 
 type AnswerMode = "manual" | "attribute";
+
+interface AnswerRow {
+    id: string;
+    mode: AnswerMode;
+    text: string;
+    attributeType: SurveyAttributeType | "";
+    selectedSubGroup: string;
+    availableSubGroups: string[];
+    availableValues: SurveyAttributeValueItem[];
+    selectedValues: Set<string>;
+    budgetRanges: { min?: number; max?: number }[];
+}
+
+interface QuestionForm {
+    id: string;
+    question: string;
+    questionType: QuestionType;
+    budgetMode: boolean;
+    answers: AnswerRow[];
+}
+
+function formatBudgetLabel(min?: number, max?: number): string {
+    const fmt = (v: number) => v.toLocaleString("vi-VN") + "đ";
+    if (min !== undefined && max !== undefined) return `${fmt(min)} - ${fmt(max)}`;
+    if (min !== undefined) return `Trên ${fmt(min)}`;
+    if (max !== undefined) return `Dưới ${fmt(max)}`;
+    return "";
+}
+
+function createEmptyAnswerRow(mode: AnswerMode = "manual"): AnswerRow {
+    return {
+        id: uuid(),
+        mode,
+        text: "",
+        attributeType: "",
+        selectedSubGroup: "",
+        availableSubGroups: [],
+        availableValues: [],
+        selectedValues: new Set(),
+        budgetRanges: [],
+    };
+}
+
+function createEmptyBudgetRow(): AnswerRow {
+    return {
+        id: uuid(),
+        mode: "manual",
+        text: "",
+        attributeType: "",
+        selectedSubGroup: "",
+        availableSubGroups: [],
+        availableValues: [],
+        selectedValues: new Set(),
+        budgetRanges: [{ max: 500000 }, { min: 500000, max: 1000000 }],
+    };
+}
 
 interface Props {
     open: boolean;
@@ -45,83 +102,67 @@ interface Props {
     onSubmit: (payload: SurveyQuestionRequest[]) => void;
 }
 
-interface QuestionForm {
-    id: string; // for React key
-    question: string;
-    questionType: QuestionType;
-    answerMode: AnswerMode;
-    // Manual mode
-    answers: string[];
-    // Attribute mode
-    selectedAttributeType: string;
-    selectedSubGroup: string;
-    availableSubGroups: string[]; // Thêm field này để lưu danh sách các nhóm
-    availableValues: SurveyAttributeValueItem[];
-    selectedValues: Set<string>;
-    // Budget mode
-    budgetRanges: { label: string; min?: number; max?: number }[];
-}
-
 export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }: Props) {
     const [attributeTypes, setAttributeTypes] = useState<SurveyAttributeTypeInfo[]>([]);
     const [loadingAttr, setLoadingAttr] = useState(false);
+
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [confirmCallback, setConfirmCallback] = useState<(() => void) | null>(null);
 
     const createEmptyForm = (): QuestionForm => ({
         id: uuid(),
         question: "",
         questionType: QuestionType.SINGLE,
-        answerMode: "manual",
-        answers: ["", ""],
-        selectedAttributeType: "",
-        selectedSubGroup: "",
-        availableSubGroups: [],
-        availableValues: [],
-        selectedValues: new Set(),
-        budgetRanges: [
-            { label: "Dưới 500.000đ", max: 500000 },
-            { label: "500.000đ - 1.000.000đ", min: 500000, max: 1000000 },
-        ],
+        budgetMode: false,
+        answers: [createEmptyAnswerRow(), createEmptyAnswerRow()],
     });
-
 
     const [forms, setForms] = useState<QuestionForm[]>([createEmptyForm()]);
 
-    // Fetch attribute types on open
     useEffect(() => {
         if (open) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             setForms([createEmptyForm()]);
-            surveyService.getAttributeTypes().then(res => {
-                setAttributeTypes(res.data);
-            }).catch(console.error);
+            surveyService.getAttributeTypes().then((res) => setAttributeTypes(res.data)).catch(console.error);
         }
     }, [open]);
 
-    // Fetch values when attribute type changes
-    const handleAttributeTypeChange = useCallback(async (formId: string, type: string) => {
-        setForms(prev => prev.map(f => f.id === formId ? { ...f, selectedAttributeType: type, availableSubGroups: [], availableValues: [], selectedSubGroup: "", selectedValues: new Set() } : f));
+    const showConfirmDialog = (callback: () => void) => {
+        setConfirmCallback(() => callback);
+        setConfirmOpen(true);
+    };
+
+    const handleConfirmClose = (confirmed: boolean) => {
+        setConfirmOpen(false);
+        if (confirmed && confirmCallback) confirmCallback();
+        setConfirmCallback(null);
+    };
+
+    const handleAttributeTypeChange = useCallback(async (formId: string, rowId: string, type: string) => {
+        setForms((prev) => prev.map((f) => {
+            if (f.id !== formId) return f;
+            return { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, attributeType: type as SurveyAttributeType, selectedSubGroup: "", availableSubGroups: [], availableValues: [], selectedValues: new Set() } : r) };
+        }));
 
         if (!type) return;
         setLoadingAttr(true);
         try {
             const res = await surveyService.getAttributeValues(type);
-            setForms(prev => prev.map(f => {
-                if (f.id !== formId) return f;
-                const values = res.data.values || [];
-                const subGroups = res.data.subGroups || [];
+            const values = res.data.values || [];
+            const subGroups = res.data.subGroups || [];
 
-                // If sub-groups exist (attribute type), store them all and use first one by default
-                if (subGroups.length > 0 && subGroups[0]) {
-                    const firstGroup = subGroups[0];
-                    const subGroupNames = subGroups.map(g => g.attributeName);
-                    return {
-                        ...f,
-                        availableSubGroups: subGroupNames,
-                        availableValues: firstGroup.values,
-                        selectedSubGroup: firstGroup.attributeName
-                    };
-                }
-                return { ...f, availableSubGroups: [], availableValues: values };
+            setForms((prev) => prev.map((f) => {
+                if (f.id !== formId) return f;
+                return {
+                    ...f,
+                    answers: f.answers.map((r) => {
+                        if (r.id !== rowId) return r;
+                        if (subGroups.length > 0 && subGroups[0]) {
+                            const firstGroup = subGroups[0];
+                            return { ...r, availableSubGroups: subGroups.map((g) => g.attributeName), availableValues: firstGroup.values, selectedSubGroup: firstGroup.attributeName };
+                        }
+                        return { ...r, availableSubGroups: [], availableValues: values };
+                    }),
+                };
             }));
         } catch (err) {
             console.error("Failed to fetch attribute values:", err);
@@ -130,15 +171,17 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
         }
     }, []);
 
-    const handleSubGroupChange = useCallback(async (formId: string, subGroupName: string) => {
-        const type = forms.find(f => f.id === formId)?.selectedAttributeType;
-        if (!type) return;
+    const handleSubGroupChange = useCallback(async (formId: string, rowId: string, subGroupName: string) => {
+        const form = forms.find((f) => f.id === formId);
+        const row = form?.answers.find((r) => r.id === rowId);
+        if (!row?.attributeType) return;
 
+        setForms((prev) => prev.map((f) => f.id !== formId ? f : { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, selectedSubGroup: subGroupName, selectedValues: new Set() } : r) }));
         setLoadingAttr(true);
         try {
-            const res = await surveyService.getAttributeValues(type);
-            const group = res.data.subGroups?.find(g => g.attributeName === subGroupName);
-            setForms(prev => prev.map(f => f.id === formId ? { ...f, selectedSubGroup: subGroupName, availableValues: group?.values || [], selectedValues: new Set() } : f));
+            const res = await surveyService.getAttributeValues(row.attributeType);
+            const group = res.data.subGroups?.find((g) => g.attributeName === subGroupName);
+            setForms((prev) => prev.map((f) => f.id !== formId ? f : { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, availableValues: group?.values || [] } : r) }));
         } catch (err) {
             console.error("Failed to fetch sub-group values:", err);
         } finally {
@@ -146,436 +189,321 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
         }
     }, [forms]);
 
-    // Form handlers
-    const handleAddForm = () => setForms(prev => [...prev, createEmptyForm()]);
-    const handleRemoveForm = (id: string) => setForms(prev => prev.filter(f => f.id !== id));
+    const handleAddForm = () => setForms((prev) => [...prev, createEmptyForm()]);
+    const handleRemoveForm = (id: string) => setForms((prev) => prev.filter((f) => f.id !== id));
 
-    const updateForm = (id: string, field: keyof QuestionForm, value: any) => {
-        setForms(prev => prev.map(f => (f.id === id ? { ...f, [field]: value } : f)));
+    const updateForm = (formId: string, field: "question" | "questionType" | "budgetMode", value: string | boolean) => {
+        setForms((prev) => prev.map((f) => (f.id === formId ? { ...f, [field]: value } : f)));
     };
 
-    const updateAnswer = (formId: string, answerIndex: number, value: string) => {
-        setForms(prev =>
-            prev.map(f => {
+    const handleBudgetModeToggle = (formId: string, enabled: boolean) => {
+        const form = forms.find((f) => f.id === formId);
+        if (!form) return;
+
+        const hasData = form.budgetMode
+            ? form.answers.some((r) => r.budgetRanges.some((br) => br.min !== undefined || br.max !== undefined))
+            : form.answers.some((r) => r.mode === "manual" ? r.text.trim() : r.selectedValues.size > 0);
+
+        const applyToggle = () => {
+            setForms((prev) => prev.map((f) => {
                 if (f.id !== formId) return f;
-                const newAnswers = [...f.answers];
-                newAnswers[answerIndex] = value;
-                return { ...f, answers: newAnswers };
-            })
-        );
+                const newAns = enabled ? f.answers.map(() => createEmptyBudgetRow()) : [createEmptyAnswerRow("manual"), createEmptyAnswerRow("manual")];
+                return { ...f, budgetMode: enabled, answers: newAns };
+            }));
+        };
+
+        if (hasData) {
+            showConfirmDialog(applyToggle);
+        } else {
+            applyToggle();
+        }
     };
 
     const handleAddAnswer = (formId: string) => {
-        setForms(prev => prev.map(f => (f.id === formId ? { ...f, answers: [...f.answers, ""] } : f)));
-    };
-
-    const handleRemoveAnswer = (formId: string, answerIndex: number) => {
-        setForms(prev =>
-            prev.map(f => {
-                if (f.id !== formId) return f;
-                if (f.answers.length <= 2) return f;
-                return { ...f, answers: f.answers.filter((_, i) => i !== answerIndex) };
-            })
-        );
-    };
-
-    const toggleValueSelection = (formId: string, displayText: string) => {
-        setForms(prev => prev.map(f => {
+        setForms((prev) => prev.map((f) => {
             if (f.id !== formId) return f;
-            const next = new Set(f.selectedValues);
-            if (next.has(displayText)) next.delete(displayText);
-            else next.add(displayText);
-            return { ...f, selectedValues: next };
+            const row = f.budgetMode ? createEmptyBudgetRow() : createEmptyAnswerRow();
+            return { ...f, answers: [...f.answers, row] };
         }));
     };
 
-    const selectAllValues = (formId: string) => {
-        setForms(prev => prev.map(f => {
+    const handleRemoveAnswer = (formId: string, rowId: string) => {
+        setForms((prev) => prev.map((f) => {
             if (f.id !== formId) return f;
-            return { ...f, selectedValues: new Set(f.availableValues.map(v => v.displayText)) };
+            if (f.answers.length <= 2) return f;
+            return { ...f, answers: f.answers.filter((r) => r.id !== rowId) };
         }));
     };
 
-    const deselectAllValues = (formId: string) => {
-        setForms(prev => prev.map(f => (f.id === formId ? { ...f, selectedValues: new Set() } : f)));
-    };
-
-    // Budget range handlers
-    const addBudgetRange = (formId: string) => {
-        setForms(prev => prev.map(f => (f.id === formId ? { ...f, budgetRanges: [...f.budgetRanges, { label: "", min: undefined, max: undefined }] } : f)));
-    };
-
-    const updateBudgetRange = (formId: string, idx: number, field: "label" | "min" | "max", value: any) => {
-        setForms(prev => prev.map(f => {
+    const switchRowMode = (formId: string, rowId: string, mode: AnswerMode) => {
+        setForms((prev) => prev.map((f) => {
             if (f.id !== formId) return f;
-            const ranges = [...f.budgetRanges];
-            const updatedRange = { ...ranges[idx], [field]: value };
-            ranges[idx] = updatedRange as { label: string; min?: number; max?: number };
-            return { ...f, budgetRanges: ranges };
-        }));
-    };
-
-    const removeBudgetRange = (formId: string, idx: number) => {
-        setForms(prev => prev.map(f => {
-            if (f.id !== formId) return f;
-            if (f.budgetRanges.length <= 2) return f;
-            return { ...f, budgetRanges: f.budgetRanges.filter((_, i) => i !== idx) };
-        }));
-    };
-
-    // Submit
-    const handleSubmit = () => {
-        const payload: SurveyQuestionRequest[] = forms.map(f => {
-            if (f.answerMode === "attribute") {
-                if (f.selectedAttributeType === "budget") {
-                    // Budget: serialize budget ranges as query answers
-                    const budgetAnswers = f.budgetRanges.filter(r => r.label.trim()).map(r => ({
-                        answer: JSON.stringify({
-                            displayText: r.label,
-                            queryFragment: { type: "budget", min: r.min, max: r.max },
-                        }),
-                    }));
-                    return {
-                        question: f.question.trim(),
-                        questionType: f.questionType,
-                        answers: budgetAnswers,
-                    };
-                }
-
-                // Attribute: serialize selected values as query answers
-                const selectedItems = f.availableValues.filter(v => f.selectedValues.has(v.displayText));
-                return {
-                    question: f.question.trim(),
-                    questionType: f.questionType,
-                    answers: selectedItems.map(v => ({
-                        answer: JSON.stringify({
-                            displayText: v.displayText,
-                            queryFragment: v.queryFragment,
-                        }),
-                    })),
-                };
-            }
-
-            // Manual mode
-            const filled = f.answers.filter(a => a.trim());
             return {
-                question: f.question.trim(),
-                questionType: f.questionType,
-                answers: filled.map(a => ({ answer: a.trim() })),
+                ...f,
+                answers: f.answers.map((r) => {
+                    if (r.id !== rowId) return r;
+                    return {
+                        ...r,
+                        mode,
+                        text: mode === "manual" ? r.text : "",
+                        attributeType: mode === "attribute" ? "" as SurveyAttributeType | "" : "",
+                        availableSubGroups: [],
+                        availableValues: [],
+                        selectedValues: new Set(),
+                    };
+                }),
             };
+        }));
+    };
+
+    const updateAnswerText = (formId: string, rowId: string, value: string) => {
+        setForms((prev) => prev.map((f) => f.id !== formId ? f : { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, text: value } : r) }));
+    };
+
+    const toggleValueSelection = (formId: string, rowId: string, displayText: string) => {
+        setForms((prev) => prev.map((f) => {
+            if (f.id !== formId) return f;
+            return { ...f, answers: f.answers.map((r) => { if (r.id !== rowId) return r; const next = new Set(r.selectedValues); if (next.has(displayText)) next.delete(displayText); else next.add(displayText); return { ...r, selectedValues: next }; }) };
+        }));
+    };
+
+    const selectAllValues = (formId: string, rowId: string) => {
+        setForms((prev) => prev.map((f) => f.id !== formId ? f : { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, selectedValues: new Set(r.availableValues.map((v) => v.displayText)) } : r) }));
+    };
+
+    const deselectAllValues = (formId: string, rowId: string) => {
+        setForms((prev) => prev.map((f) => f.id !== formId ? f : { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, selectedValues: new Set() } : r) }));
+    };
+
+    const addBudgetRange = (formId: string, rowId: string) => {
+        setForms((prev) => prev.map((f) => f.id !== formId ? f : { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, budgetRanges: [...r.budgetRanges, { min: undefined, max: undefined }] } : r) }));
+    };
+
+    const updateBudgetRange = (formId: string, rowId: string, rangeIdx: number, field: "min" | "max", value: number | undefined) => {
+        setForms((prev) => prev.map((f) => {
+            if (f.id !== formId) return f;
+            return {
+                ...f,
+                answers: f.answers.map((r) => {
+                    if (r.id !== rowId) return r;
+                    const ranges = [...r.budgetRanges];
+                    const existing = ranges[rangeIdx]!;
+                    ranges[rangeIdx] = { ...existing, [field]: value };
+                    return { ...r, budgetRanges: ranges };
+                }),
+            };
+        }));
+    };
+
+    const removeBudgetRange = (formId: string, rowId: string, rangeIdx: number) => {
+        setForms((prev) => prev.map((f) => {
+            if (f.id !== formId) return f;
+            return {
+                ...f,
+                answers: f.answers.map((r) => {
+                    if (r.id !== rowId) return r;
+                    if (r.budgetRanges.length <= 2) return r;
+                    return { ...r, budgetRanges: r.budgetRanges.filter((_, i) => i !== rangeIdx) };
+                }),
+            };
+        }));
+    };
+
+    const handleSubmit = () => {
+        const payload: SurveyQuestionRequest[] = forms.map((f) => {
+            const answers: { answer: string }[] = [];
+            if (f.budgetMode) {
+                for (const row of f.answers) {
+                    for (const r of row.budgetRanges) {
+                        if (r.min !== undefined || r.max !== undefined) {
+                            answers.push({ answer: JSON.stringify({ displayText: formatBudgetLabel(r.min, r.max), queryFragment: { type: "budget", min: r.min, max: r.max } }) });
+                        }
+                    }
+                }
+            } else {
+                for (const row of f.answers) {
+                    if (row.mode === "manual") {
+                        if (row.text.trim()) answers.push({ answer: row.text.trim() });
+                    } else {
+                        const selectedItems = row.availableValues.filter((v) => row.selectedValues.has(v.displayText));
+                        for (const v of selectedItems) {
+                            answers.push({ answer: JSON.stringify({ displayText: v.displayText, queryFragment: v.queryFragment }) });
+                        }
+                    }
+                }
+            }
+            return { question: f.question.trim(), questionType: f.questionType, answers };
         });
         onSubmit(payload);
     };
 
-    // Validation
-    const isInvalid = forms.some(f => {
+    const isInvalid = forms.some((f) => {
         if (!f.question.trim()) return true;
-        if (f.answerMode === "manual") return f.answers.filter(a => a.trim()).length < 2;
-        if (f.answerMode === "attribute") {
-            if (f.selectedAttributeType === "budget") return f.budgetRanges.filter(r => r.label.trim()).length < 2;
-            return f.selectedValues.size < 2;
+        if (f.budgetMode) {
+            const validCount = f.answers.reduce((count, r) => count + r.budgetRanges.filter((br) => br.min !== undefined || br.max !== undefined).length, 0);
+            return validCount < 2;
         }
-        return true;
+        const validCount = f.answers.reduce((count, r) => {
+            if (r.mode === "manual") return count + (r.text.trim() ? 1 : 0);
+            return count + r.selectedValues.size;
+        }, 0);
+        return validCount < 2;
     });
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
-            <DialogTitle
-                sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    borderBottom: "1px solid",
-                    borderColor: "divider",
-                    pb: 2,
-                }}
-            >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                    <SurveyIcon color="primary" />
-                    <Typography variant="h6" fontWeight="bold">Thêm câu hỏi mới</Typography>
-                </Box>
-                <IconButton onClick={onClose} disabled={isCreating} size="small">
-                    <CloseIcon />
-                </IconButton>
-            </DialogTitle>
+        <>
+            <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+                <DialogTitle sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid", borderColor: "divider", pb: 2 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><SurveyIcon color="primary" /><Typography variant="h6" fontWeight="bold">Thêm câu hỏi mới</Typography></Box>
+                    <IconButton onClick={onClose} disabled={isCreating} size="small"><CloseIcon /></IconButton>
+                </DialogTitle>
 
-            <DialogContent sx={{ p: 3, mt: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                {forms.map((form, index) => {
-                    const isAttributeMode = form.answerMode === "attribute";
-                    const isBudget = form.selectedAttributeType === "budget";
-                    const hasSubGroups = attributeTypes.find(a => a.type === form.selectedAttributeType)?.type === "attribute";
-
-                    return (
+                <DialogContent sx={{ p: 3, mt: 1, display: "flex", flexDirection: "column", gap: 4 }}>
+                    {forms.map((form, index) => (
                         <Paper key={form.id} variant="outlined" sx={{ p: 3, position: "relative", borderRadius: 2 }}>
-                            {forms.length > 1 && (
-                                <IconButton
-                                    color="error"
-                                    onClick={() => handleRemoveForm(form.id)}
-                                    disabled={isCreating}
-                                    sx={{ position: "absolute", top: 8, right: 8 }}
-                                >
-                                    <DeleteIcon />
-                                </IconButton>
-                            )}
+                            {forms.length > 1 && <IconButton color="error" onClick={() => handleRemoveForm(form.id)} disabled={isCreating} sx={{ position: "absolute", top: 8, right: 8 }}><DeleteIcon /></IconButton>}
 
-                            <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>
-                                Câu hỏi {index + 1}
-                            </Typography>
+                            <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold" }}>Câu hỏi {index + 1}</Typography>
 
-                            {/* Question Type */}
-                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                                Loại câu hỏi
-                            </Typography>
-                            <ToggleButtonGroup
-                                value={form.questionType}
-                                exclusive
-                                onChange={(_, v) => { if (v) updateForm(form.id, "questionType", v); }}
-                                size="small"
-                                sx={{ mb: 2.5 }}
-                                disabled={isCreating}
-                            >
+                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>Loại câu hỏi</Typography>
+                            <ToggleButtonGroup value={form.questionType} exclusive onChange={(_, v) => { if (v) updateForm(form.id, "questionType", v); }} size="small" sx={{ mb: 2.5 }} disabled={isCreating}>
                                 <ToggleButton value={QuestionType.SINGLE}>Một đáp án (single)</ToggleButton>
                                 <ToggleButton value={QuestionType.MULTIPLE}>Nhiều đáp án (multiple)</ToggleButton>
                             </ToggleButtonGroup>
 
-                            {/* Question Text */}
-                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                                Nội dung câu hỏi *
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                multiline
-                                minRows={2}
-                                variant="outlined"
-                                placeholder="Nhập câu hỏi..."
-                                value={form.question}
-                                onChange={(e) => updateForm(form.id, "question", e.target.value)}
-                                disabled={isCreating}
-                                sx={{ mb: 3 }}
-                            />
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2.5 }}>
+                                <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: "bold", mb: 0 }}>Chế độ trả lời</Typography>
+                                <ToggleButtonGroup value={form.budgetMode} exclusive onChange={(_, v) => { if (v !== null) handleBudgetModeToggle(form.id, v); }} size="small" disabled={isCreating}>
+                                    <ToggleButton value={false}>Thuộc tính</ToggleButton>
+                                    <ToggleButton value={true} color="success"><BudgetIcon sx={{ fontSize: 16, mr: 0.5 }} />Ngân sách</ToggleButton>
+                                </ToggleButtonGroup>
+                            </Box>
+
+                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>Nội dung câu hỏi *</Typography>
+                            <TextField fullWidth multiline minRows={2} variant="outlined" placeholder="Nhập câu hỏi..." value={form.question} onChange={(e) => updateForm(form.id, "question", e.target.value)} disabled={isCreating} sx={{ mb: 3 }} />
 
                             <Divider sx={{ mb: 2 }} />
 
-                            {/* Answer Mode Toggle */}
-                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                                Cách nhập đáp án
-                            </Typography>
-                            <ToggleButtonGroup
-                                value={form.answerMode}
-                                exclusive
-                                onChange={(_, v) => { if (v) updateForm(form.id, "answerMode", v); }}
-                                size="small"
-                                sx={{ mb: 2.5 }}
-                                disabled={isCreating}
-                            >
-                                <ToggleButton value="manual">Nhập thủ công</ToggleButton>
-                                <ToggleButton value="attribute">
-                                    <QueryIcon sx={{ mr: 0.5, fontSize: 18 }} /> Chọn từ thuộc tính
-                                </ToggleButton>
-                            </ToggleButtonGroup>
+                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+                                <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">Danh sách câu trả lời * (tối thiểu 2)</Typography>
+                                <Box sx={{ display: "flex", gap: 1 }}>
+                                    <Button size="small" startIcon={<AddAnswerIcon />} onClick={() => handleAddAnswer(form.id)} disabled={isCreating}>Thêm đáp án</Button>
+                                </Box>
+                            </Box>
 
-                            {/* ── Manual Mode ─────────────────────────────── */}
-                            {!isAttributeMode && (
-                                <>
-                                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
-                                        <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
-                                            Danh sách câu trả lời * (tối thiểu 2)
-                                        </Typography>
-                                        <Button size="small" startIcon={<AddAnswerIcon />} onClick={() => handleAddAnswer(form.id)} disabled={isCreating}>
-                                            Thêm đáp án
-                                        </Button>
-                                    </Box>
-
-                                    {form.answers.map((ans, idx) => (
-                                        <Box key={idx} sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
-                                            <Chip label={idx + 1} size="small" color="primary" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                placeholder={`Đáp án ${idx + 1}...`}
-                                                value={ans}
-                                                onChange={(e) => updateAnswer(form.id, idx, e.target.value)}
-                                                disabled={isCreating}
-                                            />
-                                            <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(form.id, idx)} disabled={form.answers.length <= 2 || isCreating}>
-                                                <RemoveAnswerIcon />
-                                            </IconButton>
+                            {form.budgetMode ? (
+                                form.answers.map((row, ansIdx) => (
+                                    <Box key={row.id} sx={{ mb: 2, p: 1.5, border: "1px solid", borderColor: "success.light", borderRadius: 1.5, bgcolor: "success.50" }}>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                                            <Chip label={ansIdx + 1} size="small" color="success" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
+                                            <Chip label="Ngân sách" size="small" color="success" variant="outlined" sx={{ height: 22, fontSize: "0.7rem" }} />
+                                            <Box sx={{ flexGrow: 1 }} />
+                                            <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(form.id, row.id)} disabled={form.answers.length <= 2 || isCreating}><RemoveAnswerIcon /></IconButton>
                                         </Box>
-                                    ))}
 
-                                    {form.answers.filter(a => a.trim()).length < 2 && (
-                                        <Alert severity="warning" sx={{ mt: 1 }}>Cần ít nhất 2 đáp án hợp lệ</Alert>
-                                    )}
-                                </>
+                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold", fontSize: "0.75rem" }}>Các khoảng ngân sách (tối thiểu 2)</Typography>
+                                        {row.budgetRanges.map((range, rIdx) => {
+                                            const autoLabel = formatBudgetLabel(range.min, range.max);
+                                            return (
+                                                <Box key={rIdx} sx={{ display: "flex", gap: 1, mb: 1, alignItems: "center" }}>
+                                                    <Chip label={rIdx + 1} size="small" color="success" variant="outlined" sx={{ minWidth: 28 }} />
+                                                    <TextField size="small" type="number" placeholder="Từ (VND)" value={range.min ?? ""} onChange={(e) => updateBudgetRange(form.id, row.id, rIdx, "min", e.target.value ? Number(e.target.value) : undefined)} sx={{ flex: 1 }} />
+                                                    <Typography color="text.secondary">-</Typography>
+                                                    <TextField size="small" type="number" placeholder="Đến (VND)" value={range.max ?? ""} onChange={(e) => updateBudgetRange(form.id, row.id, rIdx, "max", e.target.value ? Number(e.target.value) : undefined)} sx={{ flex: 1 }} />
+                                                    {autoLabel && <Chip label={autoLabel} size="small" color="success" variant="filled" sx={{ fontSize: "0.7rem" }} />}
+                                                    <IconButton size="small" color="error" onClick={() => removeBudgetRange(form.id, row.id, rIdx)} disabled={row.budgetRanges.length <= 2}><RemoveAnswerIcon /></IconButton>
+                                                </Box>
+                                            );
+                                        })}
+                                        <Button size="small" startIcon={<AddAnswerIcon />} onClick={() => addBudgetRange(form.id, row.id)}>Thêm khoảng giá</Button>
+                                    </Box>
+                                ))
+                            ) : (
+                                form.answers.map((row, ansIdx) => (
+                                    <Box key={row.id} sx={{ mb: 2, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 1.5 }}>
+                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                                            <Chip label={ansIdx + 1} size="small" color="primary" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
+                                            {row.mode === "manual" ? (
+                                                <Button size="small" variant="outlined" startIcon={<QueryIcon sx={{ fontSize: 16 }} />} onClick={() => switchRowMode(form.id, row.id, "attribute")} disabled={isCreating} sx={{ textTransform: "none", fontSize: "0.75rem" }}>Thuộc tính</Button>
+                                            ) : (
+                                                <Button size="small" variant="outlined" color="warning" startIcon={<SwitchModeIcon sx={{ fontSize: 16 }} />} onClick={() => switchRowMode(form.id, row.id, "manual")} disabled={isCreating} sx={{ textTransform: "none", fontSize: "0.75rem" }}>Thủ công</Button>
+                                            )}
+                                            {row.mode === "attribute" && <Chip label="Query" size="small" color="info" variant="outlined" sx={{ height: 22, fontSize: "0.7rem" }} />}
+                                            <Box sx={{ flexGrow: 1 }} />
+                                            <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(form.id, row.id)} disabled={form.answers.length <= 2 || isCreating}><RemoveAnswerIcon /></IconButton>
+                                        </Box>
+
+                                        {row.mode === "manual" ? (
+                                            <TextField fullWidth size="small" placeholder={`Đáp án ${ansIdx + 1}...`} value={row.text} onChange={(e) => updateAnswerText(form.id, row.id, e.target.value)} disabled={isCreating} />
+                                        ) : (
+                                            <>
+                                                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold", fontSize: "0.75rem" }}>Loại thuộc tính</Typography>
+                                                <Select fullWidth size="small" value={row.attributeType} onChange={(e) => handleAttributeTypeChange(form.id, row.id, e.target.value)} displayEmpty disabled={isCreating} sx={{ mb: 1.5 }}>
+                                                    <MenuItem value="" disabled>-- Chọn thuộc tính --</MenuItem>
+                                                    {attributeTypes.filter((at) => at.type !== "budget").map((at) => (<MenuItem key={at.type} value={at.type}>{at.label} — {at.description}</MenuItem>))}
+                                                </Select>
+
+                                                {(attributeTypes.find((a) => a.type === row.attributeType)?.type === "attribute") && (
+                                                    <>
+                                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold", fontSize: "0.75rem" }}>Nhóm thuộc tính</Typography>
+                                                        <Select fullWidth size="small" value={row.selectedSubGroup} onChange={(e) => handleSubGroupChange(form.id, row.id, e.target.value)} displayEmpty disabled={isCreating || loadingAttr} sx={{ mb: 1.5 }}>
+                                                            <MenuItem value="" disabled>-- Chọn nhóm --</MenuItem>
+                                                            {row.availableSubGroups.map((name) => (<MenuItem key={name} value={name}>{name}</MenuItem>))}
+                                                        </Select>
+                                                    </>
+                                                )}
+
+                                                {row.availableValues.length > 0 && (
+                                                    <>
+                                                        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 0.5 }}>
+                                                            <Typography variant="subtitle2" color="text.secondary" fontWeight="bold" sx={{ fontSize: "0.75rem" }}>Chọn giá trị ({row.selectedValues.size}/{row.availableValues.length})</Typography>
+                                                            <Box>
+                                                                <Button size="small" onClick={() => selectAllValues(form.id, row.id)} sx={{ mr: 0.5, fontSize: "0.7rem" }}>Chọn tất cả</Button>
+                                                                <Button size="small" onClick={() => deselectAllValues(form.id, row.id)} sx={{ fontSize: "0.7rem" }}>Bỏ chọn</Button>
+                                                            </Box>
+                                                        </Box>
+                                                        <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, maxHeight: 200, overflow: "auto", border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1 }}>
+                                                            {row.availableValues.map((val) => (<Chip key={val.displayText} label={val.displayText} onClick={() => toggleValueSelection(form.id, row.id, val.displayText)} color={row.selectedValues.has(val.displayText) ? "primary" : "default"} variant={row.selectedValues.has(val.displayText) ? "filled" : "outlined"} sx={{ cursor: "pointer", fontSize: "0.8rem" }} />))}
+                                                        </Box>
+                                                    </>
+                                                )}
+
+                                                {loadingAttr ? (<Box sx={{ display: "flex", justifyContent: "center", py: 2 }}><CircularProgress size={20} /></Box>) : null}
+                                            </>
+                                        )}
+                                    </Box>
+                                ))
                             )}
 
-                            {/* ── Attribute Mode ─────────────────────────── */}
-                            {isAttributeMode && (
-                                <>
-                                    {/* Attribute type picker */}
-                                    <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                                        Chọn loại thuộc tính *
-                                    </Typography>
-                                    <Select
-                                        fullWidth
-                                        size="small"
-                                        value={form.selectedAttributeType}
-                                        onChange={(e) => handleAttributeTypeChange(form.id, e.target.value)}
-                                        displayEmpty
-                                        disabled={isCreating}
-                                        sx={{ mb: 2 }}
-                                    >
-                                        <MenuItem value="" disabled>-- Chọn thuộc tính --</MenuItem>
-                                        {attributeTypes.map(at => (
-                                            <MenuItem key={at.type} value={at.type}>
-                                                {at.label} — {at.description}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-
-                                    {/* Sub-group picker (for 'attribute' type) */}
-                                    {hasSubGroups && form.selectedAttributeType === "attribute" && (
-                                        <>
-                                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold" }}>
-                                                Chọn nhóm thuộc tính *
-                                            </Typography>
-                                            <Select
-                                                fullWidth
-                                                size="small"
-                                                value={form.selectedSubGroup}
-                                                onChange={(e) => handleSubGroupChange(form.id, e.target.value)}
-                                                displayEmpty
-                                                disabled={isCreating || loadingAttr}
-                                                sx={{ mb: 2 }}
-                                            >
-                                                <MenuItem value="" disabled>-- Chọn nhóm --</MenuItem>
-                                                {form.availableSubGroups.map(name => (
-                                                    <MenuItem key={name} value={name}>{name}</MenuItem>
-                                                ))}
-                                            </Select>
-                                        </>
-                                    )}
-
-                                    {/* Budget ranges input */}
-                                    {isBudget && (
-                                        <>
-                                            <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1, fontWeight: "bold" }}>
-                                                Các khoảng ngân sách * (tối thiểu 2)
-                                            </Typography>
-                                            {form.budgetRanges.map((range, idx) => (
-                                                <Box key={idx} sx={{ display: "flex", gap: 1, mb: 1.5, alignItems: "center" }}>
-                                                    <Chip label={idx + 1} size="small" color="primary" variant="outlined" sx={{ minWidth: 32 }} />
-                                                    <TextField
-                                                        size="small"
-                                                        placeholder="Nhãn hiển thị"
-                                                        value={range.label}
-                                                        onChange={(e) => updateBudgetRange(form.id, idx, "label", e.target.value)}
-                                                        sx={{ flex: 2 }}
-                                                    />
-                                                    <TextField
-                                                        size="small"
-                                                        type="number"
-                                                        placeholder="Từ (VND)"
-                                                        value={range.min ?? ""}
-                                                        onChange={(e) => updateBudgetRange(form.id, idx, "min", e.target.value ? Number(e.target.value) : undefined)}
-                                                        sx={{ flex: 1 }}
-                                                    />
-                                                    <Typography color="text.secondary">-</Typography>
-                                                    <TextField
-                                                        size="small"
-                                                        type="number"
-                                                        placeholder="Đến (VND)"
-                                                        value={range.max ?? ""}
-                                                        onChange={(e) => updateBudgetRange(form.id, idx, "max", e.target.value ? Number(e.target.value) : undefined)}
-                                                        sx={{ flex: 1 }}
-                                                    />
-                                                    <IconButton size="small" color="error" onClick={() => removeBudgetRange(form.id, idx)} disabled={form.budgetRanges.length <= 2}>
-                                                        <RemoveAnswerIcon />
-                                                    </IconButton>
-                                                </Box>
-                                            ))}
-                                            <Button size="small" startIcon={<AddAnswerIcon />} onClick={() => addBudgetRange(form.id)} sx={{ mt: 0.5 }}>
-                                                Thêm khoảng giá
-                                            </Button>
-                                        </>
-                                    )}
-
-                                    {/* Values checkbox grid */}
-                                    {!isBudget && form.availableValues.length > 0 && (
-                                        <>
-                                            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}>
-                                                <Typography variant="subtitle2" color="text.secondary" fontWeight="bold">
-                                                    Chọn giá trị làm đáp án * ({form.selectedValues.size}/{form.availableValues.length})
-                                                </Typography>
-                                                <Box>
-                                                    <Button size="small" onClick={() => selectAllValues(form.id)} sx={{ mr: 0.5 }}>Chọn tất cả</Button>
-                                                    <Button size="small" onClick={() => deselectAllValues(form.id)}>Bỏ chọn</Button>
-                                                </Box>
-                                            </Box>
-                                            <Box sx={{
-                                                display: "flex",
-                                                flexWrap: "wrap",
-                                                gap: 1,
-                                                maxHeight: 300,
-                                                overflow: "auto",
-                                                border: "1px solid",
-                                                borderColor: "divider",
-                                                borderRadius: 1,
-                                                p: 1.5,
-                                            }}>
-                                                {form.availableValues.map(val => (
-                                                    <Chip
-                                                        key={val.displayText}
-                                                        label={val.displayText}
-                                                        onClick={() => toggleValueSelection(form.id, val.displayText)}
-                                                        color={form.selectedValues.has(val.displayText) ? "primary" : "default"}
-                                                        variant={form.selectedValues.has(val.displayText) ? "filled" : "outlined"}
-                                                        sx={{ cursor: "pointer" }}
-                                                    />
-                                                ))}
-                                            </Box>
-
-                                            {form.selectedValues.size < 2 && (
-                                                <Alert severity="warning" sx={{ mt: 1 }}>Cần chọn ít nhất 2 giá trị</Alert>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {loadingAttr && (
-                                        <Box sx={{ display: "flex", justifyContent: "center", py: 3 }}>
-                                            <CircularProgress size={24} />
-                                        </Box>
-                                    )}
-                                </>
+                            {form.budgetMode ? (
+                                form.answers.reduce((count, r) => count + r.budgetRanges.filter((br) => br.min !== undefined || br.max !== undefined).length, 0) < 2 && (<Alert severity="warning" sx={{ mt: 1 }}>Cần ít nhất 2 đáp án hợp lệ</Alert>)
+                            ) : (
+                                form.answers.reduce((count, r) => count + (r.mode === "manual" ? (r.text.trim() ? 1 : 0) : r.selectedValues.size), 0) < 2 && (<Alert severity="warning" sx={{ mt: 1 }}>Cần ít nhất 2 đáp án hợp lệ</Alert>)
                             )}
                         </Paper>
-                    );
-                })}
+                    ))}
 
-                <Button
-                    variant="outlined"
-                    startIcon={<AddIcon />}
-                    onClick={handleAddForm}
-                    disabled={isCreating}
-                    sx={{ py: 1.5, borderStyle: "dashed", borderWidth: 2 }}
-                >
-                    Thêm một câu hỏi nữa
-                </Button>
-            </DialogContent>
+                    <Button variant="outlined" startIcon={<AddIcon />} onClick={handleAddForm} disabled={isCreating} sx={{ py: 1.5, borderStyle: "dashed", borderWidth: 2 }}>Thêm một câu hỏi nữa</Button>
+                </DialogContent>
 
-            <DialogActions sx={{ p: 3, borderTop: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
-                <Button onClick={onClose} color="inherit" disabled={isCreating} sx={{ px: 3, borderRadius: 2 }}>Hủy</Button>
-                <Button
-                    onClick={handleSubmit}
-                    variant="contained"
-                    color="primary"
-                    disabled={isCreating || isInvalid}
-                    startIcon={isCreating ? <CircularProgress size={18} color="inherit" /> : <AddIcon />}
-                    sx={{ px: 4, borderRadius: 2, fontWeight: "bold" }}
-                >
-                    {isCreating ? "Đang tạo..." : `Tạo ${forms.length > 1 ? `${forms.length} câu hỏi` : "câu hỏi"}`}
-                </Button>
-            </DialogActions>
-        </Dialog>
+                <DialogActions sx={{ p: 3, borderTop: "1px solid", borderColor: "divider", bgcolor: "background.paper" }}>
+                    <Button onClick={onClose} color="inherit" disabled={isCreating} sx={{ px: 3, borderRadius: 2 }}>Hủy</Button>
+                    <Button onClick={handleSubmit} variant="contained" color="primary" disabled={isCreating || isInvalid} startIcon={isCreating ? <CircularProgress size={18} color="inherit" /> : <AddIcon />} sx={{ px: 4, borderRadius: 2, fontWeight: "bold" }}>
+                        {isCreating ? "Đang tạo..." : `Tạo ${forms.length > 1 ? `${forms.length} câu hỏi` : "câu hỏi"}`}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={confirmOpen} onClose={() => handleConfirmClose(false)} maxWidth="xs" PaperProps={{ sx: { borderRadius: 3 } }}>
+                <ConfirmDialogTitle sx={{ fontWeight: "bold" }}>Xác nhận chuyển đổi</ConfirmDialogTitle>
+                <DialogContent>
+                    <DialogContentText>Chuyển chế độ sẽ đặt lại tất cả đáp án đang nhập. Bạn có muốn tiếp tục?</DialogContentText>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => handleConfirmClose(false)} color="inherit">Hủy</Button>
+                    <Button onClick={() => handleConfirmClose(true)} variant="contained" color="warning">Xác nhận chuyển</Button>
+                </DialogActions>
+            </Dialog>
+        </>
     );
 }
