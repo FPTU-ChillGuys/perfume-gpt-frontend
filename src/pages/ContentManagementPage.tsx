@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -38,6 +39,9 @@ import {
   ImageOutlined as ImageIcon,
   Campaign as CampaignIcon,
   Storefront as StorefrontIcon,
+  Article as ArticleIcon,
+  ToggleOn as ToggleOnIcon,
+  ToggleOff as ToggleOffIcon,
 } from "@mui/icons-material";
 import type {
   Banner,
@@ -58,6 +62,8 @@ import { bannerService } from "@/services/bannerService";
 import { productService } from "@/services/productService";
 import { campaignService } from "@/services/campaignService";
 import { brandService } from "@/services/brandService";
+import { pageService } from "@/services/pageService";
+import type { StaticPage } from "@/services/pageService";
 import { BannerFormDialog } from "@/components/banner/BannerFormDialog";
 import { useToast } from "@/hooks/useToast";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
@@ -90,6 +96,50 @@ interface ConfirmState {
 
 export const ContentManagementPage = () => {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+
+  // ── Static Pages state ─────────────────────────────────────────────────────
+  const [staticPages, setStaticPages] = useState<StaticPage[]>([]);
+  const [staticPagesLoading, setStaticPagesLoading] = useState(true);
+
+  const loadStaticPages = useCallback(async () => {
+    setStaticPagesLoading(true);
+    try {
+      const result = await pageService.getPages({ PageSize: 100 });
+      setStaticPages(result.items);
+    } catch {
+      // non-fatal: list may be empty on first use
+    } finally {
+      setStaticPagesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadStaticPages(); }, [loadStaticPages]);
+
+  const handleDeletePage = async (id: string, title: string) => {
+    if (!window.confirm(`Xóa trang "${title}"? Hành động này không thể hoàn tác.`)) return;
+    try {
+      await pageService.deletePage(id);
+      showToast("Đã xóa trang", "success");
+      void loadStaticPages();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Không thể xóa trang", "error");
+    }
+  };
+
+  const handlePublishPage = async (slug: string, currentlyPublished: boolean) => {
+    try {
+      await pageService.publishPage(slug);
+      showToast(
+        currentlyPublished ? "Đã chuyển về bản nháp" : "Đã công bố trang",
+        "success",
+      );
+      void loadStaticPages();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Không thể thay đổi trạng thái", "error");
+    }
+  };
+  // ──────────────────────────────────────────────────────────────────────────
 
   // Link lookup: id → { name, imageUrl }
   const [linkLookup, setLinkLookup] = useState<
@@ -711,6 +761,139 @@ export const ContentManagementPage = () => {
     <AdminLayout>
       <Box>
         <Stack spacing={3}>
+
+          {/* Static Pages Section */}
+          <Paper sx={{ p: 3 }}>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              justifyContent="space-between"
+              alignItems={{ xs: "flex-start", sm: "center" }}
+              spacing={2}
+              sx={{ mb: 2 }}
+            >
+              <Box>
+                <Typography variant="h6">Trang nội dung tĩnh</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Tạo các trang như Chính sách, Về chúng tôi, Hướng dẫn mua hàng...
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  onClick={() => void loadStaticPages()}
+                >
+                  Làm mới
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<ArticleIcon />}
+                  onClick={() => navigate("/admin/content/new-page")}
+                >
+                  Tạo trang mới
+                </Button>
+              </Stack>
+            </Stack>
+
+            {staticPagesLoading ? (
+              <Box display="flex" justifyContent="center" py={4}>
+                <CircularProgress />
+              </Box>
+            ) : staticPages.length === 0 ? (
+              <Alert severity="info">Chưa có trang nào. Hãy tạo trang đầu tiên!</Alert>
+            ) : (
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tiêu đề</TableCell>
+                      <TableCell>Slug</TableCell>
+                      <TableCell align="center">Trạng thái</TableCell>
+                      <TableCell>Cập nhật</TableCell>
+                      <TableCell align="right">Thao tác</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {staticPages.map((page) => (
+                      <TableRow key={page.id} hover>
+                        <TableCell>
+                          <Typography variant="body2" fontWeight={600}>
+                            {page.title}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Typography
+                            variant="caption"
+                            sx={{ fontFamily: "monospace", color: "primary.main" }}
+                          >
+                            /pages/{page.slug}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Chip
+                            label={page.isPublished ? "Công khai" : "Bản nháp"}
+                            size="small"
+                            color={page.isPublished ? "success" : "default"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="caption" color="text.secondary">
+                            {page.updatedAt
+                              ? new Date(page.updatedAt).toLocaleDateString("vi-VN")
+                              : "-"}
+                          </Typography>
+                        </TableCell>
+                        <TableCell align="right">
+                          <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                            <Tooltip
+                              title={
+                                page.isPublished ? "Chuyển về nháp" : "Công bố"
+                              }
+                            >
+                              <IconButton
+                                size="small"
+                                color={page.isPublished ? "success" : "default"}
+                                onClick={() =>
+                                  void handlePublishPage(page.slug, page.isPublished)
+                                }
+                              >
+                                {page.isPublished ? (
+                                  <ToggleOnIcon fontSize="small" />
+                                ) : (
+                                  <ToggleOffIcon fontSize="small" />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Chỉnh sửa">
+                              <IconButton
+                                size="small"
+                                onClick={() =>
+                                navigate(`/admin/content/pages/${page.slug}/edit`)
+                                }
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Xóa">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() =>
+                                  void handleDeletePage(page.id, page.title)
+                                }
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Paper>
 
           {/* Banner Section */}
           <Paper sx={{ p: 3 }}>
