@@ -1208,14 +1208,19 @@ class OrderService {
     refundMethod: ReturnRefundMethod,
     manualTransactionReference?: string | null,
     note?: string | null,
+    approvedRefundAmount?: number | null,
   ): Promise<string> {
     try {
       const accessToken = getStoredAccessToken();
       const endpoint = `${DIRECT_API_BASE_URL}/api/orderreturnrequests/${id}/refund`;
 
-      const requestBody: Record<string, string> = {
+      const requestBody: Record<string, any> = {
         refundMethod,
       };
+      
+      if (approvedRefundAmount !== undefined && approvedRefundAmount !== null) {
+        requestBody.approvedRefundAmount = approvedRefundAmount;
+      }
       console.log("Refund request body:", requestBody);
       const trimmedManualReference = manualTransactionReference?.trim();
       if (trimmedManualReference) {

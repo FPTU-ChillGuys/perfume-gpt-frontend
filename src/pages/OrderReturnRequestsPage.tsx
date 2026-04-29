@@ -36,8 +36,8 @@ const STATUS_OPTIONS: ReturnTabStatus[] = [
   "ApprovedForReturn",
   "Inspecting",
   "ReadyForRefund",
-  "Rejected",
   "Completed",
+  "Rejected",
 ];
 
 const statusLabel = (status?: string) => {
