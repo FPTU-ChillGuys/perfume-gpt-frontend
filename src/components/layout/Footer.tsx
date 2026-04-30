@@ -59,9 +59,12 @@ export const Footer = () => {
             <h3 className="text-lg font-bold mb-4">Về chúng tôi</h3>
             <ul className="space-y-2 mb-4">
               <li>
-                <a href="#" className="text-gray-600 hover:text-red-600 text-sm">
+                <Link
+                  to="/pages/gioi-thieu-ve-perfumegpt"
+                  className="text-gray-600 hover:text-red-600 text-sm"
+                >
                   Giới thiệu
-                </a>
+                </Link>
               </li>
             </ul>
 

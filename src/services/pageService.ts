@@ -250,10 +250,10 @@ export const pageService = {
   },
 
   // ── Delete page ────────────────────────────────────────────────────────────
-  async deletePage(id: string): Promise<void> {
+  async deletePage(slug: string): Promise<void> {
     const baseUrl = getApiBaseUrl();
 
-    const response = await fetch(`${baseUrl}/api/pages/${id}`, {
+    const response = await fetch(`${baseUrl}/api/pages/${slug}`, {
       method: "DELETE",
       headers: getAuthHeaders(),
     });

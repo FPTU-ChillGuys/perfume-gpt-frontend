@@ -107,18 +107,24 @@ export const ProductSection = ({
   const scroll = (direction: "left" | "right") => {
     if (!scrollContainerRef.current) return;
 
-    const scrollAmount = scrollContainerRef.current.clientWidth;
+    // Snap by exactly 1 card width (first child element)
+    const container = scrollContainerRef.current;
+    const firstCard = container.firstElementChild as HTMLElement | null;
+    const cardWidth = firstCard
+      ? firstCard.getBoundingClientRect().width + 16 // card + gap-4(1rem)
+      : container.clientWidth / 2;
+
     const targetScroll =
       direction === "left"
-        ? scrollContainerRef.current.scrollLeft - scrollAmount
-        : scrollContainerRef.current.scrollLeft + scrollAmount;
+        ? container.scrollLeft - cardWidth
+        : container.scrollLeft + cardWidth;
 
-    scrollContainerRef.current.scrollTo({
+    container.scrollTo({
       left: targetScroll,
       behavior: "smooth",
     });
 
-    setTimeout(updateScrollButtons, 300);
+    setTimeout(updateScrollButtons, 350);
   };
 
   // Apply momentum scrolling
@@ -364,7 +370,7 @@ export const ProductSection = ({
               {displayProducts.map((product, index) => (
                 <div
                   key={`${product.id}-${index}`}
-                  className="shrink-0 w-[calc((100%-1rem)/2)] md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-4rem)/5)] 2xl:w-[calc((100%-5rem)/6)] flex flex-col"
+                  className="shrink-0 w-[calc((100%-1rem)/2)] sm:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-4rem)/5)] 2xl:w-[calc((100%-5rem)/6)] flex flex-col"
                 >
                   <ProductCard {...product} />
                 </div>

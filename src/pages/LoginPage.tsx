@@ -130,8 +130,11 @@ export const LoginPage = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          px: 3,
+          px: { xs: 2, sm: 3 },
           py: 2,
+          gap: 1,
+          flexWrap: "nowrap",
+          minWidth: 0,
         }}
       >
         <Typography
@@ -140,6 +143,7 @@ export const LoginPage = () => {
           fontWeight="bold"
           component={RouterLink}
           to="/"
+          sx={{ flexShrink: 0, fontSize: { xs: "1.1rem", sm: "1.5rem" } }}
         >
           PerfumeGPT
         </Typography>
@@ -148,9 +152,20 @@ export const LoginPage = () => {
           color="inherit"
           component={RouterLink}
           to="/"
-          sx={{ fontWeight: 500 }}
+          sx={{
+            fontWeight: 500,
+            fontSize: { xs: "0.7rem", sm: "0.875rem" },
+            px: { xs: 1, sm: 2 },
+            minWidth: 0,
+            whiteSpace: "nowrap",
+          }}
         >
-          QUAY LẠI TRANG CHỦ
+          <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+            QUAY LẠI TRANG CHỦ
+          </Box>
+          <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
+            QUAY LẠI TRANG CHỦ
+          </Box>
         </Button>
       </Box>
 

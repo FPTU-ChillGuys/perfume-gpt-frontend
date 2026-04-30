@@ -204,10 +204,13 @@ export const NotificationSection = () => {
                 </Box>
 
                 <ListItemText
+                  primaryTypographyProps={{ component: "div" }}
+                  secondaryTypographyProps={{ component: "div" }}
                   primary={
                     <Box display="flex" alignItems="center" gap={1} mb={0.3}>
                       <Typography
                         variant="body2"
+                        component="span"
                         sx={{
                           fontWeight: notification.isRead ? "normal" : "bold",
                         }}
@@ -220,6 +223,7 @@ export const NotificationSection = () => {
                     <>
                       <Typography
                         variant="body2"
+                        component="span"
                         color="text.secondary"
                         sx={{
                           display: "-webkit-box",
@@ -232,6 +236,7 @@ export const NotificationSection = () => {
                       </Typography>
                       <Typography
                         variant="caption"
+                        component="span"
                         color="text.disabled"
                         mt={0.5}
                         display="block"

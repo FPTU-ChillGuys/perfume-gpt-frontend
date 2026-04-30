@@ -536,9 +536,19 @@ export const CartPage = () => {
   return (
     <MainLayout>
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" alignItems="center" gap={2} mb={4}>
-          <Box flex={1}>
-            <Typography variant="h4" fontWeight="bold">
+        <Box
+          display="flex"
+          alignItems="center"
+          flexDirection="row"
+          gap={1}
+          mb={3}
+        >
+          <Box flex={1} minWidth={0}>
+            <Typography
+              variant="h5"
+              fontWeight="bold"
+              sx={{ fontSize: { xs: "1.15rem", sm: "1.5rem" } }}
+            >
               Giỏ hàng của bạn
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -550,9 +560,15 @@ export const CartPage = () => {
             component={RouterLink}
             to="/"
             variant="outlined"
-            sx={{ minWidth: "auto" }}
+            size="small"
+            sx={{ minWidth: "auto", flexShrink: 0 }}
           >
-            Tiếp tục mua hàng
+            <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+              Tiếp tục mua hàng
+            </Box>
+            <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
+              Mua tiếp
+            </Box>
           </Button>
         </Box>
 
@@ -655,9 +671,10 @@ export const CartPage = () => {
                     <Box
                       key={itemKey}
                       display="flex"
-                      alignItems={{ xs: "flex-start", sm: "center" }}
-                      gap={1.5}
+                      alignItems="flex-start"
+                      gap={1}
                     >
+                      {/* Checkbox */}
                       <Checkbox
                         checked={
                           item.cartItemId
@@ -668,21 +685,21 @@ export const CartPage = () => {
                         disabled={!item.cartItemId}
                         icon={<RadioButtonUnchecked fontSize="small" />}
                         checkedIcon={<CheckCircle fontSize="small" />}
-                        sx={roundCheckboxSx}
+                        sx={{ ...roundCheckboxSx, mt: 0.5, p: 0.5 }}
                       />
-                      <Card elevation={2} sx={{ flex: 1 }}>
-                        <CardContent>
-                          <Box
-                            display="flex"
-                            flexDirection={{ xs: "column", sm: "row" }}
-                            gap={3}
-                          >
+
+                      {/* Card — horizontal layout */}
+                      <Card elevation={1} sx={{ flex: 1, minWidth: 0 }}>
+                        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
+                          <Box display="flex" gap={1.5} alignItems="flex-start">
+                            {/* Product image — fixed 80x80 */}
                             <Box
                               sx={{
-                                width: { xs: "100%", sm: 120 },
-                                height: 120,
+                                width: 80,
+                                height: 80,
+                                flexShrink: 0,
                                 bgcolor: "grey.100",
-                                borderRadius: 2,
+                                borderRadius: 1.5,
                                 overflow: "hidden",
                               }}
                             >
@@ -690,180 +707,113 @@ export const CartPage = () => {
                                 <img
                                   src={item.imageUrl}
                                   alt={item.variantName ?? "Sản phẩm"}
-                                  style={{
-                                    width: "100%",
-                                    height: "100%",
-                                    objectFit: "cover",
-                                  }}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
                               ) : (
-                                <Box
-                                  display="flex"
-                                  alignItems="center"
-                                  justifyContent="center"
-                                  height="100%"
-                                >
-                                  <Typography
-                                    variant="caption"
-                                    color="text.disabled"
-                                  >
-                                    Chưa có ảnh
-                                  </Typography>
+                                <Box display="flex" alignItems="center" justifyContent="center" height="100%">
+                                  <Typography variant="caption" color="text.disabled">Chưa có ảnh</Typography>
                                 </Box>
                               )}
                             </Box>
-                            <Box flex={1}>
-                              <Box
-                                display="flex"
-                                alignItems="flex-start"
-                                gap={1}
-                                mb={1}
-                              >
+
+                            {/* Right content */}
+                            <Box flex={1} minWidth={0}>
+                              {/* Name + discount badge */}
+                              <Box display="flex" alignItems="flex-start" gap={0.5} mb={0.25}>
                                 <Typography
-                                  variant="h6"
+                                  variant="body2"
                                   fontWeight={600}
-                                  flex={1}
+                                  sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    overflow: "hidden",
+                                    display: "-webkit-box",
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: "vertical",
+                                    lineHeight: 1.35,
+                                    fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                                  }}
                                 >
                                   {item.variantName ?? "Sản phẩm chưa đặt tên"}
                                 </Typography>
                                 {hasDiscount && (
                                   <Chip
-                                    icon={<LocalOffer fontSize="small" />}
                                     label={`-${percentage}%`}
                                     color="error"
                                     size="small"
-                                    sx={{ fontWeight: 600 }}
+                                    sx={{ fontSize: "0.65rem", height: 18, flexShrink: 0 }}
                                   />
                                 )}
                               </Box>
+
+                              {/* Meta: volume • unit price */}
                               <Typography
-                                variant="body2"
+                                variant="caption"
                                 color="text.secondary"
-                                mb={showPromoBreakdown ? 1 : 2}
+                                display="block"
+                                mb={0.75}
                               >
-                                {item.volumeMl ? `${item.volumeMl} ml` : ""}
-                                {item.volumeMl && item.variantPrice
-                                  ? " \u2022 "
-                                  : ""}
-                                {item.variantPrice
-                                  ? formatCurrency(item.variantPrice)
-                                  : ""}
+                                {[
+                                  item.volumeMl ? `${item.volumeMl} ml` : null,
+                                  item.variantPrice ? formatCurrency(item.variantPrice) : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" • ")}
                               </Typography>
 
-                              {/* Promotional quantity breakdown */}
+                              {/* Promo breakdown */}
                               {showPromoBreakdown && (
-                                <Box
-                                  display="flex"
-                                  flexWrap="wrap"
-                                  gap={1}
-                                  mb={2}
-                                  alignItems="center"
-                                >
-                                  {/* Promo items */}
-                                  <Box
-                                    sx={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
-                                      px: 1.25,
-                                      py: 0.5,
-                                      borderRadius: "20px",
-                                      bgcolor: "error.50",
-                                      border: "1px solid",
-                                      borderColor: "error.200",
-                                    }}
-                                  >
-                                    <Typography
-                                      variant="caption"
-                                      fontWeight={600}
-                                      color="error.main"
-                                    >
-                                      {promoQty} SP khuyến mãi
-                                      {promoUnitPrice !== null &&
-                                        promoUnitPrice > 0 &&
-                                        ` \u00d7 ${formatCurrency(promoUnitPrice)}`}
+                                <Box display="flex" flexWrap="wrap" gap={0.5} mb={0.75}>
+                                  <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, px: 1, py: 0.25, borderRadius: "20px", bgcolor: "error.50", border: "1px solid", borderColor: "error.200" }}>
+                                    <Typography variant="caption" fontWeight={600} color="error.main">
+                                      {promoQty} SP KM{promoUnitPrice !== null && promoUnitPrice > 0 && ` × ${formatCurrency(promoUnitPrice)}`}
                                     </Typography>
                                   </Box>
-
-                                  {/* Regular items */}
                                   {regularQty > 0 && (
-                                    <Box
-                                      sx={{
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: 0.5,
-                                        px: 1.25,
-                                        py: 0.5,
-                                        borderRadius: "20px",
-                                        bgcolor: "grey.100",
-                                        border: "1px solid",
-                                        borderColor: "grey.300",
-                                      }}
-                                    >
-                                      <Typography
-                                        variant="caption"
-                                        fontWeight={600}
-                                        color="text.secondary"
-                                      >
-                                        {regularQty} SP giá thường
-                                        {baseUnitPrice > 0 &&
-                                          ` \u00d7 ${formatCurrency(baseUnitPrice)}`}
+                                    <Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, px: 1, py: 0.25, borderRadius: "20px", bgcolor: "grey.100", border: "1px solid", borderColor: "grey.300" }}>
+                                      <Typography variant="caption" fontWeight={600} color="text.secondary">
+                                        {regularQty} SP thường{baseUnitPrice > 0 && ` × ${formatCurrency(baseUnitPrice)}`}
                                       </Typography>
                                     </Box>
                                   )}
                                 </Box>
                               )}
+
+                              {/* Bottom action row: qty | price | delete */}
                               <Box
                                 display="flex"
                                 alignItems="center"
                                 justifyContent="space-between"
-                                flexWrap="wrap"
-                                gap={2}
-                                pt={2}
+                                gap={1}
+                                pt={1}
                                 borderTop={1}
                                 borderColor="divider"
+                                flexWrap="nowrap"
                               >
+                                {/* Quantity stepper */}
                                 <Box
                                   display="flex"
                                   alignItems="center"
-                                  gap={0.5}
+                                  gap={0}
                                   border={1}
                                   borderColor="divider"
-                                  borderRadius={"24px"}
-                                  px={1}
-                                  py={0.25}
+                                  borderRadius="20px"
+                                  px={0.5}
                                 >
                                   <IconButton
                                     size="small"
                                     aria-label="Giảm số lượng"
-                                    onClick={() =>
-                                      handleQuantityChange(item.cartItemId, -1)
-                                    }
-                                    disabled={
-                                      quantity <= 1 ||
-                                      updatingItemId === item.cartItemId
-                                    }
+                                    onClick={() => handleQuantityChange(item.cartItemId, -1)}
+                                    disabled={quantity <= 1 || updatingItemId === item.cartItemId}
+                                    sx={{ p: 0.25 }}
                                   >
-                                    <RemoveIcon fontSize="small" />
+                                    <RemoveIcon sx={{ fontSize: 16 }} />
                                   </IconButton>
                                   <TextField
                                     size="small"
-                                    value={
-                                      item.cartItemId
-                                        ? (inputQuantities[item.cartItemId] ?? String(quantity))
-                                        : String(quantity)
-                                    }
-                                    onChange={(e) =>
-                                      item.cartItemId &&
-                                      handleQuantityInputChange(
-                                        item.cartItemId,
-                                        e.target.value,
-                                      )
-                                    }
-                                    onBlur={() =>
-                                      item.cartItemId &&
-                                      void handleQuantityInputCommit(item.cartItemId)
-                                    }
+                                    value={item.cartItemId ? (inputQuantities[item.cartItemId] ?? String(quantity)) : String(quantity)}
+                                    onChange={(e) => item.cartItemId && handleQuantityInputChange(item.cartItemId, e.target.value)}
+                                    onBlur={() => item.cartItemId && void handleQuantityInputCommit(item.cartItemId)}
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter" && item.cartItemId) {
                                         void handleQuantityInputCommit(item.cartItemId);
@@ -871,71 +821,48 @@ export const CartPage = () => {
                                       }
                                     }}
                                     disabled={updatingItemId === item.cartItemId}
-                                    inputProps={{
-                                      min: 1,
-                                      style: {
-                                        textAlign: "center",
-                                        width: 32,
-                                        padding: "2px 4px",
-                                        fontWeight: 600,
-                                        fontSize: "0.875rem",
-                                      },
-                                    }}
-                                    sx={{
-                                      "& .MuiOutlinedInput-root": {
-                                        borderRadius: "8px",
-                                        "& fieldset": { border: "none" },
-                                      },
-                                      width: 52,
-                                    }}
+                                    inputProps={{ min: 1, style: { textAlign: "center", width: 28, padding: "2px 2px", fontWeight: 600, fontSize: "0.8rem" } }}
+                                    sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", "& fieldset": { border: "none" } }, width: 44 }}
                                   />
                                   <IconButton
                                     size="small"
                                     aria-label="Tăng số lượng"
-                                    onClick={() =>
-                                      handleQuantityChange(item.cartItemId, 1)
-                                    }
-                                    disabled={
-                                      updatingItemId === item.cartItemId
-                                    }
+                                    onClick={() => handleQuantityChange(item.cartItemId, 1)}
+                                    disabled={updatingItemId === item.cartItemId}
+                                    sx={{ p: 0.25 }}
                                   >
-                                    <AddIcon fontSize="small" />
+                                    <AddIcon sx={{ fontSize: 16 }} />
                                   </IconButton>
                                 </Box>
-                                <Box
-                                  display="flex"
-                                  flexDirection="column"
-                                  alignItems="flex-end"
-                                  gap={0.5}
-                                >
-                                  {hasDiscount && item.subTotal && (
+
+                                {/* Price + delete */}
+                                <Box display="flex" alignItems="center" gap={1} flexShrink={0}>
+                                  <Box display="flex" flexDirection="column" alignItems="flex-end">
+                                    {hasDiscount && item.subTotal && (
+                                      <Typography variant="caption" color="text.disabled" sx={{ textDecoration: "line-through", lineHeight: 1 }}>
+                                        {formatCurrency(item.subTotal)}
+                                      </Typography>
+                                    )}
                                     <Typography
                                       variant="body2"
-                                      color="text.secondary"
-                                      sx={{ textDecoration: "line-through" }}
+                                      color="error"
+                                      fontWeight={700}
+                                      sx={{ fontSize: { xs: "0.85rem", sm: "1rem" } }}
                                     >
-                                      {formatCurrency(item.subTotal)}
+                                      {formatCurrency(lineTotal)}
                                     </Typography>
-                                  )}
-                                  <Typography
-                                    variant="h6"
+                                  </Box>
+                                  <IconButton
+                                    size="small"
                                     color="error"
-                                    fontWeight={600}
+                                    aria-label="Xóa sản phẩm"
+                                    onClick={() => handleRemoveItem(item.cartItemId)}
+                                    disabled={updatingItemId === item.cartItemId}
+                                    sx={{ p: 0.5 }}
                                   >
-                                    {formatCurrency(lineTotal)}
-                                  </Typography>
+                                    <DeleteIcon sx={{ fontSize: 18 }} />
+                                  </IconButton>
                                 </Box>
-                                <Button
-                                  size="small"
-                                  color="error"
-                                  startIcon={<DeleteIcon />}
-                                  onClick={() =>
-                                    handleRemoveItem(item.cartItemId)
-                                  }
-                                  disabled={updatingItemId === item.cartItemId}
-                                >
-                                  Xóa
-                                </Button>
                               </Box>
                             </Box>
                           </Box>

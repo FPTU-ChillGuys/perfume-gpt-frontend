@@ -823,6 +823,7 @@ export const MyOrdersPage = () => {
                 minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
+                pb: { xs: "72px", md: 0 },
               }}
             >
               {/* Status tabs */}
@@ -853,7 +854,7 @@ export const MyOrdersPage = () => {
 
               <Box
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   flex: 1,
                   display: "flex",
                   flexDirection: "column",
@@ -861,16 +862,7 @@ export const MyOrdersPage = () => {
                 }}
               >
                 {/* Search and Filters */}
-                <Box
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "1fr",
-                      md: "2fr 1fr 1fr",
-                    },
-                    gap: 2,
-                  }}
-                >
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                   <TextField
                     fullWidth
                     size="small"
@@ -888,30 +880,38 @@ export const MyOrdersPage = () => {
                       ),
                     }}
                   />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Từ ngày"
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => {
-                      setFromDate(e.target.value);
-                      setPage(1);
+                  <Box
+                    sx={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr 1fr",
+                      gap: 1.5,
                     }}
-                    InputLabelProps={{ shrink: true }}
-                  />
-                  <TextField
-                    fullWidth
-                    size="small"
-                    label="Đến ngày"
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => {
-                      setToDate(e.target.value);
-                      setPage(1);
-                    }}
-                    InputLabelProps={{ shrink: true }}
-                  />
+                  >
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Từ ngày"
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => {
+                        setFromDate(e.target.value);
+                        setPage(1);
+                      }}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Đến ngày"
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => {
+                        setToDate(e.target.value);
+                        setPage(1);
+                      }}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Box>
                 </Box>
 
                 {/* Order list */}
@@ -978,25 +978,23 @@ export const MyOrdersPage = () => {
                           <Paper
                             key={order.id}
                             variant="outlined"
-                            sx={{ p: 2.5, borderRadius: 2 }}
+                            sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2 }}
                           >
                             {/* Order header */}
-                            <Stack
-                              direction="row"
-                              justifyContent="space-between"
-                              alignItems="center"
-                              mb={1.5}
-                            >
+                            <Box mb={1.5}>
+                              {/* Row 1: order code + date */}
                               <Stack
                                 direction="row"
-                                spacing={1}
+                                spacing={0.75}
                                 alignItems="center"
+                                mb={0.75}
                               >
                                 <Tooltip title={getDisplayOrderCode(order)}>
                                   <Typography
                                     variant="body2"
                                     color="text.secondary"
-                                    sx={{ fontFamily: "monospace" }}
+                                    sx={{ fontFamily: "monospace", fontWeight: 600 }}
+                                    noWrap
                                   >
                                     #{getDisplayOrderCode(order)}
                                   </Typography>
@@ -1011,63 +1009,55 @@ export const MyOrdersPage = () => {
                                         )
                                       }
                                     >
-                                      <ContentCopyIcon sx={{ fontSize: 14 }} />
+                                      <ContentCopyIcon sx={{ fontSize: 13 }} />
                                     </IconButton>
                                   </Tooltip>
                                 )}
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
-                                  ·
-                                </Typography>
-                                <Typography
-                                  variant="body2"
-                                  color="text.secondary"
-                                >
+                                <Typography variant="body2" color="text.secondary">·</Typography>
+                                <Typography variant="body2" color="text.secondary" noWrap>
                                   {order.createdAt
-                                    ? new Date(
-                                        order.createdAt,
-                                      ).toLocaleDateString("vi-VN")
+                                    ? new Date(order.createdAt).toLocaleDateString("vi-VN")
                                     : "-"}
                                 </Typography>
                               </Stack>
+                              {/* Row 2: status chips */}
                               <Stack
                                 direction="row"
-                                spacing={1}
                                 alignItems="center"
+                                flexWrap="wrap"
+                                gap={0.5}
                               >
-                                {order.type && (
-                                  <Chip
-                                    label={orderTypeLabels[order.type]}
-                                    color={orderTypeColors[order.type]}
-                                    variant="outlined"
-                                    size="small"
-                                  />
-                                )}
-                                {order.status && (
-                                  <Chip
-                                    label={orderStatusLabels[order.status]}
-                                    color={orderStatusColors[order.status]}
-                                    variant="filled"
-                                    size="small"
-                                    sx={getOrderStatusChipSx(order.status)}
-                                  />
-                                )}
-                                {order.paymentStatus && (
-                                  <Chip
-                                    label={
-                                      paymentStatusLabels[order.paymentStatus]
-                                    }
-                                    color={
-                                      paymentStatusColors[order.paymentStatus]
-                                    }
-                                    variant="filled"
-                                    size="small"
-                                  />
-                                )}
+                              {order.type && (
+                                <Chip
+                                  label={orderTypeLabels[order.type]}
+                                  color={orderTypeColors[order.type]}
+                                  variant="outlined"
+                                  size="small"
+                                />
+                              )}
+                              {order.status && (
+                                <Chip
+                                  label={orderStatusLabels[order.status]}
+                                  color={orderStatusColors[order.status]}
+                                  variant="filled"
+                                  size="small"
+                                  sx={getOrderStatusChipSx(order.status)}
+                                />
+                              )}
+                              {order.paymentStatus && (
+                                <Chip
+                                  label={
+                                    paymentStatusLabels[order.paymentStatus]
+                                  }
+                                  color={
+                                    paymentStatusColors[order.paymentStatus]
+                                  }
+                                  variant="filled"
+                                  size="small"
+                                />
+                              )}
                               </Stack>
-                            </Stack>
+                            </Box>
 
                             <Divider sx={{ mb: 1.5 }} />
                             <Typography
@@ -1159,7 +1149,8 @@ export const MyOrdersPage = () => {
                                       <Box
                                         sx={{
                                           textAlign: "right",
-                                          minWidth: 110,
+                                          minWidth: { xs: 80, sm: 110 },
+                                          flexShrink: 0,
                                         }}
                                       >
                                         {unitPriceLabel && (
@@ -1233,8 +1224,9 @@ export const MyOrdersPage = () => {
                             {/* Actions */}
                             <Stack
                               direction="row"
-                              justifyContent="flex-end"
-                              spacing={1}
+                              justifyContent={{ xs: "stretch", sm: "flex-end" }}
+                              flexWrap="wrap"
+                              gap={1}
                             >
                               {isPendingUnpaid && latestPayment?.id && (
                                 <Button

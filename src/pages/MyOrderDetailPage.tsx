@@ -2234,7 +2234,12 @@ export const MyOrderDetailPage = () => {
             <UserProfileSidebar userInfo={userInfo} />
 
             {/* Main content */}
-            <Box sx={{ flex: 1, bgcolor: "background.paper", minWidth: 0 }}>
+            <Box sx={{
+              flex: 1,
+              bgcolor: "background.paper",
+              minWidth: 0,
+              pb: { xs: "72px", md: 0 },
+            }}>
               {isLoading ? (
                 <Box
                   display="flex"
@@ -2420,7 +2425,7 @@ export const MyOrderDetailPage = () => {
 
                   <Box
                     sx={{
-                      p: 3,
+                      p: { xs: 2, sm: 3 },
                       display: "flex",
                       flexDirection: "column",
                       gap: 3,
@@ -2542,17 +2547,19 @@ export const MyOrderDetailPage = () => {
                           Sản phẩm
                         </Typography>
                       </Box>
-                      <TableContainer>
-                        <Table>
-                          <TableHead>
-                            <TableRow sx={{ bgcolor: "action.hover" }}>
-                              <TableCell>Sản phẩm</TableCell>
-                              <TableCell align="center">Số lượng</TableCell>
-                              <TableCell align="right">Đơn giá</TableCell>
-                              <TableCell align="right">Thành tiền</TableCell>
-                              {canReview && (
-                                <TableCell align="center">Đánh giá</TableCell>
-                              )}
+                      {/* Scrollable on mobile */}
+                      <Box sx={{ overflowX: "auto" }}>
+                        <TableContainer>
+                          <Table sx={{ minWidth: { xs: 480, sm: "auto" } }}>
+                            <TableHead>
+                              <TableRow sx={{ bgcolor: "action.hover" }}>
+                                <TableCell>Sản phẩm</TableCell>
+                                <TableCell align="center">Số lượng</TableCell>
+                                <TableCell align="right">Đơn giá</TableCell>
+                                <TableCell align="right">Thành tiền</TableCell>
+                                {canReview && (
+                                  <TableCell align="center">Đánh giá</TableCell>
+                                )}
                             </TableRow>
                           </TableHead>
                           <TableBody>
@@ -2706,6 +2713,7 @@ export const MyOrderDetailPage = () => {
                           </TableBody>
                         </Table>
                       </TableContainer>
+                      </Box>
                     </Paper>
 
                     {/* ── Price summary ─────────────────────────────────────── */}

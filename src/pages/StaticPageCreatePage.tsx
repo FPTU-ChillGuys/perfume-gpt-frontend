@@ -6,7 +6,6 @@ import {
   Chip,
   CircularProgress,
   FormControlLabel,
-  InputAdornment,
   Paper,
   Stack,
   Switch,
@@ -139,46 +138,63 @@ export const StaticPageCreatePage = () => {
 
   const quillRef = useRef<ReactQuill | null>(null);
 
-  // ─── Intercept Paste to Sanitize HTML ──────────────────────────────────────
+  // ─── CÁCH CHẶN PASTE CHÍNH XÁC NHẤT (Native DOM Event) ─────────────────────
   useEffect(() => {
     const editor = quillRef.current?.getEditor();
     if (!editor) return;
 
-    const handlePaste = (e: ClipboardEvent) => {
-      const html = e.clipboardData?.getData("text/html");
-      if (!html) return; // If plain text or files, let Quill handle it normally
+    // Gắn sự kiện lên thẳng container của Quill thay vì dùng React Synthetic Event
+    const container = editor.container;
 
+    const handleNativePaste = (e: ClipboardEvent) => {
+      // Ép dừng toàn bộ các sự kiện paste khác của Quill
       e.preventDefault();
-      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-      // Sanitize the HTML: keep only semantic tags, strip all inline styles/classes, remove &nbsp;
-      const cleanHtml = DOMPurify.sanitize(html, {
-        ALLOWED_TAGS: [
-          "h1", "h2", "h3", "p", "br", "ul", "ol", "li",
-          "strong", "em", "u", "a", "img", "blockquote", "code", "pre"
-        ],
-        ALLOWED_ATTR: ["href", "src", "alt", "target"],
-        FORBID_TAGS: ["style", "script", "iframe", "object", "embed"],
-        FORBID_ATTR: ["style", "class", "id"], // This strictly removes all inline CSS and classes
-      }).replace(/&nbsp;/g, " ");
+      const html = e.clipboardData?.getData("text/html");
+      const text = e.clipboardData?.getData("text/plain");
 
-      const range = editor.getSelection(true);
+      if (!html && !text) return;
+
+      let finalHtmlToPaste = "";
+
+      if (html) {
+        // Dọn dẹp khoảng trắng trước
+        const preCleanedHtml = html.replace(/&nbsp;|\u00A0/g, " ");
+
+        // Máy giặt DOMPurify
+        finalHtmlToPaste = DOMPurify.sanitize(preCleanedHtml, {
+          ALLOWED_TAGS: [
+            "h1", "h2", "h3", "h4", "p", "br", "ul", "ol", "li",
+            "strong", "em", "u", "a", "img", "blockquote", "code", "pre"
+          ],
+          ALLOWED_ATTR: ["href", "src", "alt", "target"],
+          FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "span", "div", "font"],
+          FORBID_ATTR: ["style", "class", "id", "dir", "align"],
+        });
+      } else if (text) {
+        finalHtmlToPaste = text.replace(/&nbsp;|\u00A0/g, " ");
+      }
+
+      const range = editor.getSelection(true) || { index: editor.getLength(), length: 0 };
       const lengthBefore = editor.getLength();
-      editor.clipboard.dangerouslyPasteHTML(range.index, cleanHtml);
-      
-      // Move cursor to end of pasted content
+
+      // Bơm vào Editor
+      editor.clipboard.dangerouslyPasteHTML(range.index, finalHtmlToPaste, "user");
+
+      // Set lại con trỏ
       setTimeout(() => {
         const lengthAfter = editor.getLength();
-        const addedLength = lengthAfter - lengthBefore + range.length;
-        editor.setSelection(range.index + addedLength, 0);
-      }, 0);
+        const addedLength = lengthAfter - lengthBefore;
+        editor.setSelection(range.index + addedLength, 0, "user");
+      }, 10);
     };
 
-    const quillRoot = editor.root;
-    quillRoot.addEventListener("paste", handlePaste, true); // Use capture phase
+    // 'true' = Capture phase (Đánh chặn từ xa)
+    container.addEventListener("paste", handleNativePaste, true);
 
     return () => {
-      quillRoot.removeEventListener("paste", handlePaste, true);
+      container.removeEventListener("paste", handleNativePaste, true);
     };
   }, []);
 
@@ -305,10 +321,23 @@ export const StaticPageCreatePage = () => {
     setSaveError(null);
     setIsSaving(true);
 
+    // CHỐT CHẶN CUỐI CÙNG: Dọn dẹp HTML một lần nữa trước khi ném lên API
+    // Phòng trường hợp user dùng thủ thuật nào đó sinh ra &nbsp; hoặc thẻ rác
+    const preCleanedHtml = htmlContent.replace(/&nbsp;|\u00A0/g, " ");
+    const finalCleanHtmlForAPI = DOMPurify.sanitize(preCleanedHtml, {
+      ALLOWED_TAGS: [
+        "h1", "h2", "h3", "h4", "p", "br", "ul", "ol", "li",
+        "strong", "em", "u", "a", "img", "blockquote", "code", "pre"
+      ],
+      ALLOWED_ATTR: ["href", "src", "alt", "target"],
+      FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "span", "div", "font"],
+      FORBID_ATTR: ["style", "class", "id", "dir", "align"],
+    });
+
     const payload = {
       title: title.trim(),
       slug: slug.trim(),
-      htmlContent,
+      htmlContent: finalCleanHtmlForAPI, // <-- Dùng cái HTML đã dọn sạch
       isPublished,
       metaDescription: metaDescription.trim() || null,
       temporaryMediaIds: activeTemporaryMediaIds,
@@ -415,15 +444,6 @@ export const StaticPageCreatePage = () => {
                   ? "Slug chỉ được chứa chữ thường, số và dấu gạch ngang (-)"
                   : "Tự động điền từ tiêu đề. Bạn có thể chỉnh lại."
               }
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Typography variant="body2" color="text.disabled">
-                      /pages/
-                    </Typography>
-                  </InputAdornment>
-                ),
-              }}
               sx={{ mb: 2 }}
             />
 
@@ -463,6 +483,7 @@ export const StaticPageCreatePage = () => {
             </Stack>
 
             <Box
+              // ĐÃ BỎ onPasteCapture ĐI, VÌ BÂY GIỜ TA DÙNG NATIVE EVENT Ở USEEFFECT TRÊN KIA
               sx={{
                 "& .ql-container": {
                   fontSize: "15px",

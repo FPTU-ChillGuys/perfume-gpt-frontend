@@ -126,6 +126,18 @@ const sanitizeDescriptionHtml = (html: string) => {
   return container.innerHTML;
 };
 
+/** Parse volume (ml) from displayName like "Eau de Toilette (EDT) - 30ml" → "30ml" */
+const parseVolumeLabel = (displayName: string): string | null => {
+  const match = displayName.match(/(\d+(?:\.\d+)?)\s*ml\s*$/i);
+  return match ? `${match[1]}ml` : null;
+};
+
+/** Parse concentration abbreviation: "Eau de Parfum (EDP) - 200ml" → "EDP" */
+const parseConcentration = (displayName: string): string | null => {
+  const match = displayName.match(/\(([^)]+)\)/);
+  return match ? (match[1] ?? null) : null;
+};
+
 const ProductQuickViewDialog = ({
   open,
   productId,
@@ -519,13 +531,16 @@ const ProductQuickViewDialog = ({
               onChange={handleVariantChange}
               size="small"
               sx={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, 1fr)",
+                display: "flex",
+                flexWrap: "wrap",
                 gap: 1,
                 "& .MuiToggleButtonGroup-grouped": {
                   border: "1px solid rgba(0, 0, 0, 0.12) !important",
                   borderRadius: "8px !important",
                   marginLeft: "0 !important",
+                  flex: "1 1 calc(50% - 4px)",
+                  minWidth: 0,
+                  maxWidth: "100%",
                 },
                 "& .MuiToggleButtonGroup-grouped.Mui-selected": {
                   borderColor: "primary.main !important",
@@ -535,24 +550,28 @@ const ProductQuickViewDialog = ({
               {(fastLook.variants || []).map((variant, index) =>
                 (() => {
                   const outOfStock = isVariantOutOfStock(variant);
+                  const mlLabel = parseVolumeLabel(variant.displayName || "");
+                  const concLabel = parseConcentration(variant.displayName || "");
 
                   return (
                     <ToggleButton
                       key={variant.id ?? `variant-${index}`}
                       value={variant.id || ""}
+                      title={variant.displayName}
                       sx={{
                         textTransform: "none",
                         display: "flex",
+                        flexDirection: "column",
                         alignItems: "center",
-                        justifyContent: "flex-start",
-                        gap: 1,
-                        px: 2,
-                        py: 1,
-                        whiteSpace: "nowrap",
+                        justifyContent: "center",
+                        gap: 0.25,
+                        px: 1,
+                        py: 0.75,
                         minWidth: 0,
-                        fontSize: "0.8rem",
+                        fontSize: "0.78rem",
                         position: "relative",
-                        opacity: outOfStock ? 0.75 : 1,
+                        opacity: outOfStock ? 0.65 : 1,
+                        overflow: "hidden",
                       }}
                     >
                       {variant.media?.url && (
@@ -561,8 +580,8 @@ const ProductQuickViewDialog = ({
                           src={variant.media.url}
                           alt={variant.displayName || ""}
                           sx={{
-                            width: 32,
-                            height: 32,
+                            width: 24,
+                            height: 24,
                             objectFit: "cover",
                             borderRadius: 0.5,
                             flexShrink: 0,
@@ -572,15 +591,30 @@ const ProductQuickViewDialog = ({
                       <Box
                         component="span"
                         sx={{
+                          fontWeight: 700,
+                          fontSize: "0.875rem",
+                          lineHeight: 1.1,
                           whiteSpace: "nowrap",
                           textDecoration: outOfStock ? "line-through" : "none",
-                          textDecorationColor: outOfStock
-                            ? "error.main"
-                            : "inherit",
+                          textDecorationColor: "error.main",
+                          color: outOfStock ? "text.disabled" : "inherit",
                         }}
                       >
-                        {variant.displayName || "Size"}
+                        {mlLabel ?? variant.displayName}
                       </Box>
+                      {mlLabel && concLabel && (
+                        <Box
+                          component="span"
+                          sx={{
+                            fontSize: "0.62rem",
+                            color: "text.secondary",
+                            lineHeight: 1,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {concLabel}
+                        </Box>
+                      )}
                     </ToggleButton>
                   );
                 })(),
@@ -642,14 +676,20 @@ const ProductQuickViewDialog = ({
               </Box>
             )}
 
-            <Stack direction="column" spacing={1} mt={3}>
+            <Stack direction="column" spacing={1} mt={2}>
               <Stack
                 direction="row"
                 spacing={1}
                 alignItems="baseline"
-                flexWrap="wrap"
+                flexWrap="nowrap"
+                sx={{ overflow: "hidden" }}
               >
-                <Typography variant="h4" fontWeight={700} color="error">
+                <Typography
+                  variant="h4"
+                  fontWeight={700}
+                  color="error"
+                  sx={{ whiteSpace: "nowrap", fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
+                >
                   {selectedVariantPrice
                     ? currencyFormatter.format(selectedVariantPrice)
                     : "Liên hệ"}
@@ -658,7 +698,7 @@ const ProductQuickViewDialog = ({
                   <Typography
                     variant="body1"
                     color="text.secondary"
-                    sx={{ textDecoration: "line-through" }}
+                    sx={{ textDecoration: "line-through", whiteSpace: "nowrap", fontSize: { xs: "0.9rem", sm: "1rem" } }}
                   >
                     {currencyFormatter.format(selectedVariantRetailPrice)}
                   </Typography>

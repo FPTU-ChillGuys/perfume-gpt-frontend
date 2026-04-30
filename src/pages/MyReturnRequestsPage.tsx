@@ -182,6 +182,7 @@ export const MyReturnRequestsPage = () => {
                 minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
+                pb: { xs: "72px", md: 0 },
               }}
             >
               <Box sx={{ borderBottom: "1px solid", borderColor: "divider" }}>
@@ -211,7 +212,7 @@ export const MyReturnRequestsPage = () => {
 
               <Box
                 sx={{
-                  p: 3,
+                  p: { xs: 2, sm: 3 },
                   flex: 1,
                   display: "flex",
                   flexDirection: "column",
@@ -242,42 +243,34 @@ export const MyReturnRequestsPage = () => {
                       <Paper
                         key={request.id}
                         variant="outlined"
-                        sx={{ p: 2.5, borderRadius: 2 }}
+                        sx={{ p: { xs: 2, sm: 2.5 }, borderRadius: 2 }}
                       >
-                        <Stack
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          mb={1.5}
-                        >
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                          >
+                        {/* Card header — 2 rows on mobile */}
+                        <Box mb={1.5}>
+                          <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75} alignItems="center" mb={0.75}>
                             <Tooltip title={request.orderCode || ""}>
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
-                                sx={{ fontFamily: "monospace" }}
+                                sx={{ fontFamily: "monospace", fontWeight: 600 }}
                               >
                                 Đơn hàng: #{request.orderCode || "-"}
                               </Typography>
                             </Tooltip>
-                            <Typography variant="body2" color="text.secondary">
-                              ·
-                            </Typography>
+                            <Typography variant="body2" color="text.secondary">·</Typography>
                             <Typography variant="body2" color="text.secondary">
                               {formatDate(request.createdAt)}
                             </Typography>
                           </Stack>
-                          <Chip
-                            label={statusLabel(request.status)}
-                            color={statusColor(request.status)}
-                            variant="filled"
-                            size="small"
-                          />
-                        </Stack>
+                          <Stack direction="row" alignItems="center" flexWrap="wrap" gap={0.5}>
+                            <Chip
+                              label={statusLabel(request.status)}
+                              color={statusColor(request.status)}
+                              variant="filled"
+                              size="small"
+                            />
+                          </Stack>
+                        </Box>
 
                         <Divider sx={{ mb: 1.5 }} />
 

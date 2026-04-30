@@ -426,6 +426,8 @@ const ProductDetailPage = () => {
   const displayVariants = useMemo(() => {
     return (productDetail?.variants || []).map((variant) => ({
       id: variant.id || "",
+      volumeMl: typeof variant.volumeMl === "number" ? variant.volumeMl : null,
+      concentrationName: variant.concentrationName || "",
       displayName:
         [
           variant.concentrationName,
@@ -1681,14 +1683,16 @@ const ProductDetailPage = () => {
                   onChange={handleVariantChange}
                   size="small"
                   sx={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                    display: "flex",
+                    flexWrap: "wrap",
                     gap: 1,
                     "& .MuiToggleButtonGroup-grouped": {
                       border: "1px solid rgba(0, 0, 0, 0.12) !important",
                       borderRadius: "8px !important",
                       marginLeft: "0 !important",
-                      width: "100%",
+                      flex: "1 1 calc(50% - 4px)",
+                      minWidth: 0,
+                      maxWidth: "100%",
                       minHeight: 40,
                     },
                     "& .MuiToggleButtonGroup-grouped.Mui-selected": {
@@ -1698,22 +1702,27 @@ const ProductDetailPage = () => {
                 >
                   {displayVariants.map((variant) => {
                     const outOfStock = isVariantOutOfStock(variant);
+                    // Compact label: show ml if available, else truncate displayName
+                    const mlLabel = variant.volumeMl ? `${variant.volumeMl}ml` : null;
 
                     return (
                       <ToggleButton
                         key={variant.id}
                         value={variant.id || ""}
+                        title={variant.displayName}
                         sx={{
                           textTransform: "none",
                           display: "flex",
+                          flexDirection: "column",
                           alignItems: "center",
                           justifyContent: "center",
-                          gap: 0.5,
-                          px: 0.5,
-                          py: 0.25,
+                          gap: 0.25,
+                          px: 1,
+                          py: 0.75,
                           position: "relative",
-                          opacity: outOfStock ? 0.75 : 1,
+                          opacity: outOfStock ? 0.65 : 1,
                           minWidth: 0,
+                          overflow: "hidden",
                         }}
                       >
                         {variant.media?.url && (
@@ -1722,8 +1731,8 @@ const ProductDetailPage = () => {
                             src={variant.media.url}
                             alt={variant.displayName || ""}
                             sx={{
-                              width: 22,
-                              height: 22,
+                              width: 24,
+                              height: 24,
                               objectFit: "cover",
                               borderRadius: 0.5,
                               flexShrink: 0,
@@ -1731,23 +1740,33 @@ const ProductDetailPage = () => {
                           />
                         )}
                         <Typography
-                          variant="body2"
                           sx={{
-                            fontWeight: 600,
-                            whiteSpace: "nowrap",
-                            fontSize: { xs: "0.72rem", sm: "0.78rem" },
+                            fontWeight: 700,
+                            fontSize: { xs: "0.8rem", sm: "0.875rem" },
                             lineHeight: 1.1,
-                            textAlign: "center",
-                            textDecoration: outOfStock
-                              ? "line-through"
-                              : "none",
-                            textDecorationColor: outOfStock
-                              ? "error.main"
-                              : "inherit",
+                            textDecoration: outOfStock ? "line-through" : "none",
+                            textDecorationColor: "error.main",
+                            color: outOfStock ? "text.disabled" : "inherit",
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          {variant.displayName || "Size"}
+                          {mlLabel ?? variant.displayName}
                         </Typography>
+                        {mlLabel && variant.concentrationName && (
+                          <Typography
+                            sx={{
+                              fontSize: "0.6rem",
+                              color: "text.secondary",
+                              lineHeight: 1,
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              maxWidth: "100%",
+                            }}
+                          >
+                            {variant.concentrationName.replace(/\s*\(.*\)\s*/g, "")}
+                          </Typography>
+                        )}
                       </ToggleButton>
                     );
                   })}
@@ -2047,26 +2066,28 @@ const ProductDetailPage = () => {
                     {/* Hiển thị khi có campaign discount */}
                     <Stack
                       direction="row"
-                      spacing={1.5}
+                      spacing={1}
                       alignItems="baseline"
-                      flexWrap="wrap"
+                      flexWrap="nowrap"
                     >
                       <Typography
                         sx={{
-                          fontSize: { xs: "2rem", sm: "2.5rem" },
+                          fontSize: { xs: "1.5rem", sm: "2.5rem" },
                           fontWeight: 700,
                           color: "error.main",
                           lineHeight: 1.2,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {currencyFormatter.format(campaignDisplayedPrice)}
                       </Typography>
                       <Typography
                         sx={{
-                          fontSize: { xs: "1.1rem", sm: "1.25rem" },
+                          fontSize: { xs: "0.9rem", sm: "1.25rem" },
                           color: "text.disabled",
                           textDecoration: "line-through",
                           fontWeight: 400,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {currencyFormatter.format(selectedBasePrice)}
@@ -2099,16 +2120,17 @@ const ProductDetailPage = () => {
                     {/* Hiển thị khi không có campaign */}
                     <Stack
                       direction="row"
-                      spacing={1.5}
+                      spacing={1}
                       alignItems="baseline"
-                      flexWrap="wrap"
+                      flexWrap="nowrap"
                     >
                       <Typography
                         sx={{
-                          fontSize: { xs: "2rem", sm: "2.5rem" },
+                          fontSize: { xs: "1.5rem", sm: "2.5rem" },
                           fontWeight: 700,
                           color: "error.main",
                           lineHeight: 1.2,
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {mainDisplayedPrice
@@ -2118,10 +2140,11 @@ const ProductDetailPage = () => {
                       {hasRetailPriceComparison && (
                         <Typography
                           sx={{
-                            fontSize: { xs: "1.1rem", sm: "1.25rem" },
+                            fontSize: { xs: "0.9rem", sm: "1.25rem" },
                             color: "text.disabled",
                             textDecoration: "line-through",
                             fontWeight: 400,
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {currencyFormatter.format(selectedRetailPrice)}

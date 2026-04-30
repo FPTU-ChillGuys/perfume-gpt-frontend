@@ -123,7 +123,7 @@ export const LoyaltyHistorySection = () => {
           </Typography>
         </Box>
       ) : (
-        <Paper
+      <Paper
           elevation={0}
           sx={{
             border: "1px solid",
@@ -132,18 +132,59 @@ export const LoyaltyHistorySection = () => {
             overflow: "hidden",
           }}
         >
-          <TableContainer>
+          {/* ── Mobile: card list ── */}
+          <Box sx={{ display: { xs: "block", md: "none" } }}>
+            {items.map((item, idx) => (
+              <Box
+                key={item.id ?? idx}
+                sx={{
+                  p: 2,
+                  borderBottom: idx < items.length - 1 ? "1px solid" : "none",
+                  borderColor: "divider",
+                }}
+              >
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 0.75 }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {item.createdAt
+                      ? new Date(item.createdAt).toLocaleString("vi-VN", {
+                          day: "2-digit", month: "2-digit", year: "numeric",
+                          hour: "2-digit", minute: "2-digit",
+                        })
+                      : "—"}
+                  </Typography>
+                  <Chip
+                    label={item.transactionType === "Earn" ? "Cộng điểm" : "Trừ điểm"}
+                    color={item.transactionType === "Earn" ? "success" : "error"}
+                    size="small"
+                    variant="outlined"
+                  />
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ flex: 1, mr: 1 }}>
+                    {item.reason || "—"}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    fontWeight={700}
+                    sx={{ color: item.transactionType === "Earn" ? "success.main" : "error.main", whiteSpace: "nowrap" }}
+                  >
+                    {item.transactionType === "Earn" ? "+" : "-"}
+                    {Math.abs(item.pointsChanged ?? 0).toLocaleString()}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+
+          {/* ── Desktop: table ── */}
+          <TableContainer sx={{ display: { xs: "none", md: "block" } }}>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ bgcolor: "action.hover" }}>
                   <TableCell sx={{ fontWeight: 700 }}>Thời gian</TableCell>
                   <TableCell sx={{ fontWeight: 700 }}>Lý do</TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 700 }}>
-                    Loại
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>
-                    Điểm
-                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>Loại</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 700 }}>Điểm</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -152,38 +193,23 @@ export const LoyaltyHistorySection = () => {
                     <TableCell sx={{ whiteSpace: "nowrap" }}>
                       {item.createdAt
                         ? new Date(item.createdAt).toLocaleString("vi-VN", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
+                            day: "2-digit", month: "2-digit", year: "numeric",
+                            hour: "2-digit", minute: "2-digit",
                           })
                         : "—"}
                     </TableCell>
                     <TableCell>{item.reason || "—"}</TableCell>
                     <TableCell align="center">
                       <Chip
-                        label={
-                          item.transactionType === "Earn"
-                            ? "Cộng điểm"
-                            : "Trừ điểm"
-                        }
-                        color={
-                          item.transactionType === "Earn" ? "success" : "error"
-                        }
+                        label={item.transactionType === "Earn" ? "Cộng điểm" : "Trừ điểm"}
+                        color={item.transactionType === "Earn" ? "success" : "error"}
                         size="small"
                         variant="outlined"
                       />
                     </TableCell>
                     <TableCell
                       align="right"
-                      sx={{
-                        fontWeight: 600,
-                        color:
-                          item.transactionType === "Earn"
-                            ? "success.main"
-                            : "error.main",
-                      }}
+                      sx={{ fontWeight: 600, color: item.transactionType === "Earn" ? "success.main" : "error.main" }}
                     >
                       {item.transactionType === "Earn" ? "+" : "-"}
                       {Math.abs(item.pointsChanged ?? 0).toLocaleString()}
@@ -193,6 +219,7 @@ export const LoyaltyHistorySection = () => {
               </TableBody>
             </Table>
           </TableContainer>
+
           <TablePagination
             component="div"
             count={totalCount}
@@ -200,10 +227,8 @@ export const LoyaltyHistorySection = () => {
             rowsPerPage={PAGE_SIZE}
             rowsPerPageOptions={[PAGE_SIZE]}
             onPageChange={(_, p) => setPage(p)}
-            labelRowsPerPage="Số hàng mỗi trang:"
-            labelDisplayedRows={({ from, to, count }) =>
-              `${from}–${to} của ${count}`
-            }
+            labelRowsPerPage="Số hàng:"
+            labelDisplayedRows={({ from, to, count }) => `${from}–${to} / ${count}`}
           />
         </Paper>
       )}
