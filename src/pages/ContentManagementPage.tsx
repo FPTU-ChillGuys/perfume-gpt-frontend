@@ -116,10 +116,9 @@ export const ContentManagementPage = () => {
 
   useEffect(() => { void loadStaticPages(); }, [loadStaticPages]);
 
-  const handleDeletePage = async (id: string, title: string) => {
-    if (!window.confirm(`Xóa trang "${title}"? Hành động này không thể hoàn tác.`)) return;
+  const handleDeletePage = async (slug: string) => {
     try {
-      await pageService.deletePage(id);
+      await pageService.deletePage(slug);
       showToast("Đã xóa trang", "success");
       void loadStaticPages();
     } catch (err) {
@@ -879,7 +878,7 @@ export const ContentManagementPage = () => {
                                 size="small"
                                 color="error"
                                 onClick={() =>
-                                  void handleDeletePage(page.id, page.title)
+                                  void handleDeletePage(page.slug)
                                 }
                               >
                                 <DeleteIcon fontSize="small" />
