@@ -1,20 +1,28 @@
-import { Box, Avatar, Typography, IconButton } from "@mui/material";
+import { Box, Avatar, Typography, IconButton, Tooltip } from "@mui/material";
 import {
   Close as CloseIcon,
   Settings as SettingsIcon,
+  History as HistoryIcon,
+  AddComment as AddCommentIcon,
 } from "@mui/icons-material";
 import AiLogo from "@/assets/AI_LOGO.png";
 
 interface ChatHeaderProps {
   onSettingsClick: (event: React.MouseEvent<HTMLElement>) => void;
+  onHistoryClick: () => void;
+  onNewConversation: () => void;
   onClose: () => void;
   isStaffMode?: boolean;
+  historyOpen?: boolean;
 }
 
 export function ChatHeader({
   onSettingsClick,
+  onHistoryClick,
+  onNewConversation,
   onClose,
   isStaffMode = false,
+  historyOpen = false,
 }: ChatHeaderProps) {
   return (
     <Box
@@ -62,6 +70,33 @@ export function ChatHeader({
           </Typography>
         </Box>
       </Box>
+
+      <Tooltip title="Chat mới" arrow>
+        <IconButton
+          size="small"
+          onClick={onNewConversation}
+          sx={{
+            color: "rgba(255,255,255,0.8)",
+            "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.1)" },
+            mr: 0.5,
+          }}
+        >
+          <AddCommentIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+
+      <IconButton
+        size="small"
+        onClick={onHistoryClick}
+        sx={{
+          color: historyOpen ? "#fff" : "rgba(255,255,255,0.8)",
+          bgcolor: historyOpen ? "rgba(255,255,255,0.15)" : "transparent",
+          "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.1)" },
+          mr: 0.5,
+        }}
+      >
+        <HistoryIcon fontSize="small" />
+      </IconButton>
 
       <IconButton
         size="small"

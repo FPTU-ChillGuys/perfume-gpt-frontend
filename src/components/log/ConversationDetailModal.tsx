@@ -7,7 +7,9 @@ import {
     DialogActions,
     Button,
 } from "@mui/material";
-import type { AdminConversation } from "@/types/conversation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import type { AdminConversation, ServerMessage } from "@/types/conversation";
 
 interface ConversationDetailModalProps {
     open: boolean;
@@ -20,8 +22,25 @@ const formatDate = (dateStr?: string) => {
     return new Date(dateStr).toLocaleString("vi-VN");
 };
 
+function parseMessageContent(msg: ServerMessage): string {
+    let text = msg.message;
+    try {
+        const parsed = JSON.parse(text);
+        if (parsed.message) text = parsed.message;
+    } catch {
+        // keep raw
+    }
+    return text;
+}
+
 export const ConversationDetailModal = ({ open, onClose, selectedConversation }: ConversationDetailModalProps) => {
     if (!selectedConversation) return null;
+
+    const sortedMessages = [...(selectedConversation.messages || [])].sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeA - timeB;
+    });
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
@@ -36,7 +55,7 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                 )}
 
                 <Typography variant="h6" gutterBottom sx={{ mt: 2, fontWeight: 600 }}>
-                    Nội dung Chat ({selectedConversation.messages?.length || 0})
+                    Nội dung Chat ({sortedMessages.length})
                 </Typography>
 
                 <Box
@@ -45,33 +64,20 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                         flexDirection: "column",
                         gap: 3,
                         p: 3,
-                        bgcolor: "#f5f7fa", // Thêm màu nền nhạt giống messenger
+                        bgcolor: "#f5f7fa",
                         borderRadius: 3,
                         maxHeight: "65vh",
                         overflowY: "auto",
                     }}
                 >
-                    {selectedConversation.messages && selectedConversation.messages.length > 0 ? (
-                        [...selectedConversation.messages].sort((a: any, b: any) => {
-                            const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                            const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                            return timeA - timeB;
-                        }).map((msgRef) => {
-                            let parsedMessage = msgRef.message;
-                            try {
-                                const parsed = JSON.parse(parsedMessage);
-                                if (parsed.message) parsedMessage = parsed.message;
-                            } catch {
-                                // Giữ nguyên dạng raw
-                            }
-
-                            const keyId = (msgRef as any).id;
-                            const createdAtStr = (msgRef as any).createdAt;
-                            const isUser = msgRef.sender === 'user';
+                    {sortedMessages.length > 0 ? (
+                        sortedMessages.map((msg) => {
+                            const text = parseMessageContent(msg);
+                            const isUser = msg.sender === 'user';
 
                             return (
                                 <Box
-                                    key={keyId}
+                                    key={msg.id}
                                     sx={{
                                         display: "flex",
                                         flexDirection: isUser ? "row-reverse" : "row",
@@ -81,7 +87,6 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                         maxWidth: "85%",
                                     }}
                                 >
-                                    {/* Avatar */}
                                     <Box
                                         sx={{
                                             width: 32,
@@ -101,7 +106,6 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                         {isUser ? "U" : "AI"}
                                     </Box>
 
-                                    {/* Chat Bubble */}
                                     <Box sx={{ display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
                                         <Box
                                             sx={{
@@ -115,24 +119,42 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                                 border: "1px solid",
                                                 borderColor: isUser ? "primary.dark" : "grey.200",
                                                 position: "relative",
+                                                "& p": { m: 0, mb: 1 },
+                                                "& p:last-child": { mb: 0 },
+                                                "& ul, & ol": { m: 0, mb: 1, pl: 3 },
+                                                "& li": { mb: 0.3 },
+                                                "& strong, & b": { fontWeight: 600 },
+                                                "& code": {
+                                                    bgcolor: isUser ? "rgba(255,255,255,0.15)" : "grey.100",
+                                                    px: 0.5,
+                                                    py: 0.15,
+                                                    borderRadius: 0.5,
+                                                    fontSize: "0.85em",
+                                                },
+                                                "& pre": {
+                                                    bgcolor: isUser ? "rgba(255,255,255,0.1)" : "grey.50",
+                                                    p: 1.5,
+                                                    borderRadius: 1,
+                                                    overflowX: "auto",
+                                                    fontSize: "0.85em",
+                                                },
+                                                "& h1, & h2, & h3, & h4": {
+                                                    m: 0,
+                                                    mb: 0.5,
+                                                    mt: 1,
+                                                    fontWeight: 600,
+                                                    fontSize: "1em",
+                                                },
                                             }}
                                         >
-                                            <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                                                {parsedMessage}
-                                            </Typography>
-                                            {(msgRef as any).products && (msgRef as any).products.length > 0 && (
-                                                <Box mt={2} p={1.5} bgcolor={isUser ? "rgba(255,255,255,0.15)" : "grey.50"} borderRadius={2} border="1px dashed" borderColor={isUser ? "rgba(255,255,255,0.4)" : "grey.300"}>
-                                                    <Typography variant="subtitle2" fontWeight={600}>
-                                                        🎁 Đã gợi ý {(msgRef as any).products.length} sản phẩm
-                                                    </Typography>
-                                                </Box>
-                                            )}
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {text}
+                                            </ReactMarkdown>
                                         </Box>
 
-                                        {/* Timestamp */}
-                                        {createdAtStr && (
+                                        {msg.createdAt && (
                                             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, px: 1 }}>
-                                                {formatDate(createdAtStr)}
+                                                {formatDate(msg.createdAt)}
                                             </Typography>
                                         )}
                                     </Box>
