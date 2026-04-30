@@ -1,4 +1,5 @@
 import { MapPin, Phone, Mail } from "lucide-react";
+import { Link } from "react-router-dom";
 import tiktokIcon from "../../assets/tiktok.png";
 import facebookIcon from "../../assets/facebook.png";
 import instagramIcon from "../../assets/instagram.png";
@@ -27,28 +28,28 @@ export const Footer = () => {
             <h3 className="text-lg font-bold mb-4">Hỗ trợ khách hàng</h3>
             <ul className="space-y-2">
               <li>
-                <a
-                  href="#"
+                <Link
+                  to="/pages/huong-dan-mua-hang"
                   className="text-gray-600 hover:text-red-600 text-sm"
                 >
                   Hướng dẫn mua hàng
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  to="/pages/huong-dan-su-dung-bao-quan"
                   className="text-gray-600 hover:text-red-600 text-sm"
                 >
-                  Hướng dẫn sử dụng & bảo quản
-                </a>
+                  Hướng dẫn sử dụng &amp; bảo quản
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  to="/pages/chinh-sach-mua-hang"
                   className="text-gray-600 hover:text-red-600 text-sm"
                 >
-                  Chính sách mua hàng
-                </a>
+                  Chính sách mua hàng
+                </Link>
               </li>
             </ul>
           </div>

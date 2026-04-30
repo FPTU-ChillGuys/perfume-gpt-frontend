@@ -224,6 +224,16 @@ const PaymentTransactionsManagementPage = lazy(() =>
     default: m.PaymentTransactionsManagementPage,
   })),
 );
+const StaticPageCreatePage = lazy(() =>
+  import("./pages/StaticPageCreatePage").then((m) => ({
+    default: m.StaticPageCreatePage,
+  })),
+);
+const StaticPageViewPage = lazy(() =>
+  import("./pages/StaticPageViewPage").then((m) => ({
+    default: m.StaticPageViewPage,
+  })),
+);
 
 const PageLoader = () => (
   <Box
@@ -291,6 +301,7 @@ function App() {
                       <Route path="/products" element={<ProductListPage />} />
                       <Route path="/survey" element={<SurveyPage />} />
                       <Route path="/survey/history" element={<SurveyHistoryPage />} />
+                      <Route path="/pages/:slug" element={<StaticPageViewPage />} />
                       <Route
                         path="/products/:productId"
                         element={<ProductDetailPage />}
@@ -484,6 +495,22 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <ContentManagementPage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/content/new-page"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <StaticPageCreatePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/content/pages/:pageSlug/edit"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <StaticPageCreatePage />
                           </RoleBasedRoute>
                         }
                       />
