@@ -14,6 +14,8 @@ import {
   Select,
   FormControl,
   InputLabel,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   VolumeUp as VolumeUpIcon,
@@ -82,6 +84,9 @@ export default function ChatbotWidget() {
   const lastInputTimeRef = useRef<number>(Date.now());
   // nodeRef is required for React 19 compatibility (findDOMNode was removed)
   const draggableNodeRef = useRef<HTMLDivElement>(null);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Initialize voices
   useEffect(() => {
@@ -357,7 +362,12 @@ export default function ChatbotWidget() {
   );
 
   return (
-    <Draggable handle=".chat-widget-handle" bounds="body" nodeRef={draggableNodeRef}>
+    <Draggable
+      handle=".chat-widget-handle"
+      bounds="body"
+      nodeRef={draggableNodeRef}
+      disabled={isMobile}
+    >
       <Box
         ref={draggableNodeRef}
         sx={{

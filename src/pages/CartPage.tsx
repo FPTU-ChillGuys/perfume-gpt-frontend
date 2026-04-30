@@ -671,7 +671,7 @@ export const CartPage = () => {
                     <Box
                       key={itemKey}
                       display="flex"
-                      alignItems="flex-start"
+                      alignItems="center"
                       gap={1}
                     >
                       {/* Checkbox */}
@@ -685,18 +685,21 @@ export const CartPage = () => {
                         disabled={!item.cartItemId}
                         icon={<RadioButtonUnchecked fontSize="small" />}
                         checkedIcon={<CheckCircle fontSize="small" />}
-                        sx={{ ...roundCheckboxSx, mt: 0.5, p: 0.5 }}
+                        sx={{ ...roundCheckboxSx, p: 0.5 }}
                       />
 
                       {/* Card — horizontal layout */}
                       <Card elevation={1} sx={{ flex: 1, minWidth: 0 }}>
-                        <CardContent sx={{ p: 1.5, "&:last-child": { pb: 1.5 } }}>
-                          <Box display="flex" gap={1.5} alignItems="flex-start">
-                            {/* Product image — fixed 80x80 */}
+                        <CardContent sx={{
+                          p: { xs: 1.5, md: 2 },
+                          "&:last-child": { pb: { xs: 1.5, md: 2 } },
+                        }}>
+                          <Box display="flex" gap={{ xs: 1.5, md: 2 }} alignItems="flex-start">
+                            {/* Product image */}
                             <Box
                               sx={{
-                                width: 80,
-                                height: 80,
+                                width: { xs: 80, md: 110 },
+                                height: { xs: 80, md: 110 },
                                 flexShrink: 0,
                                 bgcolor: "grey.100",
                                 borderRadius: 1.5,
@@ -731,7 +734,7 @@ export const CartPage = () => {
                                     WebkitLineClamp: 2,
                                     WebkitBoxOrient: "vertical",
                                     lineHeight: 1.35,
-                                    fontSize: { xs: "0.8rem", sm: "0.875rem" },
+                                    fontSize: { xs: "0.8rem", sm: "0.875rem", md: "1rem" },
                                   }}
                                 >
                                   {item.variantName ?? "Sản phẩm chưa đặt tên"}
@@ -752,6 +755,7 @@ export const CartPage = () => {
                                 color="text.secondary"
                                 display="block"
                                 mb={0.75}
+                                sx={{ fontSize: { xs: "0.72rem", md: "0.85rem" } }}
                               >
                                 {[
                                   item.volumeMl ? `${item.volumeMl} ml` : null,
@@ -785,7 +789,8 @@ export const CartPage = () => {
                                 alignItems="center"
                                 justifyContent="space-between"
                                 gap={1}
-                                pt={1}
+                                pt={{ xs: 1, md: 1.5 }}
+                                mt={{ xs: 0, md: 0.5 }}
                                 borderTop={1}
                                 borderColor="divider"
                                 flexWrap="nowrap"
@@ -805,9 +810,9 @@ export const CartPage = () => {
                                     aria-label="Giảm số lượng"
                                     onClick={() => handleQuantityChange(item.cartItemId, -1)}
                                     disabled={quantity <= 1 || updatingItemId === item.cartItemId}
-                                    sx={{ p: 0.25 }}
+                                    sx={{ p: { xs: 0.25, md: 0.5 } }}
                                   >
-                                    <RemoveIcon sx={{ fontSize: 16 }} />
+                                    <RemoveIcon sx={{ fontSize: { xs: 16, md: 18 } }} />
                                   </IconButton>
                                   <TextField
                                     size="small"
@@ -821,7 +826,16 @@ export const CartPage = () => {
                                       }
                                     }}
                                     disabled={updatingItemId === item.cartItemId}
-                                    inputProps={{ min: 1, style: { textAlign: "center", width: 28, padding: "2px 2px", fontWeight: 600, fontSize: "0.8rem" } }}
+                                    inputProps={{
+                                      min: 1,
+                                      style: {
+                                        textAlign: "center",
+                                        width: 28,
+                                        padding: "2px 2px",
+                                        fontWeight: 600,
+                                        fontSize: "0.8rem",
+                                      },
+                                    }}
                                     sx={{ "& .MuiOutlinedInput-root": { borderRadius: "8px", "& fieldset": { border: "none" } }, width: 44 }}
                                   />
                                   <IconButton
@@ -829,9 +843,9 @@ export const CartPage = () => {
                                     aria-label="Tăng số lượng"
                                     onClick={() => handleQuantityChange(item.cartItemId, 1)}
                                     disabled={updatingItemId === item.cartItemId}
-                                    sx={{ p: 0.25 }}
+                                    sx={{ p: { xs: 0.25, md: 0.5 } }}
                                   >
-                                    <AddIcon sx={{ fontSize: 16 }} />
+                                    <AddIcon sx={{ fontSize: { xs: 16, md: 18 } }} />
                                   </IconButton>
                                 </Box>
 
@@ -847,7 +861,7 @@ export const CartPage = () => {
                                       variant="body2"
                                       color="error"
                                       fontWeight={700}
-                                      sx={{ fontSize: { xs: "0.85rem", sm: "1rem" } }}
+                                      sx={{ fontSize: { xs: "0.85rem", sm: "1rem", md: "1.15rem" } }}
                                     >
                                       {formatCurrency(lineTotal)}
                                     </Typography>
@@ -860,7 +874,7 @@ export const CartPage = () => {
                                     disabled={updatingItemId === item.cartItemId}
                                     sx={{ p: 0.5 }}
                                   >
-                                    <DeleteIcon sx={{ fontSize: 18 }} />
+                                    <DeleteIcon sx={{ fontSize: { xs: 18, md: 22 } }} />
                                   </IconButton>
                                 </Box>
                               </Box>

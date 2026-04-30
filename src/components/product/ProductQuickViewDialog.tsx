@@ -525,6 +525,7 @@ const ProductQuickViewDialog = ({
             <Typography variant="subtitle2" fontWeight={600} gutterBottom>
               Lựa chọn size
             </Typography>
+            {/* 2 cột mobile, tự co nội dung desktop */}
             <ToggleButtonGroup
               exclusive
               value={selectedVariantId}
@@ -534,12 +535,13 @@ const ProductQuickViewDialog = ({
                 display: "flex",
                 flexWrap: "wrap",
                 gap: 1,
+                width: "100%",
                 "& .MuiToggleButtonGroup-grouped": {
                   border: "1px solid rgba(0, 0, 0, 0.12) !important",
                   borderRadius: "8px !important",
                   marginLeft: "0 !important",
-                  flex: "1 1 calc(50% - 4px)",
-                  minWidth: 0,
+                  flex: "0 0 auto",
+                  minWidth: "auto",
                   maxWidth: "100%",
                 },
                 "& .MuiToggleButtonGroup-grouped.Mui-selected": {
@@ -552,6 +554,10 @@ const ProductQuickViewDialog = ({
                   const outOfStock = isVariantOutOfStock(variant);
                   const mlLabel = parseVolumeLabel(variant.displayName || "");
                   const concLabel = parseConcentration(variant.displayName || "");
+                  const mobileLabel =
+                    mlLabel && concLabel
+                      ? `${concLabel} - ${mlLabel}`
+                      : mlLabel ?? variant.displayName;
 
                   return (
                     <ToggleButton
@@ -561,11 +567,11 @@ const ProductQuickViewDialog = ({
                       sx={{
                         textTransform: "none",
                         display: "flex",
-                        flexDirection: "column",
+                        flexDirection: "row",
                         alignItems: "center",
-                        justifyContent: "center",
-                        gap: 0.25,
-                        px: 1,
+                        justifyContent: "flex-start",
+                        gap: 1,
+                        px: 1.5,
                         py: 0.75,
                         minWidth: 0,
                         fontSize: "0.78rem",
@@ -588,33 +594,38 @@ const ProductQuickViewDialog = ({
                           }}
                         />
                       )}
+                      {/* Desktop: full displayName */}
                       <Box
                         component="span"
                         sx={{
-                          fontWeight: 700,
+                          fontWeight: 600,
                           fontSize: "0.875rem",
-                          lineHeight: 1.1,
+                          lineHeight: 1.3,
                           whiteSpace: "nowrap",
                           textDecoration: outOfStock ? "line-through" : "none",
                           textDecorationColor: "error.main",
                           color: outOfStock ? "text.disabled" : "inherit",
+                          display: { xs: "none", md: "inline" },
                         }}
                       >
-                        {mlLabel ?? variant.displayName}
+                        {variant.displayName}
                       </Box>
-                      {mlLabel && concLabel && (
-                        <Box
-                          component="span"
-                          sx={{
-                            fontSize: "0.62rem",
-                            color: "text.secondary",
-                            lineHeight: 1,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {concLabel}
-                        </Box>
-                      )}
+                      {/* Mobile: abbreviated "EDP - 100ml" */}
+                      <Box
+                        component="span"
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "0.8rem",
+                          lineHeight: 1.3,
+                          whiteSpace: "nowrap",
+                          textDecoration: outOfStock ? "line-through" : "none",
+                          textDecorationColor: "error.main",
+                          color: outOfStock ? "text.disabled" : "inherit",
+                          display: { xs: "inline", md: "none" },
+                        }}
+                      >
+                        {mobileLabel}
+                      </Box>
                     </ToggleButton>
                   );
                 })(),

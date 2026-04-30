@@ -1677,6 +1677,7 @@ const ProductDetailPage = () => {
                 <Typography variant="subtitle1" fontWeight={600} mb={1}>
                   Lựa chọn size
                 </Typography>
+                {/* Wrapper: 2 cột trên mobile, tự co nội dung trên desktop */}
                 <ToggleButtonGroup
                   exclusive
                   value={selectedVariantId}
@@ -1686,12 +1687,13 @@ const ProductDetailPage = () => {
                     display: "flex",
                     flexWrap: "wrap",
                     gap: 1,
+                    width: "100%",
                     "& .MuiToggleButtonGroup-grouped": {
                       border: "1px solid rgba(0, 0, 0, 0.12) !important",
                       borderRadius: "8px !important",
                       marginLeft: "0 !important",
-                      flex: "1 1 calc(50% - 4px)",
-                      minWidth: 0,
+                      flex: "0 0 auto",
+                      minWidth: "auto",
                       maxWidth: "100%",
                       minHeight: 40,
                     },
@@ -1702,8 +1704,17 @@ const ProductDetailPage = () => {
                 >
                   {displayVariants.map((variant) => {
                     const outOfStock = isVariantOutOfStock(variant);
-                    // Compact label: show ml if available, else truncate displayName
                     const mlLabel = variant.volumeMl ? `${variant.volumeMl}ml` : null;
+                    // Extract abbreviation: "Eau de Parfum (EDP)" → "EDP"
+                    const concAbbr = variant.concentrationName
+                      ? (variant.concentrationName.match(/\(([^)]+)\)/)?.[1] ??
+                         variant.concentrationName.replace(/\s*\(.*\)\s*/g, ""))
+                      : null;
+                    // Mobile compact label: "EDP - 100ml"
+                    const mobileLabel =
+                      mlLabel && concAbbr
+                        ? `${concAbbr} - ${mlLabel}`
+                        : mlLabel ?? variant.displayName;
 
                     return (
                       <ToggleButton
@@ -1713,11 +1724,11 @@ const ProductDetailPage = () => {
                         sx={{
                           textTransform: "none",
                           display: "flex",
-                          flexDirection: "column",
+                          flexDirection: "row",
                           alignItems: "center",
-                          justifyContent: "center",
-                          gap: 0.25,
-                          px: 1,
+                          justifyContent: "flex-start",
+                          gap: 1,
+                          px: 1.5,
                           py: 0.75,
                           position: "relative",
                           opacity: outOfStock ? 0.65 : 1,
@@ -1739,34 +1750,36 @@ const ProductDetailPage = () => {
                             }}
                           />
                         )}
+                        {/* Desktop: full displayName */}
                         <Typography
                           sx={{
-                            fontWeight: 700,
-                            fontSize: { xs: "0.8rem", sm: "0.875rem" },
-                            lineHeight: 1.1,
+                            fontWeight: 600,
+                            fontSize: "0.875rem",
+                            lineHeight: 1.3,
                             textDecoration: outOfStock ? "line-through" : "none",
                             textDecorationColor: "error.main",
                             color: outOfStock ? "text.disabled" : "inherit",
                             whiteSpace: "nowrap",
+                            display: { xs: "none", md: "block" },
                           }}
                         >
-                          {mlLabel ?? variant.displayName}
+                          {variant.displayName}
                         </Typography>
-                        {mlLabel && variant.concentrationName && (
-                          <Typography
-                            sx={{
-                              fontSize: "0.6rem",
-                              color: "text.secondary",
-                              lineHeight: 1,
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              maxWidth: "100%",
-                            }}
-                          >
-                            {variant.concentrationName.replace(/\s*\(.*\)\s*/g, "")}
-                          </Typography>
-                        )}
+                        {/* Mobile: abbreviated "EDP - 100ml" */}
+                        <Typography
+                          sx={{
+                            fontWeight: 600,
+                            fontSize: "0.8rem",
+                            lineHeight: 1.3,
+                            textDecoration: outOfStock ? "line-through" : "none",
+                            textDecorationColor: "error.main",
+                            color: outOfStock ? "text.disabled" : "inherit",
+                            whiteSpace: "nowrap",
+                            display: { xs: "block", md: "none" },
+                          }}
+                        >
+                          {mobileLabel}
+                        </Typography>
                       </ToggleButton>
                     );
                   })}
@@ -2407,7 +2420,7 @@ const ProductDetailPage = () => {
                   whiteSpace: "nowrap",
                 }}
               >
-                {productDetail?.name || ""}
+                {productDetail?.name || ""} 
               </Typography>
               <Typography
                 variant="body2"

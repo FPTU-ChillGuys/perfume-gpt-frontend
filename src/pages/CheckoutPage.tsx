@@ -830,8 +830,12 @@ export const CheckoutPage = () => {
               <Typography variant="h6" fontWeight={600} mb={2}>
                 Phương thức nhận hàng
               </Typography>
-              {/* Horizontal cards on xs, side-by-side on sm+ */}
-              <Box display="flex" flexDirection="column" gap={1.5}>
+              {/* 2 card ngang hàng trên desktop, dọc trên mobile */}
+              <Box
+                display="grid"
+                gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }}
+                gap={1.5}
+              >
                 <Card
                   onClick={() => setIsPickupInStore(false)}
                   sx={{
@@ -847,19 +851,18 @@ export const CheckoutPage = () => {
                   <CardContent
                     sx={{
                       display: "flex",
-                      flexDirection: { xs: "row", sm: "column" },
+                      flexDirection: "row",
                       alignItems: "center",
-                      gap: { xs: 1.5, sm: 0 },
-                      py: { xs: 1.5, sm: 2 },
-                      textAlign: { xs: "left", sm: "center" },
-                      "&:last-child": { pb: { xs: 1.5, sm: 2 } },
+                      gap: 1.5,
+                      py: 1.5,
+                      textAlign: "left",
+                      "&:last-child": { pb: 1.5 },
                     }}
                   >
                     <LocalShipping
                       sx={{
-                        fontSize: { xs: 32, sm: 40 },
+                        fontSize: 32,
                         color: !isPickupInStore ? "primary.main" : "text.secondary",
-                        mb: { xs: 0, sm: 1 },
                         flexShrink: 0,
                       }}
                     />
@@ -894,19 +897,18 @@ export const CheckoutPage = () => {
                   <CardContent
                     sx={{
                       display: "flex",
-                      flexDirection: { xs: "row", sm: "column" },
+                      flexDirection: "row",
                       alignItems: "center",
-                      gap: { xs: 1.5, sm: 0 },
-                      py: { xs: 1.5, sm: 2 },
-                      textAlign: { xs: "left", sm: "center" },
-                      "&:last-child": { pb: { xs: 1.5, sm: 2 } },
+                      gap: 1.5,
+                      py: 1.5,
+                      textAlign: "left",
+                      "&:last-child": { pb: 1.5 },
                     }}
                   >
                     <Store
                       sx={{
-                        fontSize: { xs: 32, sm: 40 },
+                        fontSize: 32,
                         color: isPickupInStore ? "primary.main" : "text.secondary",
-                        mb: { xs: 0, sm: 1 },
                         flexShrink: 0,
                       }}
                     />
@@ -1347,14 +1349,14 @@ export const CheckoutPage = () => {
                       onClick={removeVoucher}
                       disabled={isApplyingVoucher}
                       sx={{
-                            minWidth: 48,
-                            fontSize: "0.72rem",
-                            fontWeight: 600,
-                            px: 1,
-                            py: 0.4,
-                            borderRadius: "8px",
-                            flexShrink: 0,
-                          }}
+                        minWidth: 48,
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        px: 1,
+                        py: 0.4,
+                        borderRadius: "8px",
+                        flexShrink: 0,
+                      }}
                     >
                       Xóa
                     </Button>

@@ -4944,45 +4944,6 @@ export interface paths {
         };
         trace?: never;
     };
-    "/api/notifications/test-send": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["SendPushNotificationRequest"];
-                    "text/json": components["schemas"]["SendPushNotificationRequest"];
-                    "application/*+json": components["schemas"]["SendPushNotificationRequest"];
-                };
-            };
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/olfactoryfamilies/lookup": {
         parameters: {
             query?: never;
@@ -10744,6 +10705,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/storepolicies/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfStorePolicyResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfStorePolicyResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfStorePolicyResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateStorePolicyRequest"];
+                    "text/json": components["schemas"]["UpdateStorePolicyRequest"];
+                    "application/*+json": components["schemas"]["UpdateStorePolicyRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfStorePolicyResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfStorePolicyResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfStorePolicyResponse"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/suppliers/lookup": {
         parameters: {
             query?: never;
@@ -12769,6 +12814,13 @@ export interface components {
         };
         BaseResponseOfStockResponse: {
             payload?: null | components["schemas"]["StockResponse"];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfStorePolicyResponse: {
+            payload?: null | components["schemas"]["StorePolicyResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -14864,14 +14916,6 @@ export interface components {
             id?: number;
             name: string;
         };
-        SendPushNotificationRequest: {
-            deviceToken: string;
-            title: string;
-            body: string;
-            data?: null | {
-                [key: string]: string;
-            };
-        };
         ShippingInfoListItem: {
             /** Format: uuid */
             id?: string;
@@ -15007,6 +15051,19 @@ export interface components {
         StockStatus: "OutOfStock" | "LowStock" | "Normal";
         /** @enum {string} */
         StockTransactionType: "Import" | "Sales" | "Adjustment";
+        StorePolicyResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: decimal */
+            requiredDepositPercentage?: number;
+            /** Format: int32 */
+            depositTimeoutMinutes?: number;
+            isDepositRequiredForCOD?: boolean;
+            /** Format: int32 */
+            reviewRewardPoints?: number;
+            /** Format: int32 */
+            stockAdjustmentAutoApprovalThreshold?: number;
+        };
         StringSegment: {
             buffer?: null | string;
             /** Format: int32 */
@@ -15277,6 +15334,17 @@ export interface components {
             status?: components["schemas"]["StockAdjustmentStatus"];
             note?: null | string;
         };
+        UpdateStorePolicyRequest: {
+            /** Format: decimal */
+            requiredDepositPercentage?: number;
+            /** Format: int32 */
+            depositTimeoutMinutes?: number;
+            isDepositRequiredForCOD?: boolean;
+            /** Format: int32 */
+            reviewRewardPoints?: number;
+            /** Format: int32 */
+            stockAdjustmentAutoApprovalThreshold?: number;
+        };
         UpdateSupplierRequest: {
             name: string;
             /** Format: email */
@@ -15439,6 +15507,8 @@ export interface components {
             barcode: string;
             sku: string;
             displayName: string;
+            /** Format: int32 */
+            volumeMl?: number;
             /** Format: decimal */
             price?: number;
             /** Format: decimal */
