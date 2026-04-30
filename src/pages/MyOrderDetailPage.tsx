@@ -2133,6 +2133,7 @@ export const MyOrderDetailPage = () => {
 
       await orderService.createReturnRequest({
         orderId: order.id,
+        orderCode: order.code,
         reason: returnReason,
         isRefundOnly,
         returnItems: selectedReturnItems.map((entry) => ({

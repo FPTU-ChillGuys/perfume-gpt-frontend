@@ -1037,17 +1037,17 @@ export const InventoryManagementPage = () => {
               </Box>
             </Paper>
 
-            <TableContainer component={Paper}>
-              <Table>
+            <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 260px)' }}>
+              <Table stickyHeader>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "grey.50" }}>
-                    <TableCell>Ảnh</TableCell>
-                    <TableCell>Sản phẩm / Lô</TableCell>
-                    <TableCell>Mã SKU / Mã Lô</TableCell>
-                    <TableCell>Mã sản phẩm</TableCell>
-                    <TableCell align="right">Khả dụng / Còn lại</TableCell>
-                    <TableCell align="right">Ngưỡng thấp / NSX - HSD</TableCell>
-                    <TableCell align="center">Trạng thái</TableCell>
+                  <TableRow>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Ảnh</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Sản phẩm / Lô</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã SKU / Mã Lô</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã sản phẩm</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Khả dụng / Còn lại</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Ngưỡng thấp / NSX - HSD</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Trạng thái</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -1486,17 +1486,17 @@ export const InventoryManagementPage = () => {
               </Box>
             </Paper>
 
-            <TableContainer component={Paper}>
-              <Table>
+            <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 260px)' }}>
+              <Table stickyHeader>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "grey.50" }}>
-                    <TableCell>Mã yêu cầu</TableCell>
-                    <TableCell>Người tạo</TableCell>
-                    <TableCell>Ngày tạo</TableCell>
-                    <TableCell>Lý do</TableCell>
-                    <TableCell align="center">Số lượng điều chỉnh</TableCell>
-                    <TableCell align="center">Trạng thái</TableCell>
-                    <TableCell align="center">Thao tác</TableCell>
+                  <TableRow>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã yêu cầu</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Người tạo</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Ngày tạo</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Lý do</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Số lượng điều chỉnh</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Trạng thái</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Thao tác</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>

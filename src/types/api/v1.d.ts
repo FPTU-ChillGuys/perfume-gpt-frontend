@@ -13306,6 +13306,7 @@ export interface components {
         CreateReturnRequestDto: {
             /** Format: uuid */
             orderId: string;
+            orderCode: string;
             reason: components["schemas"]["ReturnOrderReason"];
             isRefundOnly?: boolean;
             returnItems: components["schemas"]["ReturnItemDto"][];
@@ -15063,6 +15064,16 @@ export interface components {
             reviewRewardPoints?: number;
             /** Format: int32 */
             stockAdjustmentAutoApprovalThreshold?: number;
+            /** Format: int32 */
+            orderRewardPointsInDays?: number;
+            /** Format: int32 */
+            batchExpiringSoonThresholdInDays?: number;
+            /** Format: int32 */
+            returnOrderAllowanceInDays?: number;
+            /** Format: int32 */
+            maxAddressesPerUser?: number;
+            /** Format: int32 */
+            returnOrderAllowAfterDeliveryInDays?: number;
         };
         StringSegment: {
             buffer?: null | string;
@@ -15344,6 +15355,14 @@ export interface components {
             reviewRewardPoints?: number;
             /** Format: int32 */
             stockAdjustmentAutoApprovalThreshold?: number;
+            /** Format: int32 */
+            orderRewardPointsInDays?: number;
+            /** Format: int32 */
+            batchExpiringSoonThresholdInDays?: number;
+            /** Format: int32 */
+            returnOrderAllowanceInDays?: number;
+            /** Format: int32 */
+            maxAddressesPerUser?: number;
         };
         UpdateSupplierRequest: {
             name: string;

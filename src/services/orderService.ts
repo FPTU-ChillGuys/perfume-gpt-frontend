@@ -69,6 +69,7 @@ export type ContactAddressInformation =
   components["schemas"]["ContactAddressInformation"];
 export interface CreateReturnRequestPayload {
   orderId: string;
+  orderCode: string;
   reason: ReturnOrderReason;
   isRefundOnly?: boolean;
   returnItems: {
@@ -1383,6 +1384,7 @@ class OrderService {
       console.log("[OrderService] createReturnRequest payload:", payload);
       const requestBody: CreateReturnRequestDto = {
         orderId: payload.orderId,
+        orderCode: payload.orderCode,
         reason: payload.reason,
         isRefundOnly: payload.isRefundOnly ?? false,
         returnItems: payload.returnItems,

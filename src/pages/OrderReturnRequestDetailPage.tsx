@@ -1549,7 +1549,7 @@ export const OrderReturnRequestDetailPage = () => {
                       <Typography variant="body2" color="text.secondary">
                         Tiền hàng hoàn lại:
                       </Typography>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" fontWeight={600} sx={{ whiteSpace: "nowrap", ml: 2 }}>
                         {formatCurrency(refundSummary.totalRefundableAmount)}
                       </Typography>
                     </Box>
@@ -1569,6 +1569,7 @@ export const OrderReturnRequestDetailPage = () => {
                           variant="body2"
                           fontWeight={600}
                           color="success.main"
+                          sx={{ whiteSpace: "nowrap", ml: 2 }}
                         >
                           {formatCurrency(refundSummary.refundedShippingFee)}
                         </Typography>
@@ -1591,6 +1592,7 @@ export const OrderReturnRequestDetailPage = () => {
                         variant="h6"
                         fontWeight={700}
                         color="error.main"
+                        sx={{ whiteSpace: "nowrap", ml: 2, textAlign: "right" }}
                       >
                         {formatCurrency(refundSummary.totalAmount)}
                       </Typography>
@@ -1617,6 +1619,7 @@ export const OrderReturnRequestDetailPage = () => {
                             variant="body2"
                             fontWeight={700}
                             color="success.main"
+                            sx={{ whiteSpace: "nowrap", ml: 2 }}
                           >
                             {formatCurrency(request.approvedRefundAmount)}
                           </Typography>
@@ -1898,7 +1901,7 @@ export const OrderReturnRequestDetailPage = () => {
                       arrow
                     >
                       <span>
-                        <Button
+                        <LoadingButton
                           variant="contained"
                           color="success"
                           onClick={() => {
@@ -1914,9 +1917,10 @@ export const OrderReturnRequestDetailPage = () => {
                             setRefundConfirmOpen(true);
                           }}
                           disabled={isSaving || isStaff}
+                          loading={isSaving}
                         >
                           Hoàn tiền
-                        </Button>
+                        </LoadingButton>
                       </span>
                     </Tooltip>
                   </Stack>
