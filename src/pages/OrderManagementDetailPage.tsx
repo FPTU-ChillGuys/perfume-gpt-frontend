@@ -87,6 +87,7 @@ import {
   paymentStatusLabels,
 } from "@/utils/orderStatus";
 import { formatDateTimeCompactVN, formatDateVN } from "@/utils/dateTime";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 const CARRIER_LABELS: Record<CarrierName, string> = {
   GHN: "Giao Hàng Nhanh",
@@ -2208,7 +2209,7 @@ export const OrderManagementDetailPage = () => {
                         )}
 
                         {canPrepareOrder && (
-                          <Button
+                          <LoadingButton
                             variant="contained"
                             onClick={handlePrepareOrder}
                             disabled={
@@ -2216,15 +2217,14 @@ export const OrderManagementDetailPage = () => {
                               isFulfilling ||
                               isCompletingInStorePickup
                             }
+                            loading={isUpdating}
                             sx={{
                               bgcolor: "#2e7d32",
                               "&:hover": { bgcolor: "#1b5e20" },
                             }}
                           >
-                            {isUpdating
-                              ? "Đang xác nhận..."
-                              : "Xác nhận đơn hàng"}
-                          </Button>
+                            Xác nhận đơn hàng
+                          </LoadingButton>
                         )}
 
                         {canCompleteInStoreOrder && (
@@ -2234,7 +2234,7 @@ export const OrderManagementDetailPage = () => {
                               hàng. Xác nhận khi khách đã đến nhận.
                             </Alert>
 
-                            <Button
+                            <LoadingButton
                               variant="contained"
                               color={
                                 isCashInStoreOrderPayment
@@ -2247,11 +2247,10 @@ export const OrderManagementDetailPage = () => {
                                 isFulfilling ||
                                 isCompletingInStorePickup
                               }
+                              loading={isCompletingInStorePickup}
                             >
-                              {isCompletingInStorePickup
-                                ? "Đang xác nhận..."
-                                : "Xác nhận khách đã nhận hàng"}
-                            </Button>
+                              Xác nhận khách đã nhận hàng
+                            </LoadingButton>
                           </>
                         )}
 
@@ -2464,7 +2463,7 @@ export const OrderManagementDetailPage = () => {
                               )}
                             </Box>
 
-                            <Button
+                            <LoadingButton
                               variant="contained"
                               onClick={handleFulfillOrder}
                               disabled={
@@ -2473,15 +2472,14 @@ export const OrderManagementDetailPage = () => {
                                 !isPackagingConfirmed ||
                                 Boolean(autoFulfillError)
                               }
+                              loading={isFulfilling}
                               sx={{
                                 bgcolor: "#1976d2",
                                 "&:hover": { bgcolor: "#115293" },
                               }}
                             >
-                              {isFulfilling
-                                ? "Đang đóng gói..."
-                                : "Đóng gói và chờ bàn giao"}
-                            </Button>
+                              Đóng gói và chờ bàn giao
+                            </LoadingButton>
                           </Stack>
                         )}
 
@@ -2562,16 +2560,15 @@ export const OrderManagementDetailPage = () => {
           >
             Đóng
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="warning"
             onClick={handleConfirmCashInStoreCompletion}
             disabled={isCompletingInStorePickup}
+            loading={isCompletingInStorePickup}
           >
-            {isCompletingInStorePickup
-              ? "Đang xác nhận..."
-              : "Xác nhận thu tiền"}
-          </Button>
+            Xác nhận thu tiền
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -2627,14 +2624,15 @@ export const OrderManagementDetailPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsCancelDialogOpen(false)}>Đóng</Button>
-          <Button
+          <LoadingButton
             color="error"
             variant="contained"
             onClick={handleConfirmCancelStatus}
             disabled={isUpdating || !cancelReason}
+            loading={isUpdating}
           >
-            {isUpdating ? "Đang hủy..." : "Xác nhận hủy"}
-          </Button>
+            Xác nhận hủy
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -2684,14 +2682,15 @@ export const OrderManagementDetailPage = () => {
           >
             Đóng
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="warning"
             onClick={handleConfirmSwapDamagedBatch}
             disabled={isSwappingBatch || !damagedReservationId}
+            loading={isSwappingBatch}
           >
-            {isSwappingBatch ? "Đang đổi batch..." : "Xác nhận swap"}
-          </Button>
+            Xác nhận swap
+          </LoadingButton>
         </DialogActions>
       </Dialog>
     </AdminLayout>

@@ -74,6 +74,7 @@ import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
 import payosIcon from "@/assets/payos.png";
 import transericon from "@/assets/transfer.png";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 type OrderListItemWithReturnable = OrderListItem & {
   isReturnable?: boolean;
@@ -1650,7 +1651,7 @@ export const MyOrdersPage = () => {
           >
             Đóng
           </Button>
-          <Button
+          <LoadingButton
             color={cancelBehavior?.mode === "direct" ? "error" : "warning"}
             variant="contained"
             onClick={handleConfirmCancelOrder}
@@ -1659,13 +1660,12 @@ export const MyOrdersPage = () => {
               actionOrderId === cancelOrderId ||
               !canSubmitCancelRequest
             }
+            loading={actionOrderId === cancelOrderId}
           >
-            {actionOrderId === cancelOrderId
-              ? "Đang gửi..."
-              : cancelBehavior?.mode === "direct"
-                ? "Xác nhận hủy"
-                : "Gửi yêu cầu"}
-          </Button>
+            {cancelBehavior?.mode === "direct"
+              ? "Xác nhận hủy"
+              : "Gửi yêu cầu"}
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -1729,10 +1729,15 @@ export const MyOrdersPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={closeRetryPaymentDialog} disabled={isRetryingPayment}>Đóng</Button>
-          <Button variant="contained" color="warning" onClick={handleRetryPayment}
-            disabled={isRetryingPayment || !retryPaymentId}>
-            {isRetryingPayment ? "Đang xử lý..." : "Thanh toán ngay"}
-          </Button>
+          <LoadingButton
+            variant="contained"
+            color="warning"
+            onClick={handleRetryPayment}
+            disabled={isRetryingPayment || !retryPaymentId}
+            loading={isRetryingPayment}
+          >
+            Thanh toán ngay
+          </LoadingButton>
         </DialogActions>
       </Dialog>
     </MainLayout>

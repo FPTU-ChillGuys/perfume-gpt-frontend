@@ -7,11 +7,11 @@ import {
   Typography,
   Link,
   Alert,
-  CircularProgress,
 } from "@mui/material";
 import { ArrowBack, MarkEmailRead } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
@@ -177,24 +177,21 @@ export const ForgotPasswordPage = () => {
                 />
               </Box>
 
-              <Button
+              <LoadingButton
                 type="submit"
                 variant="contained"
                 fullWidth
                 size="large"
                 disabled={isLoading}
+                loading={isLoading}
                 sx={{
                   py: 1.2,
                   fontWeight: 600,
                   "&:hover": { bgcolor: "primary.dark" },
                 }}
               >
-                {isLoading ? (
-                  <CircularProgress size={24} color="inherit" />
-                ) : (
-                  "GỬI LINK ĐẶT LẠI MẬT KHẨU"
-                )}
-              </Button>
+                GỬI LINK ĐẶT LẠI MẬT KHẨU
+              </LoadingButton>
 
               <Typography
                 variant="body2"

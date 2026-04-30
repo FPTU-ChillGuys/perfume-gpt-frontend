@@ -20,6 +20,7 @@ import {
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
@@ -425,13 +426,13 @@ export const RegisterPage = () => {
                   </Typography>
                 )}
 
-                {/* Register Button */}
-                <Button
+                <LoadingButton
                   type="submit"
                   variant="contained"
                   fullWidth
                   size="medium"
                   disabled={isLoading || Object.keys(validate()).length > 0}
+                  loading={isLoading}
                   sx={{
                     mb: 1,
                     py: 1,
@@ -447,12 +448,8 @@ export const RegisterPage = () => {
                     }),
                   }}
                 >
-                  {isLoading ? (
-                    <CircularProgress size={22} color="inherit" />
-                  ) : (
-                    "ĐĂNG KÝ"
-                  )}
-                </Button>
+                  ĐĂNG KÝ
+                </LoadingButton>
               </form>
 
               {/* Login Link */}

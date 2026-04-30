@@ -61,6 +61,7 @@ import storeIcon from "@/assets/store.png";
 import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
 import payOsIcon from "@/assets/payos.png";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 const formatCurrency = (value?: number) =>
   new Intl.NumberFormat("vi-VN").format(Number(value ?? 0)) + "đ";
@@ -1716,17 +1717,18 @@ export const CheckoutPage = () => {
                   </Box>
                 )}
 
-              <Button
+              <LoadingButton
                 fullWidth
                 variant="contained"
                 color="error"
                 size="large"
                 onClick={handleCheckout}
                 disabled={isSubmitting}
+                loading={isSubmitting}
                 sx={{ py: 1.5 }}
               >
-                {isSubmitting ? <CircularProgress size={24} /> : "Đặt hàng"}
-              </Button>
+                Đặt hàng
+              </LoadingButton>
             </Paper>
           </Box>
         </Box>

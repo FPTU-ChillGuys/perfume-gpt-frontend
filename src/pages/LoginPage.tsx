@@ -21,6 +21,7 @@ import {
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { GoogleLogin } from "@react-oauth/google";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -300,12 +301,13 @@ export const LoginPage = () => {
             </Box>
 
             {/* Login Button */}
-            <Button
+            <LoadingButton
               type="submit"
               variant="contained"
               fullWidth
               size="large"
               disabled={isLoading}
+              loading={isLoading}
               sx={{
                 mt: 2,
                 mb: 1.5,
@@ -317,12 +319,8 @@ export const LoginPage = () => {
                 },
               }}
             >
-              {isLoading ? (
-                <CircularProgress size={24} color="inherit" />
-              ) : (
-                "ĐĂNG NHẬP"
-              )}
-            </Button>
+              ĐĂNG NHẬP
+            </LoadingButton>
           </form>
 
           {/* Divider */}

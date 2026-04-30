@@ -29,6 +29,7 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CheckIcon from "@mui/icons-material/Check";
+import { LoadingButton } from "@/components/common/LoadingButton";
 import momoLogo from "@/assets/momo.png";
 import vnpayLogo from "@/assets/vnpay.jpg";
 import storeLogo from "@/assets/store.png";
@@ -1729,16 +1730,17 @@ export const OrderReturnRequestDetailPage = () => {
                     >
                       Từ chối
                     </Button>
-                    <Button
+                    <LoadingButton
                       variant="contained"
                       color="success"
                       onClick={() => {
                         void handleReview(true);
                       }}
                       disabled={isSaving}
+                      loading={isSaving}
                     >
                       Duyệt yêu cầu
-                    </Button>
+                    </LoadingButton>
                   </Stack>
                 </Paper>
               )}
@@ -1757,16 +1759,17 @@ export const OrderReturnRequestDetailPage = () => {
                   )}
 
                   <Stack direction="row" justifyContent="flex-end">
-                    <Button
+                    <LoadingButton
                       variant="contained"
                       color="warning"
                       onClick={() => {
                         void handleStartInspection();
                       }}
                       disabled={isSaving || !canStartInspection}
+                      loading={isSaving}
                     >
                       Bắt đầu kiểm định
-                    </Button>
+                    </LoadingButton>
                   </Stack>
                 </Paper>
               )}
@@ -1857,7 +1860,7 @@ export const OrderReturnRequestDetailPage = () => {
                     >
                       Từ chối kiểm định
                     </Button>
-                    <Button
+                    <LoadingButton
                       variant="contained"
                       color="success"
                       onClick={() => {
@@ -1868,9 +1871,10 @@ export const OrderReturnRequestDetailPage = () => {
                         !hasInspectionRefundInput ||
                         !isInspectionRefundAmountValid
                       }
+                      loading={isSaving}
                     >
                       Hoàn tất kiểm định
-                    </Button>
+                    </LoadingButton>
                   </Stack>
                 </Paper>
               )}
@@ -1971,16 +1975,17 @@ export const OrderReturnRequestDetailPage = () => {
           >
             Hủy
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="error"
             onClick={() => {
               void handleReview(false, rejectReason, false);
             }}
             disabled={isSaving || !rejectReason.trim()}
+            loading={isSaving}
           >
             Xác nhận từ chối
-          </Button>
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -2032,16 +2037,17 @@ export const OrderReturnRequestDetailPage = () => {
           >
             Hủy
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="warning"
             onClick={() => {
               void handleReview(false, moreInfoReason, true);
             }}
             disabled={isSaving}
+            loading={isSaving}
           >
             Xác nhận yêu cầu bổ sung
-          </Button>
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -2093,16 +2099,17 @@ export const OrderReturnRequestDetailPage = () => {
           >
             Hủy
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="error"
             onClick={() => {
               void handleFailInspection();
             }}
             disabled={isSaving || !inspectionRejectReason.trim()}
+            loading={isSaving}
           >
             Xác nhận từ chối kiểm định
-          </Button>
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -2336,7 +2343,7 @@ export const OrderReturnRequestDetailPage = () => {
           >
             Hủy
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="success"
             onClick={() => {
@@ -2349,9 +2356,10 @@ export const OrderReturnRequestDetailPage = () => {
               (isManualTransferRefund &&
                 (!hasRefundBankInfo || isManualReferenceTooShort))
             }
+            loading={isSaving}
           >
-            {isSaving ? <CircularProgress size={24} /> : "Xác nhận hoàn tiền"}
-          </Button>
+            Xác nhận hoàn tiền
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 

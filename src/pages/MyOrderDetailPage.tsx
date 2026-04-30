@@ -102,6 +102,7 @@ import vnpayIcon from "@/assets/vnpay.jpg";
 import momoIcon from "@/assets/momo.png";
 import payosIcon from "@/assets/payos.png";
 import transericon from "@/assets/transfer.png";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -3096,18 +3097,17 @@ export const MyOrderDetailPage = () => {
           >
             Đóng
           </Button>
-          <Button
+          <LoadingButton
             color={cancelBehavior?.mode === "direct" ? "error" : "warning"}
             variant="contained"
             onClick={handleCancelOrder}
             disabled={isCancelling || !canSubmitCancelRequest}
+            loading={isCancelling}
           >
-            {isCancelling
-              ? "Đang xử lý..."
-              : cancelBehavior?.mode === "direct"
-                ? "Xác nhận hủy"
-                : "Gửi yêu cầu"}
-          </Button>
+            {cancelBehavior?.mode === "direct"
+              ? "Xác nhận hủy"
+              : "Gửi yêu cầu"}
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -3171,10 +3171,15 @@ export const MyOrderDetailPage = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setIsRetryPaymentDialogOpen(false)} disabled={isRetryingPayment}>Đóng</Button>
-          <Button variant="contained" color="warning" onClick={handleRetryPaymentFromDetail}
-            disabled={isRetryingPayment || !allowedRetryPaymentMethods.includes(selectedRetryPaymentMethod) && !GATEWAY_METHODS.includes(selectedRetryPaymentMethod)}>
-            {isRetryingPayment ? "Đang xử lý..." : "Thanh toán ngay"}
-          </Button>
+          <LoadingButton
+            variant="contained"
+            color="warning"
+            onClick={handleRetryPaymentFromDetail}
+            disabled={isRetryingPayment || !allowedRetryPaymentMethods.includes(selectedRetryPaymentMethod) && !GATEWAY_METHODS.includes(selectedRetryPaymentMethod)}
+            loading={isRetryingPayment}
+          >
+            Thanh toán ngay
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -3849,14 +3854,15 @@ export const MyOrderDetailPage = () => {
           >
             Đóng
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="warning"
             onClick={handleSubmitReturnRequest}
             disabled={isSubmittingReturnRequest || !canSubmitReturnRequest}
+            loading={isSubmittingReturnRequest}
           >
-            {isSubmittingReturnRequest ? "Đang gửi..." : "Gửi yêu cầu"}
-          </Button>
+            Gửi yêu cầu
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 

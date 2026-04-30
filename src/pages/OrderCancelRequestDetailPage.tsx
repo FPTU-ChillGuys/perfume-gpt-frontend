@@ -14,9 +14,6 @@ import {
   IconButton,
   Paper,
   Stack,
-  Step,
-  StepLabel,
-  Stepper,
   Table,
   TableBody,
   TableCell,
@@ -29,9 +26,8 @@ import {
 } from "@mui/material";
 import ArrowBack from "@mui/icons-material/ArrowBack";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import { LoadingButton } from "@/components/common/LoadingButton";
 import CheckIcon from "@mui/icons-material/Check";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import HourglassEmptyIcon from "@mui/icons-material/HourglassEmpty";
 import ErrorIcon from "@mui/icons-material/Error";
 import momoLogo from "@/assets/momo.png";
 import vnpayLogo from "@/assets/vnpay.jpg";
@@ -1174,20 +1170,17 @@ export const OrderCancelRequestDetailPage = () => {
           >
             Hủy
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="error"
             onClick={() => {
               void handleConfirmReject();
             }}
             disabled={isSaving || !rejectNote.trim()}
+            loading={isSaving}
           >
-            {isSaving ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : (
-              "Xác nhận từ chối"
-            )}
-          </Button>
+            Xác nhận từ chối
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
@@ -1419,7 +1412,7 @@ export const OrderCancelRequestDetailPage = () => {
           >
             Hủy
           </Button>
-          <Button
+          <LoadingButton
             variant="contained"
             color="success"
             onClick={() => {
@@ -1431,13 +1424,10 @@ export const OrderCancelRequestDetailPage = () => {
               (isExternalTransferSelected &&
                 (!hasRefundBankInfo || isApproveManualReferenceTooShort))
             }
+            loading={isSaving}
           >
-            {isSaving ? (
-              <CircularProgress size={20} color="inherit" />
-            ) : (
-              "Xác nhận duyệt"
-            )}
-          </Button>
+            Xác nhận duyệt
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 

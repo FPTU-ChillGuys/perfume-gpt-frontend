@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Typography,
   Button,
   Table,
   TableBody,
@@ -23,6 +22,7 @@ import {
   Alert,
   Tooltip,
 } from "@mui/material";
+import { LoadingButton } from "@/components/common/LoadingButton";
 import { Search, Add, Edit, Delete, Inventory } from "@mui/icons-material";
 import { AdminLayout } from "../layouts/AdminLayout";
 import {
@@ -338,9 +338,9 @@ export const SuppliersPage = () => {
           <Button onClick={() => setDialogOpen(false)} disabled={isSaving}>
             Hủy
           </Button>
-          <Button variant="contained" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? <CircularProgress size={20} color="inherit" /> : "Lưu"}
-          </Button>
+          <LoadingButton variant="contained" onClick={handleSave} disabled={isSaving} loading={isSaving}>
+            Lưu
+          </LoadingButton>
         </DialogActions>
       </Dialog>
 
