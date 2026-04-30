@@ -538,6 +538,7 @@ export const MyReturnRequestDetailPage = () => {
                 minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
+                pb: { xs: "72px", md: 0 },
               }}
             >
               {isLoading || !request ? (
@@ -647,7 +648,7 @@ export const MyReturnRequestDetailPage = () => {
 
                   <Box
                     sx={{
-                      p: 3,
+                      p: { xs: 2, sm: 3 },
                       display: "flex",
                       flexDirection: "column",
                       gap: 2.5,
@@ -693,7 +694,7 @@ export const MyReturnRequestDetailPage = () => {
 
                       <Box
                         display="grid"
-                        gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr 1fr" }}
+                        gridTemplateColumns={{ xs: "1fr 1fr", md: "1fr 1fr 1fr" }}
                         gap={2}
                       >
                         <Box>
