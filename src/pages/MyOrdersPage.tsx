@@ -823,6 +823,7 @@ export const MyOrdersPage = () => {
                 minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
+                pb: { xs: "72px", md: 0 },
               }}
             >
               {/* Status tabs */}

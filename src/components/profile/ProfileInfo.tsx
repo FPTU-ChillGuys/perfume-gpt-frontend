@@ -7,8 +7,10 @@ import {
   Chip,
   CircularProgress,
   Divider,
+  IconButton,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
@@ -210,14 +212,21 @@ const ProfileInfo = ({
           </Typography>
         </Box>
         {!isEditing && (
-          <Button
-            variant="outlined"
-            startIcon={<EditIcon />}
-            onClick={onEdit}
-            size="small"
-          >
-            Chỉnh sửa
-          </Button>
+          <Tooltip title="Chỉnh sửa">
+            <IconButton
+              onClick={onEdit}
+              size="small"
+              sx={{
+                border: "1px solid",
+                borderColor: "divider",
+                borderRadius: 1.5,
+                p: 0.75,
+                "&:hover": { borderColor: "error.main", color: "error.main" },
+              }}
+            >
+              <EditIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         )}
       </Box>
 

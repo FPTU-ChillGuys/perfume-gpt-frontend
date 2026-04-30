@@ -169,6 +169,7 @@ export const MyCancelRequestsPage = () => {
                 minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
+                pb: { xs: "72px", md: 0 },
               }}
             >
               <Box sx={{ borderBottom: "1px solid", borderColor: "divider" }}>

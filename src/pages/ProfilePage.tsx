@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Box,
   CircularProgress,
@@ -343,7 +343,13 @@ const ProfilePage = () => {
               avatarUrl={avatar?.url || user?.avatarUrl}
             />
             <Box
-              sx={{ flex: 1, p: 4, bgcolor: "background.paper", minWidth: 0 }}
+              sx={{
+                flex: 1,
+                p: { xs: 2, sm: 4 },
+                pb: { xs: "80px", sm: 4 },
+                bgcolor: "background.paper",
+                minWidth: 0,
+              }}
             >
               {renderContent()}
             </Box>
