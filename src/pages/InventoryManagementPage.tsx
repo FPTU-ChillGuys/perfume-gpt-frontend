@@ -62,6 +62,7 @@ import {
   type StockAdjustmentStatus,
 } from "@/services/stockAdjustmentService";
 import { useToast } from "@/hooks/useToast";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type ExpiryDaysFilter = "" | "30" | "60" | "90";
@@ -1044,7 +1045,6 @@ export const InventoryManagementPage = () => {
                     <TableCell>Sản phẩm / Lô</TableCell>
                     <TableCell>Mã SKU / Mã Lô</TableCell>
                     <TableCell>Mã sản phẩm</TableCell>
-                    <TableCell align="right">Tổng nhập</TableCell>
                     <TableCell align="right">Khả dụng / Còn lại</TableCell>
                     <TableCell align="right">Ngưỡng thấp / NSX - HSD</TableCell>
                     <TableCell align="center">Trạng thái</TableCell>
@@ -1053,19 +1053,19 @@ export const InventoryManagementPage = () => {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
+                      <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={8}>
+                      <TableCell colSpan={7}>
                         <Alert severity="error">{error}</Alert>
                       </TableCell>
                     </TableRow>
                   ) : stocks.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
+                      <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                         <Typography variant="body2" color="text.secondary">
                           Không có dữ liệu tồn kho phù hợp.
                         </Typography>
@@ -1083,7 +1083,7 @@ export const InventoryManagementPage = () => {
                           {stockIndex > 0 && (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 sx={{
                                   p: 0,
                                   borderBottom: "none",
@@ -1205,9 +1205,6 @@ export const InventoryManagementPage = () => {
                               </Stack>
                             </TableCell>
                             <TableCell align="right">
-                              {stock.totalQuantity ?? 0}
-                            </TableCell>
-                            <TableCell align="right">
                               {stock.availableQuantity ?? 0}
                             </TableCell>
                             <TableCell align="right">
@@ -1230,7 +1227,7 @@ export const InventoryManagementPage = () => {
                           {batchState?.loading ? (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 sx={{
                                   bgcolor: "grey.50",
                                   borderBottom: "none",
@@ -1252,7 +1249,7 @@ export const InventoryManagementPage = () => {
                           ) : batchState?.error ? (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 sx={{
                                   bgcolor: "grey.50",
                                   borderBottom: "none",
@@ -1268,7 +1265,7 @@ export const InventoryManagementPage = () => {
                           ) : !batchState || batchState.items.length === 0 ? (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 sx={{
                                   bgcolor: "grey.50",
                                   borderBottom: "none",
@@ -1325,9 +1322,6 @@ export const InventoryManagementPage = () => {
                                   >
                                     -
                                   </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  {batch.importQuantity ?? 0}
                                 </TableCell>
                                 <TableCell align="right">
                                   {batch.remainingQuantity ?? 0}
@@ -2056,7 +2050,7 @@ export const InventoryManagementPage = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setCreateDialogOpen(false)}>Hủy</Button>
-            <Button
+            <LoadingButton
               onClick={handleCreateAdjustment}
               variant="contained"
               disabled={
@@ -2065,9 +2059,10 @@ export const InventoryManagementPage = () => {
                   (!createPayload.variantId.trim() ||
                     !createPayload.batchId.trim()))
               }
+              loading={createSubmitting}
             >
-              {createSubmitting ? "Đang tạo..." : "Tạo yêu cầu"}
-            </Button>
+              Tạo yêu cầu
+            </LoadingButton>
           </DialogActions>
         </Dialog>
       </Box>
