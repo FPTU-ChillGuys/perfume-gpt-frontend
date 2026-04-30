@@ -44,8 +44,24 @@ export const ProductCard = ({
   const { openQuickView } = useProductQuickView();
   const [isAdding, setIsAdding] = useState(false);
 
+  /** Full format: 3.450.000đ */
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
+  };
+
+  /** Compact format: 3.45tr / 450k */
+  const formatPriceCompact = (price: number): string => {
+    if (price >= 1_000_000) {
+      const val = price / 1_000_000;
+      const formatted =
+        val % 1 === 0 ? `${val}` : val.toFixed(val < 10 ? 2 : 1).replace(/\.?0+$/, "");
+      return `${formatted}tr`;
+    }
+    if (price >= 1_000) {
+      const val = price / 1_000;
+      return `${Math.round(val)}k`;
+    }
+    return `${price}đ`;
   };
 
   const hasPriceRange =
@@ -147,9 +163,10 @@ export const ProductCard = ({
               });
             openQuickView(id, aiAcceptanceId);
           }}
-          className="p-2 bg-white rounded-full shadow hover:bg-gray-100"
+          className="p-1.5 sm:p-2 bg-white rounded-full shadow hover:bg-gray-100"
         >
-          <Eye size={18} className="text-gray-700" />
+          <Eye size={16} className="text-gray-700 sm:hidden" />
+          <Eye size={18} className="text-gray-700 hidden sm:block" />
         </button>
       </div>
 
@@ -157,7 +174,7 @@ export const ProductCard = ({
       <Link
         to={detailHref}
         onClick={handleProductLinkClick}
-        className="aspect-square bg-white flex items-center justify-center overflow-hidden p-4 cursor-pointer"
+        className="aspect-square bg-white flex items-center justify-center overflow-hidden p-2 sm:p-4 cursor-pointer"
       >
         {imageUrl ? (
           <img
@@ -176,33 +193,46 @@ export const ProductCard = ({
       </Link>
 
       {/* Info */}
-      <div className="p-4 bg-gray-50 border-t border-gray-100 flex flex-col flex-grow">
+      <div className="p-2 sm:p-4 bg-gray-50 border-t border-gray-100 flex flex-col flex-grow">
         <Link
           to={detailHref}
           onClick={handleProductLinkClick}
           className="block"
         >
-          <p className="text-xs text-gray-500 uppercase font-semibold mb-1 cursor-pointer text-center">
+          <p className="text-[10px] sm:text-xs text-gray-500 uppercase font-semibold mb-0.5 sm:mb-1 cursor-pointer text-center">
             {brand}
           </p>
-          <h3 className="text-sm font-medium text-gray-800 mb-2 line-clamp-2 min-h-[2.5rem] cursor-pointer text-center">
+          <h3 className="text-xs sm:text-sm font-medium text-gray-800 mb-1 sm:mb-2 line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem] cursor-pointer text-center">
             {name}
           </h3>
         </Link>
         <div className="mt-auto w-full">
-          <div className="text-center min-h-[1.5rem] leading-snug px-1">
-            {originalPrice && (
-              <span className="inline-block mr-1.5 text-[11px] sm:text-xs text-gray-400 line-through">
-                {formatPrice(originalPrice)}
+          {/* Price — full numbers, always 1 row */}
+          <div className="text-center leading-snug px-0.5">
+            {hasPriceRange ? (
+              <span className="inline-flex items-baseline gap-[2px] flex-nowrap justify-center w-full overflow-hidden">
+                <span className="text-[10px] sm:text-xs md:text-sm font-bold text-red-600 whitespace-nowrap">
+                  {formatPrice(salePrice)}
+                </span>
+                <span className="text-gray-400 font-normal text-[9px] sm:text-[10px] shrink-0">&nbsp;–&nbsp;</span>
+                <span className="text-[10px] sm:text-xs md:text-sm font-bold text-red-600 whitespace-nowrap">
+                  {formatPrice(maxPrice!)}
+                </span>
+              </span>
+            ) : (
+              <span className="inline-flex items-baseline gap-[3px] flex-nowrap justify-center w-full overflow-hidden">
+                {originalPrice && (
+                  <span className="text-[9px] sm:text-[10px] text-gray-400 line-through whitespace-nowrap shrink-0">
+                    {formatPrice(originalPrice)}
+                  </span>
+                )}
+                <span className="text-[11px] sm:text-xs md:text-sm font-bold text-red-600 whitespace-nowrap">
+                  {formatPrice(salePrice)}
+                </span>
               </span>
             )}
-            <span className="inline text-[13px] sm:text-sm font-bold text-red-600">
-              {hasPriceRange
-                ? `${formatPrice(salePrice)} - ${formatPrice(maxPrice)}`
-                : formatPrice(salePrice)}
-            </span>
           </div>
-        <p className="mt-1 text-xs text-gray-500 text-center">
+        <p className="mt-1 text-[10px] sm:text-xs text-gray-500 text-center">
           {(numberOfVariants ?? 0) > 0
             ? (numberOfVariants ?? 0) > 1
               ? `${numberOfVariants} Sizes`

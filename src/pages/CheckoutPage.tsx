@@ -784,9 +784,19 @@ export const CheckoutPage = () => {
   return (
     <MainLayout>
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" alignItems="center" gap={2} mb={4}>
+        <Box
+          display="flex"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          flexDirection={{ xs: "column", sm: "row" }}
+          gap={1}
+          mb={3}
+        >
           <Box flex={1}>
-            <Typography variant="h4" fontWeight="bold">
+            <Typography
+              variant="h5"
+              fontWeight="bold"
+              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+            >
               Thanh toán
             </Typography>
           </Box>
@@ -795,70 +805,75 @@ export const CheckoutPage = () => {
             component={RouterLink}
             to="/cart"
             variant="outlined"
-            sx={{ minWidth: "auto" }}
+            size="small"
+            sx={{ minWidth: "auto", alignSelf: { xs: "flex-end", sm: "auto" } }}
           >
-            Quay lại
+            <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
+              Quay lại giỏ hàng
+            </Box>
+            <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
+              Quay lại
+            </Box>
           </Button>
         </Box>
 
         <Box
           display="grid"
           gridTemplateColumns={{ xs: "1fr", md: "2fr 1fr" }}
-          gap={4}
+          gap={3}
+          sx={{ minWidth: 0 }}
         >
           {/* Left: Checkout Form */}
-          <Box>
+          <Box sx={{ minWidth: 0, overflow: "hidden" }}>
             {/* Delivery Method */}
             <Box mb={3}>
               <Typography variant="h6" fontWeight={600} mb={2}>
                 Phương thức nhận hàng
               </Typography>
-              <Box
-                display="grid"
-                gridTemplateColumns={{ xs: "1fr", sm: "1fr 1fr" }}
-                gap={2}
-              >
+              {/* Horizontal cards on xs, side-by-side on sm+ */}
+              <Box display="flex" flexDirection="column" gap={1.5}>
                 <Card
                   onClick={() => setIsPickupInStore(false)}
                   sx={{
                     cursor: "pointer",
                     border: 2,
                     borderColor: !isPickupInStore ? "primary.main" : "divider",
-                    bgcolor: !isPickupInStore
-                      ? "primary.50"
-                      : "background.paper",
+                    bgcolor: !isPickupInStore ? "primary.50" : "background.paper",
                     transition: "all 0.2s ease",
                     position: "relative",
-                    "&:hover": {
-                      borderColor: "primary.main",
-                      boxShadow: 2,
-                    },
+                    "&:hover": { borderColor: "primary.main", boxShadow: 2 },
                   }}
                 >
-                  <CardContent sx={{ textAlign: "center", py: 3 }}>
+                  <CardContent
+                    sx={{
+                      display: "flex",
+                      flexDirection: { xs: "row", sm: "column" },
+                      alignItems: "center",
+                      gap: { xs: 1.5, sm: 0 },
+                      py: { xs: 1.5, sm: 2 },
+                      textAlign: { xs: "left", sm: "center" },
+                      "&:last-child": { pb: { xs: 1.5, sm: 2 } },
+                    }}
+                  >
                     <LocalShipping
                       sx={{
-                        fontSize: 48,
-                        color: !isPickupInStore
-                          ? "primary.main"
-                          : "text.secondary",
-                        mb: 1,
+                        fontSize: { xs: 32, sm: 40 },
+                        color: !isPickupInStore ? "primary.main" : "text.secondary",
+                        mb: { xs: 0, sm: 1 },
+                        flexShrink: 0,
                       }}
                     />
-                    <Typography variant="h6" fontWeight={600} gutterBottom>
-                      Giao hàng tận nơi
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Giao hàng đến địa chỉ của bạn
-                    </Typography>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Giao hàng tận nơi
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Giao hàng đến địa chỉ của bạn
+                      </Typography>
+                    </Box>
                     {!isPickupInStore && (
                       <CheckCircle
-                        sx={{
-                          position: "absolute",
-                          top: 12,
-                          right: 12,
-                          color: "primary.main",
-                        }}
+                        sx={{ position: "absolute", top: 8, right: 8, color: "primary.main", fontSize: 18 }}
                       />
                     )}
                   </CardContent>
@@ -870,41 +885,42 @@ export const CheckoutPage = () => {
                     cursor: "pointer",
                     border: 2,
                     borderColor: isPickupInStore ? "primary.main" : "divider",
-                    bgcolor: isPickupInStore
-                      ? "primary.50"
-                      : "background.paper",
+                    bgcolor: isPickupInStore ? "primary.50" : "background.paper",
                     transition: "all 0.2s ease",
                     position: "relative",
-                    "&:hover": {
-                      borderColor: "primary.main",
-                      boxShadow: 2,
-                    },
+                    "&:hover": { borderColor: "primary.main", boxShadow: 2 },
                   }}
                 >
-                  <CardContent sx={{ textAlign: "center", py: 3 }}>
+                  <CardContent
+                    sx={{
+                      display: "flex",
+                      flexDirection: { xs: "row", sm: "column" },
+                      alignItems: "center",
+                      gap: { xs: 1.5, sm: 0 },
+                      py: { xs: 1.5, sm: 2 },
+                      textAlign: { xs: "left", sm: "center" },
+                      "&:last-child": { pb: { xs: 1.5, sm: 2 } },
+                    }}
+                  >
                     <Store
                       sx={{
-                        fontSize: 48,
-                        color: isPickupInStore
-                          ? "primary.main"
-                          : "text.secondary",
-                        mb: 1,
+                        fontSize: { xs: 32, sm: 40 },
+                        color: isPickupInStore ? "primary.main" : "text.secondary",
+                        mb: { xs: 0, sm: 1 },
+                        flexShrink: 0,
                       }}
                     />
-                    <Typography variant="h6" fontWeight={600} gutterBottom>
-                      Nhận tại cửa hàng
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Nhận hàng trực tiếp tại cửa hàng
-                    </Typography>
+                    <Box>
+                      <Typography variant="subtitle2" fontWeight={600}>
+                        Nhận tại cửa hàng
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Nhận hàng trực tiếp tại cửa hàng
+                      </Typography>
+                    </Box>
                     {isPickupInStore && (
                       <CheckCircle
-                        sx={{
-                          position: "absolute",
-                          top: 12,
-                          right: 12,
-                          color: "primary.main",
-                        }}
+                        sx={{ position: "absolute", top: 8, right: 8, color: "primary.main", fontSize: 18 }}
                       />
                     )}
                   </CardContent>
@@ -921,7 +937,7 @@ export const CheckoutPage = () => {
 
                 {addresses.length > 0 && (
                   <FormControl fullWidth sx={{ mb: 2 }}>
-                    <Select
+                  <Select
                       value={useNewAddress ? "new" : selectedAddressId}
                       onChange={(e) => {
                         if (e.target.value === "new") {
@@ -933,9 +949,11 @@ export const CheckoutPage = () => {
                         }
                       }}
                       sx={{
+                        maxWidth: "100%",
                         "& .MuiSelect-select": {
-                          whiteSpace: "normal",
-                          wordBreak: "break-word",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
                         },
                       }}
                     >

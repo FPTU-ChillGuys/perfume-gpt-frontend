@@ -41,8 +41,7 @@ export const CUSTOMER_CANCEL_ORDER_REASON_OPTIONS =
       option.value === "FoundBetterPrice" ||
       option.value === "WrongShippingInformation" ||
       option.value === "PaymentIssue" ||
-      option.value === "DeliveryTooLate" ||
-      option.value === "InsufficientStock",
+      option.value === "DeliveryTooLate",
   );
 
 export const STAFF_CANCEL_ORDER_REASON_OPTIONS =

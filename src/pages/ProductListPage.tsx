@@ -1399,7 +1399,7 @@ export const ProductListPage = () => {
                 </div>
               )}
 
-              <div className="grid gap-6 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {isLoading ? (
                   renderSkeletons()
                 ) : displayedProducts.length > 0 ? (

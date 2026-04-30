@@ -16,7 +16,6 @@ import {
 import {
   ExpandLess,
   ExpandMore,
-  ShoppingCartOutlined,
   GavelOutlined,
   HandymanOutlined,
   InfoOutlined,
@@ -101,48 +100,6 @@ const PageSidebar = ({ pages, currentSlug }: SidebarProps) => {
     }
   }, [currentSlug]);
 
-  const renderLink = (page: StaticPage) => {
-    const isActive = page.slug === currentSlug;
-    return (
-      <ListItemButton
-        key={page.id}
-        component={Link}
-        to={`/pages/${page.slug}`}
-        selected={isActive}
-        sx={{
-          pl: 3.5,
-          py: 0.75,
-          borderRadius: 1,
-          mb: 0.25,
-          // active: dùng màu primary của hệ thống
-          color: isActive ? "primary.main" : "text.secondary",
-          borderLeft: isActive ? "3px solid" : "3px solid transparent",
-          borderLeftColor: isActive ? "primary.main" : "transparent",
-          "&.Mui-selected": {
-            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.07),
-            color: "primary.main",
-            "&:hover": {
-              backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.12),
-            },
-          },
-          "&:hover": {
-            backgroundColor: (theme) => alpha(theme.palette.secondary.main, 0.05),
-          },
-          transition: "all 0.15s ease",
-        }}
-      >
-        <ListItemText
-          primary={page.title}
-          primaryTypographyProps={{
-            fontSize: "0.875rem",
-            fontWeight: isActive ? 600 : 400,
-            lineHeight: 1.5,
-            color: isActive ? "primary.main" : "text.secondary",
-          }}
-        />
-      </ListItemButton>
-    );
-  };
 
   return (
     <Paper
@@ -225,7 +182,43 @@ const PageSidebar = ({ pages, currentSlug }: SidebarProps) => {
 
               <Collapse in={openCats[idx]} timeout="auto" unmountOnExit>
                 <List dense disablePadding sx={{ px: 1 }}>
-                  {catPages?.map(renderLink)}
+                  {catPages?.map((page) => {
+                    const isActive = page.slug === currentSlug;
+                    return (
+                      <ListItemButton
+                        key={page.id ?? page.slug}
+                        component={Link}
+                        to={`/pages/${page.slug}`}
+                        selected={isActive}
+                        sx={{
+                          pl: 3.5,
+                          py: 0.75,
+                          borderRadius: 1,
+                          mb: 0.25,
+                          color: isActive ? "primary.main" : "text.secondary",
+                          borderLeft: isActive ? "3px solid" : "3px solid transparent",
+                          borderLeftColor: isActive ? "primary.main" : "transparent",
+                          "&.Mui-selected": {
+                            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.07),
+                            color: "primary.main",
+                            "&:hover": { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.12) },
+                          },
+                          "&:hover": { backgroundColor: (theme) => alpha(theme.palette.secondary.main, 0.05) },
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <ListItemText
+                          primary={page.title}
+                          primaryTypographyProps={{
+                            fontSize: "0.875rem",
+                            fontWeight: isActive ? 600 : 400,
+                            lineHeight: 1.5,
+                            color: isActive ? "primary.main" : "text.secondary",
+                          }}
+                        />
+                      </ListItemButton>
+                    );
+                  })}
                 </List>
               </Collapse>
               <Divider sx={{ mx: 2, my: 0.5 }} />
@@ -267,7 +260,43 @@ const PageSidebar = ({ pages, currentSlug }: SidebarProps) => {
             </ListItemButton>
             <Collapse in={openOther} timeout="auto" unmountOnExit>
               <List dense disablePadding sx={{ px: 1 }}>
-                {other.map(renderLink)}
+                {other.map((page) => {
+                  const isActive = page.slug === currentSlug;
+                  return (
+                    <ListItemButton
+                      key={page.id ?? page.slug}
+                      component={Link}
+                      to={`/pages/${page.slug}`}
+                      selected={isActive}
+                      sx={{
+                        pl: 3.5,
+                        py: 0.75,
+                        borderRadius: 1,
+                        mb: 0.25,
+                        color: isActive ? "primary.main" : "text.secondary",
+                        borderLeft: isActive ? "3px solid" : "3px solid transparent",
+                        borderLeftColor: isActive ? "primary.main" : "transparent",
+                        "&.Mui-selected": {
+                          backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.07),
+                          color: "primary.main",
+                          "&:hover": { backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.12) },
+                        },
+                        "&:hover": { backgroundColor: (theme) => alpha(theme.palette.secondary.main, 0.05) },
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <ListItemText
+                        primary={page.title}
+                        primaryTypographyProps={{
+                          fontSize: "0.875rem",
+                          fontWeight: isActive ? 600 : 400,
+                          lineHeight: 1.5,
+                          color: isActive ? "primary.main" : "text.secondary",
+                        }}
+                      />
+                    </ListItemButton>
+                  );
+                })}
               </List>
             </Collapse>
           </Box>
