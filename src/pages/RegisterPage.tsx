@@ -9,7 +9,6 @@ import {
   InputAdornment,
   IconButton,
   Checkbox,
-  FormControlLabel,
   Alert,
   CircularProgress,
 } from "@mui/material";
@@ -132,8 +131,11 @@ export const RegisterPage = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          px: 3,
+          px: { xs: 2, sm: 3 },
           py: 2,
+          gap: 1,
+          flexWrap: "nowrap",
+          minWidth: 0,
         }}
       >
         <Typography
@@ -142,6 +144,7 @@ export const RegisterPage = () => {
           color="primary"
           fontWeight="bold"
           to="/"
+          sx={{ flexShrink: 0, fontSize: { xs: "1.1rem", sm: "1.5rem" } }}
         >
           PerfumeGPT
         </Typography>
@@ -150,7 +153,13 @@ export const RegisterPage = () => {
           color="inherit"
           component={RouterLink}
           to="/"
-          sx={{ fontWeight: 500 }}
+          sx={{
+            fontWeight: 500,
+            fontSize: { xs: "0.7rem", sm: "0.875rem" },
+            px: { xs: 1, sm: 2 },
+            minWidth: 0,
+            whiteSpace: "nowrap",
+          }}
         >
           QUAY LẠI TRANG CHỦ
         </Button>
@@ -381,34 +390,30 @@ export const RegisterPage = () => {
                 </Box>
 
                 {/* Terms Checkbox */}
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formData.agreeTerms}
-                      onChange={handleChange("agreeTerms")}
-                      size="small"
-                      sx={{ py: 0.5, alignSelf: "flex-start" }}
-                    />
-                  }
-                  label={
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ fontSize: "0.7rem", lineHeight: 1.3, pt: 0.8 }}
-                    >
-                      Đồng ý với{" "}
-                      <Link href="#" underline="hover" color="primary">
-                        Điều khoản
-                      </Link>{" "}
-                      và{" "}
-                      <Link href="#" underline="hover" color="primary">
-                        Chính sách
-                      </Link>
-                      {" "} của <strong>PerfumeGPT</strong>
-                    </Typography>
-                  }
-                  sx={{ mb: 0.5, alignItems: "flex-start", ml: 0 }}
-                />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mb: 0.5 }}>
+                  <Checkbox
+                    checked={formData.agreeTerms}
+                    onChange={handleChange("agreeTerms")}
+                    size="small"
+                    sx={{
+                      p: 0,
+                      flexShrink: 0,
+                      color: fieldErrors.agreeTerms ? "error.main" : undefined,
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    color={fieldErrors.agreeTerms ? "error" : "text.secondary"}
+                    sx={{ fontSize: "0.75rem", lineHeight: 1.5 }}
+                  >
+                    Đồng ý với{" "}
+                    <Link href="/pages/chinh-sach-mua-hang" underline="hover" color="primary">
+                      Chính sách
+                    </Link>
+                    {" "}của{" "}
+                    <strong>PerfumeGPT</strong>
+                  </Typography>
+                </Box>
                 {fieldErrors.agreeTerms && (
                   <Typography
                     variant="caption"

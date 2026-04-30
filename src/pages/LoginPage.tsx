@@ -164,7 +164,7 @@ export const LoginPage = () => {
             QUAY LẠI TRANG CHỦ
           </Box>
           <Box component="span" sx={{ display: { xs: "inline", sm: "none" } }}>
-            Trang chủ
+            QUAY LẠI TRANG CHỦ
           </Box>
         </Button>
       </Box>
