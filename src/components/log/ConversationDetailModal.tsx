@@ -7,6 +7,8 @@ import {
     DialogActions,
     Button,
 } from "@mui/material";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { AdminConversation, ServerMessage } from "@/types/conversation";
 
 interface ConversationDetailModalProps {
@@ -117,11 +119,37 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                                 border: "1px solid",
                                                 borderColor: isUser ? "primary.dark" : "grey.200",
                                                 position: "relative",
+                                                "& p": { m: 0, mb: 1 },
+                                                "& p:last-child": { mb: 0 },
+                                                "& ul, & ol": { m: 0, mb: 1, pl: 3 },
+                                                "& li": { mb: 0.3 },
+                                                "& strong, & b": { fontWeight: 600 },
+                                                "& code": {
+                                                    bgcolor: isUser ? "rgba(255,255,255,0.15)" : "grey.100",
+                                                    px: 0.5,
+                                                    py: 0.15,
+                                                    borderRadius: 0.5,
+                                                    fontSize: "0.85em",
+                                                },
+                                                "& pre": {
+                                                    bgcolor: isUser ? "rgba(255,255,255,0.1)" : "grey.50",
+                                                    p: 1.5,
+                                                    borderRadius: 1,
+                                                    overflowX: "auto",
+                                                    fontSize: "0.85em",
+                                                },
+                                                "& h1, & h2, & h3, & h4": {
+                                                    m: 0,
+                                                    mb: 0.5,
+                                                    mt: 1,
+                                                    fontWeight: 600,
+                                                    fontSize: "1em",
+                                                },
                                             }}
                                         >
-                                            <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
                                                 {text}
-                                            </Typography>
+                                            </ReactMarkdown>
                                         </Box>
 
                                         {msg.createdAt && (
