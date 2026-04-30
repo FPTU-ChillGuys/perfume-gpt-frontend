@@ -786,16 +786,16 @@ export const CheckoutPage = () => {
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Box
           display="flex"
-          alignItems={{ xs: "flex-start", sm: "center" }}
-          flexDirection={{ xs: "column", sm: "row" }}
+          alignItems="center"
+          flexDirection="row"
           gap={1}
           mb={3}
         >
-          <Box flex={1}>
+          <Box flex={1} minWidth={0}>
             <Typography
               variant="h5"
               fontWeight="bold"
-              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+              sx={{ fontSize: { xs: "1.15rem", sm: "1.5rem" } }}
             >
               Thanh toán
             </Typography>
@@ -806,7 +806,7 @@ export const CheckoutPage = () => {
             to="/cart"
             variant="outlined"
             size="small"
-            sx={{ minWidth: "auto", alignSelf: { xs: "flex-end", sm: "auto" } }}
+            sx={{ minWidth: "auto", flexShrink: 0 }}
           >
             <Box component="span" sx={{ display: { xs: "none", sm: "inline" } }}>
               Quay lại giỏ hàng
