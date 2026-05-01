@@ -1554,7 +1554,7 @@ export const CounterCheckoutStaffPage = () => {
         const retryCallId = createDebugCallId("pos-retry");
 
         // Tính depositMethod cho retry theo schema:
-        const retryDepositMethod: PaymentMethod =
+        const retryDepositMethod: PaymentMethod | null =
           paymentMethod === "CashOnDelivery" ? depositGateway : null;
 
         const result = await orderService.retryPayment(
@@ -2117,7 +2117,7 @@ export const CounterCheckoutStaffPage = () => {
     // - !isPickupInStore + CashInStore: null (thu 100% tiền mặt, không cọc)
     // - !isPickupInStore + CashOnDelivery: dùng depositGateway đã chọn
     // - !isPickupInStore + method khác (VnPay/Momo/PayOs): dùng chính method đó
-    const resolvedDepositGateway: PaymentMethod = isPickupInStore
+    const resolvedDepositGateway: PaymentMethod | null = isPickupInStore
       ? null
       : paymentMethod === "CashOnDelivery"
         ? depositGateway
@@ -2204,7 +2204,7 @@ export const CounterCheckoutStaffPage = () => {
     // - isPickupInStore: luôn null
     // - !isPickupInStore + CashOnDelivery: dùng depositGateway đã chọn
     // - !isPickupInStore + method khác: dùng chính method đó
-    const resolvedDepositGateway: PaymentMethod = isPickupInStore
+    const resolvedDepositGateway: PaymentMethod | null = isPickupInStore
       ? null
       : paymentMethod === "CashOnDelivery"
         ? depositGateway

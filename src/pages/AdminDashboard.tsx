@@ -1256,12 +1256,6 @@ const AdminDashboard = () => {
                     </Paper>
                   ))}
                 </Box>
-
-                <Typography variant="body2" color="text.secondary">
-                  API hiện tại chỉ trả dữ liệu tổng hợp cho tồn kho. Chi tiết
-                  từng variant cần API bổ sung để hiển thị danh sách cảnh báo cụ
-                  thể.
-                </Typography>
               </Paper>
             </Box>
 
