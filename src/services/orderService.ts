@@ -1832,8 +1832,21 @@ class OrderService {
       });
 
       if (!response.data?.success || !response.data.payload) {
+        const apiError = response.error as
+          | { message?: string; errors?: string[] | Record<string, string[]> }
+          | undefined;
+        const errorMessages =
+          typeof apiError?.errors === "object" && !Array.isArray(apiError.errors)
+            ? Object.values(apiError.errors).flat().join(", ")
+            : Array.isArray(apiError?.errors)
+              ? apiError.errors.join(", ")
+              : undefined;
+
         throw new Error(
-          response.data?.message || "Failed to get order picklist",
+          response.data?.message ||
+            apiError?.message ||
+            errorMessages ||
+            "Failed to get order picklist",
         );
       }
 
@@ -1930,7 +1943,22 @@ class OrderService {
       });
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to fulfill order");
+        const apiError = response.error as
+          | { message?: string; errors?: string[] | Record<string, string[]> }
+          | undefined;
+        const errorMessages =
+          typeof apiError?.errors === "object" && !Array.isArray(apiError.errors)
+            ? Object.values(apiError.errors).flat().join(", ")
+            : Array.isArray(apiError?.errors)
+              ? apiError.errors.join(", ")
+              : undefined;
+
+        throw new Error(
+          response.data?.message ||
+            apiError?.message ||
+            errorMessages ||
+            "Failed to fulfill order",
+        );
       }
 
       return response.data.message || "Order fulfilled successfully";

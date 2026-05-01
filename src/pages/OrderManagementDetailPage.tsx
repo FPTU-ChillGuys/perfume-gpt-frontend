@@ -22,6 +22,7 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
+  InputAdornment,
   Paper,
   Stack,
   Table,
@@ -1024,6 +1025,8 @@ export const OrderManagementDetailPage = () => {
   const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false);
   const [damagedReservationId, setDamagedReservationId] = useState("");
   const [swapDamageNote, setSwapDamageNote] = useState("");
+  const [swapDamageQuantity, setSwapDamageQuantity] = useState(1);
+  const [maxSwapDamageQuantity, setMaxSwapDamageQuantity] = useState(1);
   const [swappingBatchCode, setSwappingBatchCode] = useState("");
   const [isSwappingBatch, setIsSwappingBatch] = useState(false);
   const [isInStoreCompletionDialogOpen, setIsInStoreCompletionDialogOpen] =
@@ -1783,10 +1786,12 @@ export const OrderManagementDetailPage = () => {
     showToast(`Đã điền mã batch ${batchCode}`, "success");
   };
 
-  const openSwapDamagedDialog = (reservationId: string, batchCode: string) => {
+  const openSwapDamagedDialog = (reservationId: string, batchCode: string, reservedQuantity: number) => {
     setDamagedReservationId(reservationId);
     setSwappingBatchCode(batchCode);
     setSwapDamageNote("");
+    setSwapDamageQuantity(1);
+    setMaxSwapDamageQuantity(reservedQuantity);
     setIsSwapDialogOpen(true);
   };
 
@@ -1799,6 +1804,7 @@ export const OrderManagementDetailPage = () => {
       setIsSwappingBatch(true);
       const result = await orderService.swapDamagedOrderReservation(order.id, {
         damagedReservationId,
+        damagedQuantity: swapDamageQuantity,
         damageNote: swapDamageNote.trim() || null,
       });
 
@@ -1811,9 +1817,9 @@ export const OrderManagementDetailPage = () => {
       );
 
       await loadOrder();
-    } catch (err) {
+    } catch (err: any) {
       showToast(
-        err instanceof Error ? err.message : "Không thể đổi batch lỗi",
+        err?.response?.data?.message || err?.message || "Không thể đổi batch lỗi",
         "error",
       );
     } finally {
@@ -2496,9 +2502,10 @@ export const OrderManagementDetailPage = () => {
                                                                 openSwapDamagedDialog(
                                                                   batch.reservationId!,
                                                                   batch.batchCode,
+                                                                  batch.reservedQuantity || 0
                                                                 )
                                                               }
-                                                              title="Swap batch lỗi"
+                                                              title="Đổi batch lỗi"
                                                               disabled={
                                                                 isSwappingBatch ||
                                                                 isUpdating ||
@@ -2551,22 +2558,35 @@ export const OrderManagementDetailPage = () => {
                         )}
 
                         {canPrepareOrder && (
-                          <LoadingButton
-                            variant="contained"
-                            onClick={handlePrepareOrder}
-                            disabled={
-                              isUpdating ||
-                              isFulfilling ||
-                              isCompletingInStorePickup
+                          <Tooltip
+                            title={
+                              hasBlockingCancelRequest
+                                ? "Đơn hàng đang có yêu cầu hủy chờ xử lý. Vui lòng xử lý yêu cầu hủy trước."
+                                : ""
                             }
-                            loading={isUpdating}
-                            sx={{
-                              bgcolor: "#2e7d32",
-                              "&:hover": { bgcolor: "#1b5e20" },
-                            }}
+                            placement="top"
                           >
-                            Xác nhận đơn hàng
-                          </LoadingButton>
+                            <span style={{ display: "block" }}>
+                              <LoadingButton
+                                fullWidth
+                                variant="contained"
+                                onClick={handlePrepareOrder}
+                                disabled={
+                                  isUpdating ||
+                                  isFulfilling ||
+                                  isCompletingInStorePickup ||
+                                  hasBlockingCancelRequest
+                                }
+                                loading={isUpdating}
+                                sx={{
+                                  bgcolor: "#2e7d32",
+                                  "&:hover": { bgcolor: "#1b5e20" },
+                                }}
+                              >
+                                Xác nhận đơn hàng
+                              </LoadingButton>
+                            </span>
+                          </Tooltip>
                         )}
 
                         {canCompleteInStoreOrder && (
@@ -2805,23 +2825,36 @@ export const OrderManagementDetailPage = () => {
                               )}
                             </Box>
 
-                            <LoadingButton
-                              variant="contained"
-                              onClick={handleFulfillOrder}
-                              disabled={
-                                isFulfilling ||
-                                isUpdating ||
-                                !isPackagingConfirmed ||
-                                Boolean(autoFulfillError)
+                            <Tooltip
+                              title={
+                                hasBlockingCancelRequest
+                                  ? "Đơn hàng đang có yêu cầu hủy chờ xử lý. Vui lòng xử lý yêu cầu hủy trước."
+                                  : ""
                               }
-                              loading={isFulfilling}
-                              sx={{
-                                bgcolor: "#1976d2",
-                                "&:hover": { bgcolor: "#115293" },
-                              }}
+                              placement="top"
                             >
-                              Đóng gói và chờ bàn giao
-                            </LoadingButton>
+                              <span style={{ display: "block" }}>
+                                <LoadingButton
+                                  fullWidth
+                                  variant="contained"
+                                  onClick={handleFulfillOrder}
+                                  disabled={
+                                    isFulfilling ||
+                                    isUpdating ||
+                                    !isPackagingConfirmed ||
+                                    Boolean(autoFulfillError) ||
+                                    hasBlockingCancelRequest
+                                  }
+                                  loading={isFulfilling}
+                                  sx={{
+                                    bgcolor: "#1976d2",
+                                    "&:hover": { bgcolor: "#115293" },
+                                  }}
+                                >
+                                  Đóng gói và chờ bàn giao
+                                </LoadingButton>
+                              </span>
+                            </Tooltip>
                           </Stack>
                         )}
 
@@ -2984,7 +3017,7 @@ export const OrderManagementDetailPage = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Swap batch bị lỗi</DialogTitle>
+        <DialogTitle>Đổi batch bị lỗi</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 1.5 }}>
             Xác nhận đổi batch cho mã <b>{swappingBatchCode || "-"}</b>. Hệ
@@ -2993,12 +3026,70 @@ export const OrderManagementDetailPage = () => {
 
           <TextField
             fullWidth
+            type="number"
+            label="Số lượng lỗi *"
+            value={swapDamageQuantity}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSwapDamageQuantity((prev) => Math.max(1, (prev as number) - 1))}
+                    disabled={swapDamageQuantity <= 1}
+                  >
+                    <Remove fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSwapDamageQuantity((prev) => Math.min(maxSwapDamageQuantity, (prev as number) + 1))}
+                    disabled={swapDamageQuantity >= maxSwapDamageQuantity}
+                  >
+                    <Add fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            inputProps={{
+              style: { textAlign: "center" }
+            }}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              if (!isNaN(val)) {
+                setSwapDamageQuantity(val);
+              } else if (e.target.value === "") {
+                // allow empty while typing
+                setSwapDamageQuantity("" as any);
+              }
+            }}
+            onBlur={() => {
+              let val = swapDamageQuantity;
+              if (isNaN(val as number) || val < 1) {
+                val = 1;
+              } else if (val > maxSwapDamageQuantity) {
+                val = maxSwapDamageQuantity;
+              }
+              setSwapDamageQuantity(val);
+            }}
+            error={
+              swapDamageQuantity <= 0 ||
+              swapDamageQuantity > maxSwapDamageQuantity
+            }
+            helperText={`Nhập từ 1 đến ${maxSwapDamageQuantity}`}
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            fullWidth
             multiline
             minRows={2}
             label="Ghi chú lỗi batch (tuỳ chọn)"
-            placeholder="Nhập mô tả lỗi hàng"
+            placeholder="Chọn mô tả lỗi hàng bên dưới"
             value={swapDamageNote}
-            onChange={(event) => setSwapDamageNote(event.target.value)}
+            InputProps={{ readOnly: true }}
             sx={{ mb: 1.5 }}
           />
 
@@ -3028,10 +3119,16 @@ export const OrderManagementDetailPage = () => {
             variant="contained"
             color="warning"
             onClick={handleConfirmSwapDamagedBatch}
-            disabled={isSwappingBatch || !damagedReservationId}
+            disabled={
+              isSwappingBatch ||
+              !damagedReservationId ||
+              !swapDamageNote ||
+              swapDamageQuantity <= 0 ||
+              swapDamageQuantity > maxSwapDamageQuantity
+            }
             loading={isSwappingBatch}
           >
-            Xác nhận swap
+            Xác nhận đổi
           </LoadingButton>
         </DialogActions>
       </Dialog>
