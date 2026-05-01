@@ -24,6 +24,11 @@ import Sync from "@mui/icons-material/Sync";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PhotoCameraOutlined from "@mui/icons-material/PhotoCameraOutlined";
 import VideocamOutlined from "@mui/icons-material/VideocamOutlined";
+import AssignmentReturn from "@mui/icons-material/AssignmentReturn";
+import LocalShipping from "@mui/icons-material/LocalShipping";
+import Inventory from "@mui/icons-material/Inventory";
+import Payments from "@mui/icons-material/Payments";
+import CheckCircle from "@mui/icons-material/CheckCircle";
 import { MainLayout } from "@/layouts/MainLayout";
 import {
   orderService,
@@ -111,6 +116,148 @@ const isVideoMedia = (url: string, mimeType?: string | null) => {
   }
 
   return /\.(mp4|mov|webm|mkv|avi|m4v)(\?.*)?$/i.test(url);
+};
+
+const RETURN_STEPS = [
+  { label: "Đã tạo yêu cầu trả hàng", Icon: AssignmentReturn },
+  { label: "Đang gửi hàng hoàn về shop", Icon: LocalShipping },
+  { label: "Shop đã nhận hàng hoàn", Icon: Inventory },
+  { label: "Hoàn tiền hoàn tất", Icon: Payments },
+];
+
+const OrderReturnStepper = ({ request }: { request: OrderReturnRequest }) => {
+  const returnShippingStatus = request.returnShippingInfo?.status;
+  const returnRequestStatus = request.status;
+  
+  const returnActiveStep =
+    returnRequestStatus === "Completed" ||
+    returnRequestStatus === "Refunded"
+      ? 3
+      : returnShippingStatus === "Delivered" ||
+          returnRequestStatus === "Inspecting" ||
+          returnRequestStatus === "ReadyForRefund"
+        ? 2
+        : returnShippingStatus && returnShippingStatus !== "Pending" && returnShippingStatus !== "UnAssigned"
+          ? 1
+          : 0;
+
+  const isReturnComplete = returnActiveStep === 3;
+  const green = "#26aa99";
+  const gray = "#ccc";
+
+  return (
+    <Box sx={{ py: 2 }}>
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={1}
+        mb={2}
+        sx={{
+          bgcolor: isReturnComplete ? "#e8f5e9" : "#fff8e1",
+          border: `1px solid ${isReturnComplete ? "#a5d6a7" : "#ffe082"}`,
+          borderRadius: 1,
+          p: 1.5,
+        }}
+      >
+        {isReturnComplete ? (
+          <CheckCircle sx={{ color: "#2e7d32" }} />
+        ) : (
+          <AssignmentReturn sx={{ color: "#f57c00" }} />
+        )}
+        <Typography
+          fontWeight={600}
+          color={isReturnComplete ? "success.dark" : "warning.dark"}
+        >
+          {isReturnComplete
+            ? "Hoàn trả thành công"
+            : "Đơn hàng đang trong quá trình hoàn trả"}
+        </Typography>
+      </Box>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Trạng thái hoàn trả hiện tại:{" "}
+        <b>{shippingStatusLabel(returnShippingStatus)}</b>
+      </Typography>
+
+      <Box
+        display="flex"
+        alignItems="flex-start"
+        sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
+      >
+        {RETURN_STEPS.map((step, idx) => {
+          const completed = idx <= returnActiveStep;
+          const isCurrent = idx === returnActiveStep;
+          const circleColor = completed ? green : gray;
+          const lineColor = idx < returnActiveStep ? green : gray;
+
+          return (
+            <Box
+              key={step.label}
+              display="flex"
+              alignItems="flex-start"
+              sx={{ flex: idx < RETURN_STEPS.length - 1 ? 1 : "none" }}
+            >
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                sx={{ minWidth: { xs: 80, sm: 100 } }}
+              >
+                <Box
+                  sx={{
+                    width: { xs: 40, sm: 56 },
+                    height: { xs: 40, sm: 56 },
+                    borderRadius: "50%",
+                    border: `2px solid ${circleColor}`,
+                    bgcolor: completed ? green : "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: isCurrent ? `0 0 0 4px ${green}33` : "none",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  <step.Icon
+                    sx={{
+                      fontSize: { xs: 20, sm: 26 },
+                      color: completed ? "#fff" : gray,
+                    }}
+                  />
+                </Box>
+
+                <Typography
+                  variant="caption"
+                  align="center"
+                  fontWeight={completed ? 700 : 500}
+                  sx={{
+                    mt: 1,
+                    color: completed ? "#333" : "#999",
+                    maxWidth: 120,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {step.label}
+                </Typography>
+              </Box>
+
+              {idx < RETURN_STEPS.length - 1 && (
+                <Box
+                  sx={{
+                    flex: 1,
+                    height: 3,
+                    bgcolor: lineColor,
+                    mt: { xs: "19px", sm: "27px" },
+                    mx: 0.5,
+                    minWidth: 20,
+                  }}
+                />
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
 };
 
 const MediaPreviewDialog = ({
@@ -809,19 +956,6 @@ export const MyReturnRequestDetailPage = () => {
                                 {request.returnShippingInfo.carrierName || "-"}
                               </Typography>
                             </Box>
-                            <Box>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                Trạng thái vận chuyển
-                              </Typography>
-                              <Typography>
-                                {shippingStatusLabel(
-                                  request.returnShippingInfo.status,
-                                )}
-                              </Typography>
-                            </Box>
                           </>
                         )}
                       </Box>
@@ -900,6 +1034,13 @@ export const MyReturnRequestDetailPage = () => {
                           </Typography>
                         </Alert>
                       )}
+
+                    {request.status !== "Rejected" && request.status !== "Pending" && request.isRefundOnly === false && (
+                      <Box sx={{ mt: 1, pt: 3, borderTop: "1px dashed", borderColor: "divider" }}>
+                        <Typography variant="subtitle2" fontWeight={700} mb={2}>Tiến độ hoàn trả</Typography>
+                        <OrderReturnStepper request={request} />
+                      </Box>
+                    )}
 
                     <Paper variant="outlined" sx={{ p: 2 }}>
                       <Typography variant="subtitle2" fontWeight={700} mb={2}>

@@ -124,6 +124,13 @@ const STEPS = [
   { label: "Hoàn tất", Icon: StarBorder },
 ];
 
+const RETURN_STEPS = [
+  { label: "Đã tạo yêu cầu trả hàng", Icon: AssignmentReturn },
+  { label: "Đang gửi hàng hoàn về shop", Icon: LocalShipping },
+  { label: "Shop đã nhận hàng hoàn", Icon: Inventory },
+  { label: "Hoàn tiền hoàn tất", Icon: Payments },
+];
+
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
   Pending: ["Preparing", "Cancelled"],
   Preparing: ["Cancelled"],
@@ -156,6 +163,22 @@ const isSupportedPaymentMethod = (
   value === "Momo" ||
   value === "ExternalBankTransfer" ||
   value === "PayOs";
+
+const returnShippingStatusLabel = (status?: string | null) => {
+  if (!status) return "Chưa có thông tin vận chuyển hoàn trả";
+  if (status === "Pending") return "Chờ lấy hàng hoàn";
+  if (status === "Confirmed") return "Đã xác nhận lấy hàng hoàn";
+  if (status === "ReadyToPick") return "Chờ lấy hàng hoàn";
+  if (status === "PickedUp") return "Đã lấy hàng hoàn";
+  if (status === "InTransit") return "Đang vận chuyển hàng hoàn";
+  if (status === "Delivering") return "Đang giao hàng hoàn về shop";
+  if (status === "OutForDelivery") return "Đang giao hàng hoàn về shop";
+  if (status === "Delivered") return "Shop đã nhận hàng hoàn";
+  if (status === "DeliveryFailed") return "Giao hàng hoàn thất bại";
+  if (status === "Returned") return "Hàng hoàn đã trả về";
+  if (status === "Cancelled") return "Đơn vận chuyển hoàn đã hủy";
+  return status;
+};
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
@@ -458,6 +481,8 @@ interface StepperProps {
   paidAt?: string | null;
   updatedAt?: string | null;
   totalAmount?: number | null;
+  returnShippingStatus?: string | null;
+  returnRequestStatus?: string | null;
 }
 
 const OrderStepper = ({
@@ -466,12 +491,32 @@ const OrderStepper = ({
   paidAt,
   updatedAt,
   totalAmount,
+  returnShippingStatus,
+  returnRequestStatus,
 }: StepperProps) => {
   const baseStep = STATUS_TO_STEP[status] ?? 0;
-  const activeStep = paidAt && baseStep < 1 ? 1 : baseStep;
+  const isReturnFlow =
+    status === "Returning" ||
+    status === "Partial_Returned" ||
+    status === "Returned";
+
+  const returnActiveStep =
+    status === "Returned" ||
+    status === "Partial_Returned" ||
+    returnRequestStatus === "Completed" ||
+    returnRequestStatus === "Refunded"
+      ? 3
+      : returnShippingStatus === "Delivered" ||
+          returnRequestStatus === "Inspecting" ||
+          returnRequestStatus === "ReadyForRefund"
+        ? 2
+        : returnShippingStatus
+          ? 1
+          : 0;
+
+  const activeStep = paidAt && baseStep >= 0 && baseStep < 1 ? 1 : baseStep;
   const isCanceled = status === "Cancelled";
-  const isReturned = status === "Returned";
-  const isSpecial = isCanceled || isReturned;
+  const isSpecial = isCanceled;
 
   const stepDates: (string | null)[] = [
     fmtDate(createdAt),
@@ -491,46 +536,318 @@ const OrderStepper = ({
 
   const green = "#26aa99";
   const gray = "#ccc";
+  const isReturnComplete = returnActiveStep === 3;
 
-  return (
-    <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
-      {isSpecial && (
+  if (isReturnFlow) {
+    return (
+      <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
         <Box
           display="flex"
           alignItems="center"
           gap={1}
           mb={2}
           sx={{
-            bgcolor: isCanceled ? "#fff3f3" : "#fff8e1",
-            border: `1px solid ${isCanceled ? "#f5c6c6" : "#ffe082"}`,
+            bgcolor: isReturnComplete ? "#e8f5e9" : "#fff8e1",
+            border: `1px solid ${isReturnComplete ? "#a5d6a7" : "#ffe082"}`,
             borderRadius: 1,
             p: 1.5,
           }}
         >
-          {isCanceled ? (
-            <CancelOutlined sx={{ color: "#e53935" }} />
+          {isReturnComplete ? (
+            <CheckCircle sx={{ color: "#2e7d32" }} />
           ) : (
             <AssignmentReturn sx={{ color: "#f57c00" }} />
           )}
           <Typography
             fontWeight={600}
-            color={isCanceled ? "error" : "warning.dark"}
+            color={isReturnComplete ? "success.dark" : "warning.dark"}
           >
-            {isCanceled ? "Đơn hàng đã bị hủy" : "Đơn hàng đã được hoàn trả"}
+            {isReturnComplete
+              ? "Hoàn trả thành công"
+              : "Đơn hàng đang trong quá trình hoàn trả"}
           </Typography>
         </Box>
-      )}
 
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Trạng thái hoàn trả hiện tại:{" "}
+          <b>{returnShippingStatusLabel(returnShippingStatus)}</b>
+        </Typography>
+
+        <Box
+          display="flex"
+          alignItems="flex-start"
+          sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
+        >
+          {RETURN_STEPS.map((step, idx) => {
+            const completed = idx <= returnActiveStep;
+            const isCurrent = idx === returnActiveStep;
+            const circleColor = completed ? green : gray;
+            const lineColor = idx < returnActiveStep ? green : gray;
+
+            return (
+              <Box
+                key={step.label}
+                display="flex"
+                alignItems="flex-start"
+                sx={{ flex: idx < RETURN_STEPS.length - 1 ? 1 : "none" }}
+              >
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  sx={{ minWidth: 100 }}
+                >
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      border: `2px solid ${circleColor}`,
+                      bgcolor: completed ? green : "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: isCurrent ? `0 0 0 4px ${green}33` : "none",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <step.Icon
+                      sx={{
+                        fontSize: 26,
+                        color: completed ? "#fff" : gray,
+                      }}
+                    />
+                  </Box>
+
+                  <Typography
+                    variant="caption"
+                    align="center"
+                    fontWeight={isCurrent ? 700 : 500}
+                    sx={{
+                      mt: 1,
+                      color: completed ? "#333" : "text.disabled",
+                      maxWidth: 120,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {step.label}
+                  </Typography>
+
+                  {idx === 0 && createdAt && (
+                    <Typography
+                      variant="caption"
+                      align="center"
+                      sx={{ color: "text.secondary", mt: 0.25, fontSize: 11 }}
+                    >
+                      {fmtDate(createdAt)}
+                    </Typography>
+                  )}
+
+                  {idx === RETURN_STEPS.length - 1 &&
+                    status === "Returned" &&
+                    updatedAt && (
+                      <Typography
+                        variant="caption"
+                        align="center"
+                        sx={{
+                          color: "text.secondary",
+                          mt: 0.25,
+                          fontSize: 11,
+                        }}
+                      >
+                        {fmtDate(updatedAt)}
+                      </Typography>
+                    )}
+                </Box>
+
+                {idx < RETURN_STEPS.length - 1 && (
+                  <Box
+                    sx={{
+                      flex: 1,
+                      height: 3,
+                      bgcolor: lineColor,
+                      mt: "27px",
+                      mx: 0.5,
+                      minWidth: 20,
+                    }}
+                  />
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    );
+  }
+
+  if (isCanceled) {
+    const cancelSteps: Array<{
+      label: string;
+      Icon: any;
+      date: string | null;
+      subLabel: string | null;
+    }> = [
+      {
+        label: "Đơn Hàng Đã Đặt",
+        Icon: Receipt,
+        date: fmtDate(createdAt),
+        subLabel: null,
+      },
+    ];
+    if (paidAt) {
+      cancelSteps.push({
+        label: "Đơn Hàng Đã Thanh Toán",
+        Icon: Payments,
+        date: fmtDate(paidAt),
+        subLabel: totalAmount ? `(${fmt(totalAmount)})` : null,
+      });
+    } else {
+      cancelSteps.push({
+        label: "Đã Duyệt",
+        Icon: CheckCircle,
+        date: null,
+        subLabel: null,
+      });
+    }
+    cancelSteps.push({
+      label: "Đã Hủy Đơn Hàng",
+      Icon: CancelOutlined,
+      date: fmtDate(updatedAt),
+      subLabel: null,
+    });
+
+    return (
+      <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={1}
+          mb={2}
+          sx={{
+            bgcolor: "#fff3f3",
+            border: "1px solid #f5c6c6",
+            borderRadius: 1,
+            p: 1.5,
+          }}
+        >
+          <CancelOutlined sx={{ color: "#e53935" }} />
+          <Typography fontWeight={600} color="error">
+            Đơn hàng đã bị hủy
+          </Typography>
+        </Box>
+
+        <Box
+          display="flex"
+          alignItems="flex-start"
+          sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
+        >
+          {cancelSteps.map((step, idx) => {
+            const isLast = idx === cancelSteps.length - 1;
+            const circleColor = isLast ? "#e53935" : green;
+            const lineColor = green;
+
+            return (
+              <Box
+                key={step.label}
+                display="flex"
+                alignItems="flex-start"
+                sx={{ flex: idx < cancelSteps.length - 1 ? 1 : "none" }}
+              >
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  sx={{ minWidth: 100 }}
+                >
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      border: `2px solid ${circleColor}`,
+                      bgcolor: isLast ? "#e53935" : green,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: isLast ? `0 0 0 4px #e5393533` : "none",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <step.Icon
+                      sx={{
+                        fontSize: 26,
+                        color: "#fff",
+                      }}
+                    />
+                  </Box>
+
+                  <Typography
+                    variant="caption"
+                    align="center"
+                    fontWeight={isLast ? 700 : 500}
+                    sx={{
+                      mt: 1,
+                      color: isLast ? "#e53935" : "#333",
+                      maxWidth: 120,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {step.label}
+                  </Typography>
+
+                  {step.date && (
+                    <Typography
+                      variant="caption"
+                      align="center"
+                      sx={{ color: "text.secondary", mt: 0.25, fontSize: 11 }}
+                    >
+                      {step.date}
+                    </Typography>
+                  )}
+
+                  {step.subLabel && (
+                    <Typography
+                      variant="caption"
+                      align="center"
+                      sx={{ color: "text.secondary", fontSize: 11 }}
+                    >
+                      {step.subLabel}
+                    </Typography>
+                  )}
+                </Box>
+
+                {idx < cancelSteps.length - 1 && (
+                  <Box
+                    sx={{
+                      flex: 1,
+                      height: 3,
+                      bgcolor: lineColor,
+                      mt: "27px",
+                      mx: 0.5,
+                      minWidth: 20,
+                    }}
+                  />
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
       <Box
         display="flex"
         alignItems="flex-start"
         sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
       >
         {STEPS.map((step, idx) => {
-          const completed = !isSpecial && idx <= activeStep;
-          const isCurrent = !isSpecial && idx === activeStep;
+          const completed = idx <= activeStep;
+          const isCurrent = idx === activeStep;
           const circleColor = completed ? green : gray;
-          const lineColor = !isSpecial && idx < activeStep ? green : gray;
+          const lineColor = idx < activeStep ? green : gray;
 
           return (
             <Box
@@ -725,10 +1042,18 @@ export const OrderManagementDetailPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [data, cancelRequests] = await Promise.all([
+      const [data, cancelRequests, returnRequests] = await Promise.all([
         orderService.getOrderById(orderId),
         orderService
           .getAllCancelRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          })
+          .catch(() => null),
+        orderService
+          .getAllReturnRequests({
             PageNumber: 1,
             PageSize: 100,
             SortBy: "CreatedAt",
@@ -745,6 +1070,21 @@ export const OrderManagementDetailPage = () => {
               new Date(b.createdAt || 0).getTime() -
               new Date(a.createdAt || 0).getTime(),
           )[0] ?? null;
+
+      const latestReturnRequest =
+        returnRequests?.items
+          ?.filter((item) => item.orderId === data.id)
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime(),
+          )[0] ?? null;
+
+      if (latestReturnRequest) {
+        (data as any).returnShippingStatus =
+          latestReturnRequest.returnShippingInfo?.status ?? null;
+        (data as any).returnRequestStatus = latestReturnRequest.status ?? null;
+      }
 
       setOrder(data);
       setOrderCancelRequest(latestCancelRequest);
@@ -1616,6 +1956,8 @@ export const OrderManagementDetailPage = () => {
                   paidAt={order.paidAt}
                   updatedAt={order.updatedAt}
                   totalAmount={order.totalAmount}
+                  returnShippingStatus={(order as any).returnShippingStatus}
+                  returnRequestStatus={(order as any).returnRequestStatus}
                 />
               </Box>
 
