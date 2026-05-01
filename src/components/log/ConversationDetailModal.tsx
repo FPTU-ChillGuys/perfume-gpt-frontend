@@ -111,7 +111,7 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                         {isUser ? "U" : "AI"}
                                     </Box>
 
-                                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start" }}>
+                                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: isUser ? "flex-end" : "flex-start", maxWidth: "calc(100% - 48px)" }}>
                                         <Box
                                             sx={{
                                                 bgcolor: isUser ? "primary.main" : "white",
@@ -124,6 +124,8 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                                 border: "1px solid",
                                                 borderColor: isUser ? "primary.dark" : "grey.200",
                                                 position: "relative",
+                                                maxWidth: "100%",
+                                                wordBreak: "break-word",
                                                 "& p": { m: 0, mb: 1 },
                                                 "& p:last-child": { mb: 0 },
                                                 "& ul, & ol": { m: 0, mb: 1, pl: 3 },
@@ -142,6 +144,7 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                                     borderRadius: 1,
                                                     overflowX: "auto",
                                                     fontSize: "0.85em",
+                                                    maxWidth: "100%",
                                                 },
                                                 "& h1, & h2, & h3, & h4": {
                                                     m: 0,
@@ -165,6 +168,9 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                                     gap: 1.5,
                                                     overflowX: "auto",
                                                     pb: 0.5,
+                                                    pt: 0.5,
+                                                    maxWidth: "100%",
+                                                    width: "fit-content",
                                                     "&::-webkit-scrollbar": { height: 4 },
                                                     "&::-webkit-scrollbar-thumb": {
                                                         bgcolor: "#ddd",
@@ -172,7 +178,7 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                                     },
                                                 }}
                                             >
-                                                {products.map((product) => (
+                                                {products.slice(0, 10).map((product) => (
                                                     <ProductCard
                                                         key={product.id}
                                                         product={product}
