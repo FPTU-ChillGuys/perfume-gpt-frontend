@@ -10,6 +10,9 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { AdminConversation, ServerMessage } from "@/types/conversation";
+import type { ChatProduct } from "@/types/chatbot";
+import { parseAssistantPayload } from "@/components/chatbot/ChatbotWidget/helpers";
+import { ProductCard } from "@/components/chatbot/ChatbotWidget/ProductCard";
 
 interface ConversationDetailModalProps {
     open: boolean;
@@ -22,15 +25,17 @@ const formatDate = (dateStr?: string) => {
     return new Date(dateStr).toLocaleString("vi-VN");
 };
 
-function parseMessageContent(msg: ServerMessage): string {
+function parseMessageContent(msg: ServerMessage): { text: string; products: ChatProduct[] } {
     let text = msg.message;
+    let products: ChatProduct[] = [];
     try {
-        const parsed = JSON.parse(text);
-        if (parsed.message) text = parsed.message;
+        const payload = parseAssistantPayload(text);
+        text = payload.message;
+        products = payload.products;
     } catch {
-        // keep raw
+        // keep raw text, no products
     }
-    return text;
+    return { text, products };
 }
 
 export const ConversationDetailModal = ({ open, onClose, selectedConversation }: ConversationDetailModalProps) => {
@@ -72,7 +77,7 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                 >
                     {sortedMessages.length > 0 ? (
                         sortedMessages.map((msg) => {
-                            const text = parseMessageContent(msg);
+                            const { text, products } = parseMessageContent(msg);
                             const isUser = msg.sender === 'user';
 
                             return (
@@ -151,6 +156,33 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
                                                 {text}
                                             </ReactMarkdown>
                                         </Box>
+
+                                        {/* Product cards — admin view, hide add-to-cart */}
+                                        {!isUser && products.length > 0 && (
+                                            <Box
+                                                sx={{
+                                                    display: "flex",
+                                                    gap: 1.5,
+                                                    overflowX: "auto",
+                                                    pb: 0.5,
+                                                    "&::-webkit-scrollbar": { height: 4 },
+                                                    "&::-webkit-scrollbar-thumb": {
+                                                        bgcolor: "#ddd",
+                                                        borderRadius: 2,
+                                                    },
+                                                }}
+                                            >
+                                                {products.map((product) => (
+                                                    <ProductCard
+                                                        key={product.id}
+                                                        product={product}
+                                                        onAddToCart={() => {}}
+                                                        onNavigate={() => {}}
+                                                        hideAddToCart={true}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        )}
 
                                         {msg.createdAt && (
                                             <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, px: 1 }}>
