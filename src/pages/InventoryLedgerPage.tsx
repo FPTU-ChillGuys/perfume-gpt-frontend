@@ -533,7 +533,6 @@ export const InventoryLedgerPage = () => {
                   <TableCell align="right">Thay đổi</TableCell>
                   <TableCell align="right">Tồn sau</TableCell>
                   <TableCell>Mô tả</TableCell>
-                  <TableCell>Ref ID</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -576,7 +575,7 @@ export const InventoryLedgerPage = () => {
                               size="small"
                               color={config.color}
                               variant="outlined"
-                              sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                              sx={{ fontWeight: 600, fontSize: "0.75rem", padding: "5px"}}
                             />
                           </TableCell>
 
@@ -693,30 +692,6 @@ export const InventoryLedgerPage = () => {
                             >
                               {entry.description || "—"}
                             </Typography>
-                          </TableCell>
-
-                          {/* Reference */}
-                          <TableCell>
-                            {entry.referenceId ? (
-                              <Typography
-                                variant="body2"
-                                fontSize="0.82rem"
-                                sx={{
-                                  fontFamily: "monospace",
-                                  color: "primary.main",
-                                }}
-                              >
-                                {entry.referenceId}
-                              </Typography>
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                color="text.disabled"
-                                fontSize="0.82rem"
-                              >
-                                —
-                              </Typography>
-                            )}
                           </TableCell>
                         </TableRow>
                       );

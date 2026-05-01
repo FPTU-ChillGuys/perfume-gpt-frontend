@@ -72,8 +72,7 @@ type InventoryCategoryTab =
   | "men"
   | "women"
   | "unisex"
-  | "niche"
-  | "giftset";
+  | "niche";
 type VerifyDetailDraft = {
   detailId: string;
   approvedQuantity: string;
@@ -89,7 +88,6 @@ const INVENTORY_CATEGORY_TAB_ITEMS: Array<{
   { key: "women", label: "Nước hoa Nữ" },
   { key: "unisex", label: "Unisex" },
   { key: "niche", label: "Niche" },
-  { key: "giftset", label: "Gifset" },
 ];
 
 const INVENTORY_CATEGORY_ID_BY_TAB: Record<
@@ -100,7 +98,6 @@ const INVENTORY_CATEGORY_ID_BY_TAB: Record<
   men: 2,
   unisex: 3,
   niche: 4,
-  giftset: 5,
 };
 
 const resolveCategoryIdByTab = (tab: InventoryCategoryTab) => {

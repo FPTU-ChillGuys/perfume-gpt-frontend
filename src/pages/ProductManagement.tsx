@@ -40,8 +40,7 @@ type ProductCategoryTab =
   | "men"
   | "women"
   | "unisex"
-  | "niche"
-  | "giftset";
+  | "niche";
 
 const PRODUCT_CATEGORY_TAB_ITEMS: Array<{
   key: ProductCategoryTab;
@@ -52,7 +51,6 @@ const PRODUCT_CATEGORY_TAB_ITEMS: Array<{
   { key: "women", label: "Nước hoa Nữ" },
   { key: "unisex", label: "Unisex" },
   { key: "niche", label: "Niche" },
-  { key: "giftset", label: "Gifset" },
 ];
 
 const PRODUCT_CATEGORY_ID_BY_TAB: Record<
@@ -63,7 +61,6 @@ const PRODUCT_CATEGORY_ID_BY_TAB: Record<
   men: 2,
   unisex: 3,
   niche: 4,
-  giftset: 5,
 };
 
 const resolveCategoryIdByTab = (tab: ProductCategoryTab) => {

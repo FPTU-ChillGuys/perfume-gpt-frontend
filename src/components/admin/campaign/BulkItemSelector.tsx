@@ -58,8 +58,7 @@ type CampaignCategoryTab =
   | "men"
   | "women"
   | "unisex"
-  | "niche"
-  | "giftset";
+  | "niche";
 
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type ExpiryDaysFilter = "" | "30" | "60" | "90";
@@ -99,7 +98,6 @@ const CATEGORY_TABS: Array<{ key: CampaignCategoryTab; label: string }> = [
   { key: "women", label: "Nước hoa Nữ" },
   { key: "unisex", label: "Unisex" },
   { key: "niche", label: "Niche" },
-  { key: "giftset", label: "Giftset" },
 ];
 
 const CATEGORY_ID_MAP: Record<Exclude<CampaignCategoryTab, "all">, number> = {
@@ -107,7 +105,6 @@ const CATEGORY_ID_MAP: Record<Exclude<CampaignCategoryTab, "all">, number> = {
   men: 2,
   unisex: 3,
   niche: 4,
-  giftset: 5,
 };
 
 const EXPIRY_FILTER_OPTIONS: Array<{ value: ExpiryDaysFilter; label: string }> =

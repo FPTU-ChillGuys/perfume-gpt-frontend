@@ -401,21 +401,20 @@ export const ImportHistoryTab: React.FC = () => {
                 },
               }}
             >
-              <TableCell>Mã phiếu</TableCell>
               <TableCell>Nhà cung cấp</TableCell>
               <TableCell>Người tạo</TableCell>
+              <TableCell>Người xác nhận</TableCell>
               <TableCell>Ngày dự kiến</TableCell>
               <TableCell>Ngày thực tế</TableCell>
               <TableCell align="right">Tổng tiền</TableCell>
               <TableCell align="center">Số mặt hàng</TableCell>
               <TableCell align="center">Trạng thái</TableCell>
-              <TableCell>Người xác nhận</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {tickets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary" variant="body1">
                     Không có dữ liệu
                   </Typography>
@@ -432,21 +431,6 @@ export const ImportHistoryTab: React.FC = () => {
                   }}
                 >
                   <TableCell>
-                    <Tooltip title={ticket.id} arrow placement="top">
-                      <Typography
-                        variant="body2"
-                        fontFamily="monospace"
-                        sx={{
-                          cursor: "pointer",
-                          color: "primary.main",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {(ticket.id || "").substring(0, 8)}...
-                      </Typography>
-                    </Tooltip>
-                  </TableCell>
-                  <TableCell>
                     <Typography variant="body2">
                       {ticket.supplierName}
                     </Typography>
@@ -454,6 +438,11 @@ export const ImportHistoryTab: React.FC = () => {
                   <TableCell>
                     <Typography variant="body2">
                       {ticket.createdByName}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {ticket.verifiedByName || "-"}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -505,11 +494,7 @@ export const ImportHistoryTab: React.FC = () => {
                       }}
                     />
                   </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {ticket.verifiedByName || "-"}
-                    </Typography>
-                  </TableCell>
+                  
                 </TableRow>
               ))
             )}
