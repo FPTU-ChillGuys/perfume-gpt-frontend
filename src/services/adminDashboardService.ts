@@ -6,6 +6,12 @@ export interface DashboardOverview {
   topProducts?: TopProduct[];
 }
 
+export interface PaymentMethodItem {
+  paymentMethod: string;
+  transactionsCount: number;
+  amount: number;
+}
+
 export interface RevenueSummary {
   fromDate?: string;
   toDate?: string;
@@ -14,6 +20,7 @@ export interface RevenueSummary {
   netRevenue?: number;
   successfulTransactionsCount?: number;
   paidOrdersCount?: number;
+  paymentMethodDistribution?: PaymentMethodItem[];
 }
 
 export interface TopProduct {

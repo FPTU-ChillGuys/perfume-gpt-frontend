@@ -14253,8 +14253,15 @@ export interface components {
             depositGateway?: null | components["schemas"]["PaymentMethod"];
             posSessionId?: null | string;
         };
-        /** @enum {null|string} */
-        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer" | "PayOs" | null;
+        /** @enum {string} */
+        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer" | "PayOs";
+        PaymentMethodDistributionResponse: {
+            paymentMethod?: components["schemas"]["PaymentMethod"];
+            /** Format: int32 */
+            transactionsCount?: number;
+            /** Format: decimal */
+            amount?: number;
+        };
         /** @enum {string} */
         PaymentStatus: "Unpaid" | "PartialPaid" | "Paid" | "Refunded" | "PartialRefunded";
         PaymentTransactionAdminItemResponse: {
@@ -14805,6 +14812,7 @@ export interface components {
             successfulTransactionsCount?: number;
             /** Format: int32 */
             paidOrdersCount?: number;
+            paymentMethodDistribution?: components["schemas"]["PaymentMethodDistributionResponse"][];
         };
         ReviewDetailResponse: {
             /** Format: uuid */

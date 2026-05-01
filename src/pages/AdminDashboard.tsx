@@ -15,7 +15,6 @@ import {
   Select,
 } from "@mui/material";
 import {
-  PersonAdd,
   ShoppingCart,
   AttachMoney,
   Inventory2,
@@ -36,6 +35,7 @@ import {
   type RevenueSummary,
   type TopProduct,
   type InventoryLevelsSummary,
+  type PaymentMethodItem,
 } from "../services/adminDashboardService";
 
 const formatCurrency = (v?: number) =>
@@ -685,6 +685,168 @@ const RevenueLineChart = ({
   );
 };
 
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CashOnDelivery: "Tiền mặt (COD)",
+  VnPay: "VNPay",
+  Momo: "MoMo",
+  CashInStore: "Tiền mặt tại cửa hàng",
+  ExternalBankTransfer: "Chuyển khoản",
+  PayOs: "PayOS",
+};
+
+const PAYMENT_METHOD_COLORS: Record<string, string> = {
+  CashOnDelivery: "#f59e0b",
+  VnPay: "#3b82f6",
+  Momo: "#ec4899",
+  CashInStore: "#10b981",
+  ExternalBankTransfer: "#8b5cf6",
+  PayOs: "#06b6d4",
+};
+
+const DEFAULT_COLORS = [
+  "#3b82f6",
+  "#10b981",
+  "#f59e0b",
+  "#ec4899",
+  "#8b5cf6",
+  "#06b6d4",
+];
+
+const PaymentDonutChart = ({
+  distribution,
+}: {
+  distribution: PaymentMethodItem[];
+}) => {
+  const active = distribution.filter((item) => item.transactionsCount > 0);
+  const total = active.reduce((sum, item) => sum + item.amount, 0);
+
+  // Build conic-gradient segments
+  let currentAngle = 0;
+  const segments = active.map((item, index) => {
+    const pct = total > 0 ? item.amount / total : 1 / active.length;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + pct * 360;
+    currentAngle = endAngle;
+    const color =
+      PAYMENT_METHOD_COLORS[item.paymentMethod] ??
+      DEFAULT_COLORS[index % DEFAULT_COLORS.length] ??
+      "#94a3b8";
+    return { ...item, color, startAngle, endAngle, pct };
+  });
+
+  const gradientStops =
+    active.length > 0
+      ? segments
+          .map((seg) => `${seg.color} ${seg.startAngle}deg ${seg.endAngle}deg`)
+          .join(", ")
+      : "#e2e8f0 0deg 360deg";
+
+  const centerContent =
+    active.length === 0 ? (
+      <Typography variant="caption" color="text.secondary" textAlign="center">
+        Không có
+        <br />
+        giao dịch
+      </Typography>
+    ) : (
+      <>
+        <Typography variant="h6" fontWeight={700} color="text.primary">
+          {active.length}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          hình thức
+        </Typography>
+      </>
+    );
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      {/* Donut — tự lấp đầy phần còn lại theo chiều dọc */}
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          py: 1,
+        }}
+      >
+        <Box
+          sx={{
+            width: "100%",
+            maxWidth: 320,
+            aspectRatio: "1",
+            borderRadius: "50%",
+            background: `conic-gradient(${gradientStops})`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Box
+            sx={{
+              width: "60%",
+              aspectRatio: "1",
+              borderRadius: "50%",
+              bgcolor: "background.paper",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexDirection: "column",
+            }}
+          >
+            {centerContent}
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Legend — cố định ở dưới */}
+      {active.length > 0 && (
+        <Stack spacing={0.5} sx={{ pt: 1, borderTop: "1px solid", borderColor: "divider" }}>
+          {segments.map((seg) => (
+            <Box
+              key={seg.paymentMethod}
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Box display="flex" alignItems="center" gap={0.75} sx={{ minWidth: 0, flex: 1 }}>
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    bgcolor: seg.color,
+                    flexShrink: 0,
+                  }}
+                />
+                <Typography variant="caption" color="text.primary" noWrap>
+                  {PAYMENT_METHOD_LABELS[seg.paymentMethod] ?? seg.paymentMethod}
+                </Typography>
+              </Box>
+              <Box sx={{ flexShrink: 0, ml: 1, textAlign: "right" }}>
+                <Typography variant="caption" fontWeight={700}>
+                  {(seg.pct * 100).toFixed(1)}%
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
+                  {seg.transactionsCount} GD
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Stack>
+      )}
+
+      {active.length === 0 && (
+        <Typography variant="body2" color="text.secondary" textAlign="center" pb={1}>
+          Tháng này chưa có giao dịch thanh toán nào.
+        </Typography>
+      )}
+    </Box>
+  );
+};
+
 const AdminDashboard = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -699,6 +861,8 @@ const AdminDashboard = () => {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [inventorySummary, setInventorySummary] =
     useState<InventoryLevelsSummary>({});
+  const [monthRevenueSummary, setMonthRevenueSummary] =
+    useState<RevenueSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -727,8 +891,12 @@ const AdminDashboard = () => {
         ToDate: monthRange.to,
       }),
       adminDashboardService.getInventoryLevels(),
+      adminDashboardService.getRevenue({
+        FromDate: monthRange.from,
+        ToDate: monthRange.to,
+      }),
     ])
-      .then(([ov, revenueSummaries, top, inv]) => {
+      .then(([ov, revenueSummaries, top, inv, monthRev]) => {
         if (!active) {
           return;
         }
@@ -743,6 +911,7 @@ const AdminDashboard = () => {
         setRevenueRange([0, Math.max(0, weekRanges.length - 1)]);
         setTopProducts(top);
         setInventorySummary(inv);
+        setMonthRevenueSummary(monthRev);
       })
       .catch((err: any) => {
         if (!active) {
@@ -829,20 +998,18 @@ const AdminDashboard = () => {
                 bg="#dcfce7"
               />
               <StatCard
-                label="Người dùng mới hôm nay"
-                value={
-                  newUsersToday == null
-                    ? "—"
-                    : Number(newUsersToday).toLocaleString("vi-VN")
-                }
-                icon={<PersonAdd />}
+                label={`Doanh thu ${monthOptions.find((o) => o.value === selectedMonth)?.label ?? selectedMonth}`}
+                value={formatCurrency(
+                  Number(
+                    monthRevenueSummary?.netRevenue ??
+                    monthRevenueSummary?.grossRevenue ??
+                    0,
+                  ),
+                )}
+                icon={<TrendingUp />}
                 color="#6366f1"
                 bg="#ede9fe"
-                helper={
-                  newUsersToday == null
-                    ? "Schema hiện tại chưa có chỉ số user mới"
-                    : "Theo khung thời gian hôm nay"
-                }
+                helper="Doanh thu thuần theo tháng được chọn"
               />
               <StatCard
                 label="Biến thể sắp hết hàng"
@@ -906,98 +1073,24 @@ const AdminDashboard = () => {
                 )}
               </Paper>
 
-              <Paper sx={{ p: 2.5, borderRadius: 2.5 }}>
+              <Paper sx={{ p: 2.5, borderRadius: 2.5, display: "flex", flexDirection: "column", height: "100%" }}>
                 <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
+                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}
                 >
                   <PieChart color="primary" />
                   <Typography variant="h6" fontWeight="bold">
                     Phân bổ phương thức thanh toán
                   </Typography>
                 </Box>
+                <Typography variant="caption" color="text.secondary" mb={2} display="block">
+                  {monthOptions.find((o) => o.value === selectedMonth)?.label ?? selectedMonth}
+                </Typography>
 
-                <Box
-                  sx={{
-                    mx: "auto",
-                    width: 156,
-                    height: 156,
-                    borderRadius: "50%",
-                    background: "conic-gradient(#cbd5e1 0deg 360deg)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: 94,
-                      height: 94,
-                      borderRadius: "50%",
-                      bgcolor: "background.paper",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      textAlign="center"
-                    >
-                      Chưa có API
-                      <br />
-                      thanh toán
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Stack spacing={1.25} sx={{ mt: 2.5 }}>
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                  >
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Box
-                        sx={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: "50%",
-                          bgcolor: "#94a3b8",
-                        }}
-                      />
-                      <Typography variant="body2">VNPay</Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Chưa có dữ liệu
-                    </Typography>
-                  </Box>
-                  <Box
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="space-between"
-                  >
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Box
-                        sx={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: "50%",
-                          bgcolor: "#cbd5e1",
-                        }}
-                      />
-                      <Typography variant="body2">MoMo</Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      Chưa có dữ liệu
-                    </Typography>
-                  </Box>
-                </Stack>
-
-                <Alert severity="info" sx={{ mt: 2 }}>
-                  Chưa có dữ liệu phân bổ phương thức thanh toán từ API. Khi
-                  backend bổ sung, biểu đồ sẽ hiển thị tỷ lệ tự động.
-                </Alert>
+                <PaymentDonutChart
+                  distribution={
+                    monthRevenueSummary?.paymentMethodDistribution ?? []
+                  }
+                />
               </Paper>
             </Box>
 
