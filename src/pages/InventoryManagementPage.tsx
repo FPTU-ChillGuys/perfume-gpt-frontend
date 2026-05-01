@@ -1250,7 +1250,7 @@ export const InventoryManagementPage = () => {
                                   editingThreshold?.stockId === stockId;
                                 const isSaving = savingThreshold === stockId;
 
-                                if (isEditing && stockId) {
+                                if (isEditing && editingThreshold && stockId) {
                                   return (
                                     <TextField
                                       autoFocus
