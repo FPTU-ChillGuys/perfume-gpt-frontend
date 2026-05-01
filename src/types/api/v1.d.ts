@@ -12910,6 +12910,8 @@ export interface components {
             importQuantity?: number;
             /** Format: int32 */
             remainingQuantity?: number;
+            /** Format: int32 */
+            availableQuantity?: number;
             /** Format: date-time */
             createdAt?: string;
         };
@@ -12933,6 +12935,8 @@ export interface components {
             importQuantity?: number;
             /** Format: int32 */
             remainingQuantity?: number;
+            /** Format: int32 */
+            availableQuantity?: number;
             /** Format: date-time */
             createdAt?: string;
         };
@@ -15084,6 +15088,8 @@ export interface components {
             /** Format: int32 */
             batchExpiringSoonThresholdInDays?: number;
             /** Format: int32 */
+            stopSellingBeforeExpiryDays?: number;
+            /** Format: int32 */
             returnOrderAllowanceInDays?: number;
             /** Format: int32 */
             maxAddressesPerUser?: number;
@@ -15378,6 +15384,8 @@ export interface components {
             orderRewardPointsInDays?: number;
             /** Format: int32 */
             batchExpiringSoonThresholdInDays?: number;
+            /** Format: int32 */
+            stopSellingBeforeExpiryDays?: number;
             /** Format: int32 */
             returnOrderAllowanceInDays?: number;
             /** Format: int32 */

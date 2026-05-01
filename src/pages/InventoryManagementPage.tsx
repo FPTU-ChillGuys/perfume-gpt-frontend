@@ -1075,10 +1075,10 @@ export const InventoryManagementPage = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ bgcolor: "grey.50" }}>Ảnh</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Sản phẩm / Lô</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã SKU / Mã Lô</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Sản phẩm</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã SKU / Số Lô</TableCell>
                     <TableCell sx={{ bgcolor: "grey.50" }}>Mã sản phẩm</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Khả dụng / Còn lại</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Khả dụng</TableCell>
                     <TableCell sx={{ bgcolor: "grey.50" }} align="right">Ngưỡng thấp / NSX - HSD</TableCell>
                     <TableCell sx={{ bgcolor: "grey.50" }} align="center">Trạng thái</TableCell>
                   </TableRow>
@@ -1445,7 +1445,7 @@ export const InventoryManagementPage = () => {
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
-                                  {batch.remainingQuantity ?? 0}
+                                  {batch.availableQuantity ?? 0}
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body2">
