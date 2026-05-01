@@ -258,6 +258,12 @@ export const InventoryManagementPage = () => {
   const [verifyDetailDrafts, setVerifyDetailDrafts] = useState<
     VerifyDetailDraft[]
   >([]);
+  const [editingThreshold, setEditingThreshold] = useState<{
+    stockId: string;
+    value: string;
+  } | null>(null);
+  const [savingThreshold, setSavingThreshold] = useState<string | null>(null);
+
   const showToastRef = useRef(showToast);
 
   useEffect(() => {
@@ -452,7 +458,37 @@ export const InventoryManagementPage = () => {
     setPage(0);
   };
 
-  
+  const handleSaveThreshold = async (stockId: string, rawValue: string) => {
+    const parsed = parseInt(rawValue, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      showToast("Ngưỡng thấp phải là số nguyên >= 0", "warning");
+      // restore original value by cancelling
+      setEditingThreshold(null);
+      return;
+    }
+
+    // optimistic update in local state
+    setStocks((prev) =>
+      prev.map((s) =>
+        s.id === stockId ? { ...s, lowStockThreshold: parsed } : s,
+      ),
+    );
+    setEditingThreshold(null);
+
+    try {
+      setSavingThreshold(stockId);
+      await inventoryService.updateStock(stockId, parsed);
+      showToast("Đã cập nhật ngưỡng thấp", "success");
+      // reload để lấy dữ liệu mới nhất, giữ nguyên trang hiện tại
+      void loadStock();
+    } catch (err: any) {
+      showToast(err.message || "Không thể cập nhật ngưỡng thấp", "error");
+      // revert
+      void loadStock();
+    } finally {
+      setSavingThreshold(null);
+    }
+  };
 
   const loadBatchesByVariantId = useCallback(async (variantId: string) => {
     setBatchByVariantId((current) => ({
@@ -1208,7 +1244,95 @@ export const InventoryManagementPage = () => {
                               {stock.availableQuantity ?? 0}
                             </TableCell>
                             <TableCell align="right">
-                              {stock.lowStockThreshold ?? 0}
+                              {(() => {
+                                const stockId = stock.id;
+                                const isEditing =
+                                  editingThreshold?.stockId === stockId;
+                                const isSaving = savingThreshold === stockId;
+
+                                if (isEditing && stockId) {
+                                  return (
+                                    <TextField
+                                      autoFocus
+                                      size="small"
+                                      type="number"
+                                      value={editingThreshold.value}
+                                      onChange={(e) =>
+                                        setEditingThreshold({
+                                          stockId,
+                                          value: e.target.value,
+                                        })
+                                      }
+                                      onBlur={() =>
+                                        handleSaveThreshold(
+                                          stockId,
+                                          editingThreshold.value,
+                                        )
+                                      }
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleSaveThreshold(
+                                            stockId,
+                                            editingThreshold.value,
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingThreshold(null);
+                                        }
+                                      }}
+                                      sx={{ width: 80 }}
+                                      inputProps={{ min: 0, step: 1 }}
+                                    />
+                                  );
+                                }
+
+                                return (
+                                  <Box
+                                    sx={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                      cursor: stockId ? "pointer" : "default",
+                                      px: 0.5,
+                                      py: 0.25,
+                                      borderRadius: 1,
+                                      "&:hover": stockId
+                                        ? {
+                                            bgcolor: "action.hover",
+                                            outline: "1px dashed",
+                                            outlineColor: "primary.main",
+                                          }
+                                        : {},
+                                    }}
+                                    title={stockId ? "Nhấn để chỉnh ngưỡng thấp" : undefined}
+                                    onClick={() => {
+                                      if (!stockId) return;
+                                      setEditingThreshold({
+                                        stockId,
+                                        value: String(
+                                          stock.lowStockThreshold ?? 0,
+                                        ),
+                                      });
+                                    }}
+                                  >
+                                    {isSaving ? (
+                                      <CircularProgress size={14} />
+                                    ) : (
+                                      <Typography
+                                        variant="body2"
+                                        color={
+                                          stock.status === "LowStock" ||
+                                          stock.status === "OutOfStock"
+                                            ? "warning.main"
+                                            : "text.primary"
+                                        }
+                                        fontWeight={500}
+                                      >
+                                        {stock.lowStockThreshold ?? 0}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell align="center">
                               {(() => {

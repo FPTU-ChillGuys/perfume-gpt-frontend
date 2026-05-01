@@ -49,6 +49,7 @@ import type {
   UpdateVariantRequest,
   VariantStatus,
   VariantType,
+  ReplenishmentPolicy,
 } from "@/types/product";
 
 interface ManageProductVariantsDialogProps {
@@ -537,7 +538,7 @@ export default function ManageProductVariantsDialog({
           (variant.status as VariantStatus) ||
           (VARIANT_STATUS[0]?.value ?? "Active"),
         restockPolicy:
-          (variant as any).restockPolicy ||
+          variant.restockPolicy ||
           (RESTOCK_POLICIES[0]?.value ?? "AutoRestock"),
       });
       await hydrateAttributeSelectionsFromVariant(variant);
@@ -955,7 +956,7 @@ export default function ManageProductVariantsDialog({
         ? Number(formValues.retailPrice)
         : null,
       status: formValues.status as VariantStatus,
-      restockPolicy: formValues.restockPolicy as any,
+      restockPolicy: formValues.restockPolicy as ReplenishmentPolicy,
       lowStockThreshold: Number(formValues.lowStockThreshold),
       temporaryMediaIds: buildOrderedTemporaryMediaIds(),
       attributes: buildAttributePayload(),
@@ -1000,7 +1001,7 @@ export default function ManageProductVariantsDialog({
         ? Number(formValues.retailPrice)
         : null,
       status: formValues.status as VariantStatus,
-      restockPolicy: formValues.restockPolicy as any,
+      restockPolicy: formValues.restockPolicy as ReplenishmentPolicy,
       ...(formValues.lowStockThreshold
         ? { lowStockThreshold: Number(formValues.lowStockThreshold) }
         : {}),

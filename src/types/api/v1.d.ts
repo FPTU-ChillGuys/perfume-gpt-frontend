@@ -4366,23 +4366,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/inventory/stock/variant/{variantId}": {
+    "/api/inventory/stock/{stockId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: {
+        get?: never;
+        put: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    variantId: string;
+                    stockId: string;
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateStockRequest"];
+                    "text/json": components["schemas"]["UpdateStockRequest"];
+                    "application/*+json": components["schemas"]["UpdateStockRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -4390,9 +4397,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfStockResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfStockResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfStockResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
                 default: {
@@ -4407,7 +4414,6 @@ export interface paths {
                 };
             };
         };
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -14571,6 +14577,7 @@ export interface components {
             sillage?: number;
             /** Format: int32 */
             longevity?: number;
+            restockPolicy?: components["schemas"]["ReplenishmentPolicy"];
             /** Format: uuid */
             productId?: string;
             productName: string;
@@ -15352,6 +15359,10 @@ export interface components {
         UpdateStockAdjustmentStatusRequest: {
             status?: components["schemas"]["StockAdjustmentStatus"];
             note?: null | string;
+        };
+        UpdateStockRequest: {
+            /** Format: int32 */
+            lowStockThreshold?: number;
         };
         UpdateStorePolicyRequest: {
             /** Format: decimal */
