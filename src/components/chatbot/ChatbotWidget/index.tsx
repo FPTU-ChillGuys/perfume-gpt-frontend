@@ -383,9 +383,12 @@ export default function ChatbotWidget() {
   );
 
   const handleNavigate = useCallback(
-    (productId: string) => {
-      setOpen(false); // Close chatbot when navigating
-      navigate(`/products/${productId}`);
+    (productId: string, variantId?: string) => {
+      setOpen(false);
+      const params = new URLSearchParams();
+      if (variantId) params.set("variantId", variantId);
+      const qs = params.toString();
+      navigate(`/products/${productId}${qs ? `?${qs}` : ""}`);
     },
     [navigate],
   );

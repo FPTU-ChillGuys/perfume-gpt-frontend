@@ -71,6 +71,9 @@ export const ProductCard = ({
 
   const detailHref = (() => {
     const queryParams = new URLSearchParams();
+    if (variantId) {
+      queryParams.set("variantId", variantId);
+    }
     if (aiAcceptanceId) {
       queryParams.set("aiAcceptanceId", aiAcceptanceId);
     }
