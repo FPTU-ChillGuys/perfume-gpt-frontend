@@ -4,6 +4,7 @@ import { authService } from "../services/authService";
 import { setStoredAuth } from "@/utils/authStorage";
 import { AuthContext } from "./AuthContextType";
 import { useToast } from "../hooks/useToast";
+import { conversationStorage } from "@/utils/conversationStorage";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -51,6 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     authService.logout();
     setUser(null);
+    void conversationStorage.clear();
     showToast("Đăng xuất thành công!", "success");
     window.location.href = "/";
   };

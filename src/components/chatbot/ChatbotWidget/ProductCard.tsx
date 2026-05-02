@@ -11,12 +11,14 @@ interface ProductCardProps {
   product: ChatProduct;
   onAddToCart: (variantId: string, productName: string, aiAcceptanceId?: string) => void;
   onNavigate: (productId: string) => void;
+  hideAddToCart?: boolean;
 }
 
 export function ProductCard({
   product,
   onAddToCart,
   onNavigate,
+  hideAddToCart = false,
 }: ProductCardProps) {
   const [selectedVariant, setSelectedVariant] = useState<ChatVariant | null>(
     (product.variants && product.variants.length > 0
@@ -173,41 +175,43 @@ export function ProductCard({
         )}
       </Box>
 
-      {/* Add to cart button */}
-      <Box sx={{ px: 1.2, pb: 1.2 }}>
-        <Box
-          component="button"
-          onClick={handleAdd}
-          disabled={adding || !selectedVariant}
-          sx={{
-            width: "100%",
-            py: 0.7,
-            border: "none",
-            borderRadius: 1.5,
-            background:
-              adding || !selectedVariant
-                ? "#ccc"
-                : "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: "0.75rem",
-            cursor: adding || !selectedVariant ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 0.5,
-            transition: "opacity 0.2s",
-            "&:hover": { opacity: adding || !selectedVariant ? 1 : 0.9 },
-          }}
-        >
-          {adding ? (
-            <CircularProgress size={12} sx={{ color: "#fff" }} />
-          ) : (
-            <CartIcon sx={{ fontSize: 14 }} />
-          )}
-          Thêm vào giỏ
+      {/* Add to cart button — hidden in admin view */}
+      {!hideAddToCart && (
+        <Box sx={{ px: 1.2, pb: 1.2 }}>
+          <Box
+            component="button"
+            onClick={handleAdd}
+            disabled={adding || !selectedVariant}
+            sx={{
+              width: "100%",
+              py: 0.7,
+              border: "none",
+              borderRadius: 1.5,
+              background:
+                adding || !selectedVariant
+                  ? "#ccc"
+                  : "linear-gradient(135deg, #dc2626 0%, #ef4444 100%)",
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: "0.75rem",
+              cursor: adding || !selectedVariant ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 0.5,
+              transition: "opacity 0.2s",
+              "&:hover": { opacity: adding || !selectedVariant ? 1 : 0.9 },
+            }}
+          >
+            {adding ? (
+              <CircularProgress size={12} sx={{ color: "#fff" }} />
+            ) : (
+              <CartIcon sx={{ fontSize: 14 }} />
+            )}
+            Thêm vào giỏ
+          </Box>
         </Box>
-      </Box>
+      )}
     </Paper>
   );
 }
