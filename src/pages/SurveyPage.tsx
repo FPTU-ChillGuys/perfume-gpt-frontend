@@ -90,7 +90,7 @@ export default function SurveyPage() {
         setLoading(true);
         try {
             const res = await surveyService.getQuestions();
-            setQuestions([...res.data].reverse());
+            setQuestions(res.data);
         } catch {
             // show empty state
         } finally {
