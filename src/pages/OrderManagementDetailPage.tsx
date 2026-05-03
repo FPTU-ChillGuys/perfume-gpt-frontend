@@ -941,21 +941,32 @@ const OrderStepper = ({
 };
 
 interface FulfillInputItem {
+  /** Unique key: `${orderDetailId}::${expectedBatchCode}` */
+  key: string;
   orderDetailId: string;
+  /** The batch code this row is expected to scan */
+  expectedBatchCode: string;
+  /** Reserved quantity for this specific batch */
+  expectedQuantity: number;
   scannedBatchCode: string;
   quantity: string;
 }
 
 interface AutoFulfillItem {
+  key: string;
   id: string;
   variantName?: string;
   orderQuantity: number;
+  expectedBatchCode: string;
   reservedQuantity: number;
   scannedBatchCode: string;
+  /** True when scannedBatchCode matches expectedBatchCode */
+  isBatchInList: boolean;
   quantity: number;
 }
 
 interface FulfillRowValidation {
+  key: string;
   orderDetailId: string;
   isBatchMatched: boolean;
   isQuantityValid: boolean;
@@ -1038,6 +1049,7 @@ export const OrderManagementDetailPage = () => {
   const [shouldTriggerInvoicePrint, setShouldTriggerInvoicePrint] =
     useState(false);
   const invoicePrintRef = useRef<HTMLDivElement | null>(null);
+  const [refreshPickListCounter, setRefreshPickListCounter] = useState(0);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -1132,7 +1144,7 @@ export const OrderManagementDetailPage = () => {
 
     void loadPickList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order?.id, order?.status]);
+  }, [order?.id, order?.status, refreshPickListCounter]);
 
   const isShippingManagedStatus = order?.status === "Delivering";
   const hasTrackingNumber = Boolean(order?.shippingInfo?.trackingNumber);
@@ -1222,23 +1234,72 @@ export const OrderManagementDetailPage = () => {
     }
 
     setFulfillInputs((prev) => {
-      const prevMap = new Map(prev.map((item) => [item.orderDetailId, item]));
+      // Key is `${orderDetailId}::${batchCode}`
+      const prevMap = new Map(prev.map((item) => [item.key, item]));
 
       return (order.orderDetails || [])
         .filter((detail) => Boolean(detail.id))
-        .map((detail) => {
-          const existing = prevMap.get(detail.id!);
+        .flatMap((detail) => {
+          // Always use reservedBatches from the order response directly.
+          // getDetailBatches() prioritises the picklist which can be stale
+          // after a swap (loadOrder refreshes the order but the picklist
+          // may lag), causing wrong batch codes or duplicates.
+          const reservedBatches = detail.reservedBatches ?? [];
 
-          return {
-            orderDetailId: detail.id!,
-            // Keep already-scanned value if user has entered one.
-            scannedBatchCode: existing?.scannedBatchCode ?? "",
-            quantity:
-              existing?.quantity ?? String(Number(detail.quantity ?? 0)),
-          };
+          if (reservedBatches.length === 0) {
+            // No batch info yet: single empty row
+            const key = `${detail.id!}::`;
+            const existing = prevMap.get(key);
+            return [
+              {
+                key,
+                orderDetailId: detail.id!,
+                expectedBatchCode: "",
+                expectedQuantity: Number(detail.quantity ?? 0),
+                scannedBatchCode: existing?.scannedBatchCode ?? "",
+                quantity:
+                  existing?.quantity ?? String(Number(detail.quantity ?? 0)),
+              },
+            ];
+          }
+
+          // Deduplicate by batchCode (defensive — should not happen with clean API data)
+          const seenCodes = new Set<string>();
+          const uniqueBatches = reservedBatches.filter((batch) => {
+            const code = batch.batchCode || "";
+            if (seenCodes.has(code)) return false;
+            seenCodes.add(code);
+            return true;
+          });
+
+          // One input row per unique reserved batch
+          return uniqueBatches.map((batch) => {
+            const key = `${detail.id!}::${batch.batchCode}`;
+            const existing = prevMap.get(key);
+            const newReservedQty = batch.reservedQuantity ?? 0;
+            // Only preserve the user's typed quantity if the reserved quantity
+            // for this batch hasn't changed since it was last loaded.
+            // If API returns a different reservedQuantity (e.g. after a swap),
+            // reset to the new value so the UI always matches the actual batch qty.
+            const preservedQty =
+              existing && existing.expectedQuantity === newReservedQty
+                ? existing.quantity
+                : String(newReservedQty);
+            return {
+              key,
+              orderDetailId: detail.id!,
+              expectedBatchCode: batch.batchCode || "",
+              expectedQuantity: newReservedQty,
+              scannedBatchCode: existing?.scannedBatchCode ?? "",
+              quantity: preservedQty,
+            };
+          });
         });
     });
-  }, [getDetailBatches, order?.status, order?.orderDetails, pickListItemMap]);
+    // NOTE: pickListItemMap and getDetailBatches intentionally excluded —
+    // we read reservedBatches directly from orderDetails now.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.status, order?.orderDetails]);
 
   const subtotal = useMemo(
     () =>
@@ -1360,36 +1421,33 @@ export const OrderManagementDetailPage = () => {
       return [];
     }
 
-    const fulfillMap = new Map(
-      fulfillInputs.map((input) => [input.orderDetailId, input]),
+    const detailMap = new Map(
+      (order.orderDetails ?? []).map((d) => [d.id!, d]),
     );
 
-    return (order.orderDetails ?? [])
-      .filter((detail) => Boolean(detail.id))
-      .map((detail) => {
-        const detailBatches = getDetailBatches(
-          detail.id,
-          detail.reservedBatches,
-        );
-        const selectedInput = detail.id ? fulfillMap.get(detail.id) : undefined;
-        const quantity = Number(
-          selectedInput?.quantity ?? detail.quantity ?? 0,
-        );
-        const selectedBatchCode = selectedInput?.scannedBatchCode?.trim() || "";
-        const selectedBatch = detailBatches.find(
-          (batch) => batch.batchCode === selectedBatchCode,
-        );
+    return fulfillInputs.map((input) => {
+      const detail = detailMap.get(input.orderDetailId);
+      const scannedBatchCode = input.scannedBatchCode?.trim() || "";
+      // A row is valid when the scanned code matches the expected batch for this row
+      const isBatchInList =
+        scannedBatchCode !== "" &&
+        (input.expectedBatchCode === ""
+          ? true // fallback row (no expected batch) — accept any
+          : scannedBatchCode === input.expectedBatchCode);
 
-        return {
-          id: detail.id!,
-          variantName: detail.variantName,
-          orderQuantity: Number(detail.quantity ?? 0),
-          reservedQuantity: Number(selectedBatch?.reservedQuantity ?? 0),
-          scannedBatchCode: selectedBatchCode,
-          quantity,
-        };
-      });
-  }, [fulfillInputs, getDetailBatches, order?.orderDetails, order?.status]);
+      return {
+        key: input.key,
+        id: input.orderDetailId,
+        variantName: detail?.variantName,
+        orderQuantity: Number(detail?.quantity ?? 0),
+        expectedBatchCode: input.expectedBatchCode,
+        reservedQuantity: input.expectedQuantity,
+        scannedBatchCode,
+        isBatchInList,
+        quantity: Number(input.quantity ?? 0),
+      };
+    });
+  }, [fulfillInputs, order?.orderDetails, order?.status]);
 
   const fulfillRowValidations = useMemo<FulfillRowValidation[]>(() => {
     if (order?.status !== "Preparing") {
@@ -1397,27 +1455,42 @@ export const OrderManagementDetailPage = () => {
     }
 
     return autoFulfillItems.map((item) => {
-      const isBatchMatched = Boolean(item.scannedBatchCode);
-      const isQuantityValid =
-        Number.isFinite(item.quantity) &&
-        item.quantity > 0 &&
-        item.quantity <= Math.max(item.reservedQuantity, 0);
-
-      if (!isBatchMatched) {
+      // 1. No batch code typed yet
+      if (!item.scannedBatchCode) {
         return {
+          key: item.key,
           orderDetailId: item.id,
-          isBatchMatched,
+          isBatchMatched: false,
           isQuantityValid: false,
           isValid: false,
-          selectedBatchReserved: item.reservedQuantity,
+          selectedBatchReserved: 0,
           message: "Mã lô không khớp",
         };
       }
 
+      // 2. Batch code typed but doesn't match the expected batch for this row
+      if (!item.isBatchInList) {
+        return {
+          key: item.key,
+          orderDetailId: item.id,
+          isBatchMatched: false,
+          isQuantityValid: false,
+          isValid: false,
+          selectedBatchReserved: 0,
+          message: `Mã lô không khớp (cần: ${item.expectedBatchCode})`,
+        };
+      }
+
+      const isQuantityValid =
+        Number.isFinite(item.quantity) &&
+        item.quantity > 0 &&
+        item.quantity <= item.reservedQuantity;
+
       if (!isQuantityValid) {
         return {
+          key: item.key,
           orderDetailId: item.id,
-          isBatchMatched,
+          isBatchMatched: true,
           isQuantityValid,
           isValid: false,
           selectedBatchReserved: item.reservedQuantity,
@@ -1429,8 +1502,9 @@ export const OrderManagementDetailPage = () => {
       }
 
       return {
+        key: item.key,
         orderDetailId: item.id,
-        isBatchMatched,
+        isBatchMatched: true,
         isQuantityValid,
         isValid: true,
         selectedBatchReserved: item.reservedQuantity,
@@ -1451,7 +1525,7 @@ export const OrderManagementDetailPage = () => {
     }
 
     if (autoFulfillItems.length === 0) {
-      return "Không tìm thấy chi tiết đơn hàng để đóng gói";
+      return "Không tìm thấy chi tiết đơn hàng để đóng gói";
     }
 
     const missingBatch = autoFulfillItems.find(
@@ -1724,48 +1798,28 @@ export const OrderManagementDetailPage = () => {
     }));
   };
 
-  const handleBatchCodeChange = (orderDetailId: string, value: string) => {
+  const handleBatchCodeChange = (key: string, value: string) => {
     const normalizedValue = value.trim();
-    setFulfillInputs((prev) => {
-      const exists = prev.some((item) => item.orderDetailId === orderDetailId);
-
-      if (!exists) {
-        return [
-          ...prev,
-          {
-            orderDetailId,
-            scannedBatchCode: normalizedValue,
-            quantity: "1",
-          },
-        ];
-      }
-
-      return prev.map((item) =>
-        item.orderDetailId === orderDetailId
-          ? { ...item, scannedBatchCode: normalizedValue }
-          : item,
-      );
-    });
-  };
-
-  const handleQuantityChange = (orderDetailId: string, value: string) => {
-    const digitsOnly = value.replace(/\D/g, "");
     setFulfillInputs((prev) =>
       prev.map((item) =>
-        item.orderDetailId === orderDetailId
-          ? { ...item, quantity: digitsOnly || "0" }
-          : item,
+        item.key === key ? { ...item, scannedBatchCode: normalizedValue } : item,
       ),
     );
   };
 
-  const handleAdjustQuantity = (orderDetailId: string, delta: number) => {
+  const handleQuantityChange = (key: string, value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    setFulfillInputs((prev) =>
+      prev.map((item) =>
+        item.key === key ? { ...item, quantity: digitsOnly || "0" } : item,
+      ),
+    );
+  };
+
+  const handleAdjustQuantity = (key: string, delta: number) => {
     setFulfillInputs((prev) =>
       prev.map((item) => {
-        if (item.orderDetailId !== orderDetailId) {
-          return item;
-        }
-
+        if (item.key !== key) return item;
         const nextValue = Math.max(0, Number(item.quantity || 0) + delta);
         return { ...item, quantity: String(nextValue) };
       }),
@@ -1778,11 +1832,8 @@ export const OrderManagementDetailPage = () => {
     }
   }, [isAllFulfillRowsValid, isPackagingConfirmed]);
 
-  const handleSimulateScanBatch = (
-    orderDetailId: string,
-    batchCode: string,
-  ) => {
-    handleBatchCodeChange(orderDetailId, batchCode);
+  const handleSimulateScanBatch = (key: string, batchCode: string) => {
+    handleBatchCodeChange(key, batchCode);
     showToast(`Đã điền mã batch ${batchCode}`, "success");
   };
 
@@ -1817,9 +1868,10 @@ export const OrderManagementDetailPage = () => {
       );
 
       await loadOrder();
-    } catch (err: any) {
+      setRefreshPickListCounter((prev) => prev + 1);
+    } catch (err) {
       showToast(
-        err?.response?.data?.message || err?.message || "Không thể đổi batch lỗi",
+        err instanceof Error ? err.message : "Không thể đổi batch lỗi",
         "error",
       );
     } finally {
@@ -2475,12 +2527,19 @@ export const OrderManagementDetailPage = () => {
                                                         <IconButton
                                                           size="small"
                                                           color="primary"
-                                                          onClick={() =>
+                                                          onClick={() => {
+                                                            const inputKey =
+                                                              fulfillInputs.find(
+                                                                (inp) =>
+                                                                  inp.orderDetailId === item.id &&
+                                                                  inp.expectedBatchCode === batch.batchCode,
+                                                              )?.key ??
+                                                              `${item.id}::${batch.batchCode}`;
                                                             handleSimulateScanBatch(
-                                                              item.id!,
+                                                              inputKey,
                                                               batch.batchCode,
-                                                            )
-                                                          }
+                                                            );
+                                                          }}
                                                           title="Quét batch này"
                                                           disabled={
                                                             order.status !==
@@ -2645,8 +2704,7 @@ export const OrderManagementDetailPage = () => {
                                 );
                                 const rowValidation =
                                   fulfillRowValidations.find(
-                                    (row) =>
-                                      row.orderDetailId === input.orderDetailId,
+                                    (row) => row.key === input.key,
                                   );
 
                                 const statusColor = rowValidation?.isValid
@@ -2655,9 +2713,16 @@ export const OrderManagementDetailPage = () => {
                                     ? "error.main"
                                     : "divider";
 
+                                // Label shows product name + expected batch code when there are multiple batches
+                                const batchLabel = input.expectedBatchCode
+                                  ? `Batch: ${input.expectedBatchCode} (SL giữ: ${input.expectedQuantity})`
+                                  : detail?.variantName
+                                    ? `Batch code - ${detail.variantName}`
+                                    : "Batch code";
+
                                 return (
                                   <Box
-                                    key={input.orderDetailId}
+                                    key={input.key}
                                     sx={{
                                       p: 1,
                                       border: "1px solid",
@@ -2665,16 +2730,23 @@ export const OrderManagementDetailPage = () => {
                                       borderRadius: 1,
                                     }}
                                   >
+                                    {/* Show product name as section header when there are multiple batch rows */}
+                                    {input.expectedBatchCode && detail?.variantName && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        display="block"
+                                        mb={0.5}
+                                      >
+                                        {detail.variantName}
+                                      </Typography>
+                                    )}
                                     <TextField
-                                      label={
-                                        detail?.variantName
-                                          ? `Batch code - ${detail.variantName}`
-                                          : "Batch code"
-                                      }
+                                      label={batchLabel}
                                       value={input.scannedBatchCode}
                                       onChange={(event) =>
                                         handleBatchCodeChange(
-                                          input.orderDetailId,
+                                          input.key,
                                           event.target.value,
                                         )
                                       }
@@ -2711,7 +2783,7 @@ export const OrderManagementDetailPage = () => {
                                         size="small"
                                         onClick={() =>
                                           handleAdjustQuantity(
-                                            input.orderDetailId,
+                                            input.key,
                                             -1,
                                           )
                                         }
@@ -2726,7 +2798,7 @@ export const OrderManagementDetailPage = () => {
                                         value={input.quantity}
                                         onChange={(event) =>
                                           handleQuantityChange(
-                                            input.orderDetailId,
+                                            input.key,
                                             event.target.value,
                                           )
                                         }
@@ -2742,7 +2814,7 @@ export const OrderManagementDetailPage = () => {
                                         size="small"
                                         onClick={() =>
                                           handleAdjustQuantity(
-                                            input.orderDetailId,
+                                            input.key,
                                             1,
                                           )
                                         }

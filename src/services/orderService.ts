@@ -1877,8 +1877,21 @@ class OrderService {
       );
 
       if (!response.data?.success || !response.data.payload) {
+        const apiError = response.error as
+          | { message?: string; errors?: string[] | Record<string, string[]> }
+          | undefined;
+        const errorMessages =
+          typeof apiError?.errors === "object" && !Array.isArray(apiError.errors)
+            ? Object.values(apiError.errors).flat().join(", ")
+            : Array.isArray(apiError?.errors)
+              ? apiError.errors.join(", ")
+              : undefined;
+
         throw new Error(
-          response.data?.message || "Failed to swap damaged reservation",
+          response.data?.message ||
+            apiError?.message ||
+            errorMessages ||
+            "Failed to swap damaged reservation",
         );
       }
 
@@ -1886,9 +1899,7 @@ class OrderService {
     } catch (error: any) {
       console.error("Error swapping damaged reservation:", error);
       throw new Error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to swap damaged reservation",
+        error.message || "Failed to swap damaged reservation",
       );
     }
   }

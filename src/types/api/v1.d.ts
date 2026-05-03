@@ -5652,6 +5652,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orderreturnrequests/guest-on-behalf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateReturnRequestDto"];
+                    "text/json": components["schemas"]["CreateReturnRequestDto"];
+                    "application/*+json": components["schemas"]["CreateReturnRequestDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orderreturnrequests/{id}/cancel": {
         parameters: {
             query?: never;
@@ -13927,7 +13980,7 @@ export interface components {
             orderId?: string;
             orderCode: string;
             /** Format: uuid */
-            customerId?: string;
+            customerId?: null | string;
             customerEmail?: null | string;
             /** Format: uuid */
             processedById?: null | string;
@@ -14972,6 +15025,9 @@ export interface components {
         StaffCancelOrderRequest: {
             reason?: components["schemas"]["CancelOrderReason"];
             note?: null | string;
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
         };
         StaffLookupItem: {
             /** Format: uuid */
@@ -15090,11 +15146,11 @@ export interface components {
             /** Format: int32 */
             stopSellingBeforeExpiryDays?: number;
             /** Format: int32 */
+            clearanceBufferDays?: number;
+            /** Format: int32 */
             returnOrderAllowanceInDays?: number;
             /** Format: int32 */
             maxAddressesPerUser?: number;
-            /** Format: int32 */
-            returnOrderAllowAfterDeliveryInDays?: number;
         };
         StringSegment: {
             buffer?: null | string;
@@ -15386,6 +15442,8 @@ export interface components {
             batchExpiringSoonThresholdInDays?: number;
             /** Format: int32 */
             stopSellingBeforeExpiryDays?: number;
+            /** Format: int32 */
+            clearanceBufferDays?: number;
             /** Format: int32 */
             returnOrderAllowanceInDays?: number;
             /** Format: int32 */
