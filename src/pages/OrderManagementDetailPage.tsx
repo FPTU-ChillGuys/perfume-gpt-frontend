@@ -9,6 +9,7 @@ import {
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Checkbox,
@@ -71,6 +72,7 @@ import {
   type PickListResponse,
 } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { OrderInvoicePrint } from "@/components/order/OrderInvoicePrint";
 import type { PaymentMethod } from "@/types/checkout";
 import type { CarrierName, OrderResponse, OrderStatus } from "@/types/order";
@@ -94,6 +96,41 @@ const CARRIER_LABELS: Record<CarrierName, string> = {
   GHN: "Giao Hàng Nhanh",
   GHTK: "Giao Hàng Tiết Kiệm",
 };
+
+// ─── VietQR Bank ────────────────────────────────────────────────────────────
+
+interface VietQrBank {
+  id: number;
+  name: string;
+  shortName?: string;
+  short_name?: string;
+  logo?: string;
+}
+
+const getBankDisplayName = (bank: VietQrBank) => {
+  const shortName = (bank.shortName || bank.short_name || "").trim();
+  return shortName ? `${shortName} - ${bank.name}` : bank.name;
+};
+
+const normalizeRefundAccountNumber = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+const normalizeRefundAccountName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trimStart();
 
 const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
@@ -1001,6 +1038,7 @@ const SWAP_DAMAGE_NOTE_SUGGESTIONS = [
 ];
 
 export const OrderManagementDetailPage = () => {
+  const { user } = useAuth();
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1022,6 +1060,14 @@ export const OrderManagementDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
   const [cancelNote, setCancelNote] = useState("");
+  const [cancelRefundBankName, setCancelRefundBankName] = useState("");
+  const [cancelRefundAccountNumber, setCancelRefundAccountNumber] = useState("");
+  const [cancelRefundAccountName, setCancelRefundAccountName] = useState("");
+  const [selectedCancelRefundBank, setSelectedCancelRefundBank] =
+    useState<VietQrBank | null>(null);
+  const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
+  const [isLoadingVietQrBanks, setIsLoadingVietQrBanks] = useState(false);
+  const [vietQrBankError, setVietQrBankError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isFulfilling, setIsFulfilling] = useState(false);
   const [expandedBatches, setExpandedBatches] = useState<
@@ -1059,14 +1105,23 @@ export const OrderManagementDetailPage = () => {
       setError(null);
       const [data, cancelRequests, returnRequests] = await Promise.all([
         orderService.getOrderById(orderId),
-        orderService
-          .getAllCancelRequests({
-            PageNumber: 1,
-            PageSize: 100,
-            SortBy: "CreatedAt",
-            SortOrder: "desc",
-          })
-          .catch(() => null),
+        user?.role === "staff"
+          ? orderService
+              .getMyCancelRequests({
+                PageNumber: 1,
+                PageSize: 100,
+                SortBy: "CreatedAt",
+                SortOrder: "desc",
+              })
+              .catch(() => null)
+          : orderService
+              .getAllCancelRequests({
+                PageNumber: 1,
+                PageSize: 100,
+                SortBy: "CreatedAt",
+                SortOrder: "desc",
+              })
+              .catch(() => null),
         orderService
           .getAllReturnRequests({
             PageNumber: 1,
@@ -1105,6 +1160,10 @@ export const OrderManagementDetailPage = () => {
       setOrderCancelRequest(latestCancelRequest);
       setCancelReason("");
       setCancelNote("");
+      setCancelRefundBankName("");
+      setCancelRefundAccountNumber("");
+      setCancelRefundAccountName("");
+      setSelectedCancelRefundBank(null);
       setIsPackagingConfirmed(false);
     } catch (err) {
       setError(
@@ -1145,6 +1204,58 @@ export const OrderManagementDetailPage = () => {
     void loadPickList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.id, order?.status, refreshPickListCounter]);
+
+  // Đơn đã thanh toán (full hoặc đặt cọc) → cần thông tin STK hoàn tiền
+  const cancelRequiresRefundInfo = Boolean(
+    order &&
+    (
+      (order.paymentStatus === "Paid" && (order.paidAmount ?? 0) > 0) ||
+      (order.paymentStatus === "PartialPaid" && (order.paidAmount ?? 0) > 0)
+    ),
+  );
+
+  // Load danh sách ngân hàng từ VietQR khi cancel dialog mở + đơn cần hoàn tiền
+  useEffect(() => {
+    const shouldLoad = isCancelDialogOpen && cancelRequiresRefundInfo;
+    if (!shouldLoad || vietQrBanks.length > 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadBanks = async () => {
+      try {
+        setIsLoadingVietQrBanks(true);
+        setVietQrBankError(null);
+
+        const response = await fetch("https://api.vietqr.io/v2/banks", {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể tải danh sách ngân hàng");
+        }
+
+        const json = (await response.json()) as { data?: VietQrBank[] };
+        setVietQrBanks(Array.isArray(json.data) ? json.data : []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        setVietQrBankError("Không tải được danh sách ngân hàng từ VietQR");
+      } finally {
+        setIsLoadingVietQrBanks(false);
+      }
+    };
+
+    void loadBanks();
+
+    return () => {
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCancelDialogOpen, cancelRequiresRefundInfo, vietQrBanks.length]);
 
   const isShippingManagedStatus = order?.status === "Delivering";
   const hasTrackingNumber = Boolean(order?.shippingInfo?.trackingNumber);
@@ -1579,6 +1690,8 @@ export const OrderManagementDetailPage = () => {
     }
   };
 
+
+
   const openCancelDialog = () => {
     if (!canCancelOrder || hasBlockingCancelRequest) {
       if (hasBlockingCancelRequest) {
@@ -1589,6 +1702,10 @@ export const OrderManagementDetailPage = () => {
 
     setCancelReason("");
     setCancelNote("");
+    setCancelRefundBankName("");
+    setCancelRefundAccountNumber("");
+    setCancelRefundAccountName("");
+    setSelectedCancelRefundBank(null);
     setIsCancelDialogOpen(true);
   };
 
@@ -1602,6 +1719,22 @@ export const OrderManagementDetailPage = () => {
       return;
     }
 
+    // Nếu đơn đã có tiền thanh toán, bắt buộc nhập thông tin STK hoàn tiền
+    if (cancelRequiresRefundInfo) {
+      if (!selectedCancelRefundBank) {
+        showToast("Vui lòng chọn ngân hàng từ danh sách để hoàn tiền cho khách", "warning");
+        return;
+      }
+      if (!cancelRefundAccountNumber.trim()) {
+        showToast("Vui lòng nhập số tài khoản ngân hàng của khách", "warning");
+        return;
+      }
+      if (!cancelRefundAccountName.trim()) {
+        showToast("Vui lòng nhập tên chủ tài khoản ngân hàng", "warning");
+        return;
+      }
+    }
+
     setIsCancelDialogOpen(false);
 
     try {
@@ -1610,6 +1743,13 @@ export const OrderManagementDetailPage = () => {
         order.id,
         cancelReason,
         cancelNote || undefined,
+        cancelRequiresRefundInfo && selectedCancelRefundBank
+          ? {
+              refundBankName: getBankDisplayName(selectedCancelRefundBank),
+              refundAccountNumber: cancelRefundAccountNumber.trim(),
+              refundAccountName: cancelRefundAccountName.trim(),
+            }
+          : undefined,
       );
       showToast("Đã hủy đơn hàng thành công", "success");
       await loadOrder();
@@ -3021,12 +3161,36 @@ export const OrderManagementDetailPage = () => {
 
       <Dialog
         open={isCancelDialogOpen}
-        onClose={() => setIsCancelDialogOpen(false)}
+        onClose={() => !isUpdating && setIsCancelDialogOpen(false)}
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
         <DialogContent>
+          {/* Chính sách hoàn tiền */}
+          {cancelRequiresRefundInfo ? (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2" fontWeight={600} mb={0.5}>
+                Đơn hàng đã thanh toán — bắt buộc hoàn 100% tiền cho khách
+              </Typography>
+              <Typography variant="caption" display="block">
+                Theo chính sách của PerfumeGPT, khi shop chủ động hủy đơn,
+                kế toán phải liên hệ khách hàng và thực hiện hoàn trả{" "}
+                <b>100%</b> số tiền đã thanh toán (
+                {fmt(order?.paidAmount ?? 0)}) thông qua chuyển khoản thủ công.
+                <b>Vui lòng gọi điện xác nhận số tài khoản với khách trước khi
+                điền vào bên dưới.</b>
+              </Typography>
+            </Alert>
+          ) : (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="caption">
+                Đơn hàng chưa có khoản thanh toán nào — có thể hủy mà không
+                cần thông tin hoàn tiền.
+              </Typography>
+            </Alert>
+          )}
+
           <DialogContentText sx={{ mb: 1.5 }}>
             Vui lòng chọn lý do hủy đơn theo quy định trước khi xác nhận.
           </DialogContentText>
@@ -3059,6 +3223,147 @@ export const OrderManagementDetailPage = () => {
             ))}
           </Stack>
 
+          {/* Form nhập STK ngân hàng — chỉ hiện khi đơn đã thanh toán */}
+          {cancelRequiresRefundInfo && (
+            <Stack spacing={1.5} mb={1.5}>
+              <Typography variant="body2" fontWeight={600} color="warning.dark">
+                Thông tin tài khoản hoàn tiền cho khách *
+              </Typography>
+              <Autocomplete
+                options={vietQrBanks}
+                value={selectedCancelRefundBank}
+                inputValue={cancelRefundBankName}
+                loading={isLoadingVietQrBanks}
+                getOptionLabel={(option) =>
+                  typeof option === "string"
+                    ? option
+                    : getBankDisplayName(option)
+                }
+                isOptionEqualToValue={(option, value) =>
+                  option.id === value.id
+                }
+                onInputChange={() => {
+                  // Prevent free input
+                }}
+                onChange={(_, bank) => {
+                  if (!bank) {
+                    setSelectedCancelRefundBank(null);
+                    setCancelRefundBankName("");
+                    return;
+                  }
+                  if (typeof bank === "string") return;
+                  setSelectedCancelRefundBank(bank);
+                  setCancelRefundBankName(getBankDisplayName(bank));
+                }}
+                disabled={isUpdating}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <Stack direction="row" spacing={1.25} alignItems="center">
+                      {option.logo ? (
+                        <Box
+                          component="img"
+                          src={option.logo}
+                          alt={option.name}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            objectFit: "contain",
+                            borderRadius: 0.5,
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 0.5,
+                            bgcolor: "grey.100",
+                          }}
+                        />
+                      )}
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          {option.shortName || option.short_name || option.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.name}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Tên ngân hàng *"
+                    size="small"
+                    placeholder="Chọn ngân hàng từ danh sách..."
+                    error={Boolean(vietQrBankError) || (cancelRequiresRefundInfo && !selectedCancelRefundBank)}
+                    helperText={
+                      vietQrBankError ||
+                      (cancelRequiresRefundInfo && !selectedCancelRefundBank
+                        ? "Bắt buộc"
+                        : "")
+                    }
+                    inputProps={{
+                      ...params.inputProps,
+                      readOnly: true,
+                    }}
+                  />
+                )}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="Số tài khoản *"
+                placeholder="Nhập số tài khoản ngân hàng của khách"
+                value={cancelRefundAccountNumber}
+                onChange={(e) =>
+                  setCancelRefundAccountNumber(
+                    normalizeRefundAccountNumber(e.target.value),
+                  )
+                }
+                disabled={isUpdating}
+                inputProps={{
+                  inputMode: "text",
+                  autoCapitalize: "characters",
+                }}
+                error={
+                  cancelRequiresRefundInfo &&
+                  !cancelRefundAccountNumber.trim()
+                }
+                helperText={
+                  cancelRequiresRefundInfo &&
+                  !cancelRefundAccountNumber.trim()
+                    ? "Bắt buộc. Viết HOA, không khoảng trắng/ký tự đặc biệt"
+                    : "Tự động viết HOA, không khoảng trắng"
+                }
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="Tên chủ tài khoản *"
+                placeholder="VD: NGUYEN VAN A"
+                value={cancelRefundAccountName}
+                onChange={(e) =>
+                  setCancelRefundAccountName(
+                    normalizeRefundAccountName(e.target.value),
+                  )
+                }
+                disabled={isUpdating}
+                inputProps={{ autoCapitalize: "characters" }}
+                error={
+                  cancelRequiresRefundInfo && !cancelRefundAccountName.trim()
+                }
+                helperText={
+                  cancelRequiresRefundInfo && !cancelRefundAccountName.trim()
+                    ? "Bắt buộc. Viết HOA, không dấu"
+                    : "Tự động viết HOA, không dấu"
+                }
+              />
+            </Stack>
+          )}
+
           <TextField
             fullWidth
             multiline
@@ -3067,15 +3372,28 @@ export const OrderManagementDetailPage = () => {
             placeholder="Nhập thêm ghi chú nếu cần"
             value={cancelNote}
             onChange={(event) => setCancelNote(event.target.value)}
+            disabled={isUpdating}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsCancelDialogOpen(false)}>Đóng</Button>
+          <Button
+            onClick={() => setIsCancelDialogOpen(false)}
+            disabled={isUpdating}
+          >
+            Đóng
+          </Button>
           <LoadingButton
             color="error"
             variant="contained"
             onClick={handleConfirmCancelStatus}
-            disabled={isUpdating || !cancelReason}
+            disabled={
+              isUpdating ||
+              !cancelReason ||
+              (cancelRequiresRefundInfo &&
+                (!selectedCancelRefundBank ||
+                  !cancelRefundAccountNumber.trim() ||
+                  !cancelRefundAccountName.trim()))
+            }
             loading={isUpdating}
           >
             Xác nhận hủy

@@ -39,6 +39,7 @@ import {
   type ProcessCancelRequestBody,
 } from "../services/orderService";
 import { useToast } from "../hooks/useToast";
+import { useAuth } from "../hooks/useAuth";
 import type { OrderResponse } from "../types/order";
 import type { PaymentMethod } from "../types/checkout";
 import {
@@ -151,6 +152,7 @@ const stripVietnameseDiacritics = (value: string) =>
     .replace(/Đ/g, "D");
 
 export const OrderCancelRequestsPage = () => {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -203,11 +205,14 @@ export const OrderCancelRequestsPage = () => {
     setIsLoading(true);
     setError("");
     try {
-      const result = await orderService.getAllCancelRequests({
+      const params = {
         Status: statusFilter as any,
         PageNumber: page + 1,
         PageSize: rowsPerPage,
-      });
+      };
+      const result = await (user?.role === "staff"
+        ? orderService.getMyCancelRequests(params)
+        : orderService.getAllCancelRequests(params));
       setRequests(result.items);
       setTotalCount(result.totalCount);
     } catch (err: any) {
@@ -215,7 +220,7 @@ export const OrderCancelRequestsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, page, rowsPerPage]);
+  }, [statusFilter, page, rowsPerPage, user?.role]);
 
   useEffect(() => {
     load();

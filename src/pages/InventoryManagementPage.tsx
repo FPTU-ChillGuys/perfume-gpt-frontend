@@ -1078,8 +1078,8 @@ export const InventoryManagementPage = () => {
                     <TableCell sx={{ bgcolor: "grey.50" }}>Sản phẩm</TableCell>
                     <TableCell sx={{ bgcolor: "grey.50" }}>Mã SKU / Số Lô</TableCell>
                     <TableCell sx={{ bgcolor: "grey.50" }}>Mã sản phẩm</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Khả dụng</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Ngưỡng thấp / NSX - HSD</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Còn lại</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Ngưỡng thấp / NSX - HSD</TableCell>
                     <TableCell sx={{ bgcolor: "grey.50" }} align="center">Trạng thái</TableCell>
                   </TableRow>
                 </TableHead>

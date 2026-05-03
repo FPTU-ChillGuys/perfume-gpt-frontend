@@ -299,7 +299,6 @@ export const OrderManagementPage = () => {
                   <MenuItem value="">Tất cả</MenuItem>
                   <MenuItem value="Online">Online</MenuItem>
                   <MenuItem value="Offline">In-Store</MenuItem>
-                  <MenuItem value="Shoppe">Shopee</MenuItem>
                 </Select>
               </FormControl>
 

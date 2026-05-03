@@ -1793,6 +1793,11 @@ class OrderService {
     orderId: string,
     reason: CancelOrderReason,
     note?: string,
+    refundInfo?: {
+      refundBankName?: string | null;
+      refundAccountNumber?: string | null;
+      refundAccountName?: string | null;
+    },
   ): Promise<string> {
     try {
       const response = await apiInstance.POST(
@@ -1804,6 +1809,9 @@ class OrderService {
           body: {
             reason,
             note: note || null,
+            refundBankName: refundInfo?.refundBankName ?? null,
+            refundAccountNumber: refundInfo?.refundAccountNumber ?? null,
+            refundAccountName: refundInfo?.refundAccountName ?? null,
           },
         },
       );
