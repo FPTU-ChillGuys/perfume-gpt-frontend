@@ -29,6 +29,11 @@ import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CheckIcon from "@mui/icons-material/Check";
+import AssignmentReturn from "@mui/icons-material/AssignmentReturn";
+import LocalShipping from "@mui/icons-material/LocalShipping";
+import Inventory from "@mui/icons-material/Inventory";
+import Payments from "@mui/icons-material/Payments";
+import CheckCircle from "@mui/icons-material/CheckCircle";
 import { LoadingButton } from "@/components/common/LoadingButton";
 import momoLogo from "@/assets/momo.png";
 import vnpayLogo from "@/assets/vnpay.jpg";
@@ -176,6 +181,161 @@ const normalizeMoneyInput = (value: string) => {
   }
 
   return digitsOnly.replace(/^0+(?=\d)/, "");
+};
+
+const RETURN_STEPS = [
+  { label: "Đã tạo yêu cầu trả hàng", Icon: AssignmentReturn },
+  { label: "Đang gửi hàng hoàn về shop", Icon: LocalShipping },
+  { label: "Shop đã nhận hàng hoàn", Icon: Inventory },
+  { label: "Hoàn tiền hoàn tất", Icon: Payments },
+];
+
+const returnShippingStatusLabel = (status?: string | null) => {
+  if (!status) return "Chưa có thông tin vận chuyển hoàn trả";
+  if (status === "Pending") return "Chờ lấy hàng hoàn";
+  if (status === "Confirmed") return "Đã xác nhận lấy hàng hoàn";
+  if (status === "ReadyToPick") return "Chờ lấy hàng hoàn";
+  if (status === "PickedUp") return "Đã lấy hàng hoàn";
+  if (status === "InTransit") return "Đang vận chuyển hàng hoàn";
+  if (status === "Delivering") return "Đang giao hàng hoàn về shop";
+  if (status === "Delivered") return "Shop đã nhận hàng hoàn";
+  if (status === "ReturnedToSender") return "Trả hàng thất bại (hoàn người gửi)";
+  return "Không xác định";
+};
+
+const OrderReturnStepper = ({ request }: { request: OrderReturnRequest }) => {
+  const returnShippingStatus = request.returnShippingInfo?.status;
+  const returnRequestStatus = request.status;
+  
+  const returnActiveStep =
+    returnRequestStatus === "Completed" ||
+    returnRequestStatus === "Refunded"
+      ? 3
+      : returnShippingStatus === "Delivered" ||
+          returnRequestStatus === "Inspecting" ||
+          returnRequestStatus === "ReadyForRefund"
+        ? 2
+        : returnShippingStatus && returnShippingStatus !== "Pending" && returnShippingStatus !== "UnAssigned"
+          ? 1
+          : 0;
+
+  const isReturnComplete = returnActiveStep === 3;
+  const green = "#26aa99";
+  const gray = "#ccc";
+
+  return (
+    <Box sx={{ py: 2 }}>
+      <Box
+        display="flex"
+        alignItems="center"
+        gap={1}
+        mb={2}
+        sx={{
+          bgcolor: isReturnComplete ? "#e8f5e9" : "#fff8e1",
+          border: `1px solid ${isReturnComplete ? "#a5d6a7" : "#ffe082"}`,
+          borderRadius: 1,
+          p: 1.5,
+        }}
+      >
+        {isReturnComplete ? (
+          <CheckCircle sx={{ color: "#2e7d32" }} />
+        ) : (
+          <AssignmentReturn sx={{ color: "#f57c00" }} />
+        )}
+        <Typography
+          fontWeight={600}
+          color={isReturnComplete ? "success.dark" : "warning.dark"}
+        >
+          {isReturnComplete
+            ? "Hoàn trả thành công"
+            : "Đơn hàng đang trong quá trình hoàn trả"}
+        </Typography>
+      </Box>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        Trạng thái hoàn trả hiện tại:{" "}
+        <b>{returnShippingStatusLabel(returnShippingStatus)}</b>
+      </Typography>
+
+      <Box
+        display="flex"
+        alignItems="flex-start"
+        sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
+      >
+        {RETURN_STEPS.map((step, idx) => {
+          const completed = idx <= returnActiveStep;
+          const isCurrent = idx === returnActiveStep;
+          const circleColor = completed ? green : gray;
+          const lineColor = idx < returnActiveStep ? green : gray;
+
+          return (
+            <Box
+              key={step.label}
+              display="flex"
+              alignItems="flex-start"
+              sx={{ flex: idx < RETURN_STEPS.length - 1 ? 1 : "none" }}
+            >
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                sx={{ minWidth: { xs: 80, sm: 100 } }}
+              >
+                <Box
+                  sx={{
+                    width: { xs: 40, sm: 56 },
+                    height: { xs: 40, sm: 56 },
+                    borderRadius: "50%",
+                    border: `2px solid ${circleColor}`,
+                    bgcolor: completed ? green : "#fff",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: isCurrent ? `0 0 0 4px ${green}33` : "none",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  <step.Icon
+                    sx={{
+                      fontSize: { xs: 20, sm: 26 },
+                      color: completed ? "#fff" : gray,
+                    }}
+                  />
+                </Box>
+
+                <Typography
+                  variant="caption"
+                  align="center"
+                  fontWeight={completed ? 700 : 500}
+                  sx={{
+                    mt: 1,
+                    color: completed ? "#333" : "#999",
+                    maxWidth: 120,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {step.label}
+                </Typography>
+              </Box>
+
+              {idx < RETURN_STEPS.length - 1 && (
+                <Box
+                  sx={{
+                    flex: 1,
+                    height: 3,
+                    bgcolor: lineColor,
+                    mt: { xs: "19px", sm: "27px" },
+                    mx: 0.5,
+                    minWidth: 20,
+                  }}
+                />
+              )}
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
 };
 
 const formatMoneyInput = (value: string) => {
@@ -1069,16 +1229,6 @@ export const OrderReturnRequestDetailPage = () => {
                           {request.returnShippingInfo.carrierName || "-"}
                         </Typography>
                       </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          Trạng thái vận chuyển
-                        </Typography>
-                        <Typography>
-                          {shippingStatusLabel(
-                            request.returnShippingInfo.status,
-                          )}
-                        </Typography>
-                      </Box>
                       {request.status === "ApprovedForReturn" &&
                         request.returnShippingInfo.estimatedDeliveryDate && (
                           <Box sx={{ gridColumn: { xs: "1", md: "1 / -1" } }}>
@@ -1150,6 +1300,14 @@ export const OrderReturnRequestDetailPage = () => {
                   </Box>
                 </Box>
               </Box>
+
+              {request.status !== "Rejected" && request.status !== "Pending" && request.isRefundOnly === false && (
+                <Box sx={{ mt: 3, pt: 3, borderTop: "1px dashed", borderColor: "divider" }}>
+                  <Typography variant="subtitle2" fontWeight={700} mb={2}>Tiến độ hoàn trả</Typography>
+                  <OrderReturnStepper request={request} />
+                </Box>
+              )}
+
               <Paper variant="outlined" sx={{ p: 2 }}>
                 <Typography variant="subtitle2" fontWeight={700} mb={2}>
                   Bảng đối soát hoàn tiền
@@ -1549,7 +1707,7 @@ export const OrderReturnRequestDetailPage = () => {
                       <Typography variant="body2" color="text.secondary">
                         Tiền hàng hoàn lại:
                       </Typography>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" fontWeight={600} sx={{ whiteSpace: "nowrap", ml: 2 }}>
                         {formatCurrency(refundSummary.totalRefundableAmount)}
                       </Typography>
                     </Box>
@@ -1569,6 +1727,7 @@ export const OrderReturnRequestDetailPage = () => {
                           variant="body2"
                           fontWeight={600}
                           color="success.main"
+                          sx={{ whiteSpace: "nowrap", ml: 2 }}
                         >
                           {formatCurrency(refundSummary.refundedShippingFee)}
                         </Typography>
@@ -1591,6 +1750,7 @@ export const OrderReturnRequestDetailPage = () => {
                         variant="h6"
                         fontWeight={700}
                         color="error.main"
+                        sx={{ whiteSpace: "nowrap", ml: 2, textAlign: "right" }}
                       >
                         {formatCurrency(refundSummary.totalAmount)}
                       </Typography>
@@ -1617,6 +1777,7 @@ export const OrderReturnRequestDetailPage = () => {
                             variant="body2"
                             fontWeight={700}
                             color="success.main"
+                            sx={{ whiteSpace: "nowrap", ml: 2 }}
                           >
                             {formatCurrency(request.approvedRefundAmount)}
                           </Typography>
@@ -1898,7 +2059,7 @@ export const OrderReturnRequestDetailPage = () => {
                       arrow
                     >
                       <span>
-                        <Button
+                        <LoadingButton
                           variant="contained"
                           color="success"
                           onClick={() => {
@@ -1914,9 +2075,10 @@ export const OrderReturnRequestDetailPage = () => {
                             setRefundConfirmOpen(true);
                           }}
                           disabled={isSaving || isStaff}
+                          loading={isSaving}
                         >
                           Hoàn tiền
-                        </Button>
+                        </LoadingButton>
                       </span>
                     </Tooltip>
                   </Stack>

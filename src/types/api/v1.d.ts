@@ -4366,23 +4366,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/inventory/stock/variant/{variantId}": {
+    "/api/inventory/stock/{stockId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: {
+        get?: never;
+        put: {
             parameters: {
                 query?: never;
                 header?: never;
                 path: {
-                    variantId: string;
+                    stockId: string;
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateStockRequest"];
+                    "text/json": components["schemas"]["UpdateStockRequest"];
+                    "application/*+json": components["schemas"]["UpdateStockRequest"];
+                };
+            };
             responses: {
                 /** @description OK */
                 200: {
@@ -4390,9 +4397,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfStockResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfStockResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfStockResponse"];
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
                     };
                 };
                 default: {
@@ -4407,7 +4414,6 @@ export interface paths {
                 };
             };
         };
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -5640,6 +5646,59 @@ export interface paths {
             };
         };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orderreturnrequests/guest-on-behalf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateReturnRequestDto"];
+                    "text/json": components["schemas"]["CreateReturnRequestDto"];
+                    "application/*+json": components["schemas"]["CreateReturnRequestDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -12904,6 +12963,8 @@ export interface components {
             importQuantity?: number;
             /** Format: int32 */
             remainingQuantity?: number;
+            /** Format: int32 */
+            availableQuantity?: number;
             /** Format: date-time */
             createdAt?: string;
         };
@@ -12927,6 +12988,8 @@ export interface components {
             importQuantity?: number;
             /** Format: int32 */
             remainingQuantity?: number;
+            /** Format: int32 */
+            availableQuantity?: number;
             /** Format: date-time */
             createdAt?: string;
         };
@@ -13306,6 +13369,7 @@ export interface components {
         CreateReturnRequestDto: {
             /** Format: uuid */
             orderId: string;
+            orderCode: string;
             reason: components["schemas"]["ReturnOrderReason"];
             isRefundOnly?: boolean;
             returnItems: components["schemas"]["ReturnItemDto"][];
@@ -13916,7 +13980,7 @@ export interface components {
             orderId?: string;
             orderCode: string;
             /** Format: uuid */
-            customerId?: string;
+            customerId?: null | string;
             customerEmail?: null | string;
             /** Format: uuid */
             processedById?: null | string;
@@ -14252,8 +14316,15 @@ export interface components {
             depositGateway?: null | components["schemas"]["PaymentMethod"];
             posSessionId?: null | string;
         };
-        /** @enum {null|string} */
-        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer" | "PayOs" | null;
+        /** @enum {string} */
+        PaymentMethod: "CashOnDelivery" | "VnPay" | "Momo" | "CashInStore" | "ExternalBankTransfer" | "PayOs";
+        PaymentMethodDistributionResponse: {
+            paymentMethod?: components["schemas"]["PaymentMethod"];
+            /** Format: int32 */
+            transactionsCount?: number;
+            /** Format: decimal */
+            amount?: number;
+        };
         /** @enum {string} */
         PaymentStatus: "Unpaid" | "PartialPaid" | "Paid" | "Refunded" | "PartialRefunded";
         PaymentTransactionAdminItemResponse: {
@@ -14563,6 +14634,7 @@ export interface components {
             sillage?: number;
             /** Format: int32 */
             longevity?: number;
+            restockPolicy?: components["schemas"]["ReplenishmentPolicy"];
             /** Format: uuid */
             productId?: string;
             productName: string;
@@ -14804,6 +14876,7 @@ export interface components {
             successfulTransactionsCount?: number;
             /** Format: int32 */
             paidOrdersCount?: number;
+            paymentMethodDistribution?: components["schemas"]["PaymentMethodDistributionResponse"][];
         };
         ReviewDetailResponse: {
             /** Format: uuid */
@@ -14952,6 +15025,9 @@ export interface components {
         StaffCancelOrderRequest: {
             reason?: components["schemas"]["CancelOrderReason"];
             note?: null | string;
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
         };
         StaffLookupItem: {
             /** Format: uuid */
@@ -15063,6 +15139,18 @@ export interface components {
             reviewRewardPoints?: number;
             /** Format: int32 */
             stockAdjustmentAutoApprovalThreshold?: number;
+            /** Format: int32 */
+            orderRewardPointsInDays?: number;
+            /** Format: int32 */
+            batchExpiringSoonThresholdInDays?: number;
+            /** Format: int32 */
+            stopSellingBeforeExpiryDays?: number;
+            /** Format: int32 */
+            clearanceBufferDays?: number;
+            /** Format: int32 */
+            returnOrderAllowanceInDays?: number;
+            /** Format: int32 */
+            maxAddressesPerUser?: number;
         };
         StringSegment: {
             buffer?: null | string;
@@ -15334,6 +15422,10 @@ export interface components {
             status?: components["schemas"]["StockAdjustmentStatus"];
             note?: null | string;
         };
+        UpdateStockRequest: {
+            /** Format: int32 */
+            lowStockThreshold?: number;
+        };
         UpdateStorePolicyRequest: {
             /** Format: decimal */
             requiredDepositPercentage?: number;
@@ -15344,6 +15436,18 @@ export interface components {
             reviewRewardPoints?: number;
             /** Format: int32 */
             stockAdjustmentAutoApprovalThreshold?: number;
+            /** Format: int32 */
+            orderRewardPointsInDays?: number;
+            /** Format: int32 */
+            batchExpiringSoonThresholdInDays?: number;
+            /** Format: int32 */
+            stopSellingBeforeExpiryDays?: number;
+            /** Format: int32 */
+            clearanceBufferDays?: number;
+            /** Format: int32 */
+            returnOrderAllowanceInDays?: number;
+            /** Format: int32 */
+            maxAddressesPerUser?: number;
         };
         UpdateSupplierRequest: {
             name: string;

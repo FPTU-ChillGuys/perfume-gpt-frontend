@@ -69,6 +69,7 @@ export type ContactAddressInformation =
   components["schemas"]["ContactAddressInformation"];
 export interface CreateReturnRequestPayload {
   orderId: string;
+  orderCode: string;
   reason: ReturnOrderReason;
   isRefundOnly?: boolean;
   returnItems: {
@@ -1383,6 +1384,7 @@ class OrderService {
       console.log("[OrderService] createReturnRequest payload:", payload);
       const requestBody: CreateReturnRequestDto = {
         orderId: payload.orderId,
+        orderCode: payload.orderCode,
         reason: payload.reason,
         isRefundOnly: payload.isRefundOnly ?? false,
         returnItems: payload.returnItems,
@@ -1791,6 +1793,11 @@ class OrderService {
     orderId: string,
     reason: CancelOrderReason,
     note?: string,
+    refundInfo?: {
+      refundBankName?: string | null;
+      refundAccountNumber?: string | null;
+      refundAccountName?: string | null;
+    },
   ): Promise<string> {
     try {
       const response = await apiInstance.POST(
@@ -1802,6 +1809,9 @@ class OrderService {
           body: {
             reason,
             note: note || null,
+            refundBankName: refundInfo?.refundBankName ?? null,
+            refundAccountNumber: refundInfo?.refundAccountNumber ?? null,
+            refundAccountName: refundInfo?.refundAccountName ?? null,
           },
         },
       );
@@ -1830,8 +1840,21 @@ class OrderService {
       });
 
       if (!response.data?.success || !response.data.payload) {
+        const apiError = response.error as
+          | { message?: string; errors?: string[] | Record<string, string[]> }
+          | undefined;
+        const errorMessages =
+          typeof apiError?.errors === "object" && !Array.isArray(apiError.errors)
+            ? Object.values(apiError.errors).flat().join(", ")
+            : Array.isArray(apiError?.errors)
+              ? apiError.errors.join(", ")
+              : undefined;
+
         throw new Error(
-          response.data?.message || "Failed to get order picklist",
+          response.data?.message ||
+            apiError?.message ||
+            errorMessages ||
+            "Failed to get order picklist",
         );
       }
 
@@ -1862,8 +1885,21 @@ class OrderService {
       );
 
       if (!response.data?.success || !response.data.payload) {
+        const apiError = response.error as
+          | { message?: string; errors?: string[] | Record<string, string[]> }
+          | undefined;
+        const errorMessages =
+          typeof apiError?.errors === "object" && !Array.isArray(apiError.errors)
+            ? Object.values(apiError.errors).flat().join(", ")
+            : Array.isArray(apiError?.errors)
+              ? apiError.errors.join(", ")
+              : undefined;
+
         throw new Error(
-          response.data?.message || "Failed to swap damaged reservation",
+          response.data?.message ||
+            apiError?.message ||
+            errorMessages ||
+            "Failed to swap damaged reservation",
         );
       }
 
@@ -1871,9 +1907,7 @@ class OrderService {
     } catch (error: any) {
       console.error("Error swapping damaged reservation:", error);
       throw new Error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to swap damaged reservation",
+        error.message || "Failed to swap damaged reservation",
       );
     }
   }
@@ -1928,7 +1962,22 @@ class OrderService {
       });
 
       if (!response.data?.success) {
-        throw new Error(response.data?.message || "Failed to fulfill order");
+        const apiError = response.error as
+          | { message?: string; errors?: string[] | Record<string, string[]> }
+          | undefined;
+        const errorMessages =
+          typeof apiError?.errors === "object" && !Array.isArray(apiError.errors)
+            ? Object.values(apiError.errors).flat().join(", ")
+            : Array.isArray(apiError?.errors)
+              ? apiError.errors.join(", ")
+              : undefined;
+
+        throw new Error(
+          response.data?.message ||
+            apiError?.message ||
+            errorMessages ||
+            "Failed to fulfill order",
+        );
       }
 
       return response.data.message || "Order fulfilled successfully";

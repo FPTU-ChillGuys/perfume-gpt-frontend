@@ -46,7 +46,6 @@ const CATEGORY_NAME_VI: Record<string, string> = {
   "for men": "Nước hoa cho Nam",
   unisex: "Nước hoa Unisex",
   "niche & artisan": "Niche và Artisan",
-  "gift sets": "Gift Sets",
 };
 
 const toVietnameseCategoryName = (name?: string | null) => {
@@ -137,8 +136,14 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
     };
   }, [isAuthenticated, user?.role]);
 
-  const visibleCategories = categories.slice(0, MAX_VISIBLE_CATEGORIES);
-  const overflowCategories = categories.slice(MAX_VISIBLE_CATEGORIES);
+  const displayCategories = categories.filter(
+    (c) =>
+      !c.name?.toLowerCase().includes("giftset") &&
+      !c.name?.toLowerCase().includes("gift set") &&
+      !c.name?.toLowerCase().includes("gifset")
+  );
+  const visibleCategories = displayCategories.slice(0, MAX_VISIBLE_CATEGORIES);
+  const overflowCategories = displayCategories.slice(MAX_VISIBLE_CATEGORIES);
   const isBackOfficeRole = user?.role === "admin" || user?.role === "staff";
   const isStaffHomepageOrStaffPage =
     user?.role === "staff" &&

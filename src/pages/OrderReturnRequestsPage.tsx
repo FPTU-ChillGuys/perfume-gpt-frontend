@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
-  Badge,
   Box,
   Chip,
   CircularProgress,
@@ -124,15 +123,6 @@ export const OrderReturnRequestsPage = () => {
   const statusFilter =
     STATUS_OPTIONS[tabIndex] === "All" ? undefined : STATUS_OPTIONS[tabIndex];
 
-  const counts = useMemo(() => {
-    const map = new Map<string, number>();
-    requests.forEach((item) => {
-      const key = item.status || "Unknown";
-      map.set(key, (map.get(key) || 0) + 1);
-    });
-    return map;
-  }, [requests]);
-
   const load = useCallback(async () => {
     setIsLoading(true);
     setError("");
@@ -204,30 +194,12 @@ export const OrderReturnRequestsPage = () => {
                 "& .Mui-selected": { color: "#ee4d2d !important" },
               }}
             >
-              {STATUS_OPTIONS.map((status) => {
-                const count =
-                  status === "All" ? totalCount : counts.get(status) || 0;
-                return (
-                  <Tab
-                    key={status}
-                    label={
-                      status === "All" ? (
-                        "Tất cả"
-                      ) : (
-                        <Badge
-                          color={statusColor(status)}
-                          badgeContent={count > 99 ? "99+" : count}
-                          invisible={count <= 0}
-                        >
-                          <Box component="span" sx={{ pr: 1 }}>
-                            {statusLabel(status)}
-                          </Box>
-                        </Badge>
-                      )
-                    }
-                  />
-                );
-              })}
+              {STATUS_OPTIONS.map((status) => (
+                <Tab
+                  key={status}
+                  label={status === "All" ? "Tất cả" : statusLabel(status)}
+                />
+              ))}
             </Tabs>
           </Box>
         </Paper>

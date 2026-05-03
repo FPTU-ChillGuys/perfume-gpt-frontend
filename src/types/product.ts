@@ -67,3 +67,4 @@ export type CreateVariantRequest =
   components["schemas"]["CreateVariantRequest"];
 export type VariantStatus = components["schemas"]["VariantStatus"];
 export type VariantType = components["schemas"]["VariantType"];
+export type ReplenishmentPolicy = components["schemas"]["ReplenishmentPolicy"];

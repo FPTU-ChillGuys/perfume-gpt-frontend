@@ -43,7 +43,7 @@ export const AdminTrendSection = () => {
         <Box display="flex" alignItems="center" gap={1.5}>
           <AutoGraphIcon color="primary" sx={{ fontSize: 32 }} />
           <Typography variant="h5" fontWeight="bold">
-            Xu hướng - AI Accepted
+            Xu hướng - AI
           </Typography>
         </Box>
         {!isEnabled ? (
@@ -80,8 +80,7 @@ export const AdminTrendSection = () => {
           borderRadius={2}
         >
           <Typography color="text.secondary">
-            Dữ liệu AI chỉ được tải khi bấm nút để tránh gọi backend AI liên
-            tục.
+            Dữ liệu AI chỉ được tải khi bấm nút.
           </Typography>
         </Box>
       )}

@@ -62,6 +62,7 @@ import {
   type StockAdjustmentStatus,
 } from "@/services/stockAdjustmentService";
 import { useToast } from "@/hooks/useToast";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type ExpiryDaysFilter = "" | "30" | "60" | "90";
@@ -71,8 +72,7 @@ type InventoryCategoryTab =
   | "men"
   | "women"
   | "unisex"
-  | "niche"
-  | "giftset";
+  | "niche";
 type VerifyDetailDraft = {
   detailId: string;
   approvedQuantity: string;
@@ -88,7 +88,6 @@ const INVENTORY_CATEGORY_TAB_ITEMS: Array<{
   { key: "women", label: "Nước hoa Nữ" },
   { key: "unisex", label: "Unisex" },
   { key: "niche", label: "Niche" },
-  { key: "giftset", label: "Gifset" },
 ];
 
 const INVENTORY_CATEGORY_ID_BY_TAB: Record<
@@ -99,7 +98,6 @@ const INVENTORY_CATEGORY_ID_BY_TAB: Record<
   men: 2,
   unisex: 3,
   niche: 4,
-  giftset: 5,
 };
 
 const resolveCategoryIdByTab = (tab: InventoryCategoryTab) => {
@@ -257,6 +255,12 @@ export const InventoryManagementPage = () => {
   const [verifyDetailDrafts, setVerifyDetailDrafts] = useState<
     VerifyDetailDraft[]
   >([]);
+  const [editingThreshold, setEditingThreshold] = useState<{
+    stockId: string;
+    value: string;
+  } | null>(null);
+  const [savingThreshold, setSavingThreshold] = useState<string | null>(null);
+
   const showToastRef = useRef(showToast);
 
   useEffect(() => {
@@ -451,7 +455,37 @@ export const InventoryManagementPage = () => {
     setPage(0);
   };
 
-  
+  const handleSaveThreshold = async (stockId: string, rawValue: string) => {
+    const parsed = parseInt(rawValue, 10);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      showToast("Ngưỡng thấp phải là số nguyên >= 0", "warning");
+      // restore original value by cancelling
+      setEditingThreshold(null);
+      return;
+    }
+
+    // optimistic update in local state
+    setStocks((prev) =>
+      prev.map((s) =>
+        s.id === stockId ? { ...s, lowStockThreshold: parsed } : s,
+      ),
+    );
+    setEditingThreshold(null);
+
+    try {
+      setSavingThreshold(stockId);
+      await inventoryService.updateStock(stockId, parsed);
+      showToast("Đã cập nhật ngưỡng thấp", "success");
+      // reload để lấy dữ liệu mới nhất, giữ nguyên trang hiện tại
+      void loadStock();
+    } catch (err: any) {
+      showToast(err.message || "Không thể cập nhật ngưỡng thấp", "error");
+      // revert
+      void loadStock();
+    } finally {
+      setSavingThreshold(null);
+    }
+  };
 
   const loadBatchesByVariantId = useCallback(async (variantId: string) => {
     setBatchByVariantId((current) => ({
@@ -1036,36 +1070,35 @@ export const InventoryManagementPage = () => {
               </Box>
             </Paper>
 
-            <TableContainer component={Paper}>
-              <Table>
+            <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 260px)' }}>
+              <Table stickyHeader>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "grey.50" }}>
-                    <TableCell>Ảnh</TableCell>
-                    <TableCell>Sản phẩm / Lô</TableCell>
-                    <TableCell>Mã SKU / Mã Lô</TableCell>
-                    <TableCell>Mã sản phẩm</TableCell>
-                    <TableCell align="right">Tổng nhập</TableCell>
-                    <TableCell align="right">Khả dụng / Còn lại</TableCell>
-                    <TableCell align="right">Ngưỡng thấp / NSX - HSD</TableCell>
-                    <TableCell align="center">Trạng thái</TableCell>
+                  <TableRow>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Ảnh</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Sản phẩm</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã SKU / Số Lô</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã sản phẩm</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Còn lại</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Ngưỡng thấp / NSX - HSD</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Trạng thái</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
+                      <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                         <CircularProgress />
                       </TableCell>
                     </TableRow>
                   ) : error ? (
                     <TableRow>
-                      <TableCell colSpan={8}>
+                      <TableCell colSpan={7}>
                         <Alert severity="error">{error}</Alert>
                       </TableCell>
                     </TableRow>
                   ) : stocks.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} align="center" sx={{ py: 5 }}>
+                      <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
                         <Typography variant="body2" color="text.secondary">
                           Không có dữ liệu tồn kho phù hợp.
                         </Typography>
@@ -1083,7 +1116,7 @@ export const InventoryManagementPage = () => {
                           {stockIndex > 0 && (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 sx={{
                                   p: 0,
                                   borderBottom: "none",
@@ -1205,13 +1238,98 @@ export const InventoryManagementPage = () => {
                               </Stack>
                             </TableCell>
                             <TableCell align="right">
-                              {stock.totalQuantity ?? 0}
-                            </TableCell>
-                            <TableCell align="right">
                               {stock.availableQuantity ?? 0}
                             </TableCell>
                             <TableCell align="right">
-                              {stock.lowStockThreshold ?? 0}
+                              {(() => {
+                                const stockId = stock.id;
+                                const isEditing =
+                                  editingThreshold?.stockId === stockId;
+                                const isSaving = savingThreshold === stockId;
+
+                                if (isEditing && editingThreshold && stockId) {
+                                  return (
+                                    <TextField
+                                      autoFocus
+                                      size="small"
+                                      type="number"
+                                      value={editingThreshold.value}
+                                      onChange={(e) =>
+                                        setEditingThreshold({
+                                          stockId,
+                                          value: e.target.value,
+                                        })
+                                      }
+                                      onBlur={() =>
+                                        handleSaveThreshold(
+                                          stockId,
+                                          editingThreshold.value,
+                                        )
+                                      }
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleSaveThreshold(
+                                            stockId,
+                                            editingThreshold.value,
+                                          );
+                                        } else if (e.key === "Escape") {
+                                          setEditingThreshold(null);
+                                        }
+                                      }}
+                                      sx={{ width: 80 }}
+                                      inputProps={{ min: 0, step: 1 }}
+                                    />
+                                  );
+                                }
+
+                                return (
+                                  <Box
+                                    sx={{
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 0.5,
+                                      cursor: stockId ? "pointer" : "default",
+                                      px: 0.5,
+                                      py: 0.25,
+                                      borderRadius: 1,
+                                      "&:hover": stockId
+                                        ? {
+                                            bgcolor: "action.hover",
+                                            outline: "1px dashed",
+                                            outlineColor: "primary.main",
+                                          }
+                                        : {},
+                                    }}
+                                    title={stockId ? "Nhấn để chỉnh ngưỡng thấp" : undefined}
+                                    onClick={() => {
+                                      if (!stockId) return;
+                                      setEditingThreshold({
+                                        stockId,
+                                        value: String(
+                                          stock.lowStockThreshold ?? 0,
+                                        ),
+                                      });
+                                    }}
+                                  >
+                                    {isSaving ? (
+                                      <CircularProgress size={14} />
+                                    ) : (
+                                      <Typography
+                                        variant="body2"
+                                        color={
+                                          stock.status === "LowStock" ||
+                                          stock.status === "OutOfStock"
+                                            ? "warning.main"
+                                            : "text.primary"
+                                        }
+                                        fontWeight={500}
+                                      >
+                                        {stock.lowStockThreshold ?? 0}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell align="center">
                               {(() => {
@@ -1230,7 +1348,7 @@ export const InventoryManagementPage = () => {
                           {batchState?.loading ? (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 sx={{
                                   bgcolor: "grey.50",
                                   borderBottom: "none",
@@ -1252,7 +1370,7 @@ export const InventoryManagementPage = () => {
                           ) : batchState?.error ? (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 sx={{
                                   bgcolor: "grey.50",
                                   borderBottom: "none",
@@ -1268,7 +1386,7 @@ export const InventoryManagementPage = () => {
                           ) : !batchState || batchState.items.length === 0 ? (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={7}
                                 sx={{
                                   bgcolor: "grey.50",
                                   borderBottom: "none",
@@ -1327,10 +1445,7 @@ export const InventoryManagementPage = () => {
                                   </Typography>
                                 </TableCell>
                                 <TableCell align="right">
-                                  {batch.importQuantity ?? 0}
-                                </TableCell>
-                                <TableCell align="right">
-                                  {batch.remainingQuantity ?? 0}
+                                  {batch.availableQuantity ?? 0}
                                 </TableCell>
                                 <TableCell align="right">
                                   <Typography variant="body2">
@@ -1492,17 +1607,17 @@ export const InventoryManagementPage = () => {
               </Box>
             </Paper>
 
-            <TableContainer component={Paper}>
-              <Table>
+            <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 260px)' }}>
+              <Table stickyHeader>
                 <TableHead>
-                  <TableRow sx={{ bgcolor: "grey.50" }}>
-                    <TableCell>Mã yêu cầu</TableCell>
-                    <TableCell>Người tạo</TableCell>
-                    <TableCell>Ngày tạo</TableCell>
-                    <TableCell>Lý do</TableCell>
-                    <TableCell align="center">Số lượng điều chỉnh</TableCell>
-                    <TableCell align="center">Trạng thái</TableCell>
-                    <TableCell align="center">Thao tác</TableCell>
+                  <TableRow>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã yêu cầu</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Người tạo</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Ngày tạo</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }}>Lý do</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Số lượng điều chỉnh</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Trạng thái</TableCell>
+                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Thao tác</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -2056,7 +2171,7 @@ export const InventoryManagementPage = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setCreateDialogOpen(false)}>Hủy</Button>
-            <Button
+            <LoadingButton
               onClick={handleCreateAdjustment}
               variant="contained"
               disabled={
@@ -2065,9 +2180,10 @@ export const InventoryManagementPage = () => {
                   (!createPayload.variantId.trim() ||
                     !createPayload.batchId.trim()))
               }
+              loading={createSubmitting}
             >
-              {createSubmitting ? "Đang tạo..." : "Tạo yêu cầu"}
-            </Button>
+              Tạo yêu cầu
+            </LoadingButton>
           </DialogActions>
         </Dialog>
       </Box>

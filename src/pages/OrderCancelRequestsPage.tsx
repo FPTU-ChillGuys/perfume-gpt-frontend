@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Box,
-  Badge,
   Typography,
   Table,
   TableBody,
@@ -40,6 +39,7 @@ import {
   type ProcessCancelRequestBody,
 } from "../services/orderService";
 import { useToast } from "../hooks/useToast";
+import { useAuth } from "../hooks/useAuth";
 import type { OrderResponse } from "../types/order";
 import type { PaymentMethod } from "../types/checkout";
 import {
@@ -152,6 +152,7 @@ const stripVietnameseDiacritics = (value: string) =>
     .replace(/Đ/g, "D");
 
 export const OrderCancelRequestsPage = () => {
+  const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -197,16 +198,6 @@ export const OrderCancelRequestsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const pendingCount = requests.filter(
-    (item) => item.status === "Pending",
-  ).length;
-  const approvedCount = requests.filter(
-    (item) => item.status === "Approved",
-  ).length;
-  const rejectedCount = requests.filter(
-    (item) => item.status === "Rejected",
-  ).length;
-
   const statusFilter =
     STATUS_OPTIONS[tabIndex] === "All" ? undefined : STATUS_OPTIONS[tabIndex];
 
@@ -214,11 +205,14 @@ export const OrderCancelRequestsPage = () => {
     setIsLoading(true);
     setError("");
     try {
-      const result = await orderService.getAllCancelRequests({
+      const params = {
         Status: statusFilter as any,
         PageNumber: page + 1,
         PageSize: rowsPerPage,
-      });
+      };
+      const result = await (user?.role === "staff"
+        ? orderService.getMyCancelRequests(params)
+        : orderService.getAllCancelRequests(params));
       setRequests(result.items);
       setTotalCount(result.totalCount);
     } catch (err: any) {
@@ -226,7 +220,7 @@ export const OrderCancelRequestsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, page, rowsPerPage]);
+  }, [statusFilter, page, rowsPerPage, user?.role]);
 
   useEffect(() => {
     load();
@@ -546,45 +540,9 @@ export const OrderCancelRequestsPage = () => {
               }}
             >
               <Tab label="Tất cả" />
-              <Tab
-                label={
-                  <Badge
-                    color="warning"
-                    badgeContent={pendingCount > 99 ? "99+" : pendingCount}
-                    invisible={pendingCount <= 0}
-                  >
-                    <Box component="span" sx={{ pr: 1 }}>
-                      Chờ duyệt
-                    </Box>
-                  </Badge>
-                }
-              />
-              <Tab
-                label={
-                  <Badge
-                    color="success"
-                    badgeContent={approvedCount > 99 ? "99+" : approvedCount}
-                    invisible={approvedCount <= 0}
-                  >
-                    <Box component="span" sx={{ pr: 1 }}>
-                      Đã duyệt
-                    </Box>
-                  </Badge>
-                }
-              />
-              <Tab
-                label={
-                  <Badge
-                    color="error"
-                    badgeContent={rejectedCount > 99 ? "99+" : rejectedCount}
-                    invisible={rejectedCount <= 0}
-                  >
-                    <Box component="span" sx={{ pr: 1 }}>
-                      Từ chối
-                    </Box>
-                  </Badge>
-                }
-              />
+              <Tab label="Chờ duyệt" />
+              <Tab label="Đã duyệt" />
+              <Tab label="Từ chối" />
             </Tabs>
           </Box>
         </Paper>

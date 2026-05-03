@@ -9,6 +9,7 @@ import {
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Checkbox,
@@ -22,6 +23,7 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
+  InputAdornment,
   Paper,
   Stack,
   Table,
@@ -70,6 +72,7 @@ import {
   type PickListResponse,
 } from "@/services/orderService";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { OrderInvoicePrint } from "@/components/order/OrderInvoicePrint";
 import type { PaymentMethod } from "@/types/checkout";
 import type { CarrierName, OrderResponse, OrderStatus } from "@/types/order";
@@ -93,6 +96,41 @@ const CARRIER_LABELS: Record<CarrierName, string> = {
   GHN: "Giao Hàng Nhanh",
   GHTK: "Giao Hàng Tiết Kiệm",
 };
+
+// ─── VietQR Bank ────────────────────────────────────────────────────────────
+
+interface VietQrBank {
+  id: number;
+  name: string;
+  shortName?: string;
+  short_name?: string;
+  logo?: string;
+}
+
+const getBankDisplayName = (bank: VietQrBank) => {
+  const shortName = (bank.shortName || bank.short_name || "").trim();
+  return shortName ? `${shortName} - ${bank.name}` : bank.name;
+};
+
+const normalizeRefundAccountNumber = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+const normalizeRefundAccountName = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trimStart();
 
 const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashOnDelivery: "Thanh toán khi nhận hàng",
@@ -122,6 +160,13 @@ const STEPS = [
   { label: "Chờ Lấy Hàng", Icon: Storage },
   { label: "Đang Giao Hàng", Icon: LocalShipping },
   { label: "Hoàn tất", Icon: StarBorder },
+];
+
+const RETURN_STEPS = [
+  { label: "Đã tạo yêu cầu trả hàng", Icon: AssignmentReturn },
+  { label: "Đang gửi hàng hoàn về shop", Icon: LocalShipping },
+  { label: "Shop đã nhận hàng hoàn", Icon: Inventory },
+  { label: "Hoàn tiền hoàn tất", Icon: Payments },
 ];
 
 const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
@@ -156,6 +201,22 @@ const isSupportedPaymentMethod = (
   value === "Momo" ||
   value === "ExternalBankTransfer" ||
   value === "PayOs";
+
+const returnShippingStatusLabel = (status?: string | null) => {
+  if (!status) return "Chưa có thông tin vận chuyển hoàn trả";
+  if (status === "Pending") return "Chờ lấy hàng hoàn";
+  if (status === "Confirmed") return "Đã xác nhận lấy hàng hoàn";
+  if (status === "ReadyToPick") return "Chờ lấy hàng hoàn";
+  if (status === "PickedUp") return "Đã lấy hàng hoàn";
+  if (status === "InTransit") return "Đang vận chuyển hàng hoàn";
+  if (status === "Delivering") return "Đang giao hàng hoàn về shop";
+  if (status === "OutForDelivery") return "Đang giao hàng hoàn về shop";
+  if (status === "Delivered") return "Shop đã nhận hàng hoàn";
+  if (status === "DeliveryFailed") return "Giao hàng hoàn thất bại";
+  if (status === "Returned") return "Hàng hoàn đã trả về";
+  if (status === "Cancelled") return "Đơn vận chuyển hoàn đã hủy";
+  return status;
+};
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
@@ -458,6 +519,8 @@ interface StepperProps {
   paidAt?: string | null;
   updatedAt?: string | null;
   totalAmount?: number | null;
+  returnShippingStatus?: string | null;
+  returnRequestStatus?: string | null;
 }
 
 const OrderStepper = ({
@@ -466,12 +529,32 @@ const OrderStepper = ({
   paidAt,
   updatedAt,
   totalAmount,
+  returnShippingStatus,
+  returnRequestStatus,
 }: StepperProps) => {
   const baseStep = STATUS_TO_STEP[status] ?? 0;
-  const activeStep = paidAt && baseStep < 1 ? 1 : baseStep;
+  const isReturnFlow =
+    status === "Returning" ||
+    status === "Partial_Returned" ||
+    status === "Returned";
+
+  const returnActiveStep =
+    status === "Returned" ||
+    status === "Partial_Returned" ||
+    returnRequestStatus === "Completed" ||
+    returnRequestStatus === "Refunded"
+      ? 3
+      : returnShippingStatus === "Delivered" ||
+          returnRequestStatus === "Inspecting" ||
+          returnRequestStatus === "ReadyForRefund"
+        ? 2
+        : returnShippingStatus
+          ? 1
+          : 0;
+
+  const activeStep = paidAt && baseStep >= 0 && baseStep < 1 ? 1 : baseStep;
   const isCanceled = status === "Cancelled";
-  const isReturned = status === "Returned";
-  const isSpecial = isCanceled || isReturned;
+  const isSpecial = isCanceled;
 
   const stepDates: (string | null)[] = [
     fmtDate(createdAt),
@@ -491,46 +574,318 @@ const OrderStepper = ({
 
   const green = "#26aa99";
   const gray = "#ccc";
+  const isReturnComplete = returnActiveStep === 3;
 
-  return (
-    <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
-      {isSpecial && (
+  if (isReturnFlow) {
+    return (
+      <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
         <Box
           display="flex"
           alignItems="center"
           gap={1}
           mb={2}
           sx={{
-            bgcolor: isCanceled ? "#fff3f3" : "#fff8e1",
-            border: `1px solid ${isCanceled ? "#f5c6c6" : "#ffe082"}`,
+            bgcolor: isReturnComplete ? "#e8f5e9" : "#fff8e1",
+            border: `1px solid ${isReturnComplete ? "#a5d6a7" : "#ffe082"}`,
             borderRadius: 1,
             p: 1.5,
           }}
         >
-          {isCanceled ? (
-            <CancelOutlined sx={{ color: "#e53935" }} />
+          {isReturnComplete ? (
+            <CheckCircle sx={{ color: "#2e7d32" }} />
           ) : (
             <AssignmentReturn sx={{ color: "#f57c00" }} />
           )}
           <Typography
             fontWeight={600}
-            color={isCanceled ? "error" : "warning.dark"}
+            color={isReturnComplete ? "success.dark" : "warning.dark"}
           >
-            {isCanceled ? "Đơn hàng đã bị hủy" : "Đơn hàng đã được hoàn trả"}
+            {isReturnComplete
+              ? "Hoàn trả thành công"
+              : "Đơn hàng đang trong quá trình hoàn trả"}
           </Typography>
         </Box>
-      )}
 
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          Trạng thái hoàn trả hiện tại:{" "}
+          <b>{returnShippingStatusLabel(returnShippingStatus)}</b>
+        </Typography>
+
+        <Box
+          display="flex"
+          alignItems="flex-start"
+          sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
+        >
+          {RETURN_STEPS.map((step, idx) => {
+            const completed = idx <= returnActiveStep;
+            const isCurrent = idx === returnActiveStep;
+            const circleColor = completed ? green : gray;
+            const lineColor = idx < returnActiveStep ? green : gray;
+
+            return (
+              <Box
+                key={step.label}
+                display="flex"
+                alignItems="flex-start"
+                sx={{ flex: idx < RETURN_STEPS.length - 1 ? 1 : "none" }}
+              >
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  sx={{ minWidth: 100 }}
+                >
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      border: `2px solid ${circleColor}`,
+                      bgcolor: completed ? green : "#fff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: isCurrent ? `0 0 0 4px ${green}33` : "none",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <step.Icon
+                      sx={{
+                        fontSize: 26,
+                        color: completed ? "#fff" : gray,
+                      }}
+                    />
+                  </Box>
+
+                  <Typography
+                    variant="caption"
+                    align="center"
+                    fontWeight={isCurrent ? 700 : 500}
+                    sx={{
+                      mt: 1,
+                      color: completed ? "#333" : "text.disabled",
+                      maxWidth: 120,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {step.label}
+                  </Typography>
+
+                  {idx === 0 && createdAt && (
+                    <Typography
+                      variant="caption"
+                      align="center"
+                      sx={{ color: "text.secondary", mt: 0.25, fontSize: 11 }}
+                    >
+                      {fmtDate(createdAt)}
+                    </Typography>
+                  )}
+
+                  {idx === RETURN_STEPS.length - 1 &&
+                    status === "Returned" &&
+                    updatedAt && (
+                      <Typography
+                        variant="caption"
+                        align="center"
+                        sx={{
+                          color: "text.secondary",
+                          mt: 0.25,
+                          fontSize: 11,
+                        }}
+                      >
+                        {fmtDate(updatedAt)}
+                      </Typography>
+                    )}
+                </Box>
+
+                {idx < RETURN_STEPS.length - 1 && (
+                  <Box
+                    sx={{
+                      flex: 1,
+                      height: 3,
+                      bgcolor: lineColor,
+                      mt: "27px",
+                      mx: 0.5,
+                      minWidth: 20,
+                    }}
+                  />
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    );
+  }
+
+  if (isCanceled) {
+    const cancelSteps: Array<{
+      label: string;
+      Icon: any;
+      date: string | null;
+      subLabel: string | null;
+    }> = [
+      {
+        label: "Đơn Hàng Đã Đặt",
+        Icon: Receipt,
+        date: fmtDate(createdAt),
+        subLabel: null,
+      },
+    ];
+    if (paidAt) {
+      cancelSteps.push({
+        label: "Đơn Hàng Đã Thanh Toán",
+        Icon: Payments,
+        date: fmtDate(paidAt),
+        subLabel: totalAmount ? `(${fmt(totalAmount)})` : null,
+      });
+    } else {
+      cancelSteps.push({
+        label: "Đã Duyệt",
+        Icon: CheckCircle,
+        date: null,
+        subLabel: null,
+      });
+    }
+    cancelSteps.push({
+      label: "Đã Hủy Đơn Hàng",
+      Icon: CancelOutlined,
+      date: fmtDate(updatedAt),
+      subLabel: null,
+    });
+
+    return (
+      <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={1}
+          mb={2}
+          sx={{
+            bgcolor: "#fff3f3",
+            border: "1px solid #f5c6c6",
+            borderRadius: 1,
+            p: 1.5,
+          }}
+        >
+          <CancelOutlined sx={{ color: "#e53935" }} />
+          <Typography fontWeight={600} color="error">
+            Đơn hàng đã bị hủy
+          </Typography>
+        </Box>
+
+        <Box
+          display="flex"
+          alignItems="flex-start"
+          sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
+        >
+          {cancelSteps.map((step, idx) => {
+            const isLast = idx === cancelSteps.length - 1;
+            const circleColor = isLast ? "#e53935" : green;
+            const lineColor = green;
+
+            return (
+              <Box
+                key={step.label}
+                display="flex"
+                alignItems="flex-start"
+                sx={{ flex: idx < cancelSteps.length - 1 ? 1 : "none" }}
+              >
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  sx={{ minWidth: 100 }}
+                >
+                  <Box
+                    sx={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: "50%",
+                      border: `2px solid ${circleColor}`,
+                      bgcolor: isLast ? "#e53935" : green,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: isLast ? `0 0 0 4px #e5393533` : "none",
+                      transition: "all 0.2s",
+                    }}
+                  >
+                    <step.Icon
+                      sx={{
+                        fontSize: 26,
+                        color: "#fff",
+                      }}
+                    />
+                  </Box>
+
+                  <Typography
+                    variant="caption"
+                    align="center"
+                    fontWeight={isLast ? 700 : 500}
+                    sx={{
+                      mt: 1,
+                      color: isLast ? "#e53935" : "#333",
+                      maxWidth: 120,
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {step.label}
+                  </Typography>
+
+                  {step.date && (
+                    <Typography
+                      variant="caption"
+                      align="center"
+                      sx={{ color: "text.secondary", mt: 0.25, fontSize: 11 }}
+                    >
+                      {step.date}
+                    </Typography>
+                  )}
+
+                  {step.subLabel && (
+                    <Typography
+                      variant="caption"
+                      align="center"
+                      sx={{ color: "text.secondary", fontSize: 11 }}
+                    >
+                      {step.subLabel}
+                    </Typography>
+                  )}
+                </Box>
+
+                {idx < cancelSteps.length - 1 && (
+                  <Box
+                    sx={{
+                      flex: 1,
+                      height: 3,
+                      bgcolor: lineColor,
+                      mt: "27px",
+                      mx: 0.5,
+                      minWidth: 20,
+                    }}
+                  />
+                )}
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ py: 3, px: { xs: 2, sm: 4 } }}>
       <Box
         display="flex"
         alignItems="flex-start"
         sx={{ overflowX: "auto", pt: "6px", pb: 1 }}
       >
         {STEPS.map((step, idx) => {
-          const completed = !isSpecial && idx <= activeStep;
-          const isCurrent = !isSpecial && idx === activeStep;
+          const completed = idx <= activeStep;
+          const isCurrent = idx === activeStep;
           const circleColor = completed ? green : gray;
-          const lineColor = !isSpecial && idx < activeStep ? green : gray;
+          const lineColor = idx < activeStep ? green : gray;
 
           return (
             <Box
@@ -623,21 +978,32 @@ const OrderStepper = ({
 };
 
 interface FulfillInputItem {
+  /** Unique key: `${orderDetailId}::${expectedBatchCode}` */
+  key: string;
   orderDetailId: string;
+  /** The batch code this row is expected to scan */
+  expectedBatchCode: string;
+  /** Reserved quantity for this specific batch */
+  expectedQuantity: number;
   scannedBatchCode: string;
   quantity: string;
 }
 
 interface AutoFulfillItem {
+  key: string;
   id: string;
   variantName?: string;
   orderQuantity: number;
+  expectedBatchCode: string;
   reservedQuantity: number;
   scannedBatchCode: string;
+  /** True when scannedBatchCode matches expectedBatchCode */
+  isBatchInList: boolean;
   quantity: number;
 }
 
 interface FulfillRowValidation {
+  key: string;
   orderDetailId: string;
   isBatchMatched: boolean;
   isQuantityValid: boolean;
@@ -672,6 +1038,7 @@ const SWAP_DAMAGE_NOTE_SUGGESTIONS = [
 ];
 
 export const OrderManagementDetailPage = () => {
+  const { user } = useAuth();
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -693,6 +1060,14 @@ export const OrderManagementDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<CancelOrderReason | "">("");
   const [cancelNote, setCancelNote] = useState("");
+  const [cancelRefundBankName, setCancelRefundBankName] = useState("");
+  const [cancelRefundAccountNumber, setCancelRefundAccountNumber] = useState("");
+  const [cancelRefundAccountName, setCancelRefundAccountName] = useState("");
+  const [selectedCancelRefundBank, setSelectedCancelRefundBank] =
+    useState<VietQrBank | null>(null);
+  const [vietQrBanks, setVietQrBanks] = useState<VietQrBank[]>([]);
+  const [isLoadingVietQrBanks, setIsLoadingVietQrBanks] = useState(false);
+  const [vietQrBankError, setVietQrBankError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isFulfilling, setIsFulfilling] = useState(false);
   const [expandedBatches, setExpandedBatches] = useState<
@@ -707,6 +1082,8 @@ export const OrderManagementDetailPage = () => {
   const [isSwapDialogOpen, setIsSwapDialogOpen] = useState(false);
   const [damagedReservationId, setDamagedReservationId] = useState("");
   const [swapDamageNote, setSwapDamageNote] = useState("");
+  const [swapDamageQuantity, setSwapDamageQuantity] = useState(1);
+  const [maxSwapDamageQuantity, setMaxSwapDamageQuantity] = useState(1);
   const [swappingBatchCode, setSwappingBatchCode] = useState("");
   const [isSwappingBatch, setIsSwappingBatch] = useState(false);
   const [isInStoreCompletionDialogOpen, setIsInStoreCompletionDialogOpen] =
@@ -718,6 +1095,7 @@ export const OrderManagementDetailPage = () => {
   const [shouldTriggerInvoicePrint, setShouldTriggerInvoicePrint] =
     useState(false);
   const invoicePrintRef = useRef<HTMLDivElement | null>(null);
+  const [refreshPickListCounter, setRefreshPickListCounter] = useState(0);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -725,10 +1103,27 @@ export const OrderManagementDetailPage = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const [data, cancelRequests] = await Promise.all([
+      const [data, cancelRequests, returnRequests] = await Promise.all([
         orderService.getOrderById(orderId),
+        user?.role === "staff"
+          ? orderService
+              .getMyCancelRequests({
+                PageNumber: 1,
+                PageSize: 100,
+                SortBy: "CreatedAt",
+                SortOrder: "desc",
+              })
+              .catch(() => null)
+          : orderService
+              .getAllCancelRequests({
+                PageNumber: 1,
+                PageSize: 100,
+                SortBy: "CreatedAt",
+                SortOrder: "desc",
+              })
+              .catch(() => null),
         orderService
-          .getAllCancelRequests({
+          .getAllReturnRequests({
             PageNumber: 1,
             PageSize: 100,
             SortBy: "CreatedAt",
@@ -746,10 +1141,29 @@ export const OrderManagementDetailPage = () => {
               new Date(a.createdAt || 0).getTime(),
           )[0] ?? null;
 
+      const latestReturnRequest =
+        returnRequests?.items
+          ?.filter((item) => item.orderId === data.id)
+          .sort(
+            (a, b) =>
+              new Date(b.createdAt || 0).getTime() -
+              new Date(a.createdAt || 0).getTime(),
+          )[0] ?? null;
+
+      if (latestReturnRequest) {
+        (data as any).returnShippingStatus =
+          latestReturnRequest.returnShippingInfo?.status ?? null;
+        (data as any).returnRequestStatus = latestReturnRequest.status ?? null;
+      }
+
       setOrder(data);
       setOrderCancelRequest(latestCancelRequest);
       setCancelReason("");
       setCancelNote("");
+      setCancelRefundBankName("");
+      setCancelRefundAccountNumber("");
+      setCancelRefundAccountName("");
+      setSelectedCancelRefundBank(null);
       setIsPackagingConfirmed(false);
     } catch (err) {
       setError(
@@ -789,7 +1203,59 @@ export const OrderManagementDetailPage = () => {
 
     void loadPickList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order?.id, order?.status]);
+  }, [order?.id, order?.status, refreshPickListCounter]);
+
+  // Đơn đã thanh toán (full hoặc đặt cọc) → cần thông tin STK hoàn tiền
+  const cancelRequiresRefundInfo = Boolean(
+    order &&
+    (
+      (order.paymentStatus === "Paid" && (order.paidAmount ?? 0) > 0) ||
+      (order.paymentStatus === "PartialPaid" && (order.paidAmount ?? 0) > 0)
+    ),
+  );
+
+  // Load danh sách ngân hàng từ VietQR khi cancel dialog mở + đơn cần hoàn tiền
+  useEffect(() => {
+    const shouldLoad = isCancelDialogOpen && cancelRequiresRefundInfo;
+    if (!shouldLoad || vietQrBanks.length > 0) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadBanks = async () => {
+      try {
+        setIsLoadingVietQrBanks(true);
+        setVietQrBankError(null);
+
+        const response = await fetch("https://api.vietqr.io/v2/banks", {
+          method: "GET",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể tải danh sách ngân hàng");
+        }
+
+        const json = (await response.json()) as { data?: VietQrBank[] };
+        setVietQrBanks(Array.isArray(json.data) ? json.data : []);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        setVietQrBankError("Không tải được danh sách ngân hàng từ VietQR");
+      } finally {
+        setIsLoadingVietQrBanks(false);
+      }
+    };
+
+    void loadBanks();
+
+    return () => {
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCancelDialogOpen, cancelRequiresRefundInfo, vietQrBanks.length]);
 
   const isShippingManagedStatus = order?.status === "Delivering";
   const hasTrackingNumber = Boolean(order?.shippingInfo?.trackingNumber);
@@ -879,23 +1345,72 @@ export const OrderManagementDetailPage = () => {
     }
 
     setFulfillInputs((prev) => {
-      const prevMap = new Map(prev.map((item) => [item.orderDetailId, item]));
+      // Key is `${orderDetailId}::${batchCode}`
+      const prevMap = new Map(prev.map((item) => [item.key, item]));
 
       return (order.orderDetails || [])
         .filter((detail) => Boolean(detail.id))
-        .map((detail) => {
-          const existing = prevMap.get(detail.id!);
+        .flatMap((detail) => {
+          // Always use reservedBatches from the order response directly.
+          // getDetailBatches() prioritises the picklist which can be stale
+          // after a swap (loadOrder refreshes the order but the picklist
+          // may lag), causing wrong batch codes or duplicates.
+          const reservedBatches = detail.reservedBatches ?? [];
 
-          return {
-            orderDetailId: detail.id!,
-            // Keep already-scanned value if user has entered one.
-            scannedBatchCode: existing?.scannedBatchCode ?? "",
-            quantity:
-              existing?.quantity ?? String(Number(detail.quantity ?? 0)),
-          };
+          if (reservedBatches.length === 0) {
+            // No batch info yet: single empty row
+            const key = `${detail.id!}::`;
+            const existing = prevMap.get(key);
+            return [
+              {
+                key,
+                orderDetailId: detail.id!,
+                expectedBatchCode: "",
+                expectedQuantity: Number(detail.quantity ?? 0),
+                scannedBatchCode: existing?.scannedBatchCode ?? "",
+                quantity:
+                  existing?.quantity ?? String(Number(detail.quantity ?? 0)),
+              },
+            ];
+          }
+
+          // Deduplicate by batchCode (defensive — should not happen with clean API data)
+          const seenCodes = new Set<string>();
+          const uniqueBatches = reservedBatches.filter((batch) => {
+            const code = batch.batchCode || "";
+            if (seenCodes.has(code)) return false;
+            seenCodes.add(code);
+            return true;
+          });
+
+          // One input row per unique reserved batch
+          return uniqueBatches.map((batch) => {
+            const key = `${detail.id!}::${batch.batchCode}`;
+            const existing = prevMap.get(key);
+            const newReservedQty = batch.reservedQuantity ?? 0;
+            // Only preserve the user's typed quantity if the reserved quantity
+            // for this batch hasn't changed since it was last loaded.
+            // If API returns a different reservedQuantity (e.g. after a swap),
+            // reset to the new value so the UI always matches the actual batch qty.
+            const preservedQty =
+              existing && existing.expectedQuantity === newReservedQty
+                ? existing.quantity
+                : String(newReservedQty);
+            return {
+              key,
+              orderDetailId: detail.id!,
+              expectedBatchCode: batch.batchCode || "",
+              expectedQuantity: newReservedQty,
+              scannedBatchCode: existing?.scannedBatchCode ?? "",
+              quantity: preservedQty,
+            };
+          });
         });
     });
-  }, [getDetailBatches, order?.status, order?.orderDetails, pickListItemMap]);
+    // NOTE: pickListItemMap and getDetailBatches intentionally excluded —
+    // we read reservedBatches directly from orderDetails now.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.status, order?.orderDetails]);
 
   const subtotal = useMemo(
     () =>
@@ -1017,36 +1532,33 @@ export const OrderManagementDetailPage = () => {
       return [];
     }
 
-    const fulfillMap = new Map(
-      fulfillInputs.map((input) => [input.orderDetailId, input]),
+    const detailMap = new Map(
+      (order.orderDetails ?? []).map((d) => [d.id!, d]),
     );
 
-    return (order.orderDetails ?? [])
-      .filter((detail) => Boolean(detail.id))
-      .map((detail) => {
-        const detailBatches = getDetailBatches(
-          detail.id,
-          detail.reservedBatches,
-        );
-        const selectedInput = detail.id ? fulfillMap.get(detail.id) : undefined;
-        const quantity = Number(
-          selectedInput?.quantity ?? detail.quantity ?? 0,
-        );
-        const selectedBatchCode = selectedInput?.scannedBatchCode?.trim() || "";
-        const selectedBatch = detailBatches.find(
-          (batch) => batch.batchCode === selectedBatchCode,
-        );
+    return fulfillInputs.map((input) => {
+      const detail = detailMap.get(input.orderDetailId);
+      const scannedBatchCode = input.scannedBatchCode?.trim() || "";
+      // A row is valid when the scanned code matches the expected batch for this row
+      const isBatchInList =
+        scannedBatchCode !== "" &&
+        (input.expectedBatchCode === ""
+          ? true // fallback row (no expected batch) — accept any
+          : scannedBatchCode === input.expectedBatchCode);
 
-        return {
-          id: detail.id!,
-          variantName: detail.variantName,
-          orderQuantity: Number(detail.quantity ?? 0),
-          reservedQuantity: Number(selectedBatch?.reservedQuantity ?? 0),
-          scannedBatchCode: selectedBatchCode,
-          quantity,
-        };
-      });
-  }, [fulfillInputs, getDetailBatches, order?.orderDetails, order?.status]);
+      return {
+        key: input.key,
+        id: input.orderDetailId,
+        variantName: detail?.variantName,
+        orderQuantity: Number(detail?.quantity ?? 0),
+        expectedBatchCode: input.expectedBatchCode,
+        reservedQuantity: input.expectedQuantity,
+        scannedBatchCode,
+        isBatchInList,
+        quantity: Number(input.quantity ?? 0),
+      };
+    });
+  }, [fulfillInputs, order?.orderDetails, order?.status]);
 
   const fulfillRowValidations = useMemo<FulfillRowValidation[]>(() => {
     if (order?.status !== "Preparing") {
@@ -1054,27 +1566,42 @@ export const OrderManagementDetailPage = () => {
     }
 
     return autoFulfillItems.map((item) => {
-      const isBatchMatched = Boolean(item.scannedBatchCode);
-      const isQuantityValid =
-        Number.isFinite(item.quantity) &&
-        item.quantity > 0 &&
-        item.quantity <= Math.max(item.reservedQuantity, 0);
-
-      if (!isBatchMatched) {
+      // 1. No batch code typed yet
+      if (!item.scannedBatchCode) {
         return {
+          key: item.key,
           orderDetailId: item.id,
-          isBatchMatched,
+          isBatchMatched: false,
           isQuantityValid: false,
           isValid: false,
-          selectedBatchReserved: item.reservedQuantity,
+          selectedBatchReserved: 0,
           message: "Mã lô không khớp",
         };
       }
 
+      // 2. Batch code typed but doesn't match the expected batch for this row
+      if (!item.isBatchInList) {
+        return {
+          key: item.key,
+          orderDetailId: item.id,
+          isBatchMatched: false,
+          isQuantityValid: false,
+          isValid: false,
+          selectedBatchReserved: 0,
+          message: `Mã lô không khớp (cần: ${item.expectedBatchCode})`,
+        };
+      }
+
+      const isQuantityValid =
+        Number.isFinite(item.quantity) &&
+        item.quantity > 0 &&
+        item.quantity <= item.reservedQuantity;
+
       if (!isQuantityValid) {
         return {
+          key: item.key,
           orderDetailId: item.id,
-          isBatchMatched,
+          isBatchMatched: true,
           isQuantityValid,
           isValid: false,
           selectedBatchReserved: item.reservedQuantity,
@@ -1086,8 +1613,9 @@ export const OrderManagementDetailPage = () => {
       }
 
       return {
+        key: item.key,
         orderDetailId: item.id,
-        isBatchMatched,
+        isBatchMatched: true,
         isQuantityValid,
         isValid: true,
         selectedBatchReserved: item.reservedQuantity,
@@ -1108,7 +1636,7 @@ export const OrderManagementDetailPage = () => {
     }
 
     if (autoFulfillItems.length === 0) {
-      return "Không tìm thấy chi tiết đơn hàng để đóng gói";
+      return "Không tìm thấy chi tiết đơn hàng để đóng gói";
     }
 
     const missingBatch = autoFulfillItems.find(
@@ -1162,6 +1690,8 @@ export const OrderManagementDetailPage = () => {
     }
   };
 
+
+
   const openCancelDialog = () => {
     if (!canCancelOrder || hasBlockingCancelRequest) {
       if (hasBlockingCancelRequest) {
@@ -1172,6 +1702,10 @@ export const OrderManagementDetailPage = () => {
 
     setCancelReason("");
     setCancelNote("");
+    setCancelRefundBankName("");
+    setCancelRefundAccountNumber("");
+    setCancelRefundAccountName("");
+    setSelectedCancelRefundBank(null);
     setIsCancelDialogOpen(true);
   };
 
@@ -1185,6 +1719,22 @@ export const OrderManagementDetailPage = () => {
       return;
     }
 
+    // Nếu đơn đã có tiền thanh toán, bắt buộc nhập thông tin STK hoàn tiền
+    if (cancelRequiresRefundInfo) {
+      if (!selectedCancelRefundBank) {
+        showToast("Vui lòng chọn ngân hàng từ danh sách để hoàn tiền cho khách", "warning");
+        return;
+      }
+      if (!cancelRefundAccountNumber.trim()) {
+        showToast("Vui lòng nhập số tài khoản ngân hàng của khách", "warning");
+        return;
+      }
+      if (!cancelRefundAccountName.trim()) {
+        showToast("Vui lòng nhập tên chủ tài khoản ngân hàng", "warning");
+        return;
+      }
+    }
+
     setIsCancelDialogOpen(false);
 
     try {
@@ -1193,6 +1743,13 @@ export const OrderManagementDetailPage = () => {
         order.id,
         cancelReason,
         cancelNote || undefined,
+        cancelRequiresRefundInfo && selectedCancelRefundBank
+          ? {
+              refundBankName: getBankDisplayName(selectedCancelRefundBank),
+              refundAccountNumber: cancelRefundAccountNumber.trim(),
+              refundAccountName: cancelRefundAccountName.trim(),
+            }
+          : undefined,
       );
       showToast("Đã hủy đơn hàng thành công", "success");
       await loadOrder();
@@ -1381,48 +1938,28 @@ export const OrderManagementDetailPage = () => {
     }));
   };
 
-  const handleBatchCodeChange = (orderDetailId: string, value: string) => {
+  const handleBatchCodeChange = (key: string, value: string) => {
     const normalizedValue = value.trim();
-    setFulfillInputs((prev) => {
-      const exists = prev.some((item) => item.orderDetailId === orderDetailId);
-
-      if (!exists) {
-        return [
-          ...prev,
-          {
-            orderDetailId,
-            scannedBatchCode: normalizedValue,
-            quantity: "1",
-          },
-        ];
-      }
-
-      return prev.map((item) =>
-        item.orderDetailId === orderDetailId
-          ? { ...item, scannedBatchCode: normalizedValue }
-          : item,
-      );
-    });
-  };
-
-  const handleQuantityChange = (orderDetailId: string, value: string) => {
-    const digitsOnly = value.replace(/\D/g, "");
     setFulfillInputs((prev) =>
       prev.map((item) =>
-        item.orderDetailId === orderDetailId
-          ? { ...item, quantity: digitsOnly || "0" }
-          : item,
+        item.key === key ? { ...item, scannedBatchCode: normalizedValue } : item,
       ),
     );
   };
 
-  const handleAdjustQuantity = (orderDetailId: string, delta: number) => {
+  const handleQuantityChange = (key: string, value: string) => {
+    const digitsOnly = value.replace(/\D/g, "");
+    setFulfillInputs((prev) =>
+      prev.map((item) =>
+        item.key === key ? { ...item, quantity: digitsOnly || "0" } : item,
+      ),
+    );
+  };
+
+  const handleAdjustQuantity = (key: string, delta: number) => {
     setFulfillInputs((prev) =>
       prev.map((item) => {
-        if (item.orderDetailId !== orderDetailId) {
-          return item;
-        }
-
+        if (item.key !== key) return item;
         const nextValue = Math.max(0, Number(item.quantity || 0) + delta);
         return { ...item, quantity: String(nextValue) };
       }),
@@ -1435,18 +1972,17 @@ export const OrderManagementDetailPage = () => {
     }
   }, [isAllFulfillRowsValid, isPackagingConfirmed]);
 
-  const handleSimulateScanBatch = (
-    orderDetailId: string,
-    batchCode: string,
-  ) => {
-    handleBatchCodeChange(orderDetailId, batchCode);
+  const handleSimulateScanBatch = (key: string, batchCode: string) => {
+    handleBatchCodeChange(key, batchCode);
     showToast(`Đã điền mã batch ${batchCode}`, "success");
   };
 
-  const openSwapDamagedDialog = (reservationId: string, batchCode: string) => {
+  const openSwapDamagedDialog = (reservationId: string, batchCode: string, reservedQuantity: number) => {
     setDamagedReservationId(reservationId);
     setSwappingBatchCode(batchCode);
     setSwapDamageNote("");
+    setSwapDamageQuantity(1);
+    setMaxSwapDamageQuantity(reservedQuantity);
     setIsSwapDialogOpen(true);
   };
 
@@ -1459,6 +1995,7 @@ export const OrderManagementDetailPage = () => {
       setIsSwappingBatch(true);
       const result = await orderService.swapDamagedOrderReservation(order.id, {
         damagedReservationId,
+        damagedQuantity: swapDamageQuantity,
         damageNote: swapDamageNote.trim() || null,
       });
 
@@ -1471,6 +2008,7 @@ export const OrderManagementDetailPage = () => {
       );
 
       await loadOrder();
+      setRefreshPickListCounter((prev) => prev + 1);
     } catch (err) {
       showToast(
         err instanceof Error ? err.message : "Không thể đổi batch lỗi",
@@ -1616,6 +2154,8 @@ export const OrderManagementDetailPage = () => {
                   paidAt={order.paidAt}
                   updatedAt={order.updatedAt}
                   totalAmount={order.totalAmount}
+                  returnShippingStatus={(order as any).returnShippingStatus}
+                  returnRequestStatus={(order as any).returnRequestStatus}
                 />
               </Box>
 
@@ -2127,12 +2667,19 @@ export const OrderManagementDetailPage = () => {
                                                         <IconButton
                                                           size="small"
                                                           color="primary"
-                                                          onClick={() =>
+                                                          onClick={() => {
+                                                            const inputKey =
+                                                              fulfillInputs.find(
+                                                                (inp) =>
+                                                                  inp.orderDetailId === item.id &&
+                                                                  inp.expectedBatchCode === batch.batchCode,
+                                                              )?.key ??
+                                                              `${item.id}::${batch.batchCode}`;
                                                             handleSimulateScanBatch(
-                                                              item.id!,
+                                                              inputKey,
                                                               batch.batchCode,
-                                                            )
-                                                          }
+                                                            );
+                                                          }}
                                                           title="Quét batch này"
                                                           disabled={
                                                             order.status !==
@@ -2154,9 +2701,10 @@ export const OrderManagementDetailPage = () => {
                                                                 openSwapDamagedDialog(
                                                                   batch.reservationId!,
                                                                   batch.batchCode,
+                                                                  batch.reservedQuantity || 0
                                                                 )
                                                               }
-                                                              title="Swap batch lỗi"
+                                                              title="Đổi batch lỗi"
                                                               disabled={
                                                                 isSwappingBatch ||
                                                                 isUpdating ||
@@ -2209,22 +2757,35 @@ export const OrderManagementDetailPage = () => {
                         )}
 
                         {canPrepareOrder && (
-                          <LoadingButton
-                            variant="contained"
-                            onClick={handlePrepareOrder}
-                            disabled={
-                              isUpdating ||
-                              isFulfilling ||
-                              isCompletingInStorePickup
+                          <Tooltip
+                            title={
+                              hasBlockingCancelRequest
+                                ? "Đơn hàng đang có yêu cầu hủy chờ xử lý. Vui lòng xử lý yêu cầu hủy trước."
+                                : ""
                             }
-                            loading={isUpdating}
-                            sx={{
-                              bgcolor: "#2e7d32",
-                              "&:hover": { bgcolor: "#1b5e20" },
-                            }}
+                            placement="top"
                           >
-                            Xác nhận đơn hàng
-                          </LoadingButton>
+                            <span style={{ display: "block" }}>
+                              <LoadingButton
+                                fullWidth
+                                variant="contained"
+                                onClick={handlePrepareOrder}
+                                disabled={
+                                  isUpdating ||
+                                  isFulfilling ||
+                                  isCompletingInStorePickup ||
+                                  hasBlockingCancelRequest
+                                }
+                                loading={isUpdating}
+                                sx={{
+                                  bgcolor: "#2e7d32",
+                                  "&:hover": { bgcolor: "#1b5e20" },
+                                }}
+                              >
+                                Xác nhận đơn hàng
+                              </LoadingButton>
+                            </span>
+                          </Tooltip>
                         )}
 
                         {canCompleteInStoreOrder && (
@@ -2283,8 +2844,7 @@ export const OrderManagementDetailPage = () => {
                                 );
                                 const rowValidation =
                                   fulfillRowValidations.find(
-                                    (row) =>
-                                      row.orderDetailId === input.orderDetailId,
+                                    (row) => row.key === input.key,
                                   );
 
                                 const statusColor = rowValidation?.isValid
@@ -2293,9 +2853,16 @@ export const OrderManagementDetailPage = () => {
                                     ? "error.main"
                                     : "divider";
 
+                                // Label shows product name + expected batch code when there are multiple batches
+                                const batchLabel = input.expectedBatchCode
+                                  ? `Batch: ${input.expectedBatchCode} (SL giữ: ${input.expectedQuantity})`
+                                  : detail?.variantName
+                                    ? `Batch code - ${detail.variantName}`
+                                    : "Batch code";
+
                                 return (
                                   <Box
-                                    key={input.orderDetailId}
+                                    key={input.key}
                                     sx={{
                                       p: 1,
                                       border: "1px solid",
@@ -2303,16 +2870,23 @@ export const OrderManagementDetailPage = () => {
                                       borderRadius: 1,
                                     }}
                                   >
+                                    {/* Show product name as section header when there are multiple batch rows */}
+                                    {input.expectedBatchCode && detail?.variantName && (
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        display="block"
+                                        mb={0.5}
+                                      >
+                                        {detail.variantName}
+                                      </Typography>
+                                    )}
                                     <TextField
-                                      label={
-                                        detail?.variantName
-                                          ? `Batch code - ${detail.variantName}`
-                                          : "Batch code"
-                                      }
+                                      label={batchLabel}
                                       value={input.scannedBatchCode}
                                       onChange={(event) =>
                                         handleBatchCodeChange(
-                                          input.orderDetailId,
+                                          input.key,
                                           event.target.value,
                                         )
                                       }
@@ -2349,7 +2923,7 @@ export const OrderManagementDetailPage = () => {
                                         size="small"
                                         onClick={() =>
                                           handleAdjustQuantity(
-                                            input.orderDetailId,
+                                            input.key,
                                             -1,
                                           )
                                         }
@@ -2364,7 +2938,7 @@ export const OrderManagementDetailPage = () => {
                                         value={input.quantity}
                                         onChange={(event) =>
                                           handleQuantityChange(
-                                            input.orderDetailId,
+                                            input.key,
                                             event.target.value,
                                           )
                                         }
@@ -2380,7 +2954,7 @@ export const OrderManagementDetailPage = () => {
                                         size="small"
                                         onClick={() =>
                                           handleAdjustQuantity(
-                                            input.orderDetailId,
+                                            input.key,
                                             1,
                                           )
                                         }
@@ -2463,23 +3037,36 @@ export const OrderManagementDetailPage = () => {
                               )}
                             </Box>
 
-                            <LoadingButton
-                              variant="contained"
-                              onClick={handleFulfillOrder}
-                              disabled={
-                                isFulfilling ||
-                                isUpdating ||
-                                !isPackagingConfirmed ||
-                                Boolean(autoFulfillError)
+                            <Tooltip
+                              title={
+                                hasBlockingCancelRequest
+                                  ? "Đơn hàng đang có yêu cầu hủy chờ xử lý. Vui lòng xử lý yêu cầu hủy trước."
+                                  : ""
                               }
-                              loading={isFulfilling}
-                              sx={{
-                                bgcolor: "#1976d2",
-                                "&:hover": { bgcolor: "#115293" },
-                              }}
+                              placement="top"
                             >
-                              Đóng gói và chờ bàn giao
-                            </LoadingButton>
+                              <span style={{ display: "block" }}>
+                                <LoadingButton
+                                  fullWidth
+                                  variant="contained"
+                                  onClick={handleFulfillOrder}
+                                  disabled={
+                                    isFulfilling ||
+                                    isUpdating ||
+                                    !isPackagingConfirmed ||
+                                    Boolean(autoFulfillError) ||
+                                    hasBlockingCancelRequest
+                                  }
+                                  loading={isFulfilling}
+                                  sx={{
+                                    bgcolor: "#1976d2",
+                                    "&:hover": { bgcolor: "#115293" },
+                                  }}
+                                >
+                                  Đóng gói và chờ bàn giao
+                                </LoadingButton>
+                              </span>
+                            </Tooltip>
                           </Stack>
                         )}
 
@@ -2574,12 +3161,36 @@ export const OrderManagementDetailPage = () => {
 
       <Dialog
         open={isCancelDialogOpen}
-        onClose={() => setIsCancelDialogOpen(false)}
+        onClose={() => !isUpdating && setIsCancelDialogOpen(false)}
         maxWidth="sm"
         fullWidth
       >
         <DialogTitle>Xác nhận hủy đơn hàng</DialogTitle>
         <DialogContent>
+          {/* Chính sách hoàn tiền */}
+          {cancelRequiresRefundInfo ? (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              <Typography variant="body2" fontWeight={600} mb={0.5}>
+                Đơn hàng đã thanh toán — bắt buộc hoàn 100% tiền cho khách
+              </Typography>
+              <Typography variant="caption" display="block">
+                Theo chính sách của PerfumeGPT, khi shop chủ động hủy đơn,
+                kế toán phải liên hệ khách hàng và thực hiện hoàn trả{" "}
+                <b>100%</b> số tiền đã thanh toán (
+                {fmt(order?.paidAmount ?? 0)}) thông qua chuyển khoản thủ công.
+                <b>Vui lòng gọi điện xác nhận số tài khoản với khách trước khi
+                điền vào bên dưới.</b>
+              </Typography>
+            </Alert>
+          ) : (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Typography variant="caption">
+                Đơn hàng chưa có khoản thanh toán nào — có thể hủy mà không
+                cần thông tin hoàn tiền.
+              </Typography>
+            </Alert>
+          )}
+
           <DialogContentText sx={{ mb: 1.5 }}>
             Vui lòng chọn lý do hủy đơn theo quy định trước khi xác nhận.
           </DialogContentText>
@@ -2612,6 +3223,147 @@ export const OrderManagementDetailPage = () => {
             ))}
           </Stack>
 
+          {/* Form nhập STK ngân hàng — chỉ hiện khi đơn đã thanh toán */}
+          {cancelRequiresRefundInfo && (
+            <Stack spacing={1.5} mb={1.5}>
+              <Typography variant="body2" fontWeight={600} color="warning.dark">
+                Thông tin tài khoản hoàn tiền cho khách *
+              </Typography>
+              <Autocomplete
+                options={vietQrBanks}
+                value={selectedCancelRefundBank}
+                inputValue={cancelRefundBankName}
+                loading={isLoadingVietQrBanks}
+                getOptionLabel={(option) =>
+                  typeof option === "string"
+                    ? option
+                    : getBankDisplayName(option)
+                }
+                isOptionEqualToValue={(option, value) =>
+                  option.id === value.id
+                }
+                onInputChange={() => {
+                  // Prevent free input
+                }}
+                onChange={(_, bank) => {
+                  if (!bank) {
+                    setSelectedCancelRefundBank(null);
+                    setCancelRefundBankName("");
+                    return;
+                  }
+                  if (typeof bank === "string") return;
+                  setSelectedCancelRefundBank(bank);
+                  setCancelRefundBankName(getBankDisplayName(bank));
+                }}
+                disabled={isUpdating}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props}>
+                    <Stack direction="row" spacing={1.25} alignItems="center">
+                      {option.logo ? (
+                        <Box
+                          component="img"
+                          src={option.logo}
+                          alt={option.name}
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            objectFit: "contain",
+                            borderRadius: 0.5,
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: 0.5,
+                            bgcolor: "grey.100",
+                          }}
+                        />
+                      )}
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          {option.shortName || option.short_name || option.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.name}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Tên ngân hàng *"
+                    size="small"
+                    placeholder="Chọn ngân hàng từ danh sách..."
+                    error={Boolean(vietQrBankError) || (cancelRequiresRefundInfo && !selectedCancelRefundBank)}
+                    helperText={
+                      vietQrBankError ||
+                      (cancelRequiresRefundInfo && !selectedCancelRefundBank
+                        ? "Bắt buộc"
+                        : "")
+                    }
+                    inputProps={{
+                      ...params.inputProps,
+                      readOnly: true,
+                    }}
+                  />
+                )}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="Số tài khoản *"
+                placeholder="Nhập số tài khoản ngân hàng của khách"
+                value={cancelRefundAccountNumber}
+                onChange={(e) =>
+                  setCancelRefundAccountNumber(
+                    normalizeRefundAccountNumber(e.target.value),
+                  )
+                }
+                disabled={isUpdating}
+                inputProps={{
+                  inputMode: "text",
+                  autoCapitalize: "characters",
+                }}
+                error={
+                  cancelRequiresRefundInfo &&
+                  !cancelRefundAccountNumber.trim()
+                }
+                helperText={
+                  cancelRequiresRefundInfo &&
+                  !cancelRefundAccountNumber.trim()
+                    ? "Bắt buộc. Viết HOA, không khoảng trắng/ký tự đặc biệt"
+                    : "Tự động viết HOA, không khoảng trắng"
+                }
+              />
+              <TextField
+                fullWidth
+                size="small"
+                label="Tên chủ tài khoản *"
+                placeholder="VD: NGUYEN VAN A"
+                value={cancelRefundAccountName}
+                onChange={(e) =>
+                  setCancelRefundAccountName(
+                    normalizeRefundAccountName(e.target.value),
+                  )
+                }
+                disabled={isUpdating}
+                inputProps={{ autoCapitalize: "characters" }}
+                error={
+                  cancelRequiresRefundInfo && !cancelRefundAccountName.trim()
+                }
+                helperText={
+                  cancelRequiresRefundInfo && !cancelRefundAccountName.trim()
+                    ? "Bắt buộc. Viết HOA, không dấu"
+                    : "Tự động viết HOA, không dấu"
+                }
+              />
+            </Stack>
+          )}
+
           <TextField
             fullWidth
             multiline
@@ -2620,15 +3372,28 @@ export const OrderManagementDetailPage = () => {
             placeholder="Nhập thêm ghi chú nếu cần"
             value={cancelNote}
             onChange={(event) => setCancelNote(event.target.value)}
+            disabled={isUpdating}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsCancelDialogOpen(false)}>Đóng</Button>
+          <Button
+            onClick={() => setIsCancelDialogOpen(false)}
+            disabled={isUpdating}
+          >
+            Đóng
+          </Button>
           <LoadingButton
             color="error"
             variant="contained"
             onClick={handleConfirmCancelStatus}
-            disabled={isUpdating || !cancelReason}
+            disabled={
+              isUpdating ||
+              !cancelReason ||
+              (cancelRequiresRefundInfo &&
+                (!selectedCancelRefundBank ||
+                  !cancelRefundAccountNumber.trim() ||
+                  !cancelRefundAccountName.trim()))
+            }
             loading={isUpdating}
           >
             Xác nhận hủy
@@ -2642,7 +3407,7 @@ export const OrderManagementDetailPage = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Swap batch bị lỗi</DialogTitle>
+        <DialogTitle>Đổi batch bị lỗi</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 1.5 }}>
             Xác nhận đổi batch cho mã <b>{swappingBatchCode || "-"}</b>. Hệ
@@ -2651,12 +3416,70 @@ export const OrderManagementDetailPage = () => {
 
           <TextField
             fullWidth
+            type="number"
+            label="Số lượng lỗi *"
+            value={swapDamageQuantity}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSwapDamageQuantity((prev) => Math.max(1, (prev as number) - 1))}
+                    disabled={swapDamageQuantity <= 1}
+                  >
+                    <Remove fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    onClick={() => setSwapDamageQuantity((prev) => Math.min(maxSwapDamageQuantity, (prev as number) + 1))}
+                    disabled={swapDamageQuantity >= maxSwapDamageQuantity}
+                  >
+                    <Add fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            inputProps={{
+              style: { textAlign: "center" }
+            }}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              if (!isNaN(val)) {
+                setSwapDamageQuantity(val);
+              } else if (e.target.value === "") {
+                // allow empty while typing
+                setSwapDamageQuantity("" as any);
+              }
+            }}
+            onBlur={() => {
+              let val = swapDamageQuantity;
+              if (isNaN(val as number) || val < 1) {
+                val = 1;
+              } else if (val > maxSwapDamageQuantity) {
+                val = maxSwapDamageQuantity;
+              }
+              setSwapDamageQuantity(val);
+            }}
+            error={
+              swapDamageQuantity <= 0 ||
+              swapDamageQuantity > maxSwapDamageQuantity
+            }
+            helperText={`Nhập từ 1 đến ${maxSwapDamageQuantity}`}
+            sx={{ mb: 2 }}
+          />
+
+          <TextField
+            fullWidth
             multiline
             minRows={2}
             label="Ghi chú lỗi batch (tuỳ chọn)"
-            placeholder="Nhập mô tả lỗi hàng"
+            placeholder="Chọn mô tả lỗi hàng bên dưới"
             value={swapDamageNote}
-            onChange={(event) => setSwapDamageNote(event.target.value)}
+            InputProps={{ readOnly: true }}
             sx={{ mb: 1.5 }}
           />
 
@@ -2686,10 +3509,16 @@ export const OrderManagementDetailPage = () => {
             variant="contained"
             color="warning"
             onClick={handleConfirmSwapDamagedBatch}
-            disabled={isSwappingBatch || !damagedReservationId}
+            disabled={
+              isSwappingBatch ||
+              !damagedReservationId ||
+              !swapDamageNote ||
+              swapDamageQuantity <= 0 ||
+              swapDamageQuantity > maxSwapDamageQuantity
+            }
             loading={isSwappingBatch}
           >
-            Xác nhận swap
+            Xác nhận đổi
           </LoadingButton>
         </DialogActions>
       </Dialog>

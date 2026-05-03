@@ -74,6 +74,25 @@ class InventoryService {
     }
   }
 
+  async updateStock(stockId: string, lowStockThreshold: number): Promise<void> {
+    try {
+      const response = await (apiInstance as any).PUT(
+        "/api/inventory/stock/{stockId}",
+        {
+          params: { path: { stockId } },
+          body: { lowStockThreshold },
+        },
+      );
+
+      if (!response.data?.success) {
+        throw new Error(response.data?.message || "Failed to update stock");
+      }
+    } catch (error: any) {
+      console.error("Error updating stock threshold:", error);
+      throw new Error(this.extractErrorMessage(error, "Failed to update stock"));
+    }
+  }
+
   async getSummary(): Promise<InventorySummaryResponse | null> {
     try {
       const response = await apiInstance.GET("/api/inventory/summary");

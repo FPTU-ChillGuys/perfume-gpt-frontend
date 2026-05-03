@@ -136,12 +136,21 @@ const formatCurrency = (value?: number | null) => {
   return `${new Intl.NumberFormat("vi-VN").format(value)} ₫`;
 };
 
-const formatUnitPrice = (unitPrice?: number | null, total?: number | null) => {
-  if (!unitPrice || !total || unitPrice === total) {
+const formatUnitPrice = (
+  unitPrice?: number | null,
+  total?: number | null,
+  quantity?: number | null,
+) => {
+  if (unitPrice == null || total == null || quantity == null) {
     return null;
   }
 
-  return formatCurrency(unitPrice);
+  const originalTotal = unitPrice * quantity;
+  if (total >= originalTotal) {
+    return null;
+  }
+
+  return formatCurrency(originalTotal);
 };
 
 const toIsoString = (value: string) => {
@@ -1077,6 +1086,7 @@ export const MyOrdersPage = () => {
                                   const unitPriceLabel = formatUnitPrice(
                                     detail.unitPrice,
                                     detail.total,
+                                    quantity,
                                   );
 
                                   return (
