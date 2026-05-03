@@ -48,7 +48,8 @@ interface AnswerRow {
     availableSubGroups: string[];
     availableValues: SurveyAttributeValueItem[];
     selectedValues: Set<string>;
-    budgetRanges: { min?: number; max?: number }[];
+    budgetMin?: number;
+    budgetMax?: number;
 }
 
 interface QuestionForm {
@@ -77,7 +78,6 @@ function createEmptyAnswerRow(mode: AnswerMode = "manual"): AnswerRow {
         availableSubGroups: [],
         availableValues: [],
         selectedValues: new Set(),
-        budgetRanges: [],
     };
 }
 
@@ -91,7 +91,8 @@ function createEmptyBudgetRow(): AnswerRow {
         availableSubGroups: [],
         availableValues: [],
         selectedValues: new Set(),
-        budgetRanges: [{ max: 500000 }, { min: 500000, max: 1000000 }],
+        budgetMin: undefined,
+        budgetMax: undefined,
     };
 }
 
@@ -201,7 +202,7 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
         if (!form) return;
 
         const hasData = form.budgetMode
-            ? form.answers.some((r) => r.budgetRanges.some((br) => br.min !== undefined || br.max !== undefined))
+            ? form.answers.some((r) => r.budgetMin !== undefined || r.budgetMax !== undefined)
             : form.answers.some((r) => r.mode === "manual" ? r.text.trim() : r.selectedValues.size > 0);
 
         const applyToggle = () => {
@@ -275,49 +276,13 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
         setForms((prev) => prev.map((f) => f.id !== formId ? f : { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, selectedValues: new Set() } : r) }));
     };
 
-    const addBudgetRange = (formId: string, rowId: string) => {
-        setForms((prev) => prev.map((f) => f.id !== formId ? f : { ...f, answers: f.answers.map((r) => r.id === rowId ? { ...r, budgetRanges: [...r.budgetRanges, { min: undefined, max: undefined }] } : r) }));
-    };
-
-    const updateBudgetRange = (formId: string, rowId: string, rangeIdx: number, field: "min" | "max", value: number | undefined) => {
-        setForms((prev) => prev.map((f) => {
-            if (f.id !== formId) return f;
-            return {
-                ...f,
-                answers: f.answers.map((r) => {
-                    if (r.id !== rowId) return r;
-                    const ranges = [...r.budgetRanges];
-                    const existing = ranges[rangeIdx]!;
-                    ranges[rangeIdx] = { ...existing, [field]: value };
-                    return { ...r, budgetRanges: ranges };
-                }),
-            };
-        }));
-    };
-
-    const removeBudgetRange = (formId: string, rowId: string, rangeIdx: number) => {
-        setForms((prev) => prev.map((f) => {
-            if (f.id !== formId) return f;
-            return {
-                ...f,
-                answers: f.answers.map((r) => {
-                    if (r.id !== rowId) return r;
-                    if (r.budgetRanges.length <= 2) return r;
-                    return { ...r, budgetRanges: r.budgetRanges.filter((_, i) => i !== rangeIdx) };
-                }),
-            };
-        }));
-    };
-
     const handleSubmit = () => {
         const payload: SurveyQuestionRequest[] = forms.map((f) => {
             const answers: { answer: string }[] = [];
             if (f.budgetMode) {
                 for (const row of f.answers) {
-                    for (const r of row.budgetRanges) {
-                        if (r.min !== undefined || r.max !== undefined) {
-                            answers.push({ answer: JSON.stringify({ displayText: formatBudgetLabel(r.min, r.max), queryFragment: { type: "budget", min: r.min, max: r.max } }) });
-                        }
+                    if (row.budgetMin !== undefined || row.budgetMax !== undefined) {
+                        answers.push({ answer: JSON.stringify({ displayText: formatBudgetLabel(row.budgetMin, row.budgetMax), queryFragment: { type: "budget", min: row.budgetMin, max: row.budgetMax } }) });
                     }
                 }
             } else {
@@ -340,7 +305,7 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
     const isInvalid = forms.some((f) => {
         if (!f.question.trim()) return true;
         if (f.budgetMode) {
-            const validCount = f.answers.reduce((count, r) => count + r.budgetRanges.filter((br) => br.min !== undefined || br.max !== undefined).length, 0);
+            const validCount = f.answers.filter((r) => r.budgetMin !== undefined || r.budgetMax !== undefined).length;
             return validCount < 2;
         }
         const validCount = f.answers.reduce((count, r) => {
@@ -392,32 +357,31 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
                             </Box>
 
                             {form.budgetMode ? (
-                                form.answers.map((row, ansIdx) => (
-                                    <Box key={row.id} sx={{ mb: 2, p: 1.5, border: "1px solid", borderColor: "success.light", borderRadius: 1.5, bgcolor: "success.50" }}>
-                                        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                                            <Chip label={ansIdx + 1} size="small" color="success" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
-                                            <Chip label="Ngân sách" size="small" color="success" variant="outlined" sx={{ height: 22, fontSize: "0.7rem" }} />
-                                            <Box sx={{ flexGrow: 1 }} />
-                                            <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(form.id, row.id)} disabled={form.answers.length <= 2 || isCreating}><RemoveAnswerIcon /></IconButton>
+                                form.answers.map((row, ansIdx) => {
+                                    const autoLabel = formatBudgetLabel(row.budgetMin, row.budgetMax);
+                                    return (
+                                        <Box key={row.id} sx={{ mb: 2, p: 1.5, border: "1px solid", borderColor: "success.light", borderRadius: 1.5, bgcolor: "success.50" }}>
+                                            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                                                <Chip label={ansIdx + 1} size="small" color="success" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
+                                                <Chip label="Ngân sách" size="small" color="success" variant="outlined" sx={{ height: 22, fontSize: "0.7rem" }} />
+                                                {autoLabel && <Chip label={autoLabel} size="small" color="success" variant="filled" sx={{ fontSize: "0.7rem" }} />}
+                                                <Box sx={{ flexGrow: 1 }} />
+                                                <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(form.id, row.id)} disabled={form.answers.length <= 2 || isCreating}><RemoveAnswerIcon /></IconButton>
+                                            </Box>
+                                            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                                                <TextField size="small" type="number" label="Từ (VND)" value={row.budgetMin ?? ""} onChange={(e) => {
+                                                    const val = e.target.value ? Number(e.target.value) : undefined;
+                                                    setForms((prev) => prev.map((f) => f.id !== form.id ? f : { ...f, answers: f.answers.map((r) => r.id !== row.id ? r : { ...r, budgetMin: val }) }));
+                                                }} sx={{ flex: 1 }} disabled={isCreating} />
+                                                <Typography color="text.secondary">—</Typography>
+                                                <TextField size="small" type="number" label="Đến (VND)" value={row.budgetMax ?? ""} onChange={(e) => {
+                                                    const val = e.target.value ? Number(e.target.value) : undefined;
+                                                    setForms((prev) => prev.map((f) => f.id !== form.id ? f : { ...f, answers: f.answers.map((r) => r.id !== row.id ? r : { ...r, budgetMax: val }) }));
+                                                }} sx={{ flex: 1 }} disabled={isCreating} />
+                                            </Box>
                                         </Box>
-
-                                        <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold", fontSize: "0.75rem" }}>Các khoảng ngân sách (tối thiểu 2)</Typography>
-                                        {row.budgetRanges.map((range, rIdx) => {
-                                            const autoLabel = formatBudgetLabel(range.min, range.max);
-                                            return (
-                                                <Box key={rIdx} sx={{ display: "flex", gap: 1, mb: 1, alignItems: "center" }}>
-                                                    <Chip label={rIdx + 1} size="small" color="success" variant="outlined" sx={{ minWidth: 28 }} />
-                                                    <TextField size="small" type="number" placeholder="Từ (VND)" value={range.min ?? ""} onChange={(e) => updateBudgetRange(form.id, row.id, rIdx, "min", e.target.value ? Number(e.target.value) : undefined)} sx={{ flex: 1 }} />
-                                                    <Typography color="text.secondary">-</Typography>
-                                                    <TextField size="small" type="number" placeholder="Đến (VND)" value={range.max ?? ""} onChange={(e) => updateBudgetRange(form.id, row.id, rIdx, "max", e.target.value ? Number(e.target.value) : undefined)} sx={{ flex: 1 }} />
-                                                    {autoLabel && <Chip label={autoLabel} size="small" color="success" variant="filled" sx={{ fontSize: "0.7rem" }} />}
-                                                    <IconButton size="small" color="error" onClick={() => removeBudgetRange(form.id, row.id, rIdx)} disabled={row.budgetRanges.length <= 2}><RemoveAnswerIcon /></IconButton>
-                                                </Box>
-                                            );
-                                        })}
-                                        <Button size="small" startIcon={<AddAnswerIcon />} onClick={() => addBudgetRange(form.id, row.id)}>Thêm khoảng giá</Button>
-                                    </Box>
-                                ))
+                                    );
+                                })
                             ) : (
                                 form.answers.map((row, ansIdx) => (
                                     <Box key={row.id} sx={{ mb: 2, p: 1.5, border: "1px solid", borderColor: "divider", borderRadius: 1.5 }}>
@@ -476,7 +440,7 @@ export default function SurveyAddDialog({ open, isCreating, onClose, onSubmit }:
                             )}
 
                             {form.budgetMode ? (
-                                form.answers.reduce((count, r) => count + r.budgetRanges.filter((br) => br.min !== undefined || br.max !== undefined).length, 0) < 2 && (<Alert severity="warning" sx={{ mt: 1 }}>Cần ít nhất 2 đáp án hợp lệ</Alert>)
+                                form.answers.filter((r) => r.budgetMin !== undefined || r.budgetMax !== undefined).length < 2 && (<Alert severity="warning" sx={{ mt: 1 }}>Cần ít nhất 2 đáp án hợp lệ</Alert>)
                             ) : (
                                 form.answers.reduce((count, r) => count + (r.mode === "manual" ? (r.text.trim() ? 1 : 0) : r.selectedValues.size), 0) < 2 && (<Alert severity="warning" sx={{ mt: 1 }}>Cần ít nhất 2 đáp án hợp lệ</Alert>)
                             )}
