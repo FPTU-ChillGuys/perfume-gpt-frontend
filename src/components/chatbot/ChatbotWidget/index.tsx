@@ -35,6 +35,7 @@ import { getOrCreateGuestUserId } from "@/utils/guestUserId";
 import { conversationStorage } from "@/utils/conversationStorage";
 import type { ChatMessage } from "@/types/chatbot";
 import type { ConversationHistoryItem, ServerMessage } from "@/types/conversation";
+import { conversationSync } from "@/utils/conversationSync";
 
 import { parseAssistantPayload, SILENCE_TIMEOUT } from "./helpers";
 import { ChatHeader } from "./Header";
@@ -132,6 +133,7 @@ export default function ChatbotWidget() {
         setMessages(record.messages);
       }
       setRestored(true);
+      void conversationSync.syncFromServer();
     });
   }, [restored]);
 
@@ -263,11 +265,7 @@ export default function ChatbotWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Persist messages to Dexie whenever they change
-  useEffect(() => {
-    if (!restored || messages.length === 0) return;
-    void conversationStorage.save(conversationId.current, messages);
-  }, [messages, restored]);
+
 
   // Handle text-to-speech
   useEffect(() => {
@@ -351,13 +349,11 @@ export default function ChatbotWidget() {
   }, [conversationActive, resetTranscript, startListening, stopListening]);
 
   const handleNewConversation = useCallback(() => {
-    const oldId = conversationId.current;
     conversationId.current = uuid();
     setMessages([]);
     setConversationActive(false);
     setHistoryOpen(false);
     window.speechSynthesis.cancel();
-    void conversationStorage.remove(oldId);
   }, []);
 
   const handleAddToCart = useCallback(
@@ -500,15 +496,17 @@ export default function ChatbotWidget() {
 
           <Divider />
 
-          {historyOpen ? (
+          {          historyOpen ? (
             <ChatHistoryPanel
-              onSelectConversation={(conversation: ConversationHistoryItem) => {
+              onSelectConversation={(conversation: { id: string; messages: { sender: string; message: string }[] }) => {
                 conversationId.current = conversation.id;
-                const chatMsgs: ChatMessage[] = (conversation.messages || []).map(
-                  (m: ServerMessage) => ({ sender: m.sender, message: m.message })
+                const chatMsgs: ChatMessage[] = conversation.messages.map(
+                  (m) => ({ sender: m.sender, message: m.message })
                 );
                 setMessages(chatMsgs);
-                void conversationStorage.save(conversation.id, chatMsgs);
+                void conversationStorage.save(conversation.id, chatMsgs, {
+                  lastMessagePreview: chatMsgs.length > 0 ? chatMsgs[0].message : "",
+                });
                 setHistoryOpen(false);
               }}
               onNewChat={handleNewConversation}
