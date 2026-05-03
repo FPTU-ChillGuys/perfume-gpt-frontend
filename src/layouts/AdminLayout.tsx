@@ -47,6 +47,7 @@ import {
   LocalOffer as LocalOfferIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
   Badge as BadgeIcon,
+  Policy as PolicyIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -219,6 +220,12 @@ const menuGroups: SidebarMenuGroup[] = [
     icon: <CampaignIcon />,
     roles: ["admin"],
     items: [
+      {
+        text: "Cấu hình chính sách",
+        icon: <PolicyIcon />,
+        path: "/admin/store-policies",
+        roles: ["admin"],
+      },
       {
         text: "Banner & nội dung",
         icon: <SlideshowIcon />,
