@@ -74,6 +74,7 @@ import {
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/hooks/useAuth";
 import { OrderInvoicePrint } from "@/components/order/OrderInvoicePrint";
+import { StaffReturnRequestModal } from "@/components/order/StaffReturnRequestModal";
 import type { PaymentMethod } from "@/types/checkout";
 import type { CarrierName, OrderResponse, OrderStatus } from "@/types/order";
 import {
@@ -1029,6 +1030,27 @@ const STAFF_CANCELABLE_STATUSES: OrderStatus[] = [
 
 const CANCEL_REQUEST_BLOCKED_STATUSES = new Set(["Pending"]);
 
+const returnRequestStatusLabel = (status?: string | null) => {
+  if (!status) return "Đã gửi yêu cầu trả hàng";
+  if (status === "Pending") return "Yêu cầu đang chờ duyệt";
+  if (status === "ApprovedForReturn") return "Yêu cầu đã được duyệt trả hàng";
+  if (status === "Inspecting") return "Shop đang kiểm tra hàng hoàn";
+  if (status === "ReadyForRefund") return "Sẵn sàng hoàn tiền";
+  if (status === "Completed") return "Yêu cầu trả hàng đã hoàn tất";
+  if (status === "Rejected") return "Yêu cầu trả hàng đã bị từ chối";
+  if (status === "RequestMoreInfo") return "Cần bổ sung thông tin trả hàng";
+  return `Yêu cầu trả hàng: ${status}`;
+};
+
+const RETURN_REQUEST_BLOCKED_STATUSES = new Set([
+  "Pending",
+  "ApprovedForReturn",
+  "RequestMoreInfo",
+  "Inspecting",
+  "ReadyForRefund",
+  "Refunded",
+]);
+
 const SWAP_DAMAGE_NOTE_SUGGESTIONS = [
   "Hàng móp méo, không đạt chất lượng",
   "Bao bì rách/tem niêm phong bị lỗi",
@@ -1096,6 +1118,8 @@ export const OrderManagementDetailPage = () => {
     useState(false);
   const invoicePrintRef = useRef<HTMLDivElement | null>(null);
   const [refreshPickListCounter, setRefreshPickListCounter] = useState(0);
+
+  const [isReturnRequestOnBehalfOpen, setIsReturnRequestOnBehalfOpen] = useState(false);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -1279,6 +1303,17 @@ export const OrderManagementDetailPage = () => {
     orderCancelRequest?.id &&
     CANCEL_REQUEST_BLOCKED_STATUSES.has(orderCancelRequest.status ?? ""),
   );
+
+  const hasBlockingReturnRequest = Boolean(
+    (order as any)?.returnRequestStatus &&
+    RETURN_REQUEST_BLOCKED_STATUSES.has((order as any).returnRequestStatus)
+  );
+  const hasCustomerInfo = Boolean(
+    order?.customerId 
+  );
+
+  const canReturnOrder = order?.status === "Delivered" && order?.isReturnable === true;
+
 
   const selectedCancelReasonLabel = useMemo(() => {
     if (!cancelReason) {
@@ -2196,7 +2231,7 @@ export const OrderManagementDetailPage = () => {
                         >
                           Người đặt hàng
                         </Typography>
-                        {order.customerName && order.customerEmail && order.customerPhoneNumber ? (
+                        {order.customerName || order.customerEmail || order.customerPhoneNumber ? (
                           <Stack spacing={1}>
                             <Box display="flex" alignItems="center" gap={1}>
                               <Person
@@ -2204,7 +2239,7 @@ export const OrderManagementDetailPage = () => {
                                 sx={{ color: "text.secondary" }}
                               />
                               <Typography variant="body2" fontWeight={600}>
-                                {order.customerName}
+                                {order.customerName || "Không có"}
                               </Typography>
                             </Box>
                             <Box display="flex" alignItems="center" gap={1}>
@@ -2213,7 +2248,7 @@ export const OrderManagementDetailPage = () => {
                                 sx={{ color: "text.secondary" }}
                               />
                               <Typography variant="caption" color="text.secondary">
-                                {order.customerEmail}
+                                {order.customerEmail || "Không có"}
                               </Typography>
                             </Box>
                             <Box display="flex" alignItems="center" gap={1}>
@@ -2222,7 +2257,7 @@ export const OrderManagementDetailPage = () => {
                                 sx={{ color: "text.secondary" }}
                               />
                               <Typography variant="caption">
-                                {order.customerPhoneNumber}
+                                {order.customerPhoneNumber || "Không có"}
                               </Typography>
                             </Box>
                           </Stack>
@@ -2743,6 +2778,7 @@ export const OrderManagementDetailPage = () => {
 
                     {!canPrepareOrder &&
                     !canCancelOrder &&
+                    !canReturnOrder &&
                     !isShippingManagedStatus ? (
                       <Alert severity="info">
                         Đơn hàng đã ở trạng thái cuối, không thể cập nhật thêm.
@@ -3093,6 +3129,41 @@ export const OrderManagementDetailPage = () => {
                             </Stack>
                           </>
                         )}
+
+                        {canReturnOrder && (
+                          <>
+                            <Divider />
+                            <Stack alignItems="flex-end">
+                                <Tooltip
+                                  title={
+                                    hasBlockingReturnRequest
+                                      ? `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel((order as any)?.returnRequestStatus)}`
+                                      : hasCustomerInfo
+                                      ? "Đơn này đã gắn tài khoản. Staff chỉ có thể tạo yêu cầu trả hàng tại quầy (Fast Track). Trả hàng qua giao hàng vui lòng tạo trên App/Website."
+                                      : ""
+                                  }
+                                  placement="top"
+                                >
+                                <span>
+                                  <Button
+                                    variant="outlined"
+                                    color="warning"
+                                    onClick={() => setIsReturnRequestOnBehalfOpen(true)}
+                                    disabled={
+                                      hasBlockingReturnRequest ||
+                                      isUpdating ||
+                                      isFulfilling ||
+                                      isCompletingInStorePickup
+                                    }
+                                    sx={{ minWidth: 160 }}
+                                  >
+                                    {hasBlockingReturnRequest ? "Đã tạo yêu cầu trả hàng" : "Tạo yêu cầu trả hàng"}
+                                  </Button>
+                                </span>
+                              </Tooltip>
+                            </Stack>
+                          </>
+                        )}
                       </Stack>
                     )}
                   </Paper>
@@ -3256,9 +3327,11 @@ export const OrderManagementDetailPage = () => {
                   setCancelRefundBankName(getBankDisplayName(bank));
                 }}
                 disabled={isUpdating}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props}>
-                    <Stack direction="row" spacing={1.25} alignItems="center">
+                renderOption={(props, option) => {
+                  const { key, ...optionProps } = props;
+                  return (
+                    <Box component="li" key={key} {...optionProps}>
+                      <Stack direction="row" spacing={1.25} alignItems="center">
                       {option.logo ? (
                         <Box
                           component="img"
@@ -3291,7 +3364,8 @@ export const OrderManagementDetailPage = () => {
                       </Box>
                     </Stack>
                   </Box>
-                )}
+                );
+                }}
                 renderInput={(params) => (
                   <TextField
                     {...params}
@@ -3522,6 +3596,19 @@ export const OrderManagementDetailPage = () => {
           </LoadingButton>
         </DialogActions>
       </Dialog>
+
+      {order && (
+        <StaffReturnRequestModal
+          open={isReturnRequestOnBehalfOpen}
+          onClose={() => setIsReturnRequestOnBehalfOpen(false)}
+          order={order}
+          forceInStore={hasCustomerInfo}
+          onSuccess={() => {
+            setIsReturnRequestOnBehalfOpen(false);
+            void loadOrder();
+          }}
+        />
+      )}
     </AdminLayout>
   );
 };

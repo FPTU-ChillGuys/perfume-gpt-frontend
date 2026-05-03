@@ -93,6 +93,8 @@ export type ProcessInitialReturnDto =
 export type StartInspectionDto = components["schemas"]["StartInspectionDto"];
 export type RecordInspectionDto = components["schemas"]["RecordInspectionDto"];
 export type RejectInspectionDto = components["schemas"]["RejectInspectionDto"];
+export type ProcessInStoreReturnFastTrackDto =
+  components["schemas"]["ProcessInStoreReturnFastTrackDto"];
 export type PickListResponse = components["schemas"]["PickListResponse"];
 export type PickListItemResponse =
   components["schemas"]["PickListItemResponse"];
@@ -1405,6 +1407,12 @@ class OrderService {
         body: requestBody,
       });
 
+      if (response.error) {
+        const errorData = response.error as any;
+        const errorMessage = errorData.message || errorData.Message || errorData.title || "Không thể tạo yêu cầu trả hàng";
+        throw new Error(errorMessage);
+      }
+
       if (!response.data?.success) {
         throw new Error(
           response.data?.message || "Không thể tạo yêu cầu trả hàng",
@@ -1418,6 +1426,90 @@ class OrderService {
         error.response?.data?.message ||
           error.message ||
           "Không thể tạo yêu cầu trả hàng",
+      );
+    }
+  }
+
+  async createGuestOnBehalfReturnRequest(
+    payload: CreateReturnRequestPayload,
+  ): Promise<string> {
+    try {
+      console.log("[OrderService] createGuestOnBehalfReturnRequest payload:", payload);
+      const requestBody: CreateReturnRequestDto = {
+        orderId: payload.orderId,
+        orderCode: payload.orderCode,
+        reason: payload.reason,
+        isRefundOnly: payload.isRefundOnly ?? false,
+        returnItems: payload.returnItems,
+        customerNote: payload.customerNote ?? null,
+        refundBankName: payload.refundBankName ?? null,
+        refundAccountNumber: payload.refundAccountNumber ?? null,
+        refundAccountName: payload.refundAccountName ?? null,
+        savedAddressId: payload.savedAddressId ?? null,
+        recipient: payload.recipient ?? null,
+        temporaryMediaIds: payload.temporaryMediaIds ?? null,
+      };
+      console.log(
+        "[OrderService] createGuestOnBehalfReturnRequest requestBody:",
+        requestBody,
+      );
+
+      const response = await apiInstance.POST("/api/orderreturnrequests/guest-on-behalf", {
+        body: requestBody,
+      });
+
+      if (response.error) {
+        const errorData = response.error as any;
+        const errorMessage = errorData.message || errorData.Message || errorData.title || "Không thể tạo yêu cầu trả hàng";
+        throw new Error(errorMessage);
+      }
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Không thể tạo yêu cầu trả hàng",
+        );
+      }
+
+      return response.data.message || "Đã tạo yêu cầu trả hàng";
+    } catch (error: any) {
+      console.error("Error creating return request on behalf:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể tạo yêu cầu trả hàng",
+      );
+    }
+  }
+
+  async createInStoreReturnRequest(
+    payload: ProcessInStoreReturnFastTrackDto,
+  ): Promise<string> {
+    try {
+      console.log("[OrderService] createInStoreReturnRequest payload:", payload);
+
+      const response = await apiInstance.POST("/api/orderreturnrequests/in-store-fast-track", {
+        body: payload,
+      });
+
+      if (response.error) {
+        const errorData = response.error as any;
+        const errorMessage = errorData.message || errorData.Message || errorData.title || "Không thể tạo yêu cầu trả hàng tại quầy";
+        throw new Error(errorMessage);
+      }
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Không thể tạo yêu cầu trả hàng tại quầy",
+        );
+      }
+
+      return response.data.message || "Đã tạo yêu cầu trả hàng tại quầy";
+    } catch (error: any) {
+      console.error("Error creating in-store return request:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Không thể tạo yêu cầu trả hàng tại quầy",
       );
     }
   }

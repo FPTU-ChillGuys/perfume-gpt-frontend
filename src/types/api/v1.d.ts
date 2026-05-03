@@ -5652,6 +5652,59 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/orderreturnrequests/in-store-fast-track": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProcessInStoreReturnFastTrackDto"];
+                    "text/json": components["schemas"]["ProcessInStoreReturnFastTrackDto"];
+                    "application/*+json": components["schemas"]["ProcessInStoreReturnFastTrackDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orderreturnrequests/guest-on-behalf": {
         parameters: {
             query?: never;
@@ -13921,6 +13974,7 @@ export interface components {
             staffName?: null | string;
             type?: components["schemas"]["OrderType"];
             status?: components["schemas"]["OrderStatus"];
+            isReturnable?: boolean;
             paymentStatus?: components["schemas"]["PaymentStatus"];
             /** Format: decimal */
             totalAmount?: number;
@@ -14001,6 +14055,7 @@ export interface components {
             approvedRefundAmount?: null | number;
             isRefunded?: boolean;
             isRefundOnly?: boolean;
+            isReturnInStore?: boolean;
             refundBankName?: null | string;
             refundAccountName?: null | string;
             refundAccountNumber?: null | string;
@@ -14475,6 +14530,23 @@ export interface components {
             isApproved?: boolean;
             isRequestMoreInfo?: boolean;
             staffNote?: null | string;
+        };
+        ProcessInStoreReturnFastTrackDto: {
+            /** Format: uuid */
+            orderId: string;
+            orderCode: string;
+            reason: components["schemas"]["ReturnOrderReason"];
+            isRefundOnly?: boolean;
+            returnItems: components["schemas"]["ReturnItemDto"][];
+            /** Format: decimal */
+            approvedRefundAmount?: number;
+            isRestocked?: boolean;
+            inspectionNote?: null | string;
+            customerNote?: null | string;
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
+            temporaryMediaIds?: null | string[];
         };
         ProcessRefundRequest: {
             /** Format: decimal */

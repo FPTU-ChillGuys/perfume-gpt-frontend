@@ -1466,7 +1466,7 @@ export const MyReturnRequestDetailPage = () => {
                             <Typography
                               variant="h6"
                               fontWeight={700}
-                              sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+                              sx={{ fontSize: { xs: "1rem", sm: "1.25rem" }, whiteSpace: "nowrap" }}
                             >
                               TỔNG TIỀN ƯỚC TÍNH HOÀN: 
                             </Typography>
@@ -1474,7 +1474,7 @@ export const MyReturnRequestDetailPage = () => {
                               variant="h6"
                               fontWeight={700}
                               color="error.main"
-                              sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+                              sx={{ fontSize: { xs: "1rem", sm: "1.25rem" }, whiteSpace: "nowrap", ml: 2, textAlign: "right" }}
                             >
                               {formatCurrency(refundSummary.totalAmount)}
                             </Typography>
@@ -1494,6 +1494,7 @@ export const MyReturnRequestDetailPage = () => {
                                   variant="body2"
                                   fontWeight={600}
                                   color="success.main"
+                                  sx={{ whiteSpace: "nowrap" }}
                                 >
                                   Số tiền được duyệt hoàn:
                                 </Typography>
@@ -1501,6 +1502,7 @@ export const MyReturnRequestDetailPage = () => {
                                   variant="body2"
                                   fontWeight={700}
                                   color="success.main"
+                                  sx={{ whiteSpace: "nowrap", ml: 2, textAlign: "right" }}
                                 >
                                   {formatCurrency(request.approvedRefundAmount)}
                                 </Typography>

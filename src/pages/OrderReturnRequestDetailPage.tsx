@@ -893,14 +893,16 @@ export const OrderReturnRequestDetailPage = () => {
   };
 
   const handleSyncShippingStatus = async () => {
-    if (!request?.id || !request.customerId) {
-      showToast("Không tìm thấy khách hàng để đồng bộ vận chuyển", "warning");
+    const trackingNumber = request?.returnShippingInfo?.trackingNumber;
+    
+    if (!trackingNumber) {
+      showToast("Không tìm thấy mã vận đơn để đồng bộ vận chuyển", "warning");
       return;
     }
 
     setIsSyncingShipping(true);
     try {
-      await orderService.syncShippingStatusByUserId(request.customerId);
+      await orderService.syncShippingStatusByTrackingNumber(trackingNumber);
       await loadDetail();
       showToast("Đã đồng bộ trạng thái vận chuyển", "success");
     } catch (error) {
@@ -1707,7 +1709,7 @@ export const OrderReturnRequestDetailPage = () => {
                       <Typography variant="body2" color="text.secondary">
                         Tiền hàng hoàn lại:
                       </Typography>
-                      <Typography variant="body2" fontWeight={600} sx={{ whiteSpace: "nowrap", ml: 2 }}>
+                      <Typography variant="body2" fontWeight={600} sx={{ whiteSpace: "nowrap", ml: 2, textAlign: "right" }}>
                         {formatCurrency(refundSummary.totalRefundableAmount)}
                       </Typography>
                     </Box>
@@ -1743,7 +1745,11 @@ export const OrderReturnRequestDetailPage = () => {
                         alignItems: "center",
                       }}
                     >
-                      <Typography variant="h6" fontWeight={700}>
+                      <Typography 
+                        variant="h6" 
+                        fontWeight={700}
+                        sx={{ whiteSpace: "nowrap" }}
+                      >
                         TỔNG TIỀN ƯỚC TÍNH HOÀN: 
                       </Typography>
                       <Typography
@@ -1770,6 +1776,7 @@ export const OrderReturnRequestDetailPage = () => {
                             variant="body2"
                             fontWeight={600}
                             color="success.main"
+                            sx={{ whiteSpace: "nowrap" }}
                           >
                             Số tiền được duyệt hoàn:
                           </Typography>
@@ -1869,17 +1876,24 @@ export const OrderReturnRequestDetailPage = () => {
                     justifyContent="flex-end"
                     mt={2}
                   >
-                    <Button
-                      variant="outlined"
-                      color="warning"
-                      onClick={() => {
-                        setMoreInfoReason("");
-                        setMoreInfoDialogOpen(true);
-                      }}
-                      disabled={isSaving}
+                    <Tooltip
+                      title={!request.customerId ? "Không thể yêu cầu bổ sung bằng chứng vì đơn này được tạo bởi Staff (Khách vãng lai)" : ""}
+                      arrow
                     >
-                      Yêu cầu bổ sung bằng chứng
-                    </Button>
+                      <span>
+                        <Button
+                          variant="outlined"
+                          color="warning"
+                          onClick={() => {
+                            setMoreInfoReason("");
+                            setMoreInfoDialogOpen(true);
+                          }}
+                          disabled={isSaving || !request.customerId}
+                        >
+                          Yêu cầu bổ sung bằng chứng
+                        </Button>
+                      </span>
+                    </Tooltip>
                     <Button
                       variant="outlined"
                       color="error"
