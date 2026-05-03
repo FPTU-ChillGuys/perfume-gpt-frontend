@@ -501,11 +501,11 @@ export default function ChatbotWidget() {
               onSelectConversation={(conversation: { id: string; messages: { sender: string; message: string }[] }) => {
                 conversationId.current = conversation.id;
                 const chatMsgs: ChatMessage[] = conversation.messages.map(
-                  (m) => ({ sender: m.sender, message: m.message })
+                  (m) => ({ sender: m.sender as ChatMessage["sender"], message: m.message })
                 );
                 setMessages(chatMsgs);
                 void conversationStorage.save(conversation.id, chatMsgs, {
-                  lastMessagePreview: chatMsgs.length > 0 ? chatMsgs[0].message : "",
+                  lastMessagePreview: chatMsgs[0]?.message ?? "",
                 });
                 setHistoryOpen(false);
               }}

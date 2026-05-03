@@ -4,6 +4,7 @@ import { authService } from "@/services/authService";
 import { getOrCreateGuestUserId } from "@/utils/guestUserId";
 import type { ActiveConversation } from "./conversationStorage";
 import type { ServerMessage } from "@/types/conversation";
+import type { ChatMessage } from "@/types/chatbot";
 
 function serverMessageToChatMessage(m: ServerMessage): ChatMessage {
     return { sender: m.sender, message: m.message };

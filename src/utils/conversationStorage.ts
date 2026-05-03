@@ -43,9 +43,9 @@ export const conversationStorage = {
             options?.lastMessagePreview ??
             (() => {
                 const firstUserMsg = messages.find((m) => m.sender === "user");
-                return firstUserMsg?.message?.length > 60
-                    ? firstUserMsg.message.slice(0, 60)
-                    : firstUserMsg?.message ?? "";
+                const msg = firstUserMsg?.message;
+                if (msg && msg.length > 60) return msg.slice(0, 60);
+                return msg ?? "";
             })();
 
         await db.conversations.put({
