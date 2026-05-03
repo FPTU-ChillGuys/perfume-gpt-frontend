@@ -46,7 +46,8 @@ interface ParsedAnswer {
     availableSubGroups: string[];
     availableValues: SurveyAttributeValueItem[];
     selectedValues: Set<string>;
-    budgetRanges: { min?: number; max?: number }[];
+    budgetMin?: number;
+    budgetMax?: number;
 }
 
 interface SubmitPayload {
@@ -83,7 +84,8 @@ function createEmptyAnswer(mode: AnswerMode = "manual"): ParsedAnswer {
         availableSubGroups: [],
         availableValues: [],
         selectedValues: new Set(),
-        budgetRanges: [],
+        budgetMin: undefined,
+        budgetMax: undefined,
     };
 }
 
@@ -98,7 +100,8 @@ function createEmptyBudgetRow(): ParsedAnswer {
         availableSubGroups: [],
         availableValues: [],
         selectedValues: new Set(),
-        budgetRanges: [{ max: 500000 }, { min: 500000, max: 1000000 }],
+        budgetMin: undefined,
+        budgetMax: undefined,
     };
 }
 
@@ -134,7 +137,8 @@ export default function SurveyEditDialog({ open, isSaving, initialData, onClose,
                             availableSubGroups: [] as string[],
                             availableValues: [] as SurveyAttributeValueItem[],
                             selectedValues: new Set<string>(),
-                            budgetRanges: [{ min: queryData.queryFragment?.min as number | undefined, max: queryData.queryFragment?.max as number | undefined }],
+                            budgetMin: queryData.queryFragment?.min as number | undefined,
+                            budgetMax: queryData.queryFragment?.max as number | undefined,
                         };
                     }
                     return {
@@ -147,7 +151,8 @@ export default function SurveyEditDialog({ open, isSaving, initialData, onClose,
                         availableSubGroups: [] as string[],
                         availableValues: [] as SurveyAttributeValueItem[],
                         selectedValues: new Set([queryData.displayText]),
-                        budgetRanges: [],
+                        budgetMin: undefined,
+                        budgetMax: undefined,
                     };
                 }
                 return {
@@ -160,22 +165,14 @@ export default function SurveyEditDialog({ open, isSaving, initialData, onClose,
                     availableSubGroups: [] as string[],
                     availableValues: [] as SurveyAttributeValueItem[],
                     selectedValues: new Set<string>(),
-                    budgetRanges: [],
+                    budgetMin: undefined,
+                    budgetMax: undefined,
                 };
             });
 
-            const isBudgetQuestion = parsed.length > 0 && parsed.every((p) => p.budgetRanges.length > 0);
+            const isBudgetQuestion = parsed.length > 0 && parsed.every((p) => p.budgetMin !== undefined || p.budgetMax !== undefined);
             setBudgetMode(isBudgetQuestion);
-
-            if (isBudgetQuestion) {
-                const budgetAnswers = parsed.map((p) => ({
-                    ...p,
-                    budgetRanges: p.budgetRanges.length > 0 ? p.budgetRanges : [{ max: 500000 }, { min: 500000, max: 1000000 }],
-                }));
-                setParsedAnswers(budgetAnswers);
-            } else {
-                setParsedAnswers(parsed);
-            }
+            setParsedAnswers(parsed);
 
             for (let i = 0; i < parsed.length; i++) {
                 const p = parsed[i]!;
@@ -278,7 +275,7 @@ export default function SurveyEditDialog({ open, isSaving, initialData, onClose,
 
     const handleBudgetModeToggle = (enabled: boolean) => {
         const hasData = budgetMode
-            ? parsedAnswers.some((a) => a.budgetRanges.some((br) => br.min !== undefined || br.max !== undefined))
+            ? parsedAnswers.some((a) => a.budgetMin !== undefined || a.budgetMax !== undefined)
             : parsedAnswers.some((a) => a.mode === "manual" ? (a.raw.trim() || a.displayText.trim()) : a.selectedValues.size > 0);
 
         const applyToggle = () => {
@@ -372,42 +369,18 @@ export default function SurveyEditDialog({ open, isSaving, initialData, onClose,
         setParsedAnswers((prev) => prev.map((a, i) => i === index ? { ...a, selectedValues: new Set() } : a));
     };
 
-    const addBudgetRange = (index: number) => {
-        setParsedAnswers((prev) => prev.map((a, i) => i === index ? { ...a, budgetRanges: [...a.budgetRanges, { min: undefined, max: undefined }] } : a));
-    };
-
-    const updateBudgetRange = (index: number, rangeIdx: number, field: "min" | "max", value: number | undefined) => {
-        setParsedAnswers((prev) => prev.map((a, i) => {
-            if (i !== index) return a;
-            const ranges = [...a.budgetRanges];
-            const existing = ranges[rangeIdx]!;
-            ranges[rangeIdx] = { ...existing, [field]: value };
-            return { ...a, budgetRanges: ranges };
-        }));
-    };
-
-    const removeBudgetRange = (index: number, rangeIdx: number) => {
-        setParsedAnswers((prev) => prev.map((a, i) => {
-            if (i !== index) return a;
-            if (a.budgetRanges.length <= 2) return a;
-            return { ...a, budgetRanges: a.budgetRanges.filter((_, ri) => ri !== rangeIdx) };
-        }));
-    };
-
     const handleSubmit = () => {
         let answers: { answer: string }[] = [];
 
         if (budgetMode) {
-            answers = parsedAnswers.flatMap((a) =>
-                a.budgetRanges
-                    .filter((r) => r.min !== undefined || r.max !== undefined)
-                    .map((r) => ({
-                        answer: JSON.stringify({
-                            displayText: formatBudgetLabel(r.min, r.max),
-                            queryFragment: { type: "budget", min: r.min, max: r.max },
-                        }),
-                    }))
-            );
+            answers = parsedAnswers
+                .filter((a) => a.budgetMin !== undefined || a.budgetMax !== undefined)
+                .map((a) => ({
+                    answer: JSON.stringify({
+                        displayText: formatBudgetLabel(a.budgetMin, a.budgetMax),
+                        queryFragment: { type: "budget", min: a.budgetMin, max: a.budgetMax },
+                    }),
+                }));
         } else {
             answers = parsedAnswers.flatMap((a) => {
                 if (a.mode === "manual") {
@@ -427,7 +400,7 @@ export default function SurveyEditDialog({ open, isSaving, initialData, onClose,
     const isInvalid = (() => {
         if (!question.trim()) return true;
         if (budgetMode) {
-            const validCount = parsedAnswers.reduce((count, a) => count + a.budgetRanges.filter((r) => r.min !== undefined || r.max !== undefined).length, 0);
+            const validCount = parsedAnswers.filter((a) => a.budgetMin !== undefined || a.budgetMax !== undefined).length;
             return validCount < 2;
         }
         const validCount = parsedAnswers.reduce((count, a) => {
@@ -476,32 +449,31 @@ export default function SurveyEditDialog({ open, isSaving, initialData, onClose,
                     </Box>
 
                     {budgetMode ? (
-                        parsedAnswers.map((ans, idx) => (
-                            <Box key={idx} sx={{ mb: 2, p: 1.5, border: "1px solid", borderColor: "success.light", borderRadius: 1.5, bgcolor: "success.50" }}>
-                                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-                                    <Chip label={idx + 1} size="small" color="success" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
-                                    <Chip label="Ngân sách" size="small" color="success" variant="outlined" sx={{ height: 22, fontSize: "0.7rem" }} />
-                                    <Box sx={{ flexGrow: 1 }} />
-                                    <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(idx)} disabled={parsedAnswers.length <= 2 || isSaving}><RemoveAnswerIcon /></IconButton>
+                        parsedAnswers.map((ans, idx) => {
+                            const autoLabel = formatBudgetLabel(ans.budgetMin, ans.budgetMax);
+                            return (
+                                <Box key={idx} sx={{ mb: 2, p: 1.5, border: "1px solid", borderColor: "success.light", borderRadius: 1.5, bgcolor: "success.50" }}>
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+                                        <Chip label={idx + 1} size="small" color="success" variant="outlined" sx={{ minWidth: 32, fontWeight: "bold" }} />
+                                        <Chip label="Ngân sách" size="small" color="success" variant="outlined" sx={{ height: 22, fontSize: "0.7rem" }} />
+                                        {autoLabel && <Chip label={autoLabel} size="small" color="success" variant="filled" sx={{ fontSize: "0.7rem" }} />}
+                                        <Box sx={{ flexGrow: 1 }} />
+                                        <IconButton size="small" color="error" onClick={() => handleRemoveAnswer(idx)} disabled={parsedAnswers.length <= 2 || isSaving}><RemoveAnswerIcon /></IconButton>
+                                    </Box>
+                                    <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                                        <TextField size="small" type="number" label="Từ (VND)" value={ans.budgetMin ?? ""} onChange={(e) => {
+                                            const val = e.target.value ? Number(e.target.value) : undefined;
+                                            setParsedAnswers((prev) => prev.map((a, i) => i !== idx ? a : { ...a, budgetMin: val }));
+                                        }} sx={{ flex: 1 }} disabled={isSaving} />
+                                        <Typography color="text.secondary">—</Typography>
+                                        <TextField size="small" type="number" label="Đến (VND)" value={ans.budgetMax ?? ""} onChange={(e) => {
+                                            const val = e.target.value ? Number(e.target.value) : undefined;
+                                            setParsedAnswers((prev) => prev.map((a, i) => i !== idx ? a : { ...a, budgetMax: val }));
+                                        }} sx={{ flex: 1 }} disabled={isSaving} />
+                                    </Box>
                                 </Box>
-
-                                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5, fontWeight: "bold", fontSize: "0.75rem" }}>Các khoảng ngân sách (tối thiểu 2)</Typography>
-                                {ans.budgetRanges.map((range, rIdx) => {
-                                    const autoLabel = formatBudgetLabel(range.min, range.max);
-                                    return (
-                                        <Box key={rIdx} sx={{ display: "flex", gap: 1, mb: 1, alignItems: "center" }}>
-                                            <Chip label={rIdx + 1} size="small" color="success" variant="outlined" sx={{ minWidth: 28 }} />
-                                            <TextField size="small" type="number" placeholder="Từ (VND)" value={range.min ?? ""} onChange={(e) => updateBudgetRange(idx, rIdx, "min", e.target.value ? Number(e.target.value) : undefined)} sx={{ flex: 1 }} />
-                                            <Typography color="text.secondary">-</Typography>
-                                            <TextField size="small" type="number" placeholder="Đến (VND)" value={range.max ?? ""} onChange={(e) => updateBudgetRange(idx, rIdx, "max", e.target.value ? Number(e.target.value) : undefined)} sx={{ flex: 1 }} />
-                                            {autoLabel && <Chip label={autoLabel} size="small" color="success" variant="filled" sx={{ fontSize: "0.7rem" }} />}
-                                            <IconButton size="small" color="error" onClick={() => removeBudgetRange(idx, rIdx)} disabled={ans.budgetRanges.length <= 2}><RemoveAnswerIcon /></IconButton>
-                                        </Box>
-                                    );
-                                })}
-                                <Button size="small" startIcon={<AddAnswerIcon />} onClick={() => addBudgetRange(idx)}>Thêm khoảng giá</Button>
-                            </Box>
-                        ))
+                            );
+                        })
                     ) : (
                         parsedAnswers.map((ans, idx) => {
                             const isQuery = ans.queryFragment !== null;

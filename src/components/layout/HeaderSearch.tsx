@@ -166,7 +166,10 @@ export const HeaderSearch = () => {
                 console.error("Failed to log product click from search", error);
             });
             setShowDropdown(false);
-            navigate(`/products/${productId}`);
+            const params = new URLSearchParams();
+            if (variantId) params.set("variantId", variantId);
+            const qs = params.toString();
+            navigate(`/products/${productId}${qs ? `?${qs}` : ""}`);
         }
     };
 

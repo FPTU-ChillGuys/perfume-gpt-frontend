@@ -424,6 +424,9 @@ const ProductQuickViewDialog = ({
     }
     onClose();
     const queryParams = new URLSearchParams();
+    if (selectedVariantId) {
+      queryParams.set("variantId", selectedVariantId);
+    }
     if (aiAcceptanceId) {
       queryParams.set("aiAcceptanceId", aiAcceptanceId);
     }
