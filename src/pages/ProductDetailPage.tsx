@@ -710,8 +710,11 @@ const ProductDetailPage = () => {
     typeof selectedVariant?.campaignQuota === "number"
       ? selectedVariant.campaignQuota
       : null;
+  const isCampaignExhausted =
+    (Boolean(selectedCampaignName) || Boolean(selectedVoucherCode)) &&
+    selectedCampaignQuota === null;
   const shouldShowCampaignCard =
-    hasCampaignDiscount &&
+    (hasCampaignDiscount || isCampaignExhausted) &&
     (Boolean(selectedCampaignName) || Boolean(selectedVoucherCode));
   const hasRetailPriceComparison =
     mainDisplayedPrice > 0 && selectedRetailPrice > mainDisplayedPrice;
@@ -1788,39 +1791,42 @@ const ProductDetailPage = () => {
               {shouldShowCampaignCard && (
                 <Box sx={{ position: "relative" }}>
                   {/* Campaign card - only name badge */}
-                  {selectedCampaignName && (
+                  {(selectedCampaignName || selectedVoucherCode) && (
                     <Box
                       sx={{
                         display: "inline-flex",
                         flexDirection: "column",
+                        alignItems: "flex-start",
                         gap: 0.5,
                       }}
                     >
-                      <Box
-                        sx={{
-                          px: 2,
-                          py: 0.75,
-                          borderRadius: 1.5,
-                          bgcolor: "error.main",
-                          display: "inline-flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Typography
-                          component="span"
+                      {!isCampaignExhausted && (
+                        <Box
                           sx={{
-                            fontSize: "0.875rem",
-                            fontWeight: 700,
-                            color: "white",
-                            textTransform: "uppercase",
-                            letterSpacing: 0.5,
+                            px: 2,
+                            py: 0.75,
+                            borderRadius: 1.5,
+                            bgcolor: "error.main",
+                            display: "inline-flex",
+                            alignItems: "center",
                           }}
                         >
-                          {selectedCampaignName}
-                        </Typography>
-                      </Box>
+                          <Typography
+                            component="span"
+                            sx={{
+                              fontSize: "0.875rem",
+                              fontWeight: 700,
+                              color: "white",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            {selectedCampaignName || selectedVoucherCode}
+                          </Typography>
+                        </Box>
+                      )}
 
-                      {selectedCampaignQuota !== null && (
+                      {selectedCampaignQuota !== null ? (
                         <Typography
                           variant="caption"
                           sx={{
@@ -1835,6 +1841,17 @@ const ProductDetailPage = () => {
                           Còn{" "}
                           <strong>{selectedCampaignQuota}</strong> suất với ưu
                           đãi này
+                        </Typography>
+                      ) : (
+                        <Typography
+                          sx={{
+                            color: "error.main",
+                            fontWeight: 700,
+                            fontSize: { xs: "0.95rem", sm: "1.125rem" },
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          Hết suất ưu đãi (Áp dụng giá bán thông thường)
                         </Typography>
                       )}
                     </Box>

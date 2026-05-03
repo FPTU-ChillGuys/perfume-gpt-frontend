@@ -5,13 +5,6 @@ import {
   Badge,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   Chip,
   TextField,
   Select,
@@ -24,11 +17,16 @@ import {
   Tooltip,
   Tab,
   Tabs,
+  Divider,
+  Stack,
+  Pagination,
+  type SelectChangeEvent,
 } from "@mui/material";
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
   ContentCopy as ContentCopyIcon,
+  ImageNotSupportedOutlined as ImageNotSupportedOutlinedIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
@@ -167,15 +165,17 @@ export const OrderManagementPage = () => {
   };
 
   const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
+    setPage(newPage - 1);
   };
 
   const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>,
+    event: SelectChangeEvent<string>,
   ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+    setRowsPerPage(parseInt(event.target.value as string, 10));
     setPage(0);
   };
+
+  const totalPages = Math.ceil(totalCount / rowsPerPage);
 
   const handleViewDetail = (orderId?: string | null) => {
     if (!orderId) return;
@@ -353,148 +353,277 @@ export const OrderManagementPage = () => {
           </Box>
         </Paper>
 
-        {/* Table */}
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.50" }}>
-                <TableCell>Mã đơn hàng</TableCell>
-                <TableCell>Khách hàng</TableCell>
-                <TableCell>Loại</TableCell>
-                <TableCell>Trạng thái</TableCell>
-                <TableCell>Thanh toán</TableCell>
-                <TableCell align="right">Số lượng</TableCell>
-                <TableCell align="right">Tổng tiền</TableCell>
-                <TableCell>Ngày tạo</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                    <CircularProgress />
-                  </TableCell>
-                </TableRow>
-              ) : orders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      Không có đơn hàng nào
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                orders.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    hover
-                    onClick={() => handleViewDetail(order.id)}
-                    sx={{ cursor: "pointer" }}
+        {/* Orders List */}
+        <Box sx={{ minHeight: "60vh", mb: 3 }}>
+          {loading ? (
+            <Box display="flex" justifyContent="center" py={8}>
+              <CircularProgress sx={{ color: "#ee4d2d" }} />
+            </Box>
+          ) : orders.length === 0 ? (
+            <Paper sx={{ p: 8, textAlign: "center", borderRadius: 2 }}>
+              <Typography color="text.secondary">
+                Không có đơn hàng nào
+              </Typography>
+            </Paper>
+          ) : (
+            <Stack spacing={2}>
+              {orders.map((order) => (
+                <Paper
+                  key={order.id}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 2,
+                    cursor: "pointer",
+                    transition: "all 0.2s ease-in-out",
+                    border: "1px solid transparent",
+                    "&:hover": {
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+                      borderColor: "rgba(238,77,45,0.2)",
+                    },
+                  }}
+                  onClick={() => handleViewDetail(order.id)}
+                >
+                  {/* Card Header */}
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="flex-start"
+                    mb={2}
                   >
-                    <TableCell sx={{ maxWidth: 260 }}>
-                      <Box display="flex" alignItems="center" gap={0.5}>
-                        <Tooltip title={getDisplayOrderCode(order)}>
-                          <Typography
-                            variant="body2"
-                            fontWeight={500}
-                            sx={{ fontFamily: "monospace" }}
-                            noWrap
+                    <Stack spacing={0.5}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography
+                          variant="subtitle2"
+                          fontWeight={700}
+                          sx={{ fontFamily: "monospace", fontSize: "0.95rem" }}
+                        >
+                          #{getDisplayOrderCode(order)}
+                        </Typography>
+                        <Tooltip title="Sao chép mã đơn">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleCopyOrderCode(order.code || order.id);
+                            }}
                           >
-                            {getDisplayOrderCode(order)}
-                          </Typography>
+                            <ContentCopyIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
                         </Tooltip>
-                        {!!(order.code || order.id) && (
-                          <Tooltip title="Sao chép mã đơn">
-                            <IconButton
-                              size="small"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                void handleCopyOrderCode(
-                                  order.code || order.id,
-                                );
-                              }}
-                            >
-                              <ContentCopyIcon sx={{ fontSize: 14 }} />
-                            </IconButton>
-                          </Tooltip>
-                        )}
+                        <Typography variant="caption" color="text.secondary">
+                          • {formatDate(order.createdAt)}
+                        </Typography>
                       </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {getDisplayCustomerName(order.customerName)}
+                      <Typography variant="body2" color="text.secondary">
+                        Khách hàng:{" "}
+                        <strong>{getDisplayCustomerName(order.customerName)}</strong>
                       </Typography>
-                    </TableCell>
-                    <TableCell>
+                    </Stack>
+
+                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap justifyContent="flex-end">
                       <Chip
-                        label={
-                          order.type ? orderTypeLabels[order.type] : order.type
-                        }
+                        label={order.type ? orderTypeLabels[order.type] : order.type}
                         size="small"
                         variant="outlined"
-                        color={
-                          order.type ? orderTypeColors[order.type] : "default"
-                        }
+                        color={order.type ? orderTypeColors[order.type] : "default"}
                       />
-                    </TableCell>
-                    <TableCell>
                       <Chip
-                        label={
-                          order.status
-                            ? orderStatusLabels[order.status]
-                            : order.status
-                        }
+                        label={order.status ? orderStatusLabels[order.status] : order.status}
                         size="small"
                         color={orderStatusColors[order.status || "Pending"]}
                         sx={getOrderStatusChipSx(order.status || "Pending")}
                       />
-                    </TableCell>
-                    <TableCell>
                       <Chip
-                        label={
-                          order.paymentStatus
-                            ? paymentStatusLabels[order.paymentStatus]
-                            : order.paymentStatus
-                        }
+                        label={order.paymentStatus ? paymentStatusLabels[order.paymentStatus] : order.paymentStatus}
                         size="small"
-                        color={
-                          paymentStatusColors[order.paymentStatus || "Unpaid"]
-                        }
+                        color={paymentStatusColors[order.paymentStatus || "Unpaid"]}
                       />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2">{order.itemCount}</Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography variant="body2" fontWeight={600}>
-                        {formatCurrency(order.totalAmount)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" noWrap>
-                        {formatDate(order.createdAt)}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                    </Stack>
+                  </Box>
 
-          <TablePagination
-            component="div"
-            count={totalCount}
-            page={page}
-            onPageChange={handleChangePage}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            rowsPerPageOptions={[5, 10, 25, 50]}
-            labelRowsPerPage="Số hàng mỗi trang:"
-            labelDisplayedRows={({ from, to, count }) =>
-              `${from}-${to} của ${count}`
-            }
-          />
-        </TableContainer>
+                  <Divider sx={{ mb: 2 }} />
+
+                  {/* Items Preview */}
+                  <Stack spacing={2} mb={2}>
+                    {order.orderDetails?.map((detail) => (
+                      <Box
+                        key={detail.id}
+                        display="flex"
+                        alignItems="center"
+                        gap={2}
+                      >
+                        {detail.imageUrl ? (
+                          <Box
+                            component="img"
+                            src={detail.imageUrl}
+                            alt={detail.variantName}
+                            sx={{
+                              width: 64,
+                              height: 64,
+                              borderRadius: 1.5,
+                              objectFit: "cover",
+                              border: "1px solid",
+                              borderColor: "divider",
+                              flexShrink: 0,
+                            }}
+                          />
+                        ) : (
+                          <Box
+                            sx={{
+                              width: 64,
+                              height: 64,
+                              borderRadius: 1.5,
+                              bgcolor: "grey.100",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              border: "1px solid",
+                              borderColor: "divider",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <ImageNotSupportedOutlinedIcon
+                              sx={{ color: "text.disabled", fontSize: 24 }}
+                            />
+                          </Box>
+                        )}
+
+                        <Box flex={1} minWidth={0}>
+                          <Typography
+                            variant="body2"
+                            fontWeight={600}
+                            noWrap
+                            title={detail.variantName}
+                          >
+                            {detail.variantName}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            x{detail.quantity}
+                          </Typography>
+                        </Box>
+
+                        <Box textAlign="right">
+                          {detail.unitPrice && detail.total && detail.quantity && (detail.unitPrice * detail.quantity > detail.total) && (
+                            <Typography
+                              variant="caption"
+                              color="text.disabled"
+                              sx={{ textDecoration: "line-through", display: "block" }}
+                            >
+                              {formatCurrency(detail.unitPrice * detail.quantity)}
+                            </Typography>
+                          )}
+                          <Typography
+                            variant="body2"
+                            fontWeight={700}
+                            sx={{ color: "#ee4d2d" }}
+                          >
+                            {formatCurrency(detail.total)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Stack>
+
+                  <Divider sx={{ mb: 2 }} />
+
+                  {/* Card Footer */}
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    alignItems="center"
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      {order.itemCount} sản phẩm
+                    </Typography>
+
+                    <Stack direction="row" spacing={3} alignItems="center">
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          Thành tiền:
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          fontWeight={800}
+                          sx={{ color: "#ee4d2d" }}
+                        >
+                          {formatCurrency(order.totalAmount)}
+                        </Typography>
+                      </Box>
+
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetail(order.id);
+                        }}
+                        sx={{
+                          borderColor: "#ee4d2d",
+                          color: "#ee4d2d",
+                          textTransform: "none",
+                          fontWeight: 600,
+                          px: 3,
+                          "&:hover": {
+                            borderColor: "#d03e27",
+                            bgcolor: "rgba(238,77,45,0.04)",
+                          },
+                        }}
+                      >
+                        Xem chi tiết
+                      </Button>
+                    </Stack>
+                  </Box>
+                </Paper>
+              ))}
+            </Stack>
+          )}
+        </Box>
+
+        {/* Pagination */}
+        {orders.length > 0 && (
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems="center"
+            spacing={2}
+            sx={{ pt: 2, pb: 4 }}
+          >
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Typography variant="body2" color="text.secondary">
+                Hiển thị
+              </Typography>
+              <FormControl size="small">
+                <Select
+                  value={rowsPerPage.toString()}
+                  onChange={handleChangeRowsPerPage}
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value={5}>5</MenuItem>
+                  <MenuItem value={10}>10</MenuItem>
+                  <MenuItem value={25}>25</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                </Select>
+              </FormControl>
+              <Typography variant="body2" color="text.secondary">
+                / {totalCount} đơn hàng
+              </Typography>
+            </Stack>
+            <Pagination
+              count={totalPages}
+              page={page + 1}
+              onChange={(_, val) => setPage(val - 1)}
+              color="primary"
+              showFirstButton
+              showLastButton
+              sx={{
+                "& .Mui-selected": {
+                  bgcolor: "#ee4d2d !important",
+                  color: "#fff",
+                },
+              }}
+            />
+          </Stack>
+        )}
       </Box>
     </AdminLayout>
   );

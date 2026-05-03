@@ -919,7 +919,8 @@ export const OrderCancelRequestDetailPage = () => {
                                       sx={{
                                         width: 56,
                                         height: 56,
-                                        objectFit: "cover",
+                                        objectFit: "contain",
+                                        bgcolor: "#fff",
                                         borderRadius: 1,
                                         border: "1px solid",
                                         borderColor: "divider",

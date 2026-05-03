@@ -78,7 +78,8 @@ export const OrderItemsSummary = ({
                         sx={{
                           width: 64,
                           height: 64,
-                          objectFit: "cover",
+                          objectFit: "contain",
+                          bgcolor: "#fff",
                           borderRadius: 1,
                           border: "1px solid",
                           borderColor: "divider",

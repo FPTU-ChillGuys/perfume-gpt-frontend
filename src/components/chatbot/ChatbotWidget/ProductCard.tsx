@@ -67,13 +67,15 @@ export function ProductCard({
       {/* Image */}
       <Box
         sx={{
-          height: 110,
+          height: 140,
           background: product.primaryImage
-            ? `url(${product.primaryImage}) center/cover no-repeat`
+            ? `#fff url(${product.primaryImage}) center/contain no-repeat`
             : "linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
+          borderBottom: "1px solid",
+          borderColor: "divider",
         }}
       >
         {!product.primaryImage && (

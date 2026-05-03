@@ -1686,7 +1686,7 @@ export const MyOrderDetailPage = () => {
       Boolean(
         returnReason &&
         selectedReturnItems.length > 0 &&
-        returnVideoFiles.length > 0 &&
+        (returnImageFiles.length > 0 || returnVideoFiles.length > 0) &&
         refundBankName.trim() &&
         refundAccountNumber.trim() &&
         refundAccountName.trim() &&
@@ -1698,6 +1698,7 @@ export const MyOrderDetailPage = () => {
       refundAccountNumber,
       refundBankName,
       returnVideoFiles.length,
+      returnImageFiles.length,
       returnReason,
       selectedReturnItems.length,
     ],

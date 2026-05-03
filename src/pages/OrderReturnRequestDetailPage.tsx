@@ -1413,7 +1413,8 @@ export const OrderReturnRequestDetailPage = () => {
                                       width: 60,
                                       height: 60,
                                       borderRadius: 1,
-                                      objectFit: "cover",
+                                      objectFit: "contain",
+                                      bgcolor: "#fff",
                                       border: "1px solid",
                                       borderColor: "divider",
                                       flexShrink: 0,
@@ -1555,7 +1556,8 @@ export const OrderReturnRequestDetailPage = () => {
                                   width: 60,
                                   height: 60,
                                   borderRadius: 1,
-                                  objectFit: "cover",
+                                  objectFit: "contain",
+                                  bgcolor: "#fff",
                                   border: "1px solid",
                                   borderColor: "divider",
                                   flexShrink: 0,
@@ -1830,7 +1832,8 @@ export const OrderReturnRequestDetailPage = () => {
                                 sx={{
                                   width: 100,
                                   height: 100,
-                                  objectFit: "cover",
+                                  objectFit: "contain",
+                                  bgcolor: "#fff",
                                   display: "block",
                                 }}
                               />
@@ -1853,7 +1856,8 @@ export const OrderReturnRequestDetailPage = () => {
                               sx={{
                                 width: 100,
                                 height: 100,
-                                objectFit: "cover",
+                                objectFit: "contain",
+                                bgcolor: "#fff",
                                 display: "block",
                               }}
                             />
