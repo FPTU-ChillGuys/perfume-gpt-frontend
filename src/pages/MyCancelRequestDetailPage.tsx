@@ -332,6 +332,9 @@ export const MyCancelRequestDetailPage = () => {
                           isRefunded={request?.isRefunded}
                           status={request?.status}
                           paidDepositAmount={order?.paidAmount ?? 0}
+                          refundedPaymentStatus={request?.refundedPaymentStatus}
+                          refundedPaymentMethod={request?.refundedPaymentMethod}
+                          refundedAmount={request?.refundedAmount}
                         />
                       </Box>
 

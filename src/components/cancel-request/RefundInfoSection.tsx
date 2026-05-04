@@ -12,6 +12,9 @@ interface RefundInfoSectionProps {
   status?: string;
   /** Số tiền cọc đã thanh toán của đơn (dùng để hiển thị cảnh báo mất cọc khi hủy) */
   paidDepositAmount?: number;
+  refundedPaymentStatus?: string | null;
+  refundedPaymentMethod?: string | null;
+  refundedAmount?: number | null;
 }
 
 const fmt = (value?: number | null) => {
@@ -29,11 +32,14 @@ export const RefundInfoSection = ({
   isRefunded,
   status,
   paidDepositAmount = 0,
+  refundedPaymentStatus,
+  refundedPaymentMethod,
+  refundedAmount: actualRefundedAmount,
 }: RefundInfoSectionProps) => {
   const getRefundStatusChip = () => {
     if (!isRefundRequired) return null;
-
-    if (isRefunded) {
+  
+    if (isRefunded || refundedPaymentStatus === "Success") {
       return (
         <Chip
           label="Đã hoàn tiền"
@@ -155,10 +161,38 @@ export const RefundInfoSection = ({
               fontWeight={600}
               sx={{ whiteSpace: "nowrap", ml: 1 }}
             >
-              Hoàn trả tự động qua{" "}
-              {vnpTransactionNo?.startsWith("VNP") ? "VNPay" : "MoMo"}
+              {refundedPaymentMethod
+                ? refundedPaymentMethod === "VnPay"
+                  ? "VNPay"
+                  : refundedPaymentMethod === "Momo"
+                    ? "MoMo"
+                    : refundedPaymentMethod === "ExternalBankTransfer"
+                      ? "Chuyển khoản ngân hàng"
+                      : refundedPaymentMethod
+                : "—"}
             </Typography>
           </Box>
+
+          {actualRefundedAmount !== undefined &&
+            actualRefundedAmount !== null &&
+            actualRefundedAmount > 0 && (
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Số tiền đã hoàn:
+                </Typography>
+                <Typography
+                  variant="body2"
+                  fontWeight={700}
+                  color="success.main"
+                >
+                  {fmt(actualRefundedAmount)}
+                </Typography>
+              </Box>
+            )}
 
           {getRefundStatusChip() && (
             <Box display="flex" justifyContent="flex-end">

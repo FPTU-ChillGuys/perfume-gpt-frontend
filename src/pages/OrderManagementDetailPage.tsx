@@ -3139,7 +3139,7 @@ export const OrderManagementDetailPage = () => {
                                     hasBlockingReturnRequest
                                       ? `Đơn hàng này đã có yêu cầu trả hàng. ${returnRequestStatusLabel((order as any)?.returnRequestStatus)}`
                                       : hasCustomerInfo
-                                      ? "Đơn này đã gắn tài khoản. Staff chỉ có thể tạo yêu cầu trả hàng tại quầy (Fast Track). Trả hàng qua giao hàng vui lòng tạo trên App/Website."
+                                      ? "Đơn này đã gắn tài khoản. Chỉ có thể tạo yêu cầu trả hàng tại quầy. Trả hàng qua giao hàng vui lòng tạo trên App/Website."
                                       : ""
                                   }
                                   placement="top"

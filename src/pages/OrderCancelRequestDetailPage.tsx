@@ -91,6 +91,15 @@ const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   PayOs: "Thanh toán qua PayOS",
 };
 
+const REFUND_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
+  CashOnDelivery: "Thanh toán khi nhận hàng",
+  CashInStore: "Thanh toán tại quầy",
+  VnPay: "Hoàn tiền qua VNPay",
+  Momo: "Hoàn tiền qua MoMo",
+  ExternalBankTransfer: "Chuyển khoản ngân hàng",
+  PayOs: "Thanh toán qua PayOS",
+};
+
 const StepIconError = () => <ErrorIcon sx={{ color: "error.main" }} />;
 
 const cancelReasonLabel = (reason?: string | null) => {
@@ -713,15 +722,38 @@ export const OrderCancelRequestDetailPage = () => {
                               fontWeight={600}
                               sx={{ whiteSpace: "nowrap", ml: 1 }}
                             >
-                              Hoàn trả tự động qua{" "}
-                              {selected.vnpTransactionNo?.startsWith("VNP")
-                                ? "VNPay"
-                                : "MoMo"}
+                              {selected.refundedPaymentMethod
+                                ? REFUND_METHOD_LABELS[
+                                    selected.refundedPaymentMethod as keyof typeof REFUND_METHOD_LABELS
+                                  ] || selected.refundedPaymentMethod
+                                : "—"}
                             </Typography>
                           </Box>
 
-                          {selected.isRefunded && (
-                            <Box display="flex" justifyContent="flex-end">
+                          {selected.refundedAmount !== undefined &&
+                            selected.refundedAmount > 0 && (
+                              <Box
+                                display="flex"
+                                justifyContent="space-between"
+                                alignItems="center"
+                                sx={{ mt: 1 }}
+                              >
+                                <Typography variant="body2" color="text.secondary">
+                                  Số tiền đã hoàn:
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={700}
+                                  color="success.main"
+                                >
+                                  {formatCurrency(selected.refundedAmount)}
+                                </Typography>
+                              </Box>
+                            )}
+
+                          {(selected.isRefunded ||
+                            selected.refundedPaymentStatus === "Success") && (
+                            <Box display="flex" justifyContent="flex-end" sx={{ mt: 1 }}>
                               <Chip
                                 label="Đã hoàn tiền"
                                 color="success"

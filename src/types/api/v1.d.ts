@@ -13885,6 +13885,10 @@ export interface components {
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: null | string;
+            refundedPaymentStatus?: components["schemas"]["TransactionStatus"];
+            refundedPaymentMethod?: components["schemas"]["PaymentMethod"];
+            /** Format: decimal */
+            refundedAmount?: number;
         };
         OrderDetailListItem: {
             /** Format: uuid */
