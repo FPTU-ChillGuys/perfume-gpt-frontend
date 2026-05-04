@@ -278,13 +278,13 @@ const menuGroups: SidebarMenuGroup[] = [
         roles: ["admin"],
       },
       {
-        text: "AI Acceptance",
+        text: "Chấp thuận gợi ý từ AI",
         icon: <ThumbsUpDownIcon />,
         path: "/admin/ai-acceptance",
         roles: ["admin"],
       },
       {
-        text: "Survey",
+        text: "Khảo sát",
         icon: <SurveyIcon />,
         path: "/admin/survey",
         roles: ["admin"],
