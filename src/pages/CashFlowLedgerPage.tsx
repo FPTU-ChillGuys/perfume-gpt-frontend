@@ -382,7 +382,7 @@ export const CashFlowLedgerPage = () => {
             <SummaryCard
               title="Tổng thu "
               value={formatCurrency(overallStats.totalIn)}
-              subtitle="Tong thu (toan bo ket qua loc)"
+              
               icon={<TrendingUpIcon fontSize="small" />}
               color="#16a34a"
               loading={statsLoading}
@@ -392,7 +392,7 @@ export const CashFlowLedgerPage = () => {
             <SummaryCard
               title="Tổng chi"
               value={formatCurrency(overallStats.totalOut)}
-              subtitle="Tong chi (toan bo ket qua loc)"
+              
               icon={<TrendingDownIcon fontSize="small" />}
               color="#dc2626"
               loading={statsLoading}
@@ -405,9 +405,7 @@ export const CashFlowLedgerPage = () => {
                 (overallStats.net >= 0 ? "+" : "") +
                 formatCurrency(overallStats.net)
               }
-              subtitle={
-                overallStats.net >= 0 ? "Duong — thu > chi" : "Am — chi > thu"
-              }
+              
               icon={<WalletIcon fontSize="small" />}
               color={overallStats.net >= 0 ? "#0891b2" : "#e11d48"}
               loading={statsLoading}

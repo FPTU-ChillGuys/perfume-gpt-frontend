@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -103,6 +103,8 @@ interface SummaryCardProps {
   subtitle?: string;
   icon: React.ReactElement;
   color: string;
+  bgColor: string;
+  valueColor?: string;
   loading?: boolean;
 }
 
@@ -112,6 +114,8 @@ const SummaryCard = ({
   subtitle,
   icon,
   color,
+  bgColor,
+  valueColor,
   loading,
 }: SummaryCardProps) => (
   <Paper
@@ -119,12 +123,13 @@ const SummaryCard = ({
     sx={{
       p: 2.5,
       border: "1px solid",
-      borderColor: "grey.200",
+      borderColor: "grey.100",
       borderRadius: 3,
       height: "100%",
       display: "flex",
       flexDirection: "column",
       gap: 1,
+      bgcolor: bgColor,
     }}
   >
     <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -141,6 +146,7 @@ const SummaryCard = ({
           justifyContent: "center",
           bgcolor: color,
           color: "white",
+          boxShadow: "0 6px 14px rgba(0,0,0,0.12)",
         }}
       >
         {icon}
@@ -149,7 +155,7 @@ const SummaryCard = ({
     {loading ? (
       <Skeleton variant="text" width={80} height={40} />
     ) : (
-      <Typography variant="h5" fontWeight={700}>
+      <Typography variant="h5" fontWeight={700} sx={{ color: valueColor }}>
         {value}
       </Typography>
     )}
@@ -296,312 +302,282 @@ export const InventoryLedgerPage = () => {
   const hasActiveFilters = Boolean(
     typeFilter || variantFilter || fromDate || toDate,
   );
+  const activeFilterCount = [typeFilter, variantFilter, fromDate, toDate].filter(
+    Boolean,
+  ).length;
 
   return (
     <AdminLayout>
       <Box sx={{ px: { xs: 2, md: 3 }, py: 3 }}>
-        {/* Header */}
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          justifyContent="space-between"
-          alignItems={{ xs: "flex-start", sm: "center" }}
-          spacing={2}
-          sx={{ mb: 3 }}
-        >
-          <Box>
-            <Stack direction="row" spacing={1.5} alignItems="center">
-              <Box
+        <Grid container spacing={2.5}>
+          <Grid size={{ xs: 12, lg: 3.5 }}>
+            <Stack spacing={2}>
+              <Paper
+                elevation={0}
                 sx={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 2.5,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  bgcolor: "primary.main",
+                  p: 2.2,
+                  border: "1px solid",
+                  borderColor: "grey.200",
+                  borderRadius: 3,
+                  bgcolor: "#0f172a",
                   color: "white",
                 }}
               >
-                <InventoryIcon />
-              </Box>
-              <Box>
-                <Typography variant="h5" fontWeight={700}>
-                  Sổ kho – Lịch sử biến động
+                <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1 }}>
+                  <InventoryIcon fontSize="small" />
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    Sổ kho
+                  </Typography>
+                </Stack>
+                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.75)" }}>
+                  Giao diện tập trung vào số liệu cốt lõi và thao tác lọc nhanh.
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Theo dõi mọi thay đổi số lượng khi nhập hàng, bán hàng và
-                  điều chỉnh tồn kho
-                </Typography>
-              </Box>
-            </Stack>
-          </Box>
-          <Stack direction="row" spacing={1}>
-            <Button
-              variant={showFilters ? "contained" : "outlined"}
-              startIcon={<FilterListIcon />}
-              onClick={() => setShowFilters(!showFilters)}
-              size="small"
-            >
-              Bộ lọc
-              {hasActiveFilters && (
-                <Chip
-                  label="!"
-                  size="small"
-                  color="error"
-                  sx={{ ml: 0.5, height: 18, minWidth: 18, fontSize: 11 }}
-                />
-              )}
-            </Button>
-            <Tooltip title="Tải lại">
-              <IconButton onClick={fetchLedger} disabled={loading}>
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-          </Stack>
-        </Stack>
-
-        {/* Summary cards */}
-        <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <SummaryCard
-              title="Tăng / Giảm tồn"
-              value={`+${overallStats.increase.toLocaleString("vi-VN")} / -${overallStats.decrease.toLocaleString("vi-VN")}`}
-              subtitle="Da bu tru theo bien dong thuc te"
-              icon={<TrendingUpIcon fontSize="small" />}
-              color="#16a34a"
-              loading={statsLoading}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, md: 6 }}>
-            <SummaryCard
-              title="Biến động ròng"
-              value={formatQuantityChange(overallStats.netChange)}
-              subtitle="Tong thay doi so luong "
-              icon={<TrendingDownIcon fontSize="small" />}
-              color="#ea580c"
-              loading={statsLoading}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Filters panel */}
-        {showFilters && (
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2.5,
-              mb: 3,
-              border: "1px solid",
-              borderColor: "grey.200",
-              borderRadius: 3,
-            }}
-          >
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-              sx={{ mb: 2 }}
-            >
-              <Typography variant="subtitle2" fontWeight={600}>
-                Bộ lọc nâng cao
-              </Typography>
-              {hasActiveFilters && (
-                <Button
-                  size="small"
-                  startIcon={<ClearIcon />}
-                  onClick={handleClearFilters}
-                >
-                  Xóa bộ lọc
-                </Button>
-              )}
-            </Stack>
-            <Grid container spacing={2}>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Loại biến động</InputLabel>
-                  <Select
-                    label="Loại biến động"
-                    value={typeFilter}
-                    onChange={(e) => {
-                      setTypeFilter(
-                        e.target.value as InventoryLedgerType | "",
-                      );
-                      setPage(0);
+                <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
+                  <Tooltip title="Tải lại">
+                    <IconButton
+                      onClick={fetchLedger}
+                      disabled={loading}
+                      sx={{ bgcolor: "rgba(255,255,255,0.12)", color: "white" }}
+                    >
+                      <RefreshIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Button
+                    size="small"
+                    variant={showFilters ? "contained" : "outlined"}
+                    startIcon={<FilterListIcon />}
+                    onClick={() => setShowFilters((prev) => !prev)}
+                    sx={{
+                      color: "white",
+                      borderColor: "rgba(255,255,255,0.35)",
+                      bgcolor: showFilters ? "rgba(255,255,255,0.18)" : "transparent",
                     }}
                   >
-                    <MenuItem value="">Tất cả</MenuItem>
-                    <MenuItem value="Import">Nhập hàng</MenuItem>
-                    <MenuItem value="Sales">Bán hàng</MenuItem>
-                    <MenuItem value="Adjustment">Điều chỉnh</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <TextField
-                  label="Variant ID"
-                  placeholder="Nhập variant ID…"
-                  size="small"
-                  fullWidth
-                  value={variantFilter}
-                  onChange={(e) => {
-                    setVariantFilter(e.target.value);
-                    setPage(0);
-                  }}
-                  slotProps={{
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <TextField
-                  label="Từ ngày"
-                  type="datetime-local"
-                  size="small"
-                  fullWidth
-                  value={fromDate}
-                  onChange={(e) => {
-                    setFromDate(e.target.value);
-                    setPage(0);
-                  }}
-                  slotProps={{
-                    inputLabel: { shrink: true },
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <CalendarIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <TextField
-                  label="Đến ngày"
-                  type="datetime-local"
-                  size="small"
-                  fullWidth
-                  value={toDate}
-                  onChange={(e) => {
-                    setToDate(e.target.value);
-                    setPage(0);
-                  }}
-                  slotProps={{
-                    inputLabel: { shrink: true },
-                    input: {
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <CalendarIcon fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    },
-                  }}
-                />
-              </Grid>
-            </Grid>
-          </Paper>
-        )}
+                    Bộ lọc
+                  </Button>
+                </Stack>
+              </Paper>
 
-        {/* Error */}
-        {error && (
-          <Alert
-            severity="error"
-            sx={{ mb: 2, borderRadius: 2 }}
-            action={
-              <Button color="inherit" size="small" onClick={fetchLedger}>
-                Thử lại
-              </Button>
-            }
-          >
-            {error}
-          </Alert>
-        )}
+              <SummaryCard
+                title="Tăng / Giảm tồn"
+                value={`+${overallStats.increase.toLocaleString("vi-VN")} / -${overallStats.decrease.toLocaleString("vi-VN")}`}
+                subtitle="Đã bù trừ theo biến động thực tế"
+                icon={<TrendingUpIcon fontSize="small" />}
+                color="#16a34a"
+                bgColor="#f0fdf4"
+                valueColor="#166534"
+                loading={statsLoading}
+              />
+              <SummaryCard
+                title="Biến động ròng"
+                value={formatQuantityChange(overallStats.netChange)}
+                subtitle="Tổng thay đổi số lượng"
+                icon={<TrendingDownIcon fontSize="small" />}
+                color={overallStats.netChange >= 0 ? "#0891b2" : "#e11d48"}
+                bgColor={overallStats.netChange >= 0 ? "#ecfeff" : "#fff1f2"}
+                valueColor={overallStats.netChange >= 0 ? "#155e75" : "#9f1239"}
+                loading={statsLoading}
+              />
 
-        {/* Table */}
-        <Paper
-          elevation={0}
-          sx={{
-            border: "1px solid",
-            borderColor: "grey.200",
-            borderRadius: 3,
-            overflow: "hidden",
-          }}
-        >
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            justifyContent="space-between"
-            alignItems={{ xs: "flex-start", sm: "center" }}
-            spacing={1}
-            sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.200" }}
-          >
-            <Typography variant="subtitle2" color="text.secondary">
-              Lịch sử biến động kho gần nhất
-            </Typography>
-            <Button
-              size="small"
-              variant="text"
-              startIcon={showDetails ? <VisibilityOffIcon /> : <VisibilityIcon />}
-              onClick={() => setShowDetails((prev) => !prev)}
-            >
-              {showDetails ? "Ẩn thông tin phụ" : "Hiện thông tin phụ"}
-            </Button>
-          </Stack>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow
+              {showFilters && (
+                <Paper
+                  elevation={0}
                   sx={{
-                    bgcolor: "grey.50",
-                    "& th": {
-                      fontWeight: 600,
-                      fontSize: "0.8rem",
-                      color: "text.secondary",
-                      whiteSpace: "nowrap",
-                      py: 1.5,
-                    },
+                    p: 2,
+                    border: "1px solid",
+                    borderColor: "grey.200",
+                    borderRadius: 3,
+                    bgcolor: "#fafafa",
                   }}
                 >
-                  <TableCell>Thời gian</TableCell>
-                  <TableCell>Loại</TableCell>
-                  <TableCell>Sản phẩm</TableCell>
-                  <TableCell align="right">Thay đổi</TableCell>
-                  <TableCell align="right">Tồn sau</TableCell>
-                  {showDetails && <TableCell>SKU</TableCell>}
-                  {showDetails && <TableCell>Batch ID</TableCell>}
-                  {showDetails && <TableCell>Mô tả</TableCell>}
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loading && entries.length === 0
-                  ? Array.from({ length: 8 }).map((_, i) => (
-                      <TableRow key={`skel-${i}`}>
-                        {Array.from({ length: showDetails ? 8 : 5 }).map((__, j) => (
-                          <TableCell key={j}>
-                            <Skeleton variant="text" />
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  : entries.map((entry) => {
-                      const config = TYPE_CONFIG[entry.type];
-                      const isPositive = entry.quantityChange > 0;
-                      const variant = variantMap.get(entry.variantId);
+                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 1.5 }}>
+                    <Typography variant="subtitle2" fontWeight={700}>
+                      Bộ lọc
+                    </Typography>
+                    {hasActiveFilters && (
+                      <Button size="small" startIcon={<ClearIcon />} onClick={handleClearFilters}>
+                        Xóa
+                      </Button>
+                    )}
+                  </Stack>
+                  <Stack spacing={1.5}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Loại biến động</InputLabel>
+                      <Select
+                        label="Loại biến động"
+                        value={typeFilter}
+                        onChange={(e) => {
+                          setTypeFilter(e.target.value as InventoryLedgerType | "");
+                          setPage(0);
+                        }}
+                      >
+                        <MenuItem value="">Tất cả</MenuItem>
+                        <MenuItem value="Import">Nhập hàng</MenuItem>
+                        <MenuItem value="Sales">Bán hàng</MenuItem>
+                        <MenuItem value="Adjustment">Điều chỉnh</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      label="Variant ID"
+                      placeholder="Nhập variant ID..."
+                      size="small"
+                      fullWidth
+                      value={variantFilter}
+                      onChange={(e) => {
+                        setVariantFilter(e.target.value);
+                        setPage(0);
+                      }}
+                      slotProps={{
+                        input: {
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchIcon fontSize="small" />
+                            </InputAdornment>
+                          ),
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Từ ngày"
+                      type="datetime-local"
+                      size="small"
+                      fullWidth
+                      value={fromDate}
+                      onChange={(e) => {
+                        setFromDate(e.target.value);
+                        setPage(0);
+                      }}
+                      slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                    <TextField
+                      label="Đến ngày"
+                      type="datetime-local"
+                      size="small"
+                      fullWidth
+                      value={toDate}
+                      onChange={(e) => {
+                        setToDate(e.target.value);
+                        setPage(0);
+                      }}
+                      slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                  </Stack>
+                </Paper>
+              )}
+            </Stack>
+          </Grid>
 
-                      return (
-                        <TableRow
-                          key={entry.id}
-                          hover
-                          sx={{
-                            "&:last-child td": { borderBottom: 0 },
-                            transition: "background-color 0.15s",
-                          }}
-                        >
+          <Grid size={{ xs: 12, lg: 8.5 }}>
+            <Paper
+              elevation={0}
+              sx={{
+                border: "1px solid",
+                borderColor: "grey.200",
+                borderRadius: 3,
+                overflow: "hidden",
+                bgcolor: "background.paper",
+              }}
+            >
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                justifyContent="space-between"
+                alignItems={{ xs: "flex-start", sm: "center" }}
+                spacing={1}
+                sx={{
+                  px: 2,
+                  py: 1.5,
+                  borderBottom: "1px solid",
+                  borderColor: "grey.200",
+                  bgcolor: "grey.100",
+                }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                  <Typography variant="subtitle2" color="text.primary" fontWeight={700}>
+                    Lịch sử biến động kho
+                  </Typography>
+                  <Chip size="small" label={`${totalCount.toLocaleString("vi-VN")} bản ghi`} />
+                  {hasActiveFilters && (
+                    <Chip
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      label={`${activeFilterCount} bộ lọc đang bật`}
+                    />
+                  )}
+                </Stack>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={showDetails ? <VisibilityOffIcon /> : <VisibilityIcon />}
+                  onClick={() => setShowDetails((prev) => !prev)}
+                >
+                  {showDetails ? "Ẩn thông tin phụ" : "Hiện thông tin phụ"}
+                </Button>
+              </Stack>
+
+              {error && (
+                <Alert
+                  severity="error"
+                  sx={{ m: 2, borderRadius: 2 }}
+                  action={
+                    <Button color="inherit" size="small" onClick={fetchLedger}>
+                      Thử lại
+                    </Button>
+                  }
+                >
+                  {error}
+                </Alert>
+              )}
+
+              <TableContainer sx={{ maxHeight: "74vh" }}>
+                <Table size="small" stickyHeader>
+                  <TableHead>
+                    <TableRow
+                      sx={{
+                        "& th": {
+                          fontWeight: 600,
+                          fontSize: "0.8rem",
+                          color: "text.secondary",
+                          whiteSpace: "nowrap",
+                          py: 1.5,
+                        },
+                      }}
+                    >
+                      <TableCell>Thời gian</TableCell>
+                      <TableCell>Loại</TableCell>
+                      <TableCell>Sản phẩm</TableCell>
+                      <TableCell align="right">Thay đổi</TableCell>
+                      <TableCell align="right">Tồn sau</TableCell>
+                      {showDetails && <TableCell>SKU</TableCell>}
+                      {showDetails && <TableCell>Batch ID</TableCell>}
+                      {showDetails && <TableCell>Mô tả</TableCell>}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loading && entries.length === 0
+                      ? Array.from({ length: 8 }).map((_, i) => (
+                          <TableRow key={`skel-${i}`}>
+                            {Array.from({ length: showDetails ? 8 : 5 }).map((__, j) => (
+                              <TableCell key={j}>
+                                <Skeleton variant="text" />
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      : entries.map((entry) => {
+                          const config = TYPE_CONFIG[entry.type];
+                          const isPositive = entry.quantityChange > 0;
+                          const variant = variantMap.get(entry.variantId);
+
+                          return (
+                            <TableRow
+                              key={entry.id}
+                              hover
+                              sx={{
+                                "&:last-child td": { borderBottom: 0 },
+                                "&:nth-of-type(even)": { bgcolor: "grey.50" },
+                              }}
+                            >
                           {/* Timestamp */}
                           <TableCell sx={{ whiteSpace: "nowrap" }}>
                             <Typography variant="body2" fontSize="0.82rem">
@@ -617,7 +593,12 @@ export const InventoryLedgerPage = () => {
                               size="small"
                               color={config.color}
                               variant="outlined"
-                              sx={{ fontWeight: 600, fontSize: "0.75rem", padding: "5px"}}
+                              sx={{
+                                fontWeight: 600,
+                                fontSize: "0.75rem",
+                                minWidth: 96,
+                                justifyContent: "flex-start",
+                              }}
                             />
                           </TableCell>
 
@@ -736,68 +717,66 @@ export const InventoryLedgerPage = () => {
                               </Typography>
                             </TableCell>
                           )}
-                        </TableRow>
-                      );
-                    })}
+                            </TableRow>
+                          );
+                        })}
 
-                {/* Empty state */}
-                {!loading && entries.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={showDetails ? 8 : 5} sx={{ py: 8, textAlign: "center" }}>
-                      <InventoryIcon
-                        sx={{ fontSize: 48, color: "grey.300", mb: 1 }}
-                      />
-                      <Typography variant="body1" color="text.secondary">
-                        Chưa có bản ghi nào
-                      </Typography>
-                      <Typography variant="body2" color="text.disabled">
-                        {hasActiveFilters
-                          ? "Thử thay đổi bộ lọc để tìm kết quả khác"
-                          : "Dữ liệu sổ kho sẽ xuất hiện khi có nhập/xuất hàng"}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    {!loading && entries.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={showDetails ? 8 : 5} sx={{ py: 8, textAlign: "center" }}>
+                          <InventoryIcon sx={{ fontSize: 48, color: "grey.300", mb: 1 }} />
+                          <Typography variant="body1" color="text.secondary">
+                            Chưa có bản ghi nào
+                          </Typography>
+                          <Typography variant="body2" color="text.disabled">
+                            {hasActiveFilters
+                              ? "Thử thay đổi bộ lọc để tìm kết quả khác"
+                              : "Dữ liệu sổ kho sẽ xuất hiện khi có nhập/xuất hàng"}
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-          {/* Loading overlay */}
-          {loading && entries.length > 0 && (
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                py: 1,
-                bgcolor: "grey.50",
-              }}
-            >
-              <CircularProgress size={20} />
-            </Box>
-          )}
+              {loading && entries.length > 0 && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    py: 1,
+                    bgcolor: "grey.50",
+                  }}
+                >
+                  <CircularProgress size={20} />
+                </Box>
+              )}
 
-          {/* Pagination */}
-          <TablePagination
-            component="div"
-            count={totalCount}
-            page={page}
-            onPageChange={(_e, newPage) => setPage(newPage)}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-            rowsPerPageOptions={[10, 15, 25, 50]}
-            labelRowsPerPage="Dòng/trang:"
-            labelDisplayedRows={({ from, to, count }) =>
-              `${from}–${to} trên ${count !== -1 ? count : `hơn ${to}`}`
-            }
-            sx={{
-              borderTop: "1px solid",
-              borderColor: "grey.200",
-            }}
-          />
-        </Paper>
+              <TablePagination
+                component="div"
+                count={totalCount}
+                page={page}
+                onPageChange={(_e, newPage) => setPage(newPage)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(e) => {
+                  setRowsPerPage(parseInt(e.target.value, 10));
+                  setPage(0);
+                }}
+                rowsPerPageOptions={[10, 15, 25, 50]}
+                labelRowsPerPage="Dòng/trang:"
+                labelDisplayedRows={({ from, to, count }) =>
+                  `${from}–${to} trên ${count !== -1 ? count : `hơn ${to}`}`
+                }
+                sx={{
+                  borderTop: "1px solid",
+                  borderColor: "grey.200",
+                  bgcolor: "grey.50",
+                }}
+              />
+            </Paper>
+          </Grid>
+        </Grid>
       </Box>
     </AdminLayout>
   );
