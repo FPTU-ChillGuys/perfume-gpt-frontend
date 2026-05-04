@@ -1108,7 +1108,7 @@ const AdminDashboard = () => {
                 >
                   <TrendingUp color="primary" />
                   <Typography variant="h6" fontWeight="bold">
-                    Top Performance
+                    Bán Chạy Nhất
                   </Typography>
                 </Box>
 

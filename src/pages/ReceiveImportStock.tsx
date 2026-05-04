@@ -118,8 +118,8 @@ const ReceiveImportStock: React.FC = () => {
           ...inProgressResponse.payload!.items,
         ].sort(
           (a, b) =>
-            new Date(b.actualImportDate!).getTime() -
-            new Date(a.actualImportDate!).getTime(),
+            new Date(b.createdAt!).getTime() -
+            new Date(a.createdAt!).getTime(),
         );
 
         setTickets(allTickets);
@@ -265,8 +265,8 @@ const ReceiveImportStock: React.FC = () => {
         ...inProgressResponse.payload!.items,
       ].sort(
         (a, b) =>
-          new Date(b.actualImportDate!).getTime() -
-          new Date(a.actualImportDate!).getTime(),
+          new Date(b.createdAt!).getTime() -
+          new Date(a.createdAt!).getTime(),
       );
 
       setTickets(allTickets);
@@ -478,8 +478,8 @@ const ReceiveImportStock: React.FC = () => {
           ...inProgressResponse.payload!.items,
         ].sort(
           (a, b) =>
-            new Date(b.actualImportDate!).getTime() -
-            new Date(a.actualImportDate!).getTime(),
+            new Date(b.createdAt!).getTime() -
+            new Date(a.createdAt!).getTime(),
         );
 
         setTickets(allTickets);
@@ -632,7 +632,7 @@ const ReceiveImportStock: React.FC = () => {
                             <p className="text-sm text-gray-600 mt-1">
                               ID: {ticket.id!.substring(0, 8)}... | Ngày:{" "}
                               {new Date(
-                                ticket.actualImportDate!,
+                                ticket.createdAt!,
                               ).toLocaleDateString("vi-VN")}{" "}
                               | Số sản phẩm: {ticket.totalItems}
                             </p>
@@ -712,7 +712,7 @@ const ReceiveImportStock: React.FC = () => {
                     <span className="text-gray-400">|</span>
                     <span className="text-gray-600">
                       {new Date(
-                        selectedTicket.actualImportDate!,
+                        selectedTicket.createdAt!,
                       ).toLocaleDateString("vi-VN")}
                     </span>
                   </div>

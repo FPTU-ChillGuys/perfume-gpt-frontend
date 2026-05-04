@@ -593,7 +593,7 @@ export const CustomerDisplayScreen = () => {
 
         <aside className="flex h-full flex-col bg-white text-slate-900 lg:col-span-2">
           {/* Header — varies by mode */}
-          <div className="border-b border-slate-200 bg-slate-50/70 px-6 py-5 backdrop-blur">
+          <div className="border-b border-slate-200 bg-slate-50/70 px-6 py-3.5 backdrop-blur">
             {displayMode === "ONLINE_ORDER" && onlineOrderData ? (
               <div className="flex items-center justify-between gap-2">
                 <h2 className="text-2xl font-extrabold text-sky-800">
@@ -634,11 +634,11 @@ export const CustomerDisplayScreen = () => {
                     Chưa có sản phẩm trong giỏ hiển thị.
                   </p>
                 ) : (
-                  <ul className="space-y-3.5">
+                  <ul className="space-y-2.5">
                     {items.map((item, index) => (
                       <li
                         key={`${item.variantId ?? "variant"}-${index}`}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                        className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
                       >
                         <div className="flex items-start gap-3">
                           {item.imageUrl ? (
@@ -666,8 +666,8 @@ export const CustomerDisplayScreen = () => {
                               </span>
                             </div>
 
-                            <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                              <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                            <div className="mt-1.5 grid grid-cols-2 gap-2 text-sm">
+                              <div className="rounded-lg bg-slate-50 px-2 py-1">
                                 <p className="text-[11px] text-slate-500">
                                   Đơn giá
                                 </p>
@@ -681,7 +681,7 @@ export const CustomerDisplayScreen = () => {
                                   </p>
                                 )}
                               </div>
-                              <div className="rounded-lg bg-rose-50 px-2 py-1.5 text-right">
+                              <div className="rounded-lg bg-rose-50 px-2 py-1 text-right">
                                 <p className="text-[11px] text-rose-500">
                                   Thành tiền
                                 </p>
@@ -704,8 +704,8 @@ export const CustomerDisplayScreen = () => {
                 )}
               </div>
 
-              <div className="border-t border-slate-200 bg-slate-50 px-6 py-6">
-                <div className="mb-3 space-y-2 text-sm">
+              <div className="border-t border-slate-200 bg-slate-50 px-6 py-4">
+                <div className="mb-2 space-y-1 text-sm">
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Tạm tính</span>
                     <span className="font-semibold text-slate-800">
@@ -740,10 +740,10 @@ export const CustomerDisplayScreen = () => {
                 )}
 
                 <div className="flex items-end justify-between border-t border-slate-200 pt-3">
-                  <span className="text-lg font-semibold text-slate-700">
+                  <span className="text-base font-semibold text-slate-700">
                     Tổng thanh toán
                   </span>
-                  <span className="text-5xl font-extrabold leading-none text-red-600">
+                  <span className="text-4xl font-extrabold leading-none text-red-600">
                     {formatCurrency(finalTotal)}
                   </span>
                 </div>
@@ -766,7 +766,7 @@ export const CustomerDisplayScreen = () => {
               {/* Payment status banner */}
               <div className="mx-6 mt-4">
                 {effectivePaymentStatus === "Paid" ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+                  <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2">
                     <CheckCircleRounded
                       className="text-emerald-500"
                       fontSize="small"
@@ -776,7 +776,7 @@ export const CustomerDisplayScreen = () => {
                     </span>
                   </div>
                 ) : effectivePaymentStatus === "PartialPaid" || onlineOrderData.paidAmount > 0 ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+                  <div className="flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-4 py-2">
                     <CheckCircleRounded
                       className="text-orange-500"
                       fontSize="small"
@@ -787,13 +787,13 @@ export const CustomerDisplayScreen = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                    <div className="flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2">
                       <span className="font-bold text-red-600">
                         CHƯA THANH TOÁN
                       </span>
                     </div>
                     {!displayPaymentUrl && (
-                      <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                      <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-500">
                         Vui lòng thanh toán tại quầy.
                       </p>
                     )}
@@ -808,11 +808,11 @@ export const CustomerDisplayScreen = () => {
                     Không có sản phẩm.
                   </p>
                 ) : (
-                  <ul className="space-y-3.5">
+                  <ul className="space-y-2.5">
                     {onlineOrderData.orderDetails.map((item, index) => (
                       <li
                         key={`${item.variantId ?? "od"}-${index}`}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                        className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
                       >
                         <div className="flex items-start gap-3">
                           {item.imageUrl ? (
@@ -840,8 +840,8 @@ export const CustomerDisplayScreen = () => {
                               </span>
                             </div>
 
-                            <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                              <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                            <div className="mt-1.5 grid grid-cols-2 gap-2 text-sm">
+                              <div className="rounded-lg bg-slate-50 px-2 py-1">
                                 <p className="text-[11px] text-slate-500">
                                   Đơn giá
                                 </p>
@@ -855,7 +855,7 @@ export const CustomerDisplayScreen = () => {
                                   </p>
                                 )}
                               </div>
-                              <div className="rounded-lg bg-rose-50 px-2 py-1.5 text-right">
+                              <div className="rounded-lg bg-rose-50 px-2 py-1 text-right">
                                 <p className="text-[11px] text-rose-500">
                                   Thành tiền
                                 </p>
@@ -879,8 +879,8 @@ export const CustomerDisplayScreen = () => {
               </div>
 
               {/* BOPIS totals */}
-              <div className="border-t border-slate-200 bg-slate-50 px-6 py-6">
-                <div className="mb-3 space-y-2 text-sm">
+              <div className="border-t border-slate-200 bg-slate-50 px-6 py-4">
+                <div className="mb-2 space-y-1.5 text-sm">
                   <div className="flex items-center justify-between text-slate-600">
                     <span>Tạm tính</span>
                     <span className="font-semibold text-slate-800">
@@ -914,19 +914,19 @@ export const CustomerDisplayScreen = () => {
 
                 {effectivePaymentStatus === "PartialPaid" ? (
                   <div className="flex items-end justify-between border-t border-slate-200 pt-3">
-                    <span className="text-3xl font-bold text-slate-900">
+                    <span className="text-2xl font-bold text-slate-900">
                       CẦN THANH TOÁN
                     </span>
-                    <span className="text-5xl font-extrabold leading-none text-red-600">
+                    <span className="text-4xl font-extrabold leading-none text-red-600">
                       {formatCurrency(onlineOrderData.remainingAmount)}
                     </span>
                   </div>
                 ) : (
                   <div className="flex items-end justify-between border-t border-slate-200 pt-3">
-                    <span className="text-3xl font-bold text-emerald-700">
+                    <span className="text-2xl font-bold text-emerald-700">
                       TỔNG ĐƠN HÀNG
                     </span>
-                    <span className="text-5xl font-extrabold leading-none text-emerald-600">
+                    <span className="text-4xl font-extrabold leading-none text-emerald-600">
                       {formatCurrency(onlineOrderData.totalPrice)}
                     </span>
                   </div>
