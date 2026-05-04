@@ -34,8 +34,10 @@ import {
   Home as HomeIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { UserCredentials } from "@/services/userService";
+import { userService } from "@/services/userService";
+import { useAuth } from "@/hooks/useAuth";
 
 interface UserProfileSidebarProps {
   userInfo: UserCredentials | null;
@@ -100,14 +102,43 @@ const BOTTOM_NAV_ITEMS = [
 export const UserProfileSidebar = ({ userInfo, avatarUrl }: UserProfileSidebarProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { user } = useAuth();
   const [accountOpen, setAccountOpen] = useState(true);
   const [ordersOpen, setOrdersOpen] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [fetchedAvatarUrl, setFetchedAvatarUrl] = useState<string | null>(null);
 
   const isActive = (path: string, includeSubPaths = false) =>
     pathname === path || (includeSubPaths && pathname.startsWith(`${path}/`));
 
   const displayName = userInfo?.fullName || userInfo?.email || "Người dùng";
+  const resolvedAvatarUrl = avatarUrl || user?.avatarUrl || fetchedAvatarUrl || undefined;
+
+  useEffect(() => {
+    // If parent already provides avatar or auth has it, skip extra request.
+    if (avatarUrl || user?.avatarUrl) {
+      return;
+    }
+
+    let isMounted = true;
+    const loadAvatar = async () => {
+      try {
+        const avatar = await userService.getMyAvatar();
+        if (isMounted) {
+          setFetchedAvatarUrl(avatar?.url ?? null);
+        }
+      } catch {
+        if (isMounted) {
+          setFetchedAvatarUrl(null);
+        }
+      }
+    };
+
+    void loadAvatar();
+    return () => {
+      isMounted = false;
+    };
+  }, [avatarUrl, user?.avatarUrl]);
 
   // Exact-match for bottom nav — each item maps only its own path
   const bottomNavValue = (() => {
@@ -137,11 +168,11 @@ export const UserProfileSidebar = ({ userInfo, avatarUrl }: UserProfileSidebarPr
         }}
       >
         <Avatar
-          src={avatarUrl || undefined}
+          src={resolvedAvatarUrl}
           sx={{
             width: 48,
             height: 48,
-            bgcolor: avatarUrl ? undefined : "error.main",
+            bgcolor: resolvedAvatarUrl ? undefined : "error.main",
             fontSize: "1.2rem",
           }}
         >
