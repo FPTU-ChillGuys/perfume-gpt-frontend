@@ -239,6 +239,9 @@ const StorePolicyConfigPage = lazy(() =>
     default: m.StorePolicyConfigPage,
   })),
 );
+const PolicyEditPage = lazy(() =>
+  import("./pages/PolicyEditPage").then((m) => ({ default: m.PolicyEditPage })),
+);
 
 const PageLoader = () => (
   <Box
@@ -516,6 +519,14 @@ function App() {
                         element={
                           <RoleBasedRoute allowedRoles={["admin"]}>
                             <StaticPageCreatePage />
+                          </RoleBasedRoute>
+                        }
+                      />
+                      <Route
+                        path="/admin/content/policies/:policyCode/edit"
+                        element={
+                          <RoleBasedRoute allowedRoles={["admin"]}>
+                            <PolicyEditPage />
                           </RoleBasedRoute>
                         }
                       />

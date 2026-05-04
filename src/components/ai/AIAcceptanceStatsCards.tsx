@@ -44,7 +44,7 @@ export const AIAcceptanceStatsCards = ({
 
             <Paper sx={{ p: 3 }}>
                 <Typography variant="subtitle2" color="text.secondary" mb={1}>
-                    Tỷ lệ chấp nhận (isAccepted=true)
+                    Tỷ lệ chấp nhận
                 </Typography>
                 {loading ? (
                     <CircularProgress size={24} />
@@ -70,7 +70,7 @@ export const AIAcceptanceStatsCards = ({
 
             <Paper sx={{ p: 3 }}>
                 <Typography variant="subtitle2" color="text.secondary" mb={1}>
-                    Tỷ lệ từ chối (isAccepted=false)
+                    Tỷ lệ từ chối
                 </Typography>
                 {loading ? (
                     <CircularProgress size={24} />

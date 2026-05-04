@@ -107,6 +107,8 @@ class ImportStockService {
     pageSize: number = 10,
     status?: string,
     verifiedById?: string,
+    sortBy?: string,
+    sortOrder?: string,
   ): Promise<ImportTicketsResponse> {
     try {
       const params: any = {
@@ -120,6 +122,14 @@ class ImportStockService {
 
       if (verifiedById) {
         params.VerifiedById = verifiedById;
+      }
+
+      if (sortBy) {
+        params.SortBy = sortBy;
+      }
+
+      if (sortOrder) {
+        params.SortOrder = sortOrder;
       }
 
       const response = await apiInstance.GET("/api/importtickets", {
@@ -346,6 +356,39 @@ class ImportStockService {
         error.message ||
         "Tải xuống mẫu Excel thất bại";
       throw new Error(errorMessage);
+    }
+  }
+
+  async deleteImportTicket(ticketId: string): Promise<void> {
+    try {
+      const response = await apiInstance.DELETE(`/api/importtickets/{id}`, {
+        params: {
+          path: {
+            id: ticketId,
+          },
+        },
+      });
+
+      if (response.error) {
+        throw new Error(
+          this.extractApiErrorMessage(
+            response.error,
+            "Xóa đơn nhập kho thất bại",
+          ),
+        );
+      }
+
+      if (!response.data?.success) {
+        throw new Error(
+          this.extractApiErrorMessage(
+            response.data,
+            "Xóa đơn nhập kho thất bại",
+          ),
+        );
+      }
+    } catch (error: any) {
+      console.error("Delete import ticket error:", error);
+      throw new Error(error.message || "Xóa đơn nhập kho thất bại");
     }
   }
 }

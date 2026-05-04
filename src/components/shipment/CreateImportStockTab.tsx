@@ -483,8 +483,12 @@ export const CreateImportStockTab: React.FC = () => {
       showToast("Tạo đơn nhập hàng thành công!", "success");
 
       // Reset form after successful creation
-      setItems([{ variantId: "", quantity: 0, price: 0 }]);
+      setItems([]);
       setExpectedArrivalDate(getTodayIsoDate()!);
+      setHasProcessedImportData(false);
+      if (suppliers.length > 0) {
+        setSelectedSupplierId(suppliers[0]!.id!);
+      }
     } catch (err: any) {
       showToast(err.message || "Không thể tạo đơn nhập hàng", "error");
       console.error("Shipment creation error:", err);
