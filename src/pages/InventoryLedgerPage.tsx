@@ -31,9 +31,10 @@ import {
   Search as SearchIcon,
   FilterList as FilterListIcon,
   Clear as ClearIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
-  SwapVert as SwapVertIcon,
   Inventory as InventoryIcon,
   LocalShipping as ImportIcon,
   ShoppingCart as SalesIcon,
@@ -176,6 +177,13 @@ export const InventoryLedgerPage = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [overallStats, setOverallStats] = useState({
+    imports: 0,
+    sales: 0,
+    netChange: 0,
+  });
 
   // Variant name map
   const [variantMap, setVariantMap] = useState<Map<string, VariantLookupItem>>(
@@ -230,17 +238,52 @@ export const InventoryLedgerPage = () => {
     fetchLedger();
   }, [fetchLedger]);
 
-  const stats = useMemo(() => {
-    let imports = 0;
-    let sales = 0;
-    let adjustments = 0;
-    for (const e of entries) {
-      if (e.type === "Import") imports += e.quantityChange;
-      else if (e.type === "Sales") sales += Math.abs(e.quantityChange);
-      else adjustments += e.quantityChange;
-    }
-    return { imports, sales, adjustments };
-  }, [entries]);
+  useEffect(() => {
+    const fetchOverallStats = async () => {
+      try {
+        setStatsLoading(true);
+        const baseParams: InventoryLedgerParams = {
+          IsDescending: true,
+          SortBy: "CreatedAt",
+          SortOrder: "desc",
+        };
+        if (typeFilter) baseParams.Type = typeFilter;
+        if (variantFilter.trim()) baseParams.VariantId = variantFilter.trim();
+        if (fromDate) baseParams.FromDate = new Date(fromDate).toISOString();
+        if (toDate) baseParams.ToDate = new Date(toDate).toISOString();
+
+        let pageNumber = 1;
+        const pageSize = 200;
+        let hasNextPage = true;
+        let imports = 0;
+        let sales = 0;
+        let netChange = 0;
+
+        while (hasNextPage) {
+          const res = await ledgerService.getInventoryLedger({
+            ...baseParams,
+            PageNumber: pageNumber,
+            PageSize: pageSize,
+          });
+          for (const e of res.items) {
+            if (e.type === "Import") imports += e.quantityChange;
+            else if (e.type === "Sales") sales += Math.abs(e.quantityChange);
+            netChange += e.quantityChange;
+          }
+          hasNextPage = res.hasNextPage;
+          pageNumber += 1;
+        }
+
+        setOverallStats({ imports, sales, netChange });
+      } catch {
+        setOverallStats({ imports: 0, sales: 0, netChange: 0 });
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchOverallStats();
+  }, [typeFilter, variantFilter, fromDate, toDate]);
 
   const handleClearFilters = () => {
     setTypeFilter("");
@@ -319,44 +362,24 @@ export const InventoryLedgerPage = () => {
 
         {/* Summary cards */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid size={{ xs: 6, md: 3 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <SummaryCard
-              title="Tổng bản ghi"
-              value={totalCount.toLocaleString("vi-VN")}
-              subtitle={`Trang hiện tại: ${entries.length} mục`}
-              icon={<SwapVertIcon fontSize="small" />}
-              color="#6366f1"
-              loading={loading}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <SummaryCard
-              title="Nhập hàng"
-              value={`+${stats.imports.toLocaleString("vi-VN")}`}
-              subtitle="Tổng SL nhập"
+              title="Nhập / Bán"
+              value={`+${overallStats.imports.toLocaleString("vi-VN")} / -${overallStats.sales.toLocaleString("vi-VN")}`}
+              subtitle="Tổng SL nhập và bán"
               icon={<TrendingUpIcon fontSize="small" />}
               color="#16a34a"
-              loading={loading}
+              loading={statsLoading}
             />
           </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
+          <Grid size={{ xs: 12, md: 6 }}>
             <SummaryCard
-              title="Bán hàng"
-              value={`-${stats.sales.toLocaleString("vi-VN")}`}
-              subtitle="Tổng SL bán"
+              title="Biến động ròng"
+              value={formatQuantityChange(overallStats.netChange)}
+              subtitle="Tong thay doi so luong "
               icon={<TrendingDownIcon fontSize="small" />}
-              color="#dc2626"
-              loading={loading}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <SummaryCard
-              title="Điều chỉnh"
-              value={stats.adjustments.toLocaleString("vi-VN")}
-              subtitle="Tổng SL điều chỉnh"
-              icon={<AdjustmentIcon fontSize="small" />}
               color="#ea580c"
-              loading={loading}
+              loading={statsLoading}
             />
           </Grid>
         </Grid>
@@ -510,6 +533,25 @@ export const InventoryLedgerPage = () => {
             overflow: "hidden",
           }}
         >
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={1}
+            sx={{ px: 2, py: 1.5, borderBottom: "1px solid", borderColor: "grey.200" }}
+          >
+            <Typography variant="subtitle2" color="text.secondary">
+              Lịch sử biến động kho gần nhất
+            </Typography>
+            <Button
+              size="small"
+              variant="text"
+              startIcon={showDetails ? <VisibilityOffIcon /> : <VisibilityIcon />}
+              onClick={() => setShowDetails((prev) => !prev)}
+            >
+              {showDetails ? "Ẩn thông tin phụ" : "Hiện thông tin phụ"}
+            </Button>
+          </Stack>
           <TableContainer>
             <Table size="small">
               <TableHead>
@@ -528,18 +570,18 @@ export const InventoryLedgerPage = () => {
                   <TableCell>Thời gian</TableCell>
                   <TableCell>Loại</TableCell>
                   <TableCell>Sản phẩm</TableCell>
-                  <TableCell>SKU</TableCell>
-                  <TableCell>Batch ID</TableCell>
                   <TableCell align="right">Thay đổi</TableCell>
                   <TableCell align="right">Tồn sau</TableCell>
-                  <TableCell>Mô tả</TableCell>
+                  {showDetails && <TableCell>SKU</TableCell>}
+                  {showDetails && <TableCell>Batch ID</TableCell>}
+                  {showDetails && <TableCell>Mô tả</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading && entries.length === 0
                   ? Array.from({ length: 8 }).map((_, i) => (
                       <TableRow key={`skel-${i}`}>
-                        {Array.from({ length: 9 }).map((__, j) => (
+                        {Array.from({ length: showDetails ? 8 : 5 }).map((__, j) => (
                           <TableCell key={j}>
                             <Skeleton variant="text" />
                           </TableCell>
@@ -624,31 +666,6 @@ export const InventoryLedgerPage = () => {
                             </Stack>
                           </TableCell>
 
-                          {/* SKU */}
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              fontSize="0.82rem"
-                              sx={{ fontFamily: "monospace" }}
-                            >
-                              {variant?.sku || "—"}
-                            </Typography>
-                          </TableCell>
-
-                          {/* Batch */}
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              fontSize="0.82rem"
-                              sx={{
-                                fontFamily: "monospace",
-                                color: "text.secondary",
-                              }}
-                            >
-                              {entry.batchId}
-                            </Typography>
-                          </TableCell>
-
                           {/* Quantity change */}
                           <TableCell align="right">
                             <Chip
@@ -683,16 +700,42 @@ export const InventoryLedgerPage = () => {
                             </Typography>
                           </TableCell>
 
-                          {/* Description */}
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              fontSize="0.82rem"
-                            >
-                              {entry.description || "—"}
-                            </Typography>
-                          </TableCell>
+                          {showDetails && (
+                            <TableCell>
+                              <Typography
+                                variant="body2"
+                                fontSize="0.82rem"
+                                sx={{ fontFamily: "monospace" }}
+                              >
+                                {variant?.sku || "—"}
+                              </Typography>
+                            </TableCell>
+                          )}
+                          {showDetails && (
+                            <TableCell>
+                              <Typography
+                                variant="body2"
+                                fontSize="0.82rem"
+                                sx={{
+                                  fontFamily: "monospace",
+                                  color: "text.secondary",
+                                }}
+                              >
+                                {entry.batchId}
+                              </Typography>
+                            </TableCell>
+                          )}
+                          {showDetails && (
+                            <TableCell>
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                                fontSize="0.82rem"
+                              >
+                                {entry.description || "—"}
+                              </Typography>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
@@ -700,7 +743,7 @@ export const InventoryLedgerPage = () => {
                 {/* Empty state */}
                 {!loading && entries.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} sx={{ py: 8, textAlign: "center" }}>
+                    <TableCell colSpan={showDetails ? 8 : 5} sx={{ py: 8, textAlign: "center" }}>
                       <InventoryIcon
                         sx={{ fontSize: 48, color: "grey.300", mb: 1 }}
                       />
