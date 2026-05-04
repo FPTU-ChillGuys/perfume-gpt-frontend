@@ -894,6 +894,59 @@ export const ContentManagementPage = () => {
             )}
           </Paper>
 
+          {/* Policies Section */}
+          <Paper sx={{ p: 3 }}>
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="h6">Nội dung hướng dẫn (Policy)</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Quản lý các nội dung hệ thống như Hướng dẫn sử dụng, Chính sách vận chuyển...
+              </Typography>
+            </Box>
+
+            <TableContainer>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Tên nội dung</TableCell>
+                    <TableCell>Mã định danh</TableCell>
+                    <TableCell align="right">Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[
+                    { code: "USAGE_STORAGE", name: "Hướng dẫn Sử dụng & Bảo quản" },
+                    { code: "SHIPPING_RETURN", name: "Chính sách Vận chuyển & Đổi trả" },
+                  ].map((policy) => (
+                    <TableRow key={policy.code} hover>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={600}>
+                          {policy.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={policy.code}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontFamily: "monospace", fontSize: "0.7rem" }}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          startIcon={<EditIcon fontSize="small" />}
+                          onClick={() => navigate(`/admin/content/policies/${policy.code}/edit`)}
+                        >
+                          Chỉnh sửa
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+
           {/* Banner Section */}
           <Paper sx={{ p: 3 }}>
             <Stack

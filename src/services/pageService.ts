@@ -278,4 +278,49 @@ export const pageService = {
       throw new Error(errorText || `Thao tác thất bại (${response.status})`);
     }
   },
+  // ── Policies ──────────────────────────────────────────────────────────────
+  async getPolicy(policyCode: string): Promise<string> {
+    const baseUrl = getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/api/policies/${policyCode}`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(errorText || `Tải chính sách thất bại (${response.status})`);
+    }
+
+    const json = await response.json();
+    
+    // Handle { payload: "html string" }
+    if (json && typeof json.payload === "string") {
+      return json.payload;
+    }
+    
+    // Handle { payload: { content: "html string" } } or { payload: { htmlContent: "html string" } }
+    if (json && json.payload && typeof json.payload === "object") {
+      return json.payload.content || json.payload.htmlContent || "";
+    }
+
+    // Handle direct string response or direct object with content
+    if (typeof json === "string") return json;
+    return json?.content || json?.htmlContent || "";
+  },
+
+  async updatePolicy(policyCode: string, title: string, htmlContent: string): Promise<void> {
+    const baseUrl = getApiBaseUrl();
+    const response = await fetch(`${baseUrl}/api/policies/${policyCode}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+      body: JSON.stringify({ 
+        title,
+        htmlContent
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      throw new Error(errorText || `Cập nhật chính sách thất bại (${response.status})`);
+    }
+  },
 };
