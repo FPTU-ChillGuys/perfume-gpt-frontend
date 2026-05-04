@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -31,6 +31,8 @@ import {
   Search as SearchIcon,
   FilterList as FilterListIcon,
   Clear as ClearIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   AccountBalanceWallet as WalletIcon,
@@ -41,7 +43,6 @@ import {
   LocalShipping as ShippingIcon,
   Store as SupplierIcon,
   CalendarToday as CalendarIcon,
-  Receipt as ReceiptIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { ledgerService } from "@/services/ledgerService";
@@ -202,6 +203,13 @@ export const CashFlowLedgerPage = () => {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [overallStats, setOverallStats] = useState({
+    totalIn: 0,
+    totalOut: 0,
+    net: 0,
+  });
 
   const fetchCashFlow = useCallback(async () => {
     try {
@@ -238,22 +246,59 @@ export const CashFlowLedgerPage = () => {
     fetchCashFlow();
   }, [fetchCashFlow]);
 
-  const stats = useMemo(() => {
-    let totalIn = 0;
-    let totalOut = 0;
-    let countIn = 0;
-    let countOut = 0;
-    for (const e of entries) {
-      if (e.flowType === "In") {
-        totalIn += Math.abs(e.amount);
-        countIn++;
-      } else {
-        totalOut += Math.abs(e.amount);
-        countOut++;
+  useEffect(() => {
+    const fetchOverallStats = async () => {
+      try {
+        setStatsLoading(true);
+        const baseParams: CashFlowParams = {
+          IsDescending: true,
+          SortBy: "TransactionDate",
+          SortOrder: "desc",
+        };
+        if (flowTypeFilter) baseParams.FlowType = flowTypeFilter;
+        if (categoryFilter) baseParams.Category = categoryFilter;
+        if (refCodeFilter.trim())
+          baseParams.ReferenceCode = refCodeFilter.trim();
+        if (fromDate) baseParams.FromDate = new Date(fromDate).toISOString();
+        if (toDate) baseParams.ToDate = new Date(toDate).toISOString();
+
+        let pageNumber = 1;
+        const pageSize = 200;
+        let hasNextPage = true;
+        let totalIn = 0;
+        let totalOut = 0;
+        let net = 0;
+
+        while (hasNextPage) {
+          const res = await ledgerService.getCashFlowLedger({
+            ...baseParams,
+            PageNumber: pageNumber,
+            PageSize: pageSize,
+          });
+          for (const e of res.items) {
+            const normalizedAmount =
+              e.flowType === "In" ? Math.abs(e.amount) : -Math.abs(e.amount);
+            if (normalizedAmount >= 0) {
+              totalIn += normalizedAmount;
+            } else {
+              totalOut += Math.abs(normalizedAmount);
+            }
+            net += normalizedAmount;
+          }
+          hasNextPage = res.hasNextPage;
+          pageNumber += 1;
+        }
+
+        setOverallStats({ totalIn, totalOut, net });
+      } catch {
+        setOverallStats({ totalIn: 0, totalOut: 0, net: 0 });
+      } finally {
+        setStatsLoading(false);
       }
-    }
-    return { totalIn, totalOut, net: totalIn - totalOut, countIn, countOut };
-  }, [entries]);
+    };
+
+    fetchOverallStats();
+  }, [flowTypeFilter, categoryFilter, refCodeFilter, fromDate, toDate]);
 
   const handleClearFilters = () => {
     setFlowTypeFilter("");
@@ -333,46 +378,39 @@ export const CashFlowLedgerPage = () => {
 
         {/* Summary cards */}
         <Grid container spacing={2} sx={{ mb: 3 }}>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <SummaryCard
-              title="Tổng giao dịch"
-              value={totalCount.toLocaleString("vi-VN")}
-              subtitle={`Thu: ${stats.countIn} · Chi: ${stats.countOut}`}
-              icon={<ReceiptIcon fontSize="small" />}
-              color="#6366f1"
-              loading={loading}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <SummaryCard
               title="Tổng thu "
-              value={formatCurrency(stats.totalIn)}
-              subtitle={`${stats.countIn} giao dịch thu`}
+              value={formatCurrency(overallStats.totalIn)}
+              subtitle="Tong thu (toan bo ket qua loc)"
               icon={<TrendingUpIcon fontSize="small" />}
               color="#16a34a"
-              loading={loading}
+              loading={statsLoading}
             />
           </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <SummaryCard
               title="Tổng chi"
-              value={formatCurrency(stats.totalOut)}
-              subtitle={`${stats.countOut} giao dịch chi`}
+              value={formatCurrency(overallStats.totalOut)}
+              subtitle="Tong chi (toan bo ket qua loc)"
               icon={<TrendingDownIcon fontSize="small" />}
               color="#dc2626"
-              loading={loading}
+              loading={statsLoading}
             />
           </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <SummaryCard
               title="Chênh lệch"
               value={
-                (stats.net >= 0 ? "+" : "") + formatCurrency(stats.net)
+                (overallStats.net >= 0 ? "+" : "") +
+                formatCurrency(overallStats.net)
               }
-              subtitle={stats.net >= 0 ? "Dương — thu > chi" : "Âm — chi > thu"}
+              subtitle={
+                overallStats.net >= 0 ? "Duong — thu > chi" : "Am — chi > thu"
+              }
               icon={<WalletIcon fontSize="small" />}
-              color={stats.net >= 0 ? "#0891b2" : "#e11d48"}
-              loading={loading}
+              color={overallStats.net >= 0 ? "#0891b2" : "#e11d48"}
+              loading={statsLoading}
             />
           </Grid>
         </Grid>
@@ -546,6 +584,30 @@ export const CashFlowLedgerPage = () => {
             overflow: "hidden",
           }}
         >
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            justifyContent="space-between"
+            alignItems={{ xs: "flex-start", sm: "center" }}
+            spacing={1}
+            sx={{
+              px: 2,
+              py: 1.5,
+              borderBottom: "1px solid",
+              borderColor: "grey.200",
+            }}
+          >
+            <Typography variant="subtitle2" color="text.secondary">
+              Lịch sử thu chi gần nhất
+            </Typography>
+            <Button
+              size="small"
+              variant="text"
+              startIcon={showDetails ? <VisibilityOffIcon /> : <VisibilityIcon />}
+              onClick={() => setShowDetails((prev) => !prev)}
+            >
+              {showDetails ? "Ẩn thông tin phụ" : "Hiện thông tin phụ"}
+            </Button>
+          </Stack>
           <TableContainer>
             <Table size="small">
               <TableHead>
@@ -565,19 +627,21 @@ export const CashFlowLedgerPage = () => {
                   <TableCell>Loại</TableCell>
                   <TableCell>Danh mục</TableCell>
                   <TableCell align="right">Số tiền</TableCell>
-                  <TableCell>Mô tả</TableCell>
-                  <TableCell>Mã tham chiếu</TableCell>
+                  {showDetails && <TableCell>Mô tả</TableCell>}
+                  {showDetails && <TableCell>Mã tham chiếu</TableCell>}
                 </TableRow>
               </TableHead>
               <TableBody>
                 {loading && entries.length === 0
                   ? Array.from({ length: 8 }).map((_, i) => (
                       <TableRow key={`skel-${i}`}>
-                        {Array.from({ length: 6 }).map((__, j) => (
+                        {Array.from({ length: showDetails ? 6 : 4 }).map(
+                          (__, j) => (
                           <TableCell key={j}>
                             <Skeleton variant="text" />
                           </TableCell>
-                        ))}
+                          ),
+                        )}
                       </TableRow>
                     ))
                   : entries.map((entry) => {
@@ -653,41 +717,42 @@ export const CashFlowLedgerPage = () => {
                             />
                           </TableCell>
 
-                          {/* Description */}
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              color="text.secondary"
-                              fontSize="0.82rem"
-                            >
-                              {entry.description || "—"}
-                            </Typography>
-                          </TableCell>
-
-                          {/* Reference Code */}
-                          <TableCell>
-                            {entry.referenceCode ? (
+                          {showDetails && (
+                            <TableCell>
                               <Typography
                                 variant="body2"
-                                fontWeight={600}
-                                fontSize="0.82rem"
-                                sx={{
-                                  fontFamily: "monospace",
-                                  color: "primary.main",
-                                }}
-                              >
-                                {entry.referenceCode}
-                              </Typography>
-                            ) : (
-                              <Typography
-                                variant="body2"
-                                color="text.disabled"
+                                color="text.secondary"
                                 fontSize="0.82rem"
                               >
-                                —
+                                {entry.description || "—"}
                               </Typography>
-                            )}
-                          </TableCell>
+                            </TableCell>
+                          )}
+                          {showDetails && (
+                            <TableCell>
+                              {entry.referenceCode ? (
+                                <Typography
+                                  variant="body2"
+                                  fontWeight={600}
+                                  fontSize="0.82rem"
+                                  sx={{
+                                    fontFamily: "monospace",
+                                    color: "primary.main",
+                                  }}
+                                >
+                                  {entry.referenceCode}
+                                </Typography>
+                              ) : (
+                                <Typography
+                                  variant="body2"
+                                  color="text.disabled"
+                                  fontSize="0.82rem"
+                                >
+                                  —
+                                </Typography>
+                              )}
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
@@ -695,7 +760,10 @@ export const CashFlowLedgerPage = () => {
                 {/* Empty state */}
                 {!loading && entries.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} sx={{ py: 8, textAlign: "center" }}>
+                    <TableCell
+                      colSpan={showDetails ? 6 : 4}
+                      sx={{ py: 8, textAlign: "center" }}
+                    >
                       <WalletIcon
                         sx={{ fontSize: 48, color: "grey.300", mb: 1 }}
                       />

@@ -180,8 +180,8 @@ export const InventoryLedgerPage = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
   const [overallStats, setOverallStats] = useState({
-    imports: 0,
-    sales: 0,
+    increase: 0,
+    decrease: 0,
     netChange: 0,
   });
 
@@ -255,8 +255,8 @@ export const InventoryLedgerPage = () => {
         let pageNumber = 1;
         const pageSize = 200;
         let hasNextPage = true;
-        let imports = 0;
-        let sales = 0;
+        let increase = 0;
+        let decrease = 0;
         let netChange = 0;
 
         while (hasNextPage) {
@@ -266,17 +266,17 @@ export const InventoryLedgerPage = () => {
             PageSize: pageSize,
           });
           for (const e of res.items) {
-            if (e.type === "Import") imports += e.quantityChange;
-            else if (e.type === "Sales") sales += Math.abs(e.quantityChange);
+            if (e.quantityChange > 0) increase += e.quantityChange;
+            else decrease += Math.abs(e.quantityChange);
             netChange += e.quantityChange;
           }
           hasNextPage = res.hasNextPage;
           pageNumber += 1;
         }
 
-        setOverallStats({ imports, sales, netChange });
+        setOverallStats({ increase, decrease, netChange });
       } catch {
-        setOverallStats({ imports: 0, sales: 0, netChange: 0 });
+        setOverallStats({ increase: 0, decrease: 0, netChange: 0 });
       } finally {
         setStatsLoading(false);
       }
@@ -364,9 +364,9 @@ export const InventoryLedgerPage = () => {
         <Grid container spacing={2} sx={{ mb: 3 }}>
           <Grid size={{ xs: 12, md: 6 }}>
             <SummaryCard
-              title="Nhập / Bán"
-              value={`+${overallStats.imports.toLocaleString("vi-VN")} / -${overallStats.sales.toLocaleString("vi-VN")}`}
-              subtitle="Tổng SL nhập và bán"
+              title="Tăng / Giảm tồn"
+              value={`+${overallStats.increase.toLocaleString("vi-VN")} / -${overallStats.decrease.toLocaleString("vi-VN")}`}
+              subtitle="Da bu tru theo bien dong thuc te"
               icon={<TrendingUpIcon fontSize="small" />}
               color="#16a34a"
               loading={statsLoading}
