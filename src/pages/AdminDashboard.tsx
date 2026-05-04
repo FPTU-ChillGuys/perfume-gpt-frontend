@@ -13,6 +13,7 @@ import {
   FormControl,
   MenuItem,
   Select,
+  LinearProgress,
 } from "@mui/material";
 import {
   ShoppingCart,
@@ -24,6 +25,7 @@ import {
   PieChart,
   Insights,
   Bolt,
+  SettingsSuggest,
 } from "@mui/icons-material";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
@@ -37,6 +39,8 @@ import {
   type PaymentMethodItem,
   type RevenueChartItem,
 } from "../services/adminDashboardService";
+import { aiAcceptanceService } from "../services/ai/aiAcceptanceService";
+import type { AiAcceptanceRecord } from "../types/chatbot";
 
 const formatCurrency = (v?: number) =>
   v != null
@@ -945,9 +949,13 @@ const AdminDashboard = () => {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [inventorySummary, setInventorySummary] =
     useState<InventoryLevelsSummary>({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [aiRecords, setAiRecords] = useState<AiAcceptanceRecord[]>([]);
+  const [rateAccepted, setRateAccepted] = useState<number | null>(null);
+  const [rateRejected, setRateRejected] = useState<number | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [monthRevenueSummary, setMonthRevenueSummary] =
     useState<RevenueSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const todayRange = getTodayRange();
@@ -970,8 +978,11 @@ const AdminDashboard = () => {
         FromDate: monthRange.from,
         ToDate: monthRange.to,
       }),
+      aiAcceptanceService.getAllAcceptanceStatus(),
+      aiAcceptanceService.getAcceptanceRate(true),
+      aiAcceptanceService.getAcceptanceRate(false),
     ])
-      .then(([todayRev, top, inv, monthRev]) => {
+      .then(([todayRev, top, inv, monthRev, aiData, accepted, rejected]) => {
         if (!active) {
           return;
         }
@@ -984,6 +995,9 @@ const AdminDashboard = () => {
         setTopProducts(top);
         setInventorySummary(inv);
         setMonthRevenueSummary(monthRev);
+        setAiRecords(aiData);
+        setRateAccepted(accepted);
+        setRateRejected(rejected);
       })
       .catch((err: any) => {
         if (!active) {
@@ -1165,7 +1179,7 @@ const AdminDashboard = () => {
             <Box
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "1fr", lg: "1.4fr 1fr" },
+                gridTemplateColumns: { xs: "1fr", lg: "1.2fr 1.8fr" },
                 gap: 2,
               }}
             >
@@ -1196,9 +1210,9 @@ const AdminDashboard = () => {
                           py: 1.2,
                           gap: 1.5,
                           cursor: "pointer",
-                          borderRadius: 1,
-                          px: 0.5,
-                          mx: -0.5,
+                          borderRadius: 2,
+                          px: 1,
+                          mx: -1,
                           transition: "background 0.15s",
                           "&:hover": { bgcolor: "action.hover" },
                         }}
@@ -1216,15 +1230,17 @@ const AdminDashboard = () => {
                             src={p.imageUrl}
                             alt={p.productName || "Sản phẩm"}
                             sx={{
-                              width: 36,
-                              height: 36,
-                              borderRadius: 1,
+                              width: 48,
+                              height: 48,
+                              borderRadius: 1.5,
                               objectFit: "cover",
+                              border: "1px solid",
+                              borderColor: "divider",
                             }}
                           />
                         )}
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="body2" fontWeight={600} noWrap>
+                          <Typography variant="body2" fontWeight={600} noWrap sx={{ fontSize: "0.925rem", mb: 0.25 }}>
                             {p.productName}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
@@ -1247,73 +1263,176 @@ const AdminDashboard = () => {
                 )}
               </Paper>
 
-              <Paper sx={{ p: 2.5, borderRadius: 2.5 }}>
-                <Box
-                  sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}
-                >
-                  <Bolt color="warning" />
-                  <Typography variant="h6" fontWeight="bold">
-                    Tình trạng kho
+              <Paper sx={{ p: 2.5, borderRadius: 2.5, display: "flex", flexDirection: "column" }}>
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" fontWeight={800} display="flex" alignItems="center" gap={1.5}>
+                    <SettingsSuggest sx={{ color: "primary.main", fontSize: 28 }} />
+                    Vận hành & Hiệu quả AI
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Thống kê kho bãi và dữ liệu hỗ trợ từ AI
                   </Typography>
                 </Box>
 
                 <Box
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-                    gap: 1.25,
-                    mb: 2,
+                    gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+                    gap: 1.5,
                   }}
                 >
+                  {/* Stock Status */}
                   {[
                     {
-                      label: "Sản phẩm hết hàng",
+                      label: "Hết hàng",
                       value: outOfStockCount,
                       icon: <Insights />,
                       color: "#dc2626",
                       bg: "#fef2f2",
                     },
                     {
-                      label: "Sản phẩm sắp hết",
+                      label: "Sắp hết",
                       value: lowStockCount,
                       icon: <Inventory2 />,
                       color: "#ea580c",
                       bg: "#fff7ed",
                     },
                     {
-                      label: "Lô sắp hết hạn",
+                      label: "Sắp hết hạn",
                       value: expiringSoonCount,
                       icon: <Bolt />,
                       color: "#2563eb",
                       bg: "#eff6ff",
                     },
                   ].map((item) => (
-                    <Paper
+                    <Box
                       key={item.label}
-                      variant="outlined"
-                      sx={{ p: 1.25, borderRadius: 2, borderColor: "divider" }}
+                      sx={{
+                        p: 1.75,
+                        borderRadius: 3,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        bgcolor: "background.paper",
+                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        "&:hover": {
+                          transform: "translateY(-4px)",
+                          boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+                          borderColor: item.color,
+                        },
+                      }}
                     >
-                      <Stack direction="row" alignItems="center" spacing={1.2}>
+                      <Avatar
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          bgcolor: item.bg,
+                          color: item.color,
+                          borderRadius: 2,
+                        }}
+                      >
+                        {item.icon}
+                      </Avatar>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ letterSpacing: 0.5, textTransform: "uppercase", fontSize: "0.65rem" }}>
+                          {item.label}
+                        </Typography>
+                        <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                          {item.value.toLocaleString("vi-VN")}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ))}
+
+                  {/* AI Acceptance Status */}
+                  {[
+                    {
+                      label: "Tổng gợi ý từ AI",
+                      value: aiRecords.length,
+                      icon: <Timeline />,
+                      color: "#6366f1",
+                      bg: "#eef2ff",
+                      progress: 100,
+                    },
+                    {
+                      label: "Tỷ lệ chấp nhận",
+                      value: rateAccepted !== null ? `${rateAccepted.toFixed(1)}%` : "0%",
+                      icon: <Insights />,
+                      color: "#10b981",
+                      bg: "#ecfdf5",
+                      progress: rateAccepted ?? 0,
+                      subtext: `${aiRecords.filter(r => r.isAccepted).length} bản ghi`,
+                    },
+                    {
+                      label: "Tỷ lệ từ chối",
+                      value: rateRejected !== null ? `${rateRejected.toFixed(1)}%` : "0%",
+                      icon: <Warning />,
+                      color: "#f43f5e",
+                      bg: "#fff1f2",
+                      progress: rateRejected ?? 0,
+                      subtext: `${aiRecords.filter(r => !r.isAccepted).length} bản ghi`,
+                    },
+                  ].map((item) => (
+                    <Box
+                      key={item.label}
+                      sx={{
+                        p: 1.75,
+                        borderRadius: 3,
+                        border: "1px solid",
+                        borderColor: "divider",
+                        bgcolor: "background.paper",
+                        transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                        "&:hover": {
+                          transform: "translateY(-4px)",
+                          boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+                          borderColor: item.color,
+                        },
+                      }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing={1.5} mb={1}>
                         <Avatar
                           sx={{
-                            width: 32,
-                            height: 32,
+                            width: 36,
+                            height: 36,
                             bgcolor: item.bg,
                             color: item.color,
+                            borderRadius: 2,
                           }}
                         >
                           {item.icon}
                         </Avatar>
                         <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ letterSpacing: 0.5, textTransform: "uppercase", fontSize: "0.65rem" }}>
                             {item.label}
                           </Typography>
-                          <Typography variant="body1" fontWeight={700}>
-                            {item.value.toLocaleString("vi-VN")}
+                          <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                            {item.value}
                           </Typography>
                         </Box>
                       </Stack>
-                    </Paper>
+                      
+                      <Box sx={{ px: 0.5 }}>
+                        <LinearProgress 
+                          variant="determinate" 
+                          value={item.progress} 
+                          sx={{ 
+                            height: 4, 
+                            borderRadius: 2,
+                            bgcolor: "rgba(0,0,0,0.05)",
+                            "& .MuiLinearProgress-bar": {
+                              bgcolor: item.color
+                            }
+                          }} 
+                        />
+                        {"subtext" in item && (
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: "0.65rem", mt: 0.5, display: "block", textAlign: "right" }}>
+                            {item.subtext}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
                   ))}
                 </Box>
               </Paper>

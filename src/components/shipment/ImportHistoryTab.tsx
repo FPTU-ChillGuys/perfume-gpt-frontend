@@ -19,6 +19,7 @@ import {
   MenuItem,
   TextField,
   Tooltip,
+  Snackbar,
   Stack,
   Button,
   Dialog,
@@ -35,6 +36,7 @@ import {
   Close,
   ExpandMore,
   ExpandLess,
+  Delete,
 } from "@mui/icons-material";
 import { importStockService } from "../../services/importStockService";
 import type { ImportTicket, ImportTicketDetail } from "@/types/import-ticket";
@@ -59,6 +61,21 @@ export const ImportHistoryTab: React.FC = () => {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(
     new Set(),
   );
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error" | "warning" | "info";
+  }>({ open: false, message: "", severity: "info" });
+
+  const showToast = (
+    message: string,
+    severity: "success" | "error" | "warning" | "info" = "success",
+  ) => {
+    setToast({ open: true, message, severity });
+  };
 
   // Load staff list on mount
   useEffect(() => {
@@ -102,6 +119,8 @@ export const ImportHistoryTab: React.FC = () => {
         rowsPerPage,
         statusFilter || undefined,
         staffFilter || undefined,
+        "createdAt",
+        "desc",
       );
 
       let filteredItems = response.payload!.items;
@@ -124,8 +143,8 @@ export const ImportHistoryTab: React.FC = () => {
       }
 
       filteredItems = filteredItems.slice().sort((a, b) => {
-        const bTime = getTicketDateValue(b) ?? new Date(b.createdAt!).getTime();
-        const aTime = getTicketDateValue(a) ?? new Date(a.createdAt!).getTime();
+        const bTime = new Date(b.createdAt!).getTime();
+        const aTime = new Date(a.createdAt!).getTime();
         return bTime - aTime;
       });
 
@@ -184,6 +203,29 @@ export const ImportHistoryTab: React.FC = () => {
     setExpandedProducts(new Set());
   };
 
+  const handleDeleteTicket = (e: React.MouseEvent, ticketId: string) => {
+    e.stopPropagation();
+    setTicketToDelete(ticketId);
+    setDeleteConfirmOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ticketToDelete) return;
+    try {
+      setDeleting(true);
+      await importStockService.deleteImportTicket(ticketToDelete);
+      loadTickets();
+      setDeleteConfirmOpen(false);
+      setTicketToDelete(null);
+      showToast("Xóa phiếu nhập thành công!");
+    } catch (err: any) {
+      setError(err.message || "Xóa phiếu nhập thất bại");
+      showToast(err.message || "Xóa phiếu nhập thất bại", "error");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const toggleProductExpand = (productId: string) => {
     setExpandedProducts((prev) => {
       const newSet = new Set(prev);
@@ -238,14 +280,24 @@ export const ImportHistoryTab: React.FC = () => {
       return "-";
     }
 
-    const parsedDate = new Date(dateString);
+    let dateToParse = dateString;
+    if (
+      dateString &&
+      !dateString.endsWith("Z") &&
+      !dateString.includes("+") &&
+      !dateString.split("T")[1]?.includes("-")
+    ) {
+      dateToParse = `${dateString}Z`;
+    }
 
-    if (Number.isNaN(parsedDate.getTime())) {
+    const parsedDate = new Date(dateToParse);
+
+    if (Number.isNaN(parsedDate.getTime()) || parsedDate.getFullYear() <= 1) {
       return "-";
     }
 
     if (includeTime) {
-      return parsedDate.toLocaleDateString("vi-VN", {
+      return parsedDate.toLocaleString("vi-VN", {
         year: "numeric",
         month: "2-digit",
         day: "2-digit",
@@ -401,6 +453,7 @@ export const ImportHistoryTab: React.FC = () => {
                 },
               }}
             >
+              <TableCell>Ngày tạo</TableCell>
               <TableCell>Nhà cung cấp</TableCell>
               <TableCell>Người tạo</TableCell>
               <TableCell>Người xác nhận</TableCell>
@@ -409,12 +462,13 @@ export const ImportHistoryTab: React.FC = () => {
               <TableCell align="right">Tổng tiền</TableCell>
               <TableCell align="center">Số mặt hàng</TableCell>
               <TableCell align="center">Trạng thái</TableCell>
+              <TableCell align="center">Hành động</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {tickets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={10} align="center" sx={{ py: 4 }}>
                   <Typography color="text.secondary" variant="body1">
                     Không có dữ liệu
                   </Typography>
@@ -430,6 +484,11 @@ export const ImportHistoryTab: React.FC = () => {
                     "&:last-child td": { borderBottom: 0 },
                   }}
                 >
+                  <TableCell>
+                    <Typography variant="body2">
+                      {formatDate(ticket.createdAt)}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     <Typography variant="body2">
                       {ticket.supplierName}
@@ -494,6 +553,19 @@ export const ImportHistoryTab: React.FC = () => {
                       }}
                     />
                   </TableCell>
+                  <TableCell align="center">
+                    {ticket.status === "Pending" && (
+                      <Tooltip title="Xóa phiếu nhập">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={(e) => ticket.id && handleDeleteTicket(e, ticket.id)}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </TableCell>
                   
                 </TableRow>
               ))
@@ -550,7 +622,7 @@ export const ImportHistoryTab: React.FC = () => {
             >
               <Box>
                 <Typography variant="h6" fontWeight={600}>
-                  Chi tiết phiếu nhập - {selectedTicket.id!.substring(0, 8)}...
+                  Chi tiết phiếu nhập
                 </Typography>
                 <Stack spacing={0.5} sx={{ mt: 0.5 }}>
                   <Typography variant="body2" color="text.secondary">
@@ -887,6 +959,56 @@ export const ImportHistoryTab: React.FC = () => {
           </>
         )}
       </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmOpen}
+        onClose={() => !deleting && setDeleteConfirmOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle sx={{ color: "error.main", fontWeight: "bold" }}>
+          Xác nhận xóa phiếu nhập
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Bạn có chắc chắn muốn xóa phiếu nhập này? Hành động này không thể hoàn tác.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setDeleteConfirmOpen(false)}
+            disabled={deleting}
+            variant="outlined"
+            color="inherit"
+          >
+            Hủy
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            color="error"
+            variant="contained"
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={20} /> : <Delete />}
+          >
+            {deleting ? "Đang xóa..." : "Xác nhận xóa"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={4000}
+        onClose={() => setToast({ ...toast, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setToast({ ...toast, open: false })}
+          severity={toast.severity}
+          sx={{ width: "100%" }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

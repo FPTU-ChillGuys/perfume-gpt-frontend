@@ -13690,7 +13690,7 @@ export interface components {
             /** Format: date-time */
             expectedArrivalDate?: string;
             /** Format: date-time */
-            actualImportDate?: string;
+            actualImportDate?: null | string;
             /** Format: decimal */
             totalCost?: number;
             status?: components["schemas"]["ImportStatus"];
