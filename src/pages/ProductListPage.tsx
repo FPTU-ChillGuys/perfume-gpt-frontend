@@ -68,7 +68,7 @@ const CATEGORY_LABEL_MAP: Record<string, string> = {
   "for women": "Nước hoa cho Nữ",
   "for men": "Nước hoa cho Nam",
   unisex: "Nước hoa Unisex",
-  "niche & artisan": "Niche và Artisan",
+  "niche & artisan": "Nước hoa Niche",
   "gift sets": "Gift Sets",
 };
 

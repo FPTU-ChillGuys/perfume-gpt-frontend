@@ -45,7 +45,7 @@ const CATEGORY_NAME_VI: Record<string, string> = {
   "for women": "Nước hoa cho Nữ",
   "for men": "Nước hoa cho Nam",
   unisex: "Nước hoa Unisex",
-  "niche & artisan": "Niche và Artisan",
+  "niche & artisan": "Nước hoa Niche",
 };
 
 const toVietnameseCategoryName = (name?: string | null) => {

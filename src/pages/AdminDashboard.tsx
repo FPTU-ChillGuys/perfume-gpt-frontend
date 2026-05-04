@@ -275,10 +275,10 @@ const StatCard = ({ label, value, icon, color, bg, helper }: StatCardProps) => (
           variant={value.toString().length > 10 ? "h6" : "h5"}
           fontWeight="bold"
           sx={{
-            wordBreak: "break-all",
+            wordBreak: "normal",
             lineHeight: 1.2,
             mb: 0.5,
-            fontSize: { xs: "1rem", sm: "1.1rem", lg: "1.2rem", xl: "1.4rem" },
+            fontSize: { xs: "1rem", sm: "1.1rem", lg: "1.05rem", xl: "1.35rem" },
           }}
         >
           {value}
@@ -1042,7 +1042,7 @@ const AdminDashboard = () => {
                   xs: "1fr",
                   sm: "repeat(2, 1fr)",
                   md: "repeat(3, 1fr)",
-                  lg: "repeat(5, 1fr)",
+                  lg: "0.8fr 1.05fr 1.05fr 1.05fr 1.05fr",
                 },
                 gap: { xs: 1, sm: 1.5, lg: 1.5 },
               }}
@@ -1253,7 +1253,7 @@ const AdminDashboard = () => {
                 >
                   <Bolt color="warning" />
                   <Typography variant="h6" fontWeight="bold">
-                    Cảnh báo vận hành
+                    Tình trạng kho
                   </Typography>
                 </Box>
 
@@ -1267,14 +1267,14 @@ const AdminDashboard = () => {
                 >
                   {[
                     {
-                      label: "Variant hết hàng",
+                      label: "Sản phẩm hết hàng",
                       value: outOfStockCount,
                       icon: <Insights />,
                       color: "#dc2626",
                       bg: "#fef2f2",
                     },
                     {
-                      label: "Variant sắp hết",
+                      label: "Sản phẩm sắp hết",
                       value: lowStockCount,
                       icon: <Inventory2 />,
                       color: "#ea580c",
