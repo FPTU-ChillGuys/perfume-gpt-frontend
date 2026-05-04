@@ -62,13 +62,13 @@ const resolveNotificationHubUrl = (): string => {
   return "/hubs/notifications";
 };
 
-const NOTIFICATION_HUB_URL = resolveNotificationHubUrl();
+export const NOTIFICATION_HUB_URL = resolveNotificationHubUrl();
 
 // ---------------------------------------------------------------------------
 // Token helper
 // ---------------------------------------------------------------------------
 
-const getValidToken = (): string => {
+export const getValidToken = (): string => {
   const raw = getStoredAccessToken();
   if (!raw) return "";
   const token = raw
