@@ -31,11 +31,11 @@ import { AdminLayout } from "../layouts/AdminLayout";
 import { AdminTrendSection } from "../components/admin/AdminTrendSection";
 import {
   adminDashboardService,
-  type DashboardOverview,
   type RevenueSummary,
   type TopProduct,
   type InventoryLevelsSummary,
   type PaymentMethodItem,
+  type RevenueChartItem,
 } from "../services/adminDashboardService";
 
 const formatCurrency = (v?: number) =>
@@ -216,26 +216,17 @@ const getMonthDayRanges = (monthKey: string): DayRange[] => {
 };
 
 const buildDailyRevenueSeries = (
-  ranges: DayRange[],
-  summaries: RevenueSummary[],
+  chartData: RevenueChartItem[],
 ): RevenueDayPoint[] => {
-  return ranges.map((range, index) => {
-    const summary = summaries[index] || {};
-    const grossRevenue = Math.max(0, Number(summary.grossRevenue ?? 0));
-    const refundedAmount = Math.abs(Number(summary.refundedAmount ?? 0));
-    const netRevenue = Math.max(
-      0,
-      Number(summary.netRevenue ?? grossRevenue - refundedAmount),
-    );
-    const orders = Number(summary.paidOrdersCount ?? 0);
-
+  return (chartData || []).map((item) => {
+    const date = new Date(item.date);
     return {
-      label: range.label,
-      date: range.date,
-      grossRevenue,
-      refundedAmount,
-      netRevenue,
-      orders,
+      label: `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`,
+      date: date,
+      grossRevenue: Number(item.grossRevenue ?? 0),
+      refundedAmount: Math.abs(Number(item.refundedAmount ?? 0)),
+      netRevenue: Number(item.netRevenue ?? 0),
+      orders: 0,
     };
   });
 };
@@ -250,18 +241,62 @@ interface StatCardProps {
 }
 
 const StatCard = ({ label, value, icon, color, bg, helper }: StatCardProps) => (
-  <Paper sx={{ p: 2.5, borderRadius: 2 }}>
-    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-      <Avatar sx={{ bgcolor: bg, color, width: 48, height: 48 }}>{icon}</Avatar>
-      <Box>
-        <Typography variant="body2" color="text.secondary">
+  <Paper
+    sx={{
+      p: { xs: 1.25, sm: 1.5, lg: 1.75 },
+      borderRadius: 2,
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+    }}
+  >
+    <Box sx={{ display: "flex", alignItems: "flex-start", gap: { xs: 1, lg: 1.25 }, flex: 1 }}>
+      <Avatar
+        sx={{
+          bgcolor: bg,
+          color,
+          width: { xs: 32, sm: 36, lg: 40 },
+          height: { xs: 32, sm: 36, lg: 40 },
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </Avatar>
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          noWrap
+          sx={{ mb: 0.25, display: "block", fontSize: { xs: "0.6rem", sm: "0.65rem", lg: "0.7rem" } }}
+        >
           {label}
         </Typography>
-        <Typography variant="h5" fontWeight="bold">
+        <Typography
+          variant={value.toString().length > 10 ? "h6" : "h5"}
+          fontWeight="bold"
+          sx={{
+            wordBreak: "break-all",
+            lineHeight: 1.2,
+            mb: 0.5,
+            fontSize: { xs: "1rem", sm: "1.1rem", lg: "1.2rem", xl: "1.4rem" },
+          }}
+        >
           {value}
         </Typography>
         {helper && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              display: "-webkit-box",
+              WebkitLineClamp: 1,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+              lineHeight: 1.2,
+              mt: "auto",
+              fontSize: { xs: "0.6rem", lg: "0.65rem" },
+            }}
+          >
             {helper}
           </Typography>
         )}
@@ -285,8 +320,10 @@ const RevenueLineChart = ({
   const height = 340;
   const margin = { top: 28, right: 24, bottom: 62, left: 70 };
   const xAxisStart = margin.left + 18;
-
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+  // Key to restart animations when data changes
+  const chartKey = data.length > 0 ? `${data[0]?.label}-${data.length}` : "empty";
 
   const safeStart = Math.max(0, Math.min(range[0] ?? 0, weekRanges.length - 1));
   const safeEnd = Math.max(
@@ -335,7 +372,7 @@ const RevenueLineChart = ({
     const y =
       margin.top +
       plotHeight -
-      ((point.netRevenue - minRevenue) / valueSpan) * plotHeight;
+      ((Math.max(0, point.netRevenue) - minRevenue) / valueSpan) * plotHeight;
     return { ...point, x, y };
   });
 
@@ -373,7 +410,9 @@ const RevenueLineChart = ({
     source: (RevenueDayPoint & { x: number; y: number })[],
   ) => {
     const seriesPoints = source.map((point) => {
-      const value = selector(point);
+      const rawValue = selector(point);
+      // Clamp negative values to 0 for visualization on the chart
+      const value = Math.max(0, rawValue);
       const y =
         margin.top +
         plotHeight -
@@ -386,7 +425,7 @@ const RevenueLineChart = ({
     }
 
     const connectedPoints = [
-      { x: margin.left, y: seriesPoints[0]!.y },
+      { x: margin.left, y: margin.top + plotHeight },
       ...seriesPoints,
     ];
     return smoothPath(connectedPoints);
@@ -452,11 +491,35 @@ const RevenueLineChart = ({
         </Stack>
       </Stack>
 
-      <Box sx={{ width: "100%", overflowX: "auto", position: "relative" }}>
+      <Box sx={{ width: "100%", position: "relative" }}>
+        <style>
+          {`
+            @keyframes drawPath {
+              from { stroke-dashoffset: 3000; }
+              to { stroke-dashoffset: 0; }
+            }
+            @keyframes fadeInPoint {
+              from { opacity: 0; transform: scale(0); }
+              to { opacity: 1; transform: scale(1); }
+            }
+            .chart-path {
+              stroke-dasharray: 3000;
+              stroke-dashoffset: 3000;
+              animation: drawPath 1.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            .chart-point {
+              transform-origin: center;
+              animation: fadeInPoint 0.5s ease-out forwards;
+              opacity: 0;
+            }
+          `}
+        </style>
         <svg
+          key={chartKey}
           width="100%"
-          height={height}
+          height="auto"
           viewBox={`0 0 ${width} ${height}`}
+          style={{ display: "block", width: "100%" }}
           role="img"
           aria-label="Biểu đồ doanh thu theo ngày"
         >
@@ -522,6 +585,8 @@ const RevenueLineChart = ({
             strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
+            className="chart-path"
+            style={{ animationDelay: "0s" }}
           />
 
           <path
@@ -531,6 +596,8 @@ const RevenueLineChart = ({
             strokeWidth={3}
             strokeLinecap="round"
             strokeLinejoin="round"
+            className="chart-path"
+            style={{ animationDelay: "0.2s" }}
           />
 
           <path
@@ -540,6 +607,8 @@ const RevenueLineChart = ({
             strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
+            className="chart-path"
+            style={{ animationDelay: "0.4s" }}
           />
 
           {points.map((point, index) => (
@@ -567,16 +636,7 @@ const RevenueLineChart = ({
                 );
               })()}
 
-              <circle
-                cx={point.x}
-                cy={
-                  margin.top +
-                  plotHeight -
-                  ((point.netRevenue - minRevenue) / valueSpan) * plotHeight
-                }
-                r={hoveredIndex === index ? 5 : 3.8}
-                fill="#60a5fa"
-              />
+              {/* Point dots removed as requested for a cleaner line look */}
 
               {(index === lastPointIndex ||
                 (index % labelStep === 0 &&
@@ -615,7 +675,11 @@ const RevenueLineChart = ({
             sx={{
               position: "absolute",
               top: 10,
-              left: Math.min(width - 220, Math.max(8, hoveredX + 12)),
+              // Use percentage for responsive positioning and flip if near the right edge
+              left:
+                hoveredX > width * 0.7
+                  ? `calc(${(hoveredX / width) * 100}% - 210px)`
+                  : `calc(${(hoveredX / width) * 100}% + 12px)`,
               px: 1.25,
               py: 1,
               bgcolor: "#ffffff",
@@ -623,6 +687,8 @@ const RevenueLineChart = ({
               border: "1px solid #cbd5e1",
               borderRadius: 1.5,
               minWidth: 190,
+              zIndex: 10,
+              pointerEvents: "none", // Prevent tooltip from flickering when mouse is over it
             }}
           >
             <Typography
@@ -639,9 +705,14 @@ const RevenueLineChart = ({
             </Typography>
             <Typography
               variant="caption"
-              sx={{ color: "#93c5fd", display: "block" }}
+              sx={{
+                color: hoveredPoint.netRevenue < 0 ? "#ef4444" : "#93c5fd",
+                display: "block",
+                fontWeight: hoveredPoint.netRevenue < 0 ? "bold" : "normal",
+              }}
             >
               Doanh thu thuần: {formatCurrency(hoveredPoint.netRevenue)}
+              {hoveredPoint.netRevenue < 0 && " (Lỗ)"}
             </Typography>
             <Typography
               variant="caption"
@@ -760,7 +831,20 @@ const PaymentDonutChart = ({
     );
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+    <Box
+      key={JSON.stringify(distribution)}
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+        animation: "donutAppear 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+        "@keyframes donutAppear": {
+          from: { opacity: 0, transform: "scale(0.9) rotate(-5deg)" },
+          to: { opacity: 1, transform: "scale(1) rotate(0)" },
+        },
+      }}
+    >
       {/* Donut — tự lấp đầy phần còn lại theo chiều dọc */}
       <Box
         sx={{
@@ -853,7 +937,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const monthOptions = getYearMonthOptions(new Date().getFullYear());
 
-  const [overview, setOverview] = useState<DashboardOverview | null>(null);
+  const [todayRevenueSummary, setTodayRevenueSummary] = useState<RevenueSummary | null>(null);
   const [dailyRevenue, setDailyRevenue] = useState<RevenueDayPoint[]>([]);
   const [monthWeekRanges, setMonthWeekRanges] = useState<WeekRange[]>([]);
   const [revenueRange, setRevenueRange] = useState<number[]>([0, 0]);
@@ -869,22 +953,13 @@ const AdminDashboard = () => {
     const todayRange = getTodayRange();
     const monthRange = getMonthRange(selectedMonth);
     const weekRanges = getMonthWeekRanges(selectedMonth);
-    const dayRanges = getMonthDayRanges(selectedMonth);
     let active = true;
 
     Promise.all([
-      adminDashboardService.getOverview({
+      adminDashboardService.getRevenue({
         FromDate: todayRange.from,
         ToDate: todayRange.to,
       }),
-      Promise.all(
-        dayRanges.map((range) =>
-          adminDashboardService.getRevenue({
-            FromDate: range.from,
-            ToDate: range.to,
-          }),
-        ),
-      ),
       adminDashboardService.getTopProducts({
         Top: 5,
         FromDate: monthRange.from,
@@ -896,16 +971,13 @@ const AdminDashboard = () => {
         ToDate: monthRange.to,
       }),
     ])
-      .then(([ov, revenueSummaries, top, inv, monthRev]) => {
+      .then(([todayRev, top, inv, monthRev]) => {
         if (!active) {
           return;
         }
 
-        setOverview(ov);
-        const dailySeries = buildDailyRevenueSeries(
-          dayRanges,
-          revenueSummaries,
-        );
+        setTodayRevenueSummary(todayRev);
+        const dailySeries = buildDailyRevenueSeries(monthRev.chartData || []);
         setDailyRevenue(dailySeries);
         setMonthWeekRanges(weekRanges);
         setRevenueRange([0, Math.max(0, weekRanges.length - 1)]);
@@ -930,30 +1002,21 @@ const AdminDashboard = () => {
     };
   }, [selectedMonth, showToast]);
 
-  const todayOrders = Number(overview?.revenue?.paidOrdersCount ?? 0);
+  const todayOrders = Number(todayRevenueSummary?.paidOrdersCount ?? 0);
   const todayRevenue = Number(
-    overview?.revenue?.netRevenue ?? overview?.revenue?.grossRevenue ?? 0,
+    todayRevenueSummary?.netRevenue ?? todayRevenueSummary?.grossRevenue ?? 0,
   );
-  const newUsersToday =
-    (overview as any)?.newUsersToday ??
-    (overview as any)?.totalUsersCreatedToday ??
-    null;
-  const lowStockCount = Number(
-    inventorySummary.lowStockVariantsCount ??
-      overview?.inventoryLevels?.lowStockVariantsCount ??
-      0,
+  const monthNetRevenue = Number(
+    monthRevenueSummary?.netRevenue ?? monthRevenueSummary?.grossRevenue ?? 0,
   );
-  const outOfStockCount = Number(
-    inventorySummary.outOfStockVariantsCount ??
-      overview?.inventoryLevels?.outOfStockVariantsCount ??
-      0,
+  const monthGrossRevenue = Number(monthRevenueSummary?.grossRevenue ?? 0);
+  const monthRefundedAmount = Math.abs(
+    Number(monthRevenueSummary?.refundedAmount ?? 0),
   );
-  const expiringSoonCount = Number(
-    inventorySummary.expiringSoonCount ??
-      overview?.inventoryLevels?.expiringSoonCount ??
-      0,
-  );
-  const pendingOrdersCount = Number((overview as any)?.pendingOrders ?? 0);
+
+  const lowStockCount = Number(inventorySummary.lowStockVariantsCount ?? 0);
+  const outOfStockCount = Number(inventorySummary.outOfStockVariantsCount ?? 0);
+  const expiringSoonCount = Number(inventorySummary.expiringSoonCount ?? 0);
 
   return (
     <AdminLayout>
@@ -978,9 +1041,10 @@ const AdminDashboard = () => {
                 gridTemplateColumns: {
                   xs: "1fr",
                   sm: "repeat(2, 1fr)",
-                  lg: "repeat(4, 1fr)",
+                  md: "repeat(3, 1fr)",
+                  lg: "repeat(5, 1fr)",
                 },
-                gap: 2,
+                gap: { xs: 1, sm: 1.5, lg: 1.5 },
               }}
             >
               <StatCard
@@ -998,25 +1062,28 @@ const AdminDashboard = () => {
                 bg="#dcfce7"
               />
               <StatCard
-                label={`Doanh thu ${monthOptions.find((o) => o.value === selectedMonth)?.label ?? selectedMonth}`}
-                value={formatCurrency(
-                  Number(
-                    monthRevenueSummary?.netRevenue ??
-                    monthRevenueSummary?.grossRevenue ??
-                    0,
-                  ),
-                )}
+                label="Doanh thu thuần (Tháng)"
+                value={formatCurrency(monthNetRevenue)}
                 icon={<TrendingUp />}
                 color="#6366f1"
                 bg="#ede9fe"
-                helper="Doanh thu thuần theo tháng được chọn"
+                helper={`Doanh thu ${monthOptions.find((o) => o.value === selectedMonth)?.label ?? selectedMonth}`}
               />
               <StatCard
-                label="Biến thể sắp hết hàng"
-                value={lowStockCount.toLocaleString("vi-VN")}
-                icon={<Inventory2 />}
-                color="#f97316"
-                bg="#ffedd5"
+                label="Doanh thu gộp (Tháng)"
+                value={formatCurrency(monthGrossRevenue)}
+                icon={<Timeline />}
+                color="#4ade80"
+                bg="#f0fdf4"
+                helper="Tổng doanh thu trước khi trừ hoàn tiền"
+              />
+              <StatCard
+                label="Hoàn tiền (Tháng)"
+                value={formatCurrency(monthRefundedAmount)}
+                icon={<Warning />}
+                color="#f87171"
+                bg="#fef2f2"
+                helper="Tổng số tiền đã hoàn trả"
               />
             </Box>
 
@@ -1199,13 +1266,6 @@ const AdminDashboard = () => {
                   }}
                 >
                   {[
-                    {
-                      label: "Đơn chờ xử lý",
-                      value: pendingOrdersCount,
-                      icon: <Warning />,
-                      color: "#d97706",
-                      bg: "#fff7ed",
-                    },
                     {
                       label: "Variant hết hàng",
                       value: outOfStockCount,

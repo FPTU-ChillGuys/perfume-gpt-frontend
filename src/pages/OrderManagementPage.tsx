@@ -20,6 +20,8 @@ import {
   Divider,
   Stack,
   Pagination,
+  Autocomplete,
+  Collapse,
   type SelectChangeEvent,
 } from "@mui/material";
 import {
@@ -27,10 +29,15 @@ import {
   Clear as ClearIcon,
   ContentCopy as ContentCopyIcon,
   ImageNotSupportedOutlined as ImageNotSupportedOutlinedIcon,
+  FilterList as FilterListIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { orderService } from "@/services/orderService";
+import { userService, type UserLookupItem } from "@/services/userService";
 import { useToast } from "@/hooks/useToast";
+import { useDebounce } from "@/hooks/useDebounce";
 import { formatDateTimeVN } from "@/utils/dateTime";
 import type { OrderListItem, OrderStatus, OrderType } from "@/types/order";
 import {
@@ -88,8 +95,8 @@ export const OrderManagementPage = () => {
   const [totalCount, setTotalCount] = useState(0);
 
   // Filters
-  const [searchTerm, setSearchTerm] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const debouncedSearchTerm = useDebounce(searchInput, 500);
   const initialStatus =
     (location.state as { status?: OrderStatus | "" } | null)?.status ?? "";
   const [status, setStatus] = useState<OrderStatus | "">(initialStatus);
@@ -98,10 +105,26 @@ export const OrderManagementPage = () => {
   const [toDate, setToDate] = useState("");
   const [pendingCount, setPendingCount] = useState(0);
 
+  const [userLookup, setUserLookup] = useState<UserLookupItem[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<UserLookupItem | null>(null);
+  const [showFilters, setShowFilters] = useState(true);
+
   useEffect(() => {
     loadOrders();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, rowsPerPage, searchTerm, status, type, fromDate, toDate]);
+  }, [page, rowsPerPage, debouncedSearchTerm, status, type, fromDate, toDate, selectedCustomer]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedSearchTerm]);
+
+  useEffect(() => {
+    userService.getUserLookup().then((res) => {
+      setUserLookup(res.payload || []);
+    }).catch(err => {
+      console.error("Failed to load user lookup:", err);
+    });
+  }, []);
 
   const loadOrders = async () => {
     try {
@@ -110,11 +133,12 @@ export const OrderManagementPage = () => {
         orderService.getAllOrders({
           PageNumber: page + 1,
           PageSize: rowsPerPage,
-          OrderCode: searchTerm || undefined,
+          OrderCode: debouncedSearchTerm || undefined,
           Status: status || undefined,
           Type: type || undefined,
           FromDate: fromDate || undefined,
           ToDate: toDate || undefined,
+          UserId: selectedCustomer?.id || undefined,
           SortBy: "CreatedAt",
           SortOrder: "desc",
         }),
@@ -139,17 +163,17 @@ export const OrderManagementPage = () => {
   };
 
   const handleSearch = () => {
-    setSearchTerm(searchInput);
     setPage(0);
+    void loadOrders();
   };
 
   const handleClearFilters = () => {
     setSearchInput("");
-    setSearchTerm("");
     setStatus("");
     setType("");
     setFromDate("");
     setToDate("");
+    setSelectedCustomer(null);
     setPage(0);
   };
 
@@ -198,11 +222,18 @@ export const OrderManagementPage = () => {
         {/* Filters */}
         <Paper sx={{ mb: 3, overflow: "hidden" }}>
           <Box
-            sx={{ borderBottom: "1px solid", borderColor: "divider", px: 2 }}
+            sx={{
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              px: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
           >
             <Tabs
               value={status}
-              onChange={(_, value: OrderStatus | "") => {
+              onChange={(event: React.SyntheticEvent, value: OrderStatus | "") => {
                 setStatus(value);
                 setPage(0);
               }}
@@ -210,6 +241,7 @@ export const OrderManagementPage = () => {
               scrollButtons="auto"
               TabIndicatorProps={{ style: { backgroundColor: "#ee4d2d" } }}
               sx={{
+                flex: 1,
                 "& .MuiTab-root": {
                   textTransform: "none",
                   fontWeight: 500,
@@ -245,113 +277,165 @@ export const OrderManagementPage = () => {
                 );
               })}
             </Tabs>
-          </Box>
 
-          <Box sx={{ p: 3 }}>
-            <Box
+            <Button
+              size="small"
+              onClick={() => setShowFilters(!showFilters)}
+              startIcon={<FilterListIcon />}
+              endIcon={showFilters ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "repeat(2, 1fr)",
-                  md: "2fr repeat(2, 1fr)",
-                  lg: "2fr repeat(3, 1fr) auto auto",
-                },
-                gap: 2,
+                ml: 2,
+                textTransform: "none",
+                color: "text.secondary",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                "&:hover": { color: "#ee4d2d", bgcolor: "transparent" },
               }}
             >
-              <TextField
-                fullWidth
-                label="Tìm theo mã đơn hàng"
-                placeholder="Tìm theo mã đơn hàng"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleSearch();
-                }}
-                sx={{
-                  gridColumn: {
-                    xs: "span 1",
-                    sm: "span 2",
-                    md: "span 1",
-                    lg: "span 1",
-                  },
-                }}
-                InputProps={{
-                  endAdornment: (
-                    <IconButton onClick={handleSearch} edge="end">
-                      <SearchIcon />
-                    </IconButton>
-                  ),
-                }}
-              />
+              {showFilters ? "Ẩn bộ lọc" : "Hiện bộ lọc"}
+            </Button>
+          </Box>
 
-              <FormControl fullWidth>
-                <InputLabel>Loại đơn hàng</InputLabel>
-                <Select
-                  value={type}
-                  label="Loại đơn hàng"
-                  onChange={(e) => {
-                    setType(e.target.value as OrderType | "");
+          <Collapse in={showFilters}>
+            <Box sx={{ p: 3 }}>
+            <Stack spacing={3}>
+              {/* Row 1: Primary Search */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+                  gap: 2,
+                }}
+              >
+                <TextField
+                  fullWidth
+                  label="Tìm theo mã đơn hàng"
+                  placeholder="Nhập mã đơn hàng..."
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  InputProps={{
+                    endAdornment: (
+                      <IconButton disabled edge="end">
+                        <SearchIcon />
+                      </IconButton>
+                    ),
+                  }}
+                />
+
+                <Autocomplete
+                  options={userLookup}
+                  value={selectedCustomer}
+                  onChange={(_, newValue) => {
+                    setSelectedCustomer(newValue);
                     setPage(0);
                   }}
-                >
-                  <MenuItem value="">Tất cả</MenuItem>
-                  <MenuItem value="Online">Online</MenuItem>
-                  <MenuItem value="Offline">In-Store</MenuItem>
-                </Select>
-              </FormControl>
+                  getOptionLabel={(option) => `${option.fullName} (${option.email})`}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Tìm theo khách hàng"
+                      placeholder="Nhập tên hoặc email khách hàng..."
+                    />
+                  )}
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  noOptionsText="Không tìm thấy khách hàng"
+                />
+              </Box>
 
-              <TextField
-                fullWidth
-                label="Từ ngày"
-                type="date"
-                value={fromDate}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  setPage(0);
-                }}
-                InputLabelProps={{ shrink: true }}
-              />
-
-              <TextField
-                fullWidth
-                label="Đến ngày"
-                type="date"
-                value={toDate}
-                onChange={(e) => {
-                  setToDate(e.target.value);
-                  setPage(0);
-                }}
-                InputLabelProps={{ shrink: true }}
-              />
-
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<SearchIcon />}
-                onClick={handleSearch}
+              {/* Row 2: Filters & Actions */}
+              <Box
                 sx={{
-                  minWidth: 120,
-                  bgcolor: "#ee4d2d",
-                  "&:hover": { bgcolor: "#d03e27" },
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    md: "repeat(3, 1fr)",
+                    lg: "1.5fr 1.5fr 1.5fr 120px 120px",
+                  },
+                  gap: 2,
+                  alignItems: "center",
                 }}
               >
-                Tìm
-              </Button>
+                <FormControl fullWidth>
+                  <InputLabel>Loại đơn hàng</InputLabel>
+                  <Select
+                    value={type}
+                    label="Loại đơn hàng"
+                    onChange={(e) => {
+                      setType(e.target.value as OrderType | "");
+                      setPage(0);
+                    }}
+                  >
+                    <MenuItem value="">Tất cả loại</MenuItem>
+                    <MenuItem value="Online">Online</MenuItem>
+                    <MenuItem value="Offline">In-Store</MenuItem>
+                  </Select>
+                </FormControl>
 
-              <Button
-                fullWidth
-                variant="outlined"
-                startIcon={<ClearIcon />}
-                onClick={handleClearFilters}
-                sx={{ height: 56 }}
-              >
-                Xóa bộ lọc
-              </Button>
-            </Box>
+                <TextField
+                  fullWidth
+                  label="Từ ngày"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    setPage(0);
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Đến ngày"
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => {
+                    setToDate(e.target.value);
+                    setPage(0);
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                />
+
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<SearchIcon />}
+                  onClick={handleSearch}
+                  sx={{
+                    height: 56,
+                    bgcolor: "#ee4d2d",
+                    "&:hover": { bgcolor: "#d03e27" },
+                    textTransform: "none",
+                    fontWeight: 600,
+                  }}
+                >
+                  Tìm
+                </Button>
+
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<ClearIcon />}
+                  onClick={handleClearFilters}
+                  sx={{
+                    height: 56,
+                    textTransform: "none",
+                    fontWeight: 600,
+                    borderColor: "#ee4d2d",
+                    color: "#ee4d2d",
+                    "&:hover": {
+                      borderColor: "#d03e27",
+                      bgcolor: "rgba(238,77,45,0.04)",
+                    },
+                  }}
+                >
+                  Xóa
+                </Button>
+              </Box>
+            </Stack>
           </Box>
-        </Paper>
+        </Collapse>
+      </Paper>
 
         {/* Orders List */}
         <Box sx={{ minHeight: "60vh", mb: 3 }}>

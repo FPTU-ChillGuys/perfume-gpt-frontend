@@ -560,9 +560,7 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: {
-                    ExpiringWithinDays?: number;
-                };
+                query?: never;
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -629,59 +627,6 @@ export interface paths {
                         "text/plain": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
                         "application/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
                         "text/json": components["schemas"]["BaseResponseOfListOfTopProductResponse"];
-                    };
-                };
-                default: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponse"];
-                        "application/json": components["schemas"]["BaseResponse"];
-                        "text/json": components["schemas"]["BaseResponse"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/admindashboard/overview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: {
-                    TopProductsCount?: number;
-                    ExpiringWithinDays?: number;
-                    Top?: number;
-                    FromDate?: string;
-                    ToDate?: string;
-                };
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
-                        "application/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
-                        "text/json": components["schemas"]["BaseResponseOfAdminDashboardOverviewResponse"];
                     };
                 };
                 default: {
@@ -11333,6 +11278,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/users/user-lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    FullName?: string;
+                    Email?: string;
+                    PhoneNumber?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfListOfUserLookupItem"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfUserLookupItem"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfUserLookupItem"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users/staff-manage": {
         parameters: {
             query?: never;
@@ -12144,11 +12140,6 @@ export interface components {
             provinceId?: number;
             isDefault?: boolean;
         };
-        AdminDashboardOverviewResponse: {
-            revenue?: components["schemas"]["RevenueSummaryResponse"];
-            inventoryLevels?: components["schemas"]["InventoryLevelsResponse"];
-            topProducts: components["schemas"]["TopProductResponse"][];
-        };
         AnswerReviewRequest: {
             staffFeedbackComment: string;
         };
@@ -12226,13 +12217,6 @@ export interface components {
         };
         BaseResponseOfAddressResponse: {
             payload?: null | components["schemas"]["AddressResponse"];
-            success?: boolean;
-            message?: string;
-            errors?: null | string[];
-            errorType?: null | components["schemas"]["ResponseErrorType"];
-        };
-        BaseResponseOfAdminDashboardOverviewResponse: {
-            payload?: null | components["schemas"]["AdminDashboardOverviewResponse"];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -12590,6 +12574,13 @@ export interface components {
         };
         BaseResponseOfListOfTopProductResponse: {
             payload?: null | components["schemas"]["TopProductResponse"][];
+            success?: boolean;
+            message?: string;
+            errors?: null | string[];
+            errorType?: null | components["schemas"]["ResponseErrorType"];
+        };
+        BaseResponseOfListOfUserLookupItem: {
+            payload?: null | components["schemas"]["UserLookupItem"][];
             success?: boolean;
             message?: string;
             errors?: null | string[];
@@ -13538,6 +13529,16 @@ export interface components {
             noteId?: number;
             noteName: string;
             noteType?: components["schemas"]["NoteType"];
+        };
+        DailyRevenueItem: {
+            /** Format: date-time */
+            date?: string;
+            /** Format: decimal */
+            grossRevenue?: number;
+            /** Format: decimal */
+            refundedAmount?: number;
+            /** Format: decimal */
+            netRevenue?: number;
         };
         DeliverInStoreRequest: {
             posSessionId?: null | string;
@@ -14949,6 +14950,9 @@ export interface components {
             /** Format: int32 */
             paidOrdersCount?: number;
             paymentMethodDistribution?: components["schemas"]["PaymentMethodDistributionResponse"][];
+            /** Format: decimal */
+            aov?: number;
+            chartData?: components["schemas"]["DailyRevenueItem"][];
         };
         ReviewDetailResponse: {
             /** Format: uuid */
@@ -15301,6 +15305,7 @@ export interface components {
             /** Format: uuid */
             productId?: string;
             productName: string;
+            imageUrl?: null | string;
             /** Format: int32 */
             totalUnitsSold?: number;
             /** Format: decimal */
@@ -15593,6 +15598,12 @@ export interface components {
             phoneNumber: string;
             email: string;
             profilePictureUrl?: null | string;
+        };
+        UserLookupItem: {
+            /** Format: uuid */
+            id?: string;
+            fullName: string;
+            email: string;
         };
         UserManageItem: {
             /** Format: uuid */

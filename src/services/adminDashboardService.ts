@@ -1,15 +1,17 @@
 import { apiInstance } from "@/lib/api";
 
-export interface DashboardOverview {
-  revenue?: RevenueSummary;
-  inventoryLevels?: InventoryLevelsSummary;
-  topProducts?: TopProduct[];
-}
 
 export interface PaymentMethodItem {
   paymentMethod: string;
   transactionsCount: number;
   amount: number;
+}
+
+export interface RevenueChartItem {
+  date: string;
+  grossRevenue: number;
+  refundedAmount: number;
+  netRevenue: number;
 }
 
 export interface RevenueSummary {
@@ -21,6 +23,8 @@ export interface RevenueSummary {
   successfulTransactionsCount?: number;
   paidOrdersCount?: number;
   paymentMethodDistribution?: PaymentMethodItem[];
+  chartData?: RevenueChartItem[];
+  aov?: number;
 }
 
 export interface TopProduct {
@@ -45,21 +49,6 @@ export interface InventoryLevelsSummary {
 class AdminDashboardService {
   private readonly BASE = "/api/admindashboard";
 
-  async getOverview(params?: {
-    FromDate?: string;
-    ToDate?: string;
-  }): Promise<DashboardOverview> {
-    const response = await apiInstance.GET(
-      `${this.BASE}/overview` as any,
-      {
-        params: { query: params },
-      } as any,
-    );
-    if (!response.data?.success) {
-      throw new Error(response.data?.message || "Failed to load overview");
-    }
-    return (response.data.payload as DashboardOverview) ?? {};
-  }
 
   async getRevenue(params?: {
     FromDate?: string;

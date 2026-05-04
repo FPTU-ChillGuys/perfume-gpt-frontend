@@ -7,6 +7,18 @@ export type UserCredentials = components["schemas"]["UserCredentialsResponse"];
 export type UserAvatar = components["schemas"]["MediaResponse"];
 export type UpdateUserBasicInfoRequest = components["schemas"]["UpdateUserBasicInfoRequest"];
 
+export interface UserLookupItem {
+  id: string;
+  fullName: string;
+  email: string;
+}
+
+export interface UserLookupResponse {
+  success: boolean;
+  message: string;
+  payload: UserLookupItem[];
+}
+
 class UserService {
   async getUserMe(): Promise<UserCredentials> {
     const response = await apiInstance.GET("/api/users/me");
@@ -18,7 +30,6 @@ class UserService {
 
   async getStaffLookup(): Promise<StaffLookupResponse> {
     try {
-      //const response = await axiosInstance.get<StaffLookupResponse>(`${this.USERS_ENDPOINT}/staff-lookup`,);
       const response = await apiInstance.GET(`/api/users/staff-lookup`);
 
       if (!response.data?.success) {
@@ -34,6 +45,27 @@ class UserService {
         error.response?.data?.message ||
           error.message ||
           "Failed to fetch staff lookup",
+      );
+    }
+  }
+
+  async getUserLookup(): Promise<UserLookupResponse> {
+    try {
+      const response = await apiInstance.GET("/api/users/user-lookup" as any, {});
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to fetch user lookup",
+        );
+      }
+
+      return response.data as any;
+    } catch (error: any) {
+      console.error("Get user lookup error:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to fetch user lookup",
       );
     }
   }

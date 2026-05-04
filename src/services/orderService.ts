@@ -37,6 +37,7 @@ interface GetMyOrdersParams {
 }
 
 interface GetAllOrdersParams extends GetMyOrdersParams {
+  UserId?: string;
   SortBy?: string;
   SortOrder?: string;
   IsDescending?: boolean;
