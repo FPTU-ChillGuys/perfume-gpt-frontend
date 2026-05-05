@@ -57,6 +57,7 @@ export interface RestockAIVariant {
     supplierName?: string;
     negotiatedPrice?: number;
     estimatedLeadTimeDays?: number;
+    slowStockRisk?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | null;
 }
 
 export interface RestockAIPredictionData {

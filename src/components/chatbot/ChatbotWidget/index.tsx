@@ -359,6 +359,22 @@ export default function ChatbotWidget() {
 
   const handleAddToCart = useCallback(
     async (variantId: string, productName: string, aiAcceptanceId?: string) => {
+      // Auth guard — giống ProductDetailPage
+      const currentUser = authService.getCurrentUser();
+      if (!currentUser) {
+        showToast("Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng", "warning");
+        return;
+      }
+
+      const role = currentUser.role?.toLowerCase();
+      if (role === "admin" || role === "staff") {
+        showToast(
+          "Tài khoản admin/staff không thể thêm giỏ hàng hoặc thanh toán online",
+          "info",
+        );
+        return;
+      }
+
       try {
         // Add item to cart
         await cartService.addItem(variantId, 1);

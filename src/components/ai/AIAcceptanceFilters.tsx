@@ -1,7 +1,7 @@
 import { Box, IconButton, Paper, TextField, Tooltip } from "@mui/material";
 import { Search as SearchIcon, Clear as ClearIcon } from "@mui/icons-material";
 
-export type FilterStatus = "all" | "accepted" | "rejected";
+export type FilterStatus = "all" | "accepted" | "rejected" | "pending";
 
 interface Props {
     searchInput: string;
@@ -56,6 +56,7 @@ export const AIAcceptanceFilters = ({
                 <option value="all">Tất cả</option>
                 <option value="accepted">Đã chấp nhận</option>
                 <option value="rejected">Đã từ chối</option>
+                <option value="pending">Chưa xác định</option>
             </TextField>
 
             <Box />
