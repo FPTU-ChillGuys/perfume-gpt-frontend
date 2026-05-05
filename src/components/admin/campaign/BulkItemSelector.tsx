@@ -47,6 +47,7 @@ import {
   type StockResponse,
 } from "@/services/inventoryService";
 import { productService } from "@/services/productService";
+import { storePolicyService } from "@/services/storePolicyService";
 import {
   BulkConfigModal,
   type SplitBulkConfigValues,
@@ -128,6 +129,27 @@ const isBatchExpired = (batch: BatchDetailResponse): boolean => {
   return false;
 };
 
+const isBatchSelectable = (batch: BatchDetailResponse, stopSellingDays: number): boolean => {
+  if (batch.remainingQuantity === 0) return false;
+  if (isBatchExpired(batch)) return false;
+  if ((batch.daysUntilExpiry ?? 9999) <= stopSellingDays) return false;
+  return true;
+};
+
+const formatDaysToYMD = (totalDays: number) => {
+  if (totalDays <= 0) return "Hết hạn";
+  const years = Math.floor(totalDays / 365);
+  const months = Math.floor((totalDays % 365) / 30);
+  const days = Math.floor((totalDays % 365) % 30);
+  
+  const parts = [];
+  if (years > 0) parts.push(`${years} năm`);
+  if (months > 0) parts.push(`${months} tháng`);
+  if (days > 0) parts.push(`${days} ngày`);
+  
+  return parts.length > 0 ? parts.join(" ") : "0 ngày";
+};
+
 const getStockStatusDisplay = (stock: StockResponse) => {
   if (stock.status === "OutOfStock")
     return { label: "Hết hàng", color: "error" as const };
@@ -176,6 +198,15 @@ export const BulkItemSelector = ({
   // ── Checkbox state ──
   const [checkedKeys, setCheckedKeys] = useState<Set<string>>(new Set());
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [stopSellingDays, setStopSellingDays] = useState(0);
+
+  useEffect(() => {
+    storePolicyService.getCurrentPolicy().then((policy) => {
+      setStopSellingDays(policy.stopSellingBeforeExpiryDays || 0);
+    }).catch(() => {
+      // ignore
+    });
+  }, []);
 
   // Cross-page cache: accumulates all SelectableRow data the user has seen
   const allRowsCache = useRef<Map<string, SelectableRow>>(new Map());
@@ -431,7 +462,7 @@ export const BulkItemSelector = ({
             const batch = batchByVariantId[r.productVariantId]?.items.find(
               (b) => b.id === r.batchId,
             );
-            if (batch && isBatchExpired(batch)) return false;
+            if (batch && !isBatchSelectable(batch, stopSellingDays)) return false;
           }
           return true;
         })
@@ -502,7 +533,7 @@ export const BulkItemSelector = ({
         const batch = batchByVariantId[row.productVariantId]?.items.find(
           (b) => b.id === row.batchId,
         );
-        if (batch && isBatchExpired(batch)) continue;
+        if (batch && !isBatchSelectable(batch, stopSellingDays)) continue;
       }
 
       const isBatch = Boolean(row.batchId);
@@ -855,13 +886,17 @@ export const BulkItemSelector = ({
                                           batch.id ||
                                           `${variantId}-${batch.batchCode}`
                                         }
-                                        sx={isBatchExpired(batch) ? { opacity: 0.5 } : undefined}
+                                        sx={!isBatchSelectable(batch, stopSellingDays) ? { opacity: 0.5 } : undefined}
                                       >
                                         <TableCell padding="checkbox">
                                           <Tooltip
                                             title={
-                                              isBatchExpired(batch)
+                                              batch.remainingQuantity === 0
+                                                ? "Lô đã hết hàng"
+                                                : isBatchExpired(batch)
                                                 ? "Lô đã hết hạn, không thể chọn"
+                                                : (batch.daysUntilExpiry ?? 9999) <= stopSellingDays
+                                                ? "Lô cận date, không thể chọn"
                                                 : ""
                                             }
                                           >
@@ -877,7 +912,7 @@ export const BulkItemSelector = ({
                                                 disabled={
                                                   isBatchAdded ||
                                                   isBatchBlockedByProduct ||
-                                                  isBatchExpired(batch)
+                                                  !isBatchSelectable(batch, stopSellingDays)
                                                 }
                                               />
                                             </span>
@@ -922,14 +957,14 @@ export const BulkItemSelector = ({
                                               size="small"
                                               color="warning"
                                               variant="outlined"
-                                              label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
+                                              label={`Còn ${formatDaysToYMD(batch.daysUntilExpiry ?? 0)}`}
                                             />
                                           ) : (
                                             <Chip
                                               size="small"
                                               color="success"
                                               variant="outlined"
-                                              label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
+                                              label={`Còn ${formatDaysToYMD(batch.daysUntilExpiry ?? 0)}`}
                                             />
                                           )}
                                         </TableCell>

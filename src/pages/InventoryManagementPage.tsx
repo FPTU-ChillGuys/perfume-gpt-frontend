@@ -158,6 +158,20 @@ const formatDate = (value?: string) => {
   return new Date(value).toLocaleDateString("vi-VN");
 };
 
+const formatDaysToYMD = (totalDays: number) => {
+  if (totalDays <= 0) return "Hết hạn";
+  const years = Math.floor(totalDays / 365);
+  const months = Math.floor((totalDays % 365) / 30);
+  const days = Math.floor((totalDays % 365) % 30);
+  
+  const parts = [];
+  if (years > 0) parts.push(`${years} năm`);
+  if (months > 0) parts.push(`${months} tháng`);
+  if (days > 0) parts.push(`${days} ngày`);
+  
+  return parts.length > 0 ? parts.join(" ") : "0 ngày";
+};
+
 const getStockStatus = (stock: StockResponse) => {
   if (stock.status === "OutOfStock") {
     return { label: "Hết hàng", color: "error" as const };
@@ -1478,14 +1492,14 @@ export const InventoryManagementPage = () => {
                                         size="small"
                                         color="warning"
                                         variant="outlined"
-                                        label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
+                                        label={`Còn ${formatDaysToYMD(batch.daysUntilExpiry ?? 0)}`}
                                       />
                                     ) : (
                                       <Chip
                                         size="small"
                                         color="success"
                                         variant="outlined"
-                                        label={`Còn ${batch.daysUntilExpiry ?? 0} ngày`}
+                                        label={`Còn ${formatDaysToYMD(batch.daysUntilExpiry ?? 0)}`}
                                       />
                                     )}
                                     {isStaff && (
