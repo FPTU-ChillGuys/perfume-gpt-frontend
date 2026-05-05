@@ -93,7 +93,7 @@ export const CreateImportStockTab: React.FC = () => {
             if (!isNaN(leadDays) && leadDays > 0) {
               const arrivalDate = new Date();
               arrivalDate.setDate(arrivalDate.getDate() + leadDays);
-              setExpectedArrivalDate(arrivalDate.toISOString().split("T")[0]);
+              setExpectedArrivalDate(arrivalDate.toISOString().split("T")[0]!);
             }
           }
 
