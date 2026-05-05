@@ -13,6 +13,7 @@ import { RoleBasedRoute } from "./components/common/RoleBasedRoute";
 import { CustomerPurchaseRoute } from "./components/common/CustomerPurchaseRoute";
 import { PublicOnlyRoute } from "./components/common/PublicOnlyRoute";
 import { ChatbotWidgetWrapper } from "./components/chatbot/ChatbotWidgetWrapper";
+import { ScrollToTop } from "./components/common/ScrollToTop";
 import "./App.css";
 
 // Lazy-loaded pages — each becomes a separate chunk
@@ -262,6 +263,7 @@ function App() {
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AppThemeProvider>
         <BrowserRouter>
+          <ScrollToTop />
           <ToastProvider>
             <AuthProvider>
               <CartProvider>
