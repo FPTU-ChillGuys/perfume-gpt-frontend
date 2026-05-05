@@ -604,7 +604,8 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           <Typography
             variant="h6"
             noWrap
-            component="div"
+            component={RouterLink}
+            to="/"
             color="primary"
             fontWeight="bold"
           >
