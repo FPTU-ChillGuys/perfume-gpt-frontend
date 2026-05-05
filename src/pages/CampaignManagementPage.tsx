@@ -553,7 +553,14 @@ export const CampaignManagementPage = () => {
                     {(
                       Object.keys(CAMPAIGN_STATUS_LABEL) as CampaignStatus[]
                     )
-                      .filter((s) => s !== "Upcoming")
+                      .filter((s) => {
+                        // Nếu đang ở trạng thái Sắp diễn ra, chỉ cho phép chọn Đã hủy
+                        if (statusDialogCampaign?.status === "Upcoming") {
+                          return s === "Cancelled";
+                        }
+                        // Không bao giờ cho phép quay lại trạng thái Sắp diễn ra
+                        return s !== "Upcoming";
+                      })
                       .map((s) => (
                         <MenuItem key={s} value={s}>
                           {CAMPAIGN_STATUS_LABEL[s]}
