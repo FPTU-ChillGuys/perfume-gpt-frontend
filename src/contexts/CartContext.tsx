@@ -2,17 +2,16 @@ import { useState, useEffect, type ReactNode, useCallback } from "react";
 import * as signalR from "@microsoft/signalr";
 import { cartService } from "../services/cartService";
 import { CartContext } from "./CartContextType";
-import { authService } from "../services/authService";
+import { useAuth } from "../hooks/useAuth";
 import { NOTIFICATION_HUB_URL, getValidToken } from "../hooks/useNotificationSystem";
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
+  const { isAuthenticated } = useAuth();
   const [cartCount, setCartCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const loadCartCount = useCallback(async () => {
-    // Only load cart if user is authenticated
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) {
+    if (!isAuthenticated) {
       setCartCount(0);
       setIsLoading(false);
       return;
@@ -28,21 +27,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoading(false);
     }
-  }, []); // Empty dependency is fine - we check auth inside the function
+  }, [isAuthenticated]);
 
   useEffect(() => {
     loadCartCount();
-    // Only run once on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadCartCount]);
 
   const refreshCart = useCallback(async () => {
     await loadCartCount();
   }, [loadCartCount]);
 
   useEffect(() => {
-    const currentUser = authService.getCurrentUser();
-    if (!currentUser) return;
+    if (!isAuthenticated) return;
 
     let isMounted = true;
     let connection: signalR.HubConnection | null = null;
@@ -81,7 +77,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         void connection.stop();
       }
     };
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <CartContext.Provider
