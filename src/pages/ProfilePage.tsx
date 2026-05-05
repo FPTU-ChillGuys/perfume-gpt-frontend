@@ -24,6 +24,7 @@ import { LoyaltyHistorySection } from "../components/profile/LoyaltyHistorySecti
 import { VoucherSection } from "../components/profile/VoucherSection";
 import { ScentPreferencesSection } from "../components/profile/ScentPreferencesSection";
 import { NotificationSection } from "../components/profile/NotificationSection";
+import { ChangePasswordSection } from "../components/profile/ChangePasswordSection";
 
 const ProfilePage = () => {
   const { user, updateUser } = useAuth();
@@ -173,15 +174,31 @@ const ProfilePage = () => {
     setSuccess("");
   };
 
-  const handleSave = async (fullName: string, phoneNumber: string) => {
+  const handleSave = async (
+    fullName: string,
+    phoneNumber: string,
+    budget: { minBudget: number | null; maxBudget: number | null },
+  ) => {
     setIsSaving(true);
     setError("");
     setSuccess("");
     try {
-      const message = await userService.updateUserMe({ fullName, phoneNumber });
-      setSuccess(message);
+      const [basicMessage] = await Promise.all([
+        userService.updateUserMe({ fullName, phoneNumber }),
+        profileService.updateProfile({
+          ...formData,
+          minBudget: budget.minBudget,
+          maxBudget: budget.maxBudget,
+        }),
+      ]);
+      setFormData((prev) => ({
+        ...prev,
+        minBudget: budget.minBudget,
+        maxBudget: budget.maxBudget,
+      }));
+      setSuccess(basicMessage || "Cập nhật thông tin thành công");
+      await Promise.all([loadUserInfo(), loadProfile()]);
       setIsEditing(false);
-      await loadUserInfo();
     } catch (err: any) {
       setError(err.message || "Không thể cập nhật thông tin");
     } finally {
@@ -287,16 +304,7 @@ const ProfilePage = () => {
         );
 
       case "change-password":
-        return (
-          <Box py={4} textAlign="center">
-            <Typography variant="h6" color="text.secondary">
-              Đổi Mật Khẩu
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mt={1}>
-              Tính năng đang được phát triển.
-            </Typography>
-          </Box>
-        );
+        return <ChangePasswordSection email={userInfo?.email || user?.email} />;
       default:
         return (
           <ProfileInfo

@@ -8,6 +8,7 @@ import {
   CircularProgress,
   Divider,
   IconButton,
+  Paper,
   Stack,
   TextField,
   Tooltip,
@@ -35,7 +36,11 @@ interface ProfileInfoProps {
   success: string;
   onEdit: () => void;
   onCancel: () => void;
-  onSave: (fullName: string, phoneNumber: string) => void;
+  onSave: (
+    fullName: string,
+    phoneNumber: string,
+    budget: { minBudget: number | null; maxBudget: number | null },
+  ) => void;
   onChange: (field: keyof UpdateProfileRequest, value: any) => void;
   onClearError: () => void;
   onClearSuccess: () => void;
@@ -98,6 +103,7 @@ const InfoRow = ({
 const ProfileInfo = ({
   profile,
   userInfo,
+  formData,
   isEditing,
   isSaving,
   error,
@@ -115,18 +121,36 @@ const ProfileInfo = ({
 }: ProfileInfoProps) => {
   const [editName, setEditName] = useState(userInfo?.fullName || "");
   const [editPhone, setEditPhone] = useState(userInfo?.phoneNumber || "");
+  const [editMinBudget, setEditMinBudget] = useState("");
+  const [editMaxBudget, setEditMaxBudget] = useState("");
   const [nameError, setNameError] = useState("");
   const [phoneError, setPhoneError] = useState("");
+  const [budgetError, setBudgetError] = useState("");
 
   // Sync form fields when entering edit mode or when userInfo changes
   useEffect(() => {
     if (isEditing) {
       setEditName(userInfo?.fullName || "");
       setEditPhone(userInfo?.phoneNumber || "");
+      setEditMinBudget(
+        formData.minBudget != null
+          ? String(formData.minBudget)
+          : profile?.minBudget != null
+            ? String(profile.minBudget)
+            : "",
+      );
+      setEditMaxBudget(
+        formData.maxBudget != null
+          ? String(formData.maxBudget)
+          : profile?.maxBudget != null
+            ? String(profile.maxBudget)
+            : "",
+      );
       setNameError("");
       setPhoneError("");
+      setBudgetError("");
     }
-  }, [isEditing, userInfo]);
+  }, [isEditing, userInfo, formData.minBudget, formData.maxBudget, profile]);
 
   const validate = () => {
     let valid = true;
@@ -161,12 +185,48 @@ const ProfileInfo = ({
     } else {
       setPhoneError("");
     }
+
+    const parsedMin = editMinBudget.trim()
+      ? Number(editMinBudget.replace(/[^0-9]/g, ""))
+      : null;
+    const parsedMax = editMaxBudget.trim()
+      ? Number(editMaxBudget.replace(/[^0-9]/g, ""))
+      : null;
+
+    if (
+      (parsedMin != null && !Number.isFinite(parsedMin)) ||
+      (parsedMax != null && !Number.isFinite(parsedMax))
+    ) {
+      setBudgetError("Ngân sách không hợp lệ");
+      valid = false;
+    } else if (
+      (parsedMin != null && parsedMin < 0) ||
+      (parsedMax != null && parsedMax < 0)
+    ) {
+      setBudgetError("Ngân sách phải lớn hơn hoặc bằng 0");
+      valid = false;
+    } else if (
+      parsedMin != null &&
+      parsedMax != null &&
+      parsedMin > parsedMax
+    ) {
+      setBudgetError("Ngân sách tối thiểu không được lớn hơn tối đa");
+      valid = false;
+    } else {
+      setBudgetError("");
+    }
     return valid;
   };
 
   const handleSave = () => {
     if (!validate()) return;
-    onSave(editName.trim(), editPhone.trim());
+    const minBudget = editMinBudget.trim()
+      ? Number(editMinBudget.replace(/[^0-9]/g, ""))
+      : null;
+    const maxBudget = editMaxBudget.trim()
+      ? Number(editMaxBudget.replace(/[^0-9]/g, ""))
+      : null;
+    onSave(editName.trim(), editPhone.trim(), { minBudget, maxBudget });
   };
   const avatarFallback = (userInfo?.fullName || userInfo?.email || "U")
     .trim()
@@ -194,14 +254,28 @@ const ProfileInfo = ({
     return type || "";
   };
 
+  const familyPreferences = profile?.familyPreferences ?? [];
+  const notePreferences = profile?.notePreferences ?? [];
+  const attributePreferences = profile?.attributePreferences ?? [];
+
   return (
     <>
-      {/* Header */}
+      <Paper
+        elevation={0}
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
+          p: { xs: 2, sm: 3 },
+          mb: 2.5,
+          bgcolor: "grey.50",
+        }}
+      >
       <Box
         display="flex"
         alignItems="center"
         justifyContent="space-between"
-        mb={3}
+        mb={2}
       >
         <Box>
           <Typography variant="h6" fontWeight="bold">
@@ -241,13 +315,13 @@ const ProfileInfo = ({
         </Alert>
       )}
 
-      <Divider sx={{ mb: 3 }} />
+      <Divider sx={{ mb: 2.5 }} />
 
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2}
         alignItems={{ xs: "flex-start", sm: "center" }}
-        sx={{ mb: 3 }}
+        sx={{ mb: 1.5 }}
       >
         <Avatar
           src={avatar?.url || undefined}
@@ -293,12 +367,25 @@ const ProfileInfo = ({
           </Stack>
         </Box>
       </Stack>
+      </Paper>
 
       {/* Info rows */}
+      <Paper
+        elevation={0}
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
+          p: { xs: 2, sm: 2.5 },
+        }}
+      >
       <Box>
         {isEditing ? (
           <>
-            <Box sx={{ mb: 2.5 }}>
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
+              Chỉnh sửa thông tin
+            </Typography>
+            <Stack spacing={2}>
               <TextField
                 fullWidth
                 label="Họ và tên"
@@ -309,8 +396,6 @@ const ProfileInfo = ({
                 size="small"
                 slotProps={{ htmlInput: { maxLength: 100 } }}
               />
-            </Box>
-            <Box sx={{ mb: 2.5 }}>
               <TextField
                 fullWidth
                 label="Email"
@@ -319,8 +404,6 @@ const ProfileInfo = ({
                 disabled
                 helperText="Email không thể thay đổi"
               />
-            </Box>
-            <Box sx={{ mb: 2.5 }}>
               <TextField
                 fullWidth
                 label="Số điện thoại"
@@ -335,7 +418,36 @@ const ProfileInfo = ({
                 placeholder="0xxxxxxxxx"
                 slotProps={{ htmlInput: { maxLength: 10, inputMode: "numeric" } }}
               />
-            </Box>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5}>
+                <TextField
+                  fullWidth
+                  label="Ngân sách từ (₫)"
+                  value={editMinBudget}
+                  onChange={(e) =>
+                    setEditMinBudget(e.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  size="small"
+                  placeholder="Ví dụ: 500000"
+                  slotProps={{ htmlInput: { inputMode: "numeric" } }}
+                />
+                <TextField
+                  fullWidth
+                  label="Ngân sách đến (₫)"
+                  value={editMaxBudget}
+                  onChange={(e) =>
+                    setEditMaxBudget(e.target.value.replace(/[^0-9]/g, ""))
+                  }
+                  size="small"
+                  placeholder="Ví dụ: 2000000"
+                  slotProps={{ htmlInput: { inputMode: "numeric" } }}
+                />
+              </Stack>
+              {budgetError && (
+                <Typography variant="caption" color="error">
+                  {budgetError}
+                </Typography>
+              )}
+            </Stack>
             <Stack direction="row" spacing={1.5} sx={{ mt: 1 }}>
               <Button
                 variant="contained"
@@ -380,18 +492,19 @@ const ProfileInfo = ({
           </>
         )}
       </Box>
+      </Paper>
 
       {/* Scent Preferences */}
-      {(profile?.notePreferences?.length ||
-        profile?.familyPreferences?.length ||
-        profile?.attributePreferences?.length) ? (
+      {(notePreferences.length ||
+        familyPreferences.length ||
+        attributePreferences.length) ? (
         <>
           <Divider sx={{ my: 3 }} />
           <Typography variant="subtitle1" fontWeight={600} mb={2}>
             Sở thích hương
           </Typography>
 
-          {profile.familyPreferences.length > 0 && (
+          {familyPreferences.length > 0 && (
             <Box sx={{ mb: 2 }}>
               <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                 <LocalFloristIcon fontSize="small" color="secondary" />
@@ -400,7 +513,7 @@ const ProfileInfo = ({
                 </Typography>
               </Stack>
               <Stack direction="row" flexWrap="wrap" gap={0.75}>
-                {profile.familyPreferences.map((f) => (
+                {familyPreferences.map((f) => (
                   <Chip
                     key={f.familyId}
                     label={f.familyName}
@@ -413,7 +526,7 @@ const ProfileInfo = ({
             </Box>
           )}
 
-          {profile.notePreferences.length > 0 && (
+          {notePreferences.length > 0 && (
             <Box sx={{ mb: 2 }}>
               <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                 <SpaIcon fontSize="small" color="primary" />
@@ -422,7 +535,7 @@ const ProfileInfo = ({
                 </Typography>
               </Stack>
               <Stack direction="row" flexWrap="wrap" gap={0.75}>
-                {profile.notePreferences.map((n) => (
+                {notePreferences.map((n) => (
                   <Chip
                     key={`${n.noteId}-${n.noteType}`}
                     label={`${n.noteName} (${noteTypeLabel(n.noteType)})`}
@@ -435,7 +548,7 @@ const ProfileInfo = ({
             </Box>
           )}
 
-          {profile.attributePreferences.length > 0 && (
+          {attributePreferences.length > 0 && (
             <Box sx={{ mb: 2 }}>
               <Stack direction="row" alignItems="center" spacing={1} mb={1}>
                 <StyleIcon fontSize="small" color="info" />
@@ -444,7 +557,7 @@ const ProfileInfo = ({
                 </Typography>
               </Stack>
               <Stack direction="row" flexWrap="wrap" gap={0.75}>
-                {profile.attributePreferences.map((a) => (
+                {attributePreferences.map((a) => (
                   <Chip
                     key={a.attributeValueId}
                     label={a.attributeValueName}
