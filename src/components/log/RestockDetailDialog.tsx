@@ -16,7 +16,9 @@ import {
     Paper,
     Box,
     Chip,
+    Tooltip,
 } from "@mui/material";
+import { Warning as WarningIcon } from "@mui/icons-material";
 import type { RestockAIVariant } from "@/types/inventory";
 
 interface RestockDetailDialogProps {
@@ -115,6 +117,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                     <TableCell align="right"><strong>Giá Thương Lượng</strong></TableCell>
                                     <TableCell align="center"><strong>Tồn kho</strong></TableCell>
                                     <TableCell align="center"><strong>Thời gian giao hàng dự kiến</strong></TableCell>
+                                    <TableCell align="center"><strong>Slow Stock</strong></TableCell>
                                     <TableCell align="center"><strong>Gợi ý nhập</strong></TableCell>
                                 </TableRow>
                             </TableHead>
@@ -123,7 +126,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                     <React.Fragment key={supplier}>
                                         {/* Group Header Row */}
                                         <TableRow sx={{ bgcolor: "primary.light", opacity: 0.9 }}>
-                                            <TableCell colSpan={8} sx={{ py: 0.5, px: 2 }}>
+                                            <TableCell colSpan={9} sx={{ py: 0.5, px: 2 }}>
                                                 <Box display="flex" alignItems="center" justifyContent="space-between">
                                                     <Typography variant="subtitle2" color="white" fontWeight="bold">
                                                         Nhà cung cấp: {supplier} ({items.length} sản phẩm)
@@ -168,6 +171,28 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                                 <TableCell align="center">{row.totalQuantity}</TableCell>
                                                 <TableCell align="center">
                                                     {row.estimatedLeadTimeDays ? `${row.estimatedLeadTimeDays} ngày` : "—"}
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    {row.slowStockRisk ? (
+                                                        <Tooltip title={
+                                                            row.slowStockRisk === 'CRITICAL' ? 'Cần xử lý ngay' :
+                                                            row.slowStockRisk === 'HIGH' ? 'Rủi ro cao' :
+                                                            'Rủi ro trung bình'
+                                                        }>
+                                                            <Chip
+                                                                icon={<WarningIcon fontSize="small" />}
+                                                                label={row.slowStockRisk}
+                                                                size="small"
+                                                                color={
+                                                                    row.slowStockRisk === 'CRITICAL' ? 'error' :
+                                                                    row.slowStockRisk === 'HIGH' ? 'warning' :
+                                                                    'default'
+                                                                }
+                                                            />
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <Typography variant="caption" color="text.disabled">—</Typography>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <Typography
