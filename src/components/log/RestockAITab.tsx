@@ -120,7 +120,7 @@ export const RestockAITab = () => {
             }
             
             setSelectedVariants(parsedData.variants || []);
-            setDialogTitle(`Chi tiết log nhập hàng: ${log.id?.substring(0, 8)}`);
+            setDialogTitle(`Chi tiết log nhập hàng`);
             setDetailDialogOpen(true);
         } catch (error) {
             console.error("Failed to parse restock log data", error);
@@ -147,7 +147,10 @@ export const RestockAITab = () => {
         return logs.filter((log) => {
             let matchesSearch = true;
             if (searchTerm) {
-                matchesSearch = log.id?.toLowerCase().includes(searchTerm.toLowerCase());
+                const term = searchTerm.toLowerCase();
+                matchesSearch =
+                    log.inventoryLog?.toLowerCase().includes(term) ||
+                    formatDate(log.createdAt).toLowerCase().includes(term);
             }
 
             let matchesFromDate = true;
@@ -208,8 +211,8 @@ export const RestockAITab = () => {
                 >
                     <TextField
                         fullWidth
-                        label="Tìm kiếm Log ID"
-                        placeholder="Nhập ID..."
+                        label="Tìm kiếm"
+                        placeholder="Nội dung, ngày..."
                         value={searchInput}
                         onChange={(e) => setSearchInput(e.target.value)}
                         onKeyDown={(e) => {
@@ -264,8 +267,6 @@ export const RestockAITab = () => {
                 <Table>
                     <TableHead>
                         <TableRow sx={{ bgcolor: "grey.50" }}>
-                            <TableCell>Log ID</TableCell>
-                            <TableCell>Ngày tạo</TableCell>
                             <TableCell>Cập nhật cuối</TableCell>
                             <TableCell align="center">Thao tác</TableCell>
                         </TableRow>
@@ -273,13 +274,13 @@ export const RestockAITab = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                                <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
                                     <CircularProgress />
                                 </TableCell>
                             </TableRow>
                         ) : paginatedLogs.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                                <TableCell colSpan={2} align="center" sx={{ py: 4 }}>
                                     <Typography variant="body2" color="text.secondary">
                                         Không có log nào phù hợp
                                     </Typography>
@@ -288,17 +289,6 @@ export const RestockAITab = () => {
                         ) : (
                             paginatedLogs.map((log) => (
                                 <TableRow key={log.id} hover>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={500}>
-                                            {log.id?.substring(0, 8)}...
-                                        </Typography>
-                                    </TableCell>
-
-                                    <TableCell>
-                                        <Typography variant="body2" noWrap>
-                                            {formatDate(log.createdAt)}
-                                        </Typography>
-                                    </TableCell>
                                     <TableCell>
                                         <Typography variant="body2" noWrap>
                                             {formatDate(log.updatedAt)}

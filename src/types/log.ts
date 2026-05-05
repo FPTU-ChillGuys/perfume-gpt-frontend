@@ -52,6 +52,7 @@ export interface UserLog {
     isDeleted?: boolean;
     isActive?: boolean;
     userId?: string | null;
+    userName?: string;
     eventType?: "message" | "search" | "survey" | "product" | null;
     entityType?: "conversation" | "search" | "survey" | "product" | null;
     entityId?: string | null;
@@ -76,6 +77,7 @@ export interface UserLogSummaryResponse {
     isActive?: boolean;
     isDeleted?: boolean;
     userId: string;
+    userName?: string;
     logSummary: string;
     featureSnapshot?: Record<string, unknown>;
     dailyLogSummary?: Record<string, string>;

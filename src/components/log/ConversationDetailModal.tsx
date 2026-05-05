@@ -50,12 +50,12 @@ export const ConversationDetailModal = ({ open, onClose, selectedConversation }:
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle sx={{ fontWeight: "bold" }}>
-                Chi tiết Hội thoại: {selectedConversation.id}
+                Chi tiết Hội thoại
             </DialogTitle>
             <DialogContent dividers>
                 {selectedConversation.userId && (
                     <Typography variant="subtitle1" gutterBottom>
-                        <strong>User ID:</strong> {selectedConversation.userId}
+                        <strong>User ID:</strong> {selectedConversation.userName ?? "Khách"}
                     </Typography>
                 )}
 
