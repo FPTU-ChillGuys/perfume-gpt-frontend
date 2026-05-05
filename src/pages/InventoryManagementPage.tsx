@@ -124,7 +124,11 @@ const requestChip = (status?: StockAdjustmentStatus) => {
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return "-";
-  const date = new Date(value);
+  let dateStr = value;
+  if (dateStr.includes("T") && !dateStr.endsWith("Z") && !dateStr.includes("+")) {
+    dateStr += "Z";
+  }
+  const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
@@ -133,6 +137,7 @@ const formatDateTime = (value?: string | null) => {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Asia/Ho_Chi_Minh",
   }).format(date);
 };
 
