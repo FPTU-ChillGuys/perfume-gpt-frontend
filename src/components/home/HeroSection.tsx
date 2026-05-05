@@ -116,6 +116,7 @@ const resolveBannerLink = (banner: Banner): string => {
     case "Brand":
       return `/products?brand=${banner.linkTarget}`;
     case "Campaign":
+      return `/products?campaignId=${banner.linkTarget}`;
     default:
       return banner.linkTarget.startsWith("/")
         ? banner.linkTarget
