@@ -952,14 +952,10 @@ export const InventoryManagementPage = () => {
               value={createPayload.adjustmentQuantity}
               onChange={(event) => {
                 const val = event.target.value;
-                // Prevent negative input via keyboard if necessary, but min=1 handles UI
                 setCreatePayload((prev) => ({ ...prev, adjustmentQuantity: val }));
               }}
               fullWidth
-              slotProps={{
-                htmlInput: { min: 1 },
-              }}
-              helperText="Nhập số lượng cần điều chỉnh (tối thiểu là 1)"
+              helperText="Nhập số lượng cần điều chỉnh (có thể nhập số âm để giảm tồn kho)"
             />
             <FormControl fullWidth>
               <InputLabel>Lý do</InputLabel>

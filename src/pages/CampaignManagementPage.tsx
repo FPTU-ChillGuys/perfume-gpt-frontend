@@ -76,7 +76,7 @@ const CAMPAIGN_STATUS_COLOR: Record<CampaignStatus, ChipProps["color"]> = {
   Upcoming: "info",
   Active: "success",
   Paused: "warning",
-  Completed: "default",
+  Completed: "secondary",
   Cancelled: "error",
 };
 
