@@ -111,7 +111,7 @@ export const Footer = () => {
           {/* Liên hệ */}
           <div>
             <h3 className="text-lg font-bold mb-4">Liên hệ</h3>
-            <ul className="space-y-3">
+            <ul className="space-y-3 mb-6">
               <li className="flex items-start gap-2 text-sm text-gray-600">
                 <MapPin
                   size={18}
@@ -130,6 +130,24 @@ export const Footer = () => {
                 <span>contact@perfumegpt.com</span>
               </li>
             </ul>
+
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="group relative w-10 h-10 rounded-full border border-gray-200 bg-white shadow-xs flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={quanPix} alt="Quan" className="w-8 h-8 object-contain [image-rendering:pixelated]" title="Quân" />
+              </div>
+              <div className="group relative w-10 h-10 rounded-full border border-gray-200 bg-white shadow-xs flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={phuocPix} alt="Phuoc" className="w-8 h-8 object-contain [image-rendering:pixelated]" title="Phước" />
+              </div>
+              <div className="group relative w-10 h-10 rounded-full border border-gray-200 bg-white shadow-xs flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={khoaPix} alt="Khoa" className="w-8 h-8 object-contain [image-rendering:pixelated]" title="Khoa" />
+              </div>
+              <div className="group relative w-10 h-10 rounded-full border border-gray-200 bg-white shadow-xs flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={thanhPix} alt="Thanh" className="w-8 h-8 object-contain [image-rendering:pixelated]" title="Thành" />
+              </div>
+              <div className="group relative w-10 h-10 rounded-full border border-gray-200 bg-white shadow-xs flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={nguyenPix} alt="Nguyen" className="w-8 h-8 object-contain [image-rendering:pixelated]" title="Nguyên" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -137,25 +155,8 @@ export const Footer = () => {
       {/* Copyright */}
       <div className="border-t border-gray-300">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex flex-col items-center gap-3">
-            <div className="flex items-center gap-4">
-              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
-                <img src={quanPix} alt="Quan" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Quan" />
-              </div>
-              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
-                <img src={phuocPix} alt="Phuoc" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Phuoc" />
-              </div>
-              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
-                <img src={khoaPix} alt="Khoa" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Khoa" />
-              </div>
-              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
-                <img src={thanhPix} alt="Thanh" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Thanh" />
-              </div>
-              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
-                <img src={nguyenPix} alt="Nguyen" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Nguyen" />
-              </div>
-            </div>
-            <p className="text-center text-gray-600 text-sm">
+          <div className="flex flex-col items-center">
+                  <p className="text-center text-gray-600 text-sm">
               © 2026 PerfumeGPT. Made by <strong>ChillGuys</strong>.
             </p>
           </div>

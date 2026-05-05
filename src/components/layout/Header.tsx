@@ -18,7 +18,7 @@ import {
   PersonOutline,
   ArrowDropDown,
   ArrowDropUp,
-  Dashboard as DashboardIcon,
+  SpaceDashboard as SpaceDashboardIcon,
   Logout as LogoutIcon,
   ShoppingBag as ShoppingBagIcon,
   PointOfSale as PointOfSaleIcon,
@@ -445,7 +445,7 @@ export const Header = ({ sticky = true }: { sticky?: boolean }) => {
                   {(user.role === "admin" || user.role === "staff") && (
                     <MenuItem onClick={handleDashboard} sx={{ py: 1.5 }}>
                       <ListItemIcon>
-                        <DashboardIcon fontSize="small" />
+                        <SpaceDashboardIcon fontSize="small" />
                       </ListItemIcon>
                       <Typography variant="body2">Trang chủ</Typography>
                     </MenuItem>

@@ -22,11 +22,7 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { GoogleLogin } from "@react-oauth/google";
 import { LoadingButton } from "@/components/common/LoadingButton";
-import phuocPix from "../assets/PhuocPix.png";
-import thanhPix from "../assets/ThanhPix.png";
-import khoaPix from "../assets/KhoaPix.png";
-import quanPix from "../assets/QuanPix.png";
-import nguyenPix from "../assets/NguyenPix.png";
+
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -379,46 +375,7 @@ export const LoginPage = () => {
           gap: 1.5,
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          {[
-            { img: quanPix, name: "Quan" },
-            { img: phuocPix, name: "Phuoc" },
-            { img: khoaPix, name: "Khoa" },
-            { img: thanhPix, name: "Thanh" },
-            { img: nguyenPix, name: "Nguyen" },
-          ].map((author) => (
-            <Box
-              key={author.name}
-              sx={{
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                border: "1px solid",
-                borderColor: "grey.200",
-                bgcolor: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-                transition: "transform 0.3s",
-                "&:hover": { transform: "scale(1.1)" },
-              }}
-            >
-              <Box
-                component="img"
-                src={author.img}
-                alt={author.name}
-                title={author.name}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  objectFit: "contain",
-                  imageRendering: "pixelated",
-                }}
-              />
-            </Box>
-          ))}
-        </Box>
+
         <Typography variant="caption" color="text.secondary">
           © 2026 PerfumeGPT. Made by <strong>ChillGuys</strong>.
         </Typography>
