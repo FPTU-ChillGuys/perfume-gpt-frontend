@@ -1428,9 +1428,9 @@ export const ProductListPage = () => {
               </div>
             </aside>
 
-            <div className="lg:col-start-2 lg:row-start-1">
-              <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="lg:col-start-2 lg:row-start-1 min-w-0">
+              <div className="rounded-3xl border border-slate-100 bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between min-w-0">
                   <div className="relative w-full md:max-w-md">
                     <Search
                       className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -1475,7 +1475,7 @@ export const ProductListPage = () => {
                       <span className="hidden min-[360px]:inline">Bộ lọc</span>
                     </button>
                     {categoryIdParam && (
-                      <span className="flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-1 md:px-3 md:py-1.5 text-xs md:text-sm font-medium text-rose-700 shrink-0">
+                      <span className="hidden md:flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-1 md:px-3 md:py-1.5 text-xs md:text-sm font-medium text-rose-700 shrink-0">
                         {toVietnameseCategoryName(categoryNameParam)}
                         <button
                           type="button"
@@ -1531,14 +1531,14 @@ export const ProductListPage = () => {
               </div>
             </div>
 
-            <div className="flex min-w-0 flex-1 flex-col lg:col-start-2 lg:row-start-2">
+            <div className="flex min-w-0 flex-1 flex-col lg:col-start-2 lg:row-start-2 overflow-hidden">
               {error && (
                 <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                   {error}
                 </div>
               )}
 
-              <div className="grid gap-3 sm:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <div className="grid gap-3 sm:gap-6 grid-cols-1 min-[340px]:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {isLoading ? (
                   renderSkeletons()
                 ) : displayedProducts.length > 0 ? (

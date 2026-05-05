@@ -213,17 +213,17 @@ export const ProductCard = ({
           {/* Price — full numbers, always 1 row */}
           <div className="text-center leading-snug px-0.5">
             {hasPriceRange ? (
-              <span className="inline-flex items-baseline gap-[2px] flex-nowrap justify-center w-full overflow-hidden">
+              <span className="inline-flex items-baseline gap-x-1 gap-y-0.5 flex-wrap justify-center w-full overflow-hidden">
                 <span className="text-[10px] sm:text-xs md:text-[12px] lg:text-[13px] font-bold text-red-600 whitespace-nowrap">
                   {formatPrice(salePrice)}
                 </span>
-                <span className="text-gray-400 font-normal text-[9px] sm:text-[10px] shrink-0">&nbsp;–&nbsp;</span>
+                <span className="text-gray-400 font-normal text-[9px] sm:text-[10px] shrink-0">–</span>
                 <span className="text-[10px] sm:text-xs md:text-[12px] lg:text-[13px] font-bold text-red-600 whitespace-nowrap">
                   {formatPrice(maxPrice!)}
                 </span>
               </span>
             ) : (
-              <span className="inline-flex items-baseline gap-[3px] flex-nowrap justify-center w-full overflow-hidden">
+              <span className="inline-flex items-baseline gap-x-1 gap-y-0.5 flex-wrap justify-center w-full overflow-hidden">
                 {originalPrice && (
                   <span className="text-[9px] sm:text-[10px] text-gray-400 line-through whitespace-nowrap shrink-0">
                     {formatPrice(originalPrice)}
