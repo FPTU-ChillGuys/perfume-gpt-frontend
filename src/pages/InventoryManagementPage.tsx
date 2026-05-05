@@ -1,18 +1,17 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
-  Badge,
   Box,
   Button,
+  Card,
+  CardContent,
   Chip,
-  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
-  Grid,
-  IconButton,
   InputAdornment,
   InputLabel,
   MenuItem,
@@ -33,17 +32,12 @@ import {
   Typography,
 } from "@mui/material";
 import {
+  Refresh as RefreshIcon,
   Search as SearchIcon,
-  Clear as ClearIcon,
-  ContentCopy as ContentCopyIcon,
-  Add as AddIcon,
-  Remove as RemoveIcon,
-  Cancel as CancelIcon,
-  PlayArrow as PlayArrowIcon,
-  Inventory2 as Inventory2Icon,
-  WarningAmber as WarningAmberIcon,
-  Category as CategoryIcon,
-  ViewList as ViewListIcon,
+  Inventory2 as InventoryIcon,
+  WarningAmber as WarningIcon,
+  Layers as LayersIcon,
+  PendingActions as PendingIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
@@ -52,61 +46,46 @@ import {
   type InventorySummaryResponse,
   type StockResponse,
 } from "@/services/inventoryService";
-import { useAuth } from "@/hooks/useAuth";
 import {
   stockAdjustmentService,
   type StockAdjustmentDetailResponse,
-  type StockAdjustmentListItem,
   type StockAdjustmentReason,
   type StockAdjustmentResponse,
   type StockAdjustmentStatus,
 } from "@/services/stockAdjustmentService";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { LoadingButton } from "@/components/common/LoadingButton";
 
+type InventoryTab = "inventory" | "requests";
 type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
-type ExpiryDaysFilter = "" | "30" | "60" | "90";
-type InventoryTab = "inventory" | "adjustments";
-type InventoryCategoryTab =
-  | "all"
-  | "men"
-  | "women"
-  | "unisex"
-  | "niche";
-type VerifyDetailDraft = {
-  detailId: string;
-  approvedQuantity: string;
-  note: string;
+type CategoryTab = "all" | "women" | "men" | "unisex" | "niche";
+
+const REASON_LABELS: Record<StockAdjustmentReason, string> = {
+  Damage: "H\u01b0 h\u1ea1i",
+  Expired: "H\u1ebft h\u1ea1n",
+  Theft: "Th\u1ea5t tho\u00e1t",
+  Loss: "M\u1ea5t m\u00e1t",
+  Found: "T\u00ecm th\u1ea5y",
+  Correction: "\u0110i\u1ec1u ch\u1ec9nh",
+  Return: "Ho\u00e0n tr\u1ea3",
+  Other: "Kh\u00e1c",
 };
 
-const INVENTORY_CATEGORY_TAB_ITEMS: Array<{
-  key: InventoryCategoryTab;
-  label: string;
-}> = [
-  { key: "all", label: "Tất cả" },
-  { key: "men", label: "Nước hoa Nam" },
-  { key: "women", label: "Nước hoa Nữ" },
-  { key: "unisex", label: "Unisex" },
-  { key: "niche", label: "Niche" },
+const STATUS_LABELS: Record<StockAdjustmentStatus, string> = {
+  Pending: "Ch\u1edd duy\u1ec7t",
+  InProgress: "\u0110ang x\u1eed l\u00fd",
+  Completed: "Ho\u00e0n th\u00e0nh",
+  Cancelled: "\u0110\u00e3 h\u1ee7y",
+};
+
+const CATEGORY_OPTIONS: Array<{ key: CategoryTab; label: string; id?: number }> = [
+  { key: "all", label: "T\u1ea5t c\u1ea3" },
+  { key: "women", label: "N\u01b0\u1edbc hoa n\u1eef", id: 1 },
+  { key: "men", label: "N\u01b0\u1edbc hoa nam", id: 2 },
+  { key: "unisex", label: "Unisex", id: 3 },
+  { key: "niche", label: "Niche", id: 4 },
 ];
-
-const INVENTORY_CATEGORY_ID_BY_TAB: Record<
-  Exclude<InventoryCategoryTab, "all">,
-  number
-> = {
-  women: 1,
-  men: 2,
-  unisex: 3,
-  niche: 4,
-};
-
-const resolveCategoryIdByTab = (tab: InventoryCategoryTab) => {
-  if (tab === "all") {
-    return undefined;
-  }
-
-  return INVENTORY_CATEGORY_ID_BY_TAB[tab];
-};
 
 const ADJUSTMENT_REASON_OPTIONS: StockAdjustmentReason[] = [
   "Damage",
@@ -127,128 +106,98 @@ const ADJUSTMENT_STATUS_OPTIONS: Array<StockAdjustmentStatus | ""> = [
   "Cancelled",
 ];
 
-const statusLabelMap: Record<StockAdjustmentStatus, string> = {
-  Pending: "Chờ duyệt",
-  InProgress: "Đang xử lý",
-  Completed: "Hoàn thành",
-  Cancelled: "Đã hủy",
+const stockChip = (status?: StockResponse["status"]) => {
+  if (status === "OutOfStock") return { label: "H\u1ebft h\u00e0ng", color: "error" as const };
+  if (status === "LowStock") return { label: "S\u1eafp h\u1ebft", color: "warning" as const };
+  return { label: "B\u00ecnh th\u01b0\u1eddng", color: "success" as const };
 };
 
-const reasonLabelMap: Record<StockAdjustmentReason, string> = {
-  Damage: "Hư hại",
-  Expired: "Hết hạn",
-  Theft: "Thất thoát",
-  Loss: "Mất mát",
-  Found: "Tìm thấy",
-  Correction: "Điều chỉnh",
-  Return: "Hoàn trả",
-  Other: "Khác",
+const requestChip = (status?: StockAdjustmentStatus) => {
+  if (status === "Pending") return "warning" as const;
+  if (status === "InProgress") return "info" as const;
+  if (status === "Completed") return "success" as const;
+  return "default" as const;
 };
 
-const EXPIRY_FILTER_OPTIONS: Array<{ value: ExpiryDaysFilter; label: string }> =
-  [
-    { value: "", label: "Tất cả hạn dùng" },
-    { value: "30", label: "Sắp hết hạn <= 30 ngày" },
-    { value: "60", label: "Sắp hết hạn <= 60 ngày" },
-    { value: "90", label: "Sắp hết hạn <= 90 ngày" },
-  ];
-
-const formatDate = (value?: string) => {
-  if (!value) return "N/A";
-  return new Date(value).toLocaleDateString("vi-VN");
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
 };
 
-const formatDaysToYMD = (totalDays: number) => {
-  if (totalDays <= 0) return "Hết hạn";
-  const years = Math.floor(totalDays / 365);
-  const months = Math.floor((totalDays % 365) / 30);
-  const days = Math.floor((totalDays % 365) % 30);
-  
-  const parts = [];
-  if (years > 0) parts.push(`${years} năm`);
-  if (months > 0) parts.push(`${months} tháng`);
-  if (days > 0) parts.push(`${days} ngày`);
-  
-  return parts.length > 0 ? parts.join(" ") : "0 ngày";
+const formatDate = (value?: string | null) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
 };
 
-const getStockStatus = (stock: StockResponse) => {
-  if (stock.status === "OutOfStock") {
-    return { label: "Hết hàng", color: "error" as const };
+const toInt = (value: string, fallback = 0) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const getStockKey = (stock: StockResponse) => stock.variantId || stock.id || stock.variantSku;
+
+const batchExpiryChip = (batch: BatchDetailResponse) => {
+  if (batch.isExpired || (typeof batch.daysUntilExpiry === "number" && batch.daysUntilExpiry < 0)) {
+    return { label: "\u0110\u00e3 h\u1ebft h\u1ea1n", color: "error" as const };
   }
-
-  if (stock.status === "LowStock") {
-    return { label: "Sắp hết", color: "warning" as const };
+  if (typeof batch.daysUntilExpiry === "number") {
+    if (batch.daysUntilExpiry <= 30) return { label: `C\u00f2n ${batch.daysUntilExpiry} ng\u00e0y`, color: "warning" as const };
+    return { label: `C\u00f2n ${batch.daysUntilExpiry} ng\u00e0y`, color: "success" as const };
   }
-
-  if (stock.status === "Normal") {
-    return { label: "Bình thường", color: "success" as const };
-  }
-
-  const availableQuantity = stock.availableQuantity ?? 0;
-  const threshold = stock.lowStockThreshold ?? 0;
-
-  if (availableQuantity <= 0) {
-    return { label: "Hết hàng", color: "error" as const };
-  }
-
-  if (availableQuantity < threshold) {
-    return { label: "Sắp hết", color: "warning" as const };
-  }
-
-  return { label: "Bình thường", color: "success" as const };
+  return { label: "\u0110ang b\u00e1n", color: "success" as const };
 };
 
 export const InventoryManagementPage = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
-  const isStaff = user?.role === "staff";
   const isAdmin = user?.role === "admin";
-  const [activeTab, setActiveTab] = useState<InventoryTab>("inventory");
-  const [selectedCategoryTab, setSelectedCategoryTab] =
-    useState<InventoryCategoryTab>("all");
+  const isStaff = user?.role === "staff";
 
+  const [tab, setTab] = useState<InventoryTab>("inventory");
   const [summary, setSummary] = useState<InventorySummaryResponse | null>(null);
-  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   const [stocks, setStocks] = useState<StockResponse[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
-
+  const [stockBatchMap, setStockBatchMap] = useState<Record<string, BatchDetailResponse[]>>({});
+  const [stockBatchLoading, setStockBatchLoading] = useState(false);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [stockError, setStockError] = useState<string | null>(null);
+  const [stockPage, setStockPage] = useState(0);
+  const [stockRowsPerPage, setStockRowsPerPage] = useState(10);
+  const [stockTotalCount, setStockTotalCount] = useState(0);
+  const [categoryTab, setCategoryTab] = useState<CategoryTab>("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState<StockStatusFilter>("");
   const [searchInput, setSearchInput] = useState("");
-  const [searchValue, setSearchValue] = useState("");
-  const [stockStatusFilter, setStockStatusFilter] =
-    useState<StockStatusFilter>("");
-  const [expiryDaysFilter, setExpiryDaysFilter] =
-    useState<ExpiryDaysFilter>("");
-  const [batchByVariantId, setBatchByVariantId] = useState<
-    Record<
-      string,
-      {
-        items: BatchDetailResponse[];
-        loading: boolean;
-        error: string | null;
-      }
-    >
-  >({});
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const [adjustments, setAdjustments] = useState<StockAdjustmentListItem[]>([]);
-  const [adjustmentsLoading, setAdjustmentsLoading] = useState(false);
-  const [adjustmentsError, setAdjustmentsError] = useState<string | null>(null);
-  const [adjustmentPage, setAdjustmentPage] = useState(0);
-  const [adjustmentRowsPerPage, setAdjustmentRowsPerPage] = useState(10);
-  const [adjustmentTotalCount, setAdjustmentTotalCount] = useState(0);
-  const [pendingAdjustmentCount, setPendingAdjustmentCount] = useState(0);
-  const [adjustmentStatusFilter, setAdjustmentStatusFilter] = useState<
-    StockAdjustmentStatus | ""
-  >("");
-  const [adjustmentReasonFilter, setAdjustmentReasonFilter] = useState<
-    StockAdjustmentReason | ""
-  >("");
+  const [requests, setRequests] = useState<StockAdjustmentResponse[]>([]);
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestPage, setRequestPage] = useState(0);
+  const [requestRowsPerPage, setRequestRowsPerPage] = useState(10);
+  const [requestTotalCount, setRequestTotalCount] = useState(0);
+  const [requestStatusFilter, setRequestStatusFilter] = useState<StockAdjustmentStatus | "">("");
+  const [requestReasonFilter, setRequestReasonFilter] = useState<StockAdjustmentReason | "">("");
+
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [batchLoading, setBatchLoading] = useState(false);
+  const [batchItems, setBatchItems] = useState<BatchDetailResponse[]>([]);
+  const [batchVariantId, setBatchVariantId] = useState("");
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
@@ -260,1947 +209,703 @@ export const InventoryManagementPage = () => {
     note: "",
   });
 
-  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
-  const [verifyLoading, setVerifyLoading] = useState(false);
-  const [verifySubmitting, setVerifySubmitting] = useState(false);
-  const [statusSubmitting, setStatusSubmitting] = useState(false);
-  const [selectedAdjustmentDetail, setSelectedAdjustmentDetail] =
-    useState<StockAdjustmentResponse | null>(null);
-  const [verifyDetailDrafts, setVerifyDetailDrafts] = useState<
-    VerifyDetailDraft[]
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailSubmitting, setDetailSubmitting] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<StockAdjustmentResponse | null>(null);
+  const [verifyDrafts, setVerifyDrafts] = useState<
+    Array<{ detailId: string; approvedQuantity: string; note: string }>
   >([]);
-  const [editingThreshold, setEditingThreshold] = useState<{
-    stockId: string;
-    value: string;
-  } | null>(null);
-  const [savingThreshold, setSavingThreshold] = useState<string | null>(null);
-
-  const showToastRef = useRef(showToast);
-
-  useEffect(() => {
-    showToastRef.current = showToast;
-  }, [showToast]);
-
-  useEffect(() => {
-    setPage(0);
-  }, [selectedCategoryTab]);
 
   const loadSummary = useCallback(async () => {
     try {
       setSummaryLoading(true);
-      const response = await inventoryService.getSummary();
-      setSummary(response);
-    } catch (summaryError) {
-      console.error("Failed to load inventory summary:", summaryError);
-      showToastRef.current("Không thể tải thống kê kho", "error");
+      setSummary(await inventoryService.getSummary());
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i t\u1ed5ng quan", "error");
     } finally {
       setSummaryLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
-  const loadStock = useCallback(async () => {
-    const selectedCategoryId = resolveCategoryIdByTab(selectedCategoryTab);
-
+  const loadStocks = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const baseQuery: {
-        CategoryId?: number;
-        StockStatus?: NonNullable<StockResponse["status"]>;
-        DaysUntilExpiry?: number;
-        PageNumber: number;
-        PageSize: number;
-        SortBy: string;
-        SortOrder: string;
-      } = {
-        PageNumber: page + 1,
-        PageSize: rowsPerPage,
-        SortBy: "ProductName",
-        SortOrder: "asc",
-      };
-
-      if (stockStatusFilter) {
-        baseQuery.StockStatus = stockStatusFilter;
-      }
-
-      if (selectedCategoryId) {
-        baseQuery.CategoryId = selectedCategoryId;
-      }
-
-      if (expiryDaysFilter) {
-        baseQuery.DaysUntilExpiry = Number(expiryDaysFilter);
-      }
-
-      const normalizedSearchValue = searchValue.trim();
-
-      if (!normalizedSearchValue) {
-        const response = await inventoryService.getStock(baseQuery);
-        setStocks(response.items || []);
-        setTotalCount(response.totalCount || 0);
-        return;
-      }
-
-      const skuResponse = await inventoryService.getStock({
-        ...baseQuery,
-        SKU: normalizedSearchValue,
+      setStockLoading(true);
+      setStockBatchLoading(false);
+      setStockError(null);
+      const categoryId = CATEGORY_OPTIONS.find((item) => item.key === categoryTab)?.id;
+      const result = await inventoryService.getStock({
+        CategoryId: categoryId,
+        SKU: searchQuery || undefined,
+        StockStatus: stockStatusFilter || undefined,
+        PageNumber: stockPage + 1,
+        PageSize: stockRowsPerPage,
       });
+      const nextStocks = result.items || [];
+      setStocks(nextStocks);
+      setStockTotalCount(result.totalCount || 0);
+      setStockBatchMap({});
 
-      if ((skuResponse.items || []).length > 0) {
-        setStocks(skuResponse.items || []);
-        setTotalCount(skuResponse.totalCount || 0);
-        return;
+      const stocksWithVariant = nextStocks.filter((stock) => stock.variantId);
+      if (stocksWithVariant.length > 0) {
+        setStockBatchLoading(true);
+        const batchResults = await Promise.allSettled(
+          stocksWithVariant.map(async (stock) => ({
+            key: getStockKey(stock),
+            items: await inventoryService.getBatchesByVariant(stock.variantId || ""),
+          })),
+        );
+        const nextBatchMap: Record<string, BatchDetailResponse[]> = {};
+        batchResults.forEach((result) => {
+          if (result.status === "fulfilled" && result.value.key) {
+            nextBatchMap[result.value.key] = result.value.items;
+          }
+        });
+        setStockBatchMap(nextBatchMap);
       }
-
-      const batchCodeResponse = await inventoryService.getStock({
-        ...baseQuery,
-        BatchCode: normalizedSearchValue,
-      });
-
-      setStocks(batchCodeResponse.items || []);
-      setTotalCount(batchCodeResponse.totalCount || 0);
-    } catch (stockError) {
-      console.error("Failed to load stock:", stockError);
-      const message =
-        stockError instanceof Error
-          ? stockError.message
-          : "Không thể tải danh sách tồn kho";
-      setError(message);
-      showToastRef.current(message, "error");
+    } catch (error) {
+      setStockError(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i t\u1ed3n kho");
     } finally {
-      setLoading(false);
+      setStockLoading(false);
+      setStockBatchLoading(false);
     }
-  }, [
-    page,
-    rowsPerPage,
-    searchValue,
-    stockStatusFilter,
-    selectedCategoryTab,
-    expiryDaysFilter,
-  ]);
+  }, [categoryTab, searchQuery, stockPage, stockRowsPerPage, stockStatusFilter]);
+
+  const loadRequests = useCallback(async () => {
+    try {
+      setRequestLoading(true);
+      setRequestError(null);
+      const result = await stockAdjustmentService.getAdjustments({
+        Status: requestStatusFilter || undefined,
+        Reason: requestReasonFilter || undefined,
+        PageNumber: requestPage + 1,
+        PageSize: requestRowsPerPage,
+      });
+      setRequests((result.items as StockAdjustmentResponse[]) || []);
+      setRequestTotalCount(result.totalCount || 0);
+    } catch (error) {
+      setRequestError(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i danh s\u00e1ch y\u00eau c\u1ea7u");
+    } finally {
+      setRequestLoading(false);
+    }
+  }, [requestStatusFilter, requestReasonFilter, requestPage, requestRowsPerPage]);
 
   useEffect(() => {
     void loadSummary();
   }, [loadSummary]);
 
   useEffect(() => {
-    void loadStock();
-  }, [loadStock]);
+    if (tab === "inventory") void loadStocks();
+  }, [tab, loadStocks]);
 
-  const loadAdjustments = useCallback(async () => {
+  useEffect(() => {
+    if (tab === "requests") void loadRequests();
+  }, [tab, loadRequests]);
+
+  const cards = useMemo(
+    () => [
+      { label: "T\u1ed5ng bi\u1ebfn th\u1ec3", value: summary?.totalVariants ?? 0, icon: <InventoryIcon color="primary" fontSize="small" /> },
+      { label: "S\u1eafp h\u1ebft h\u00e0ng", value: summary?.lowStockVariantsCount ?? 0, icon: <WarningIcon color="warning" fontSize="small" /> },
+      { label: "T\u1ed5ng l\u00f4 h\u00e0ng", value: summary?.totalBatches ?? 0, icon: <LayersIcon color="info" fontSize="small" /> },
+      { label: "Y\u00eau c\u1ea7u ch\u1edd duy\u1ec7t", value: requests.filter((item) => item.status === "Pending").length, icon: <PendingIcon color="warning" fontSize="small" /> },
+    ],
+    [requests, summary],
+  );
+
+  const openBatchDialog = async (variantId?: string) => {
+    if (!variantId) return;
+    setBatchVariantId(variantId);
+    setBatchDialogOpen(true);
     try {
-      setAdjustmentsLoading(true);
-      setAdjustmentsError(null);
-
-      const [response, pendingResponse] = await Promise.all([
-        stockAdjustmentService.getAdjustments({
-          PageNumber: adjustmentPage + 1,
-          PageSize: adjustmentRowsPerPage,
-          Status: adjustmentStatusFilter || undefined,
-          Reason: adjustmentReasonFilter || undefined,
-          SortBy: "CreatedAt",
-          SortOrder: "desc",
-        }),
-        stockAdjustmentService.getAdjustments({
-          PageNumber: 1,
-          PageSize: 1,
-          Status: "Pending",
-          SortBy: "CreatedAt",
-          SortOrder: "desc",
-        }),
-      ]);
-
-      setAdjustments(response.items || []);
-      setAdjustmentTotalCount(response.totalCount || 0);
-      setPendingAdjustmentCount(pendingResponse.totalCount || 0);
+      setBatchLoading(true);
+      setBatchItems(await inventoryService.getBatchesByVariant(variantId));
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể tải danh sách stock adjustment";
-      setAdjustmentsError(message);
-      setPendingAdjustmentCount(0);
-      showToastRef.current(message, "error");
+      setBatchItems([]);
+      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i l\u00f4 h\u00e0ng", "error");
     } finally {
-      setAdjustmentsLoading(false);
-    }
-  }, [
-    adjustmentPage,
-    adjustmentReasonFilter,
-    adjustmentRowsPerPage,
-    adjustmentStatusFilter,
-  ]);
-
-  useEffect(() => {
-    if (activeTab !== "adjustments") {
-      return;
-    }
-
-    void loadAdjustments();
-  }, [activeTab, loadAdjustments]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const normalizedInput = searchInput.trim();
-      setSearchValue((current) => {
-        if (current === normalizedInput) {
-          return current;
-        }
-        return normalizedInput;
-      });
-      setPage((currentPage) => (currentPage === 0 ? currentPage : 0));
-    }, 300);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [searchInput]);
-
-  const handleSearch = () => {
-    setPage(0);
-    setSearchValue(searchInput.trim());
-  };
-
-  const handleClearFilters = () => {
-    setSearchInput("");
-    setSearchValue("");
-    setStockStatusFilter("");
-    setExpiryDaysFilter("");
-    setPage(0);
-  };
-
-  const handleSaveThreshold = async (stockId: string, rawValue: string) => {
-    const parsed = parseInt(rawValue, 10);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      showToast("Ngưỡng thấp phải là số nguyên >= 0", "warning");
-      // restore original value by cancelling
-      setEditingThreshold(null);
-      return;
-    }
-
-    // optimistic update in local state
-    setStocks((prev) =>
-      prev.map((s) =>
-        s.id === stockId ? { ...s, lowStockThreshold: parsed } : s,
-      ),
-    );
-    setEditingThreshold(null);
-
-    try {
-      setSavingThreshold(stockId);
-      await inventoryService.updateStock(stockId, parsed);
-      showToast("Đã cập nhật ngưỡng thấp", "success");
-      // reload để lấy dữ liệu mới nhất, giữ nguyên trang hiện tại
-      void loadStock();
-    } catch (err: any) {
-      showToast(err.message || "Không thể cập nhật ngưỡng thấp", "error");
-      // revert
-      void loadStock();
-    } finally {
-      setSavingThreshold(null);
+      setBatchLoading(false);
     }
   };
 
-  const loadBatchesByVariantId = useCallback(async (variantId: string) => {
-    setBatchByVariantId((current) => ({
-      ...current,
-      [variantId]: {
-        items: current[variantId]?.items || [],
-        loading: true,
-        error: null,
-      },
-    }));
-
-    try {
-      const response = await inventoryService.getBatchesByVariant(variantId);
-
-      setBatchByVariantId((current) => ({
-        ...current,
-        [variantId]: {
-          items: response,
-          loading: false,
-          error: null,
-        },
-      }));
-    } catch (batchLoadError) {
-      const message =
-        batchLoadError instanceof Error
-          ? batchLoadError.message
-          : "Không thể tải danh sách batch";
-
-      setBatchByVariantId((current) => ({
-        ...current,
-        [variantId]: {
-          items: [],
-          loading: false,
-          error: message,
-        },
-      }));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (activeTab !== "inventory" || loading) {
-      return;
-    }
-
-    const visibleVariantIds = stocks
-      .map((stock) => stock.variantId)
-      .filter((variantId): variantId is string => Boolean(variantId));
-
-    visibleVariantIds.forEach((variantId) => {
-      if (!batchByVariantId[variantId]) {
-        void loadBatchesByVariantId(variantId);
-      }
-    });
-  }, [activeTab, batchByVariantId, loadBatchesByVariantId, loading, stocks]);
-
-  const resetCreatePayload = () => {
-    setCreatePayload({
-      variantId: "",
-      batchId: "",
-      adjustmentQuantity: "1",
-      reason: "Damage",
-      note: "",
-    });
-  };
-
-  const openCreateRequestDialog = (prefill?: {
-    variantId?: string;
-    batchId?: string;
-    reason?: StockAdjustmentReason;
-  }) => {
-    setCreatePayload((current) => ({
-      ...current,
-      variantId: prefill?.variantId || current.variantId || "",
-      batchId: prefill?.batchId || current.batchId || "",
-      reason: prefill?.reason || current.reason,
-      adjustmentQuantity: "1",
-      note: "",
-    }));
+  const openCreateDialog = (variantId?: string, batchId?: string) => {
+    setCreatePayload({ variantId: variantId || "", batchId: batchId || "", adjustmentQuantity: "1", reason: "Damage", note: "" });
     setCreateDialogOpen(true);
   };
 
-  const handleCreateAdjustment = async () => {
-    const variantId = createPayload.variantId.trim();
-    const batchId = createPayload.batchId.trim();
-    const quantity = Number(createPayload.adjustmentQuantity);
-
-    if (!variantId || !batchId || !Number.isFinite(quantity) || quantity <= 0) {
-      showToast(
-        isStaff
-          ? 'Vui lòng tạo request từ nút "Tạo request" trong chi tiết batch để hệ thống tự gắn VariantId và BatchId'
-          : "Vui lòng nhập VariantId, BatchId và số lượng hợp lệ",
-        "warning",
-      );
+  const handleCreateRequest = async () => {
+    const quantity = toInt(createPayload.adjustmentQuantity, 0);
+    if (!createPayload.variantId.trim() || !createPayload.batchId.trim() || quantity <= 0) {
+      showToast("M\u00e3 bi\u1ebfn th\u1ec3, m\u00e3 l\u00f4 h\u00e0ng v\u00e0 s\u1ed1 l\u01b0\u1ee3ng ph\u1ea3i h\u1ee3p l\u1ec7", "warning");
       return;
     }
-
     try {
       setCreateSubmitting(true);
-      const nowIso = new Date().toISOString();
-
       await stockAdjustmentService.createAdjustment({
-        adjustmentDate: nowIso,
+        adjustmentDate: new Date().toISOString(),
         reason: createPayload.reason,
-        note: createPayload.note || null,
-        adjustmentDetails: [
-          {
-            variantId,
-            batchId,
-            adjustmentQuantity: quantity,
-            note: createPayload.note || null,
-          },
-        ],
+        note: createPayload.note.trim() || null,
+        adjustmentDetails: [{
+          variantId: createPayload.variantId.trim(),
+          batchId: createPayload.batchId.trim(),
+          adjustmentQuantity: quantity,
+          note: createPayload.note.trim() || null,
+        }],
       });
-
-      showToast("Tạo request stock adjustment thành công", "success");
       setCreateDialogOpen(false);
-      resetCreatePayload();
-
-      if (activeTab === "adjustments") {
-        void loadAdjustments();
-      }
+      showToast("T\u1ea1o y\u00eau c\u1ea7u th\u00e0nh c\u00f4ng", "success");
+      if (tab === "requests") void loadRequests();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Không thể tạo request";
-      showToast(message, "error");
+      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea1o y\u00eau c\u1ea7u", "error");
     } finally {
       setCreateSubmitting(false);
     }
   };
 
-  const handleOpenVerifyDialog = async (adjustmentId?: string) => {
-    if (!adjustmentId) {
-      return;
-    }
-
+  const openRequestDetail = async (requestId?: string) => {
+    if (!requestId) return;
     try {
-      setVerifyLoading(true);
-      const detail =
-        await stockAdjustmentService.getAdjustmentById(adjustmentId);
-      setSelectedAdjustmentDetail(detail);
-      setVerifyDetailDrafts(
-        (detail?.adjustmentDetails || [])
-          .filter(
-            (item): item is StockAdjustmentDetailResponse & { id: string } =>
-              Boolean(item.id),
-          )
-          .map((item) => ({
-            detailId: item.id,
-            approvedQuantity: String(
-              detail?.status === "Pending"
-                ? (item.adjustmentQuantity ?? 0)
-                : (item.approvedQuantity ?? item.adjustmentQuantity ?? 0),
-            ),
-            note: "",
-          })),
-      );
-      setVerifyDialogOpen(true);
+      setDetailLoading(true);
+      const detail = await stockAdjustmentService.getAdjustmentById(requestId);
+      setSelectedRequest(detail);
+      setVerifyDrafts((detail?.adjustmentDetails || [])
+        .filter((item): item is StockAdjustmentDetailResponse & { id: string } => Boolean(item.id))
+        .map((item) => ({
+          detailId: item.id,
+          approvedQuantity: String(item.approvedQuantity ?? item.adjustmentQuantity ?? 0),
+          note: item.note || "",
+        })));
+      setDetailDialogOpen(true);
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể tải chi tiết adjustment";
-      showToast(message, "error");
+      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i chi ti\u1ebft", "error");
     } finally {
-      setVerifyLoading(false);
+      setDetailLoading(false);
     }
   };
 
-  const handleCloseVerifyDialog = () => {
-    setVerifyDialogOpen(false);
-    setSelectedAdjustmentDetail(null);
-    setVerifyDetailDrafts([]);
-  };
-
-  const handleVerifyDetailDraftChange = (
-    detailId: string,
-    key: "note",
-    value: string,
-  ) => {
-    setVerifyDetailDrafts((current) =>
-      current.map((item) =>
-        item.detailId === detailId ? { ...item, [key]: value } : item,
-      ),
-    );
-  };
-
-  const handleCreateQuantityStep = (step: number) => {
-    setCreatePayload((current) => {
-      const currentQuantity = Math.max(
-        1,
-        Number.parseInt(current.adjustmentQuantity, 10) || 1,
-      );
-      const nextQuantity = Math.max(1, currentQuantity + step);
-
-      return {
-        ...current,
-        adjustmentQuantity: String(nextQuantity),
-      };
-    });
-  };
-
-  const handleVerifyQuantityStep = (
-    detailId: string,
-    step: number,
-    maxQuantity: number,
-  ) => {
-    setVerifyDetailDrafts((current) =>
-      current.map((item) => {
-        if (item.detailId !== detailId) {
-          return item;
-        }
-
-        const currentQuantity = Math.max(
-          0,
-          Number.parseInt(item.approvedQuantity, 10) || 0,
-        );
-        const upperBound = Math.max(0, maxQuantity);
-        const nextQuantity = Math.min(
-          upperBound,
-          Math.max(0, currentQuantity + step),
-        );
-
-        return {
-          ...item,
-          approvedQuantity: String(nextQuantity),
-        };
-      }),
-    );
-  };
-
-  const handleVerifyAdjustment = async () => {
-    if (!selectedAdjustmentDetail?.id) {
-      return;
-    }
-
-    if (selectedAdjustmentDetail.status !== "InProgress") {
-      showToast(
-        "Chỉ có thể xác nhận duyệt khi request ở trạng thái Đang xử lý",
-        "warning",
-      );
-      return;
-    }
-
-    const details: StockAdjustmentDetailResponse[] =
-      selectedAdjustmentDetail.adjustmentDetails || [];
-
-    if (!details.length) {
-      showToast("Không có detail để duyệt", "warning");
-      return;
-    }
-
-    const detailMap = new Map(
-      details
-        .filter(
-          (detail): detail is StockAdjustmentDetailResponse & { id: string } =>
-            Boolean(detail.id),
-        )
-        .map((detail) => [detail.id, detail]),
-    );
-
-    const verifyPayloadDetails = verifyDetailDrafts
-      .filter((draft) => detailMap.has(draft.detailId))
-      .map((draft) => {
-        const relatedDetail = detailMap.get(draft.detailId);
-        const approvedQuantity = Number(draft.approvedQuantity);
-        const requestQuantity = relatedDetail?.adjustmentQuantity ?? 0;
-
-        return {
-          detailId: draft.detailId,
-          approvedQuantity,
-          requestQuantity,
-          note: draft.note.trim() || null,
-          sku: relatedDetail?.variantSku || "N/A",
-        };
-      });
-
-    if (!verifyPayloadDetails.length) {
-      showToast("Không có detail hợp lệ để duyệt", "warning");
-      return;
-    }
-
-    const invalidQuantityItem = verifyPayloadDetails.find(
-      (item) =>
-        !Number.isFinite(item.approvedQuantity) ||
-        !Number.isInteger(item.approvedQuantity) ||
-        item.approvedQuantity < 0 ||
-        item.approvedQuantity > item.requestQuantity,
-    );
-
-    if (invalidQuantityItem) {
-      showToast(
-        `SL duyệt không hợp lệ cho SKU ${invalidQuantityItem.sku}. Giá trị phải từ 0 đến ${invalidQuantityItem.requestQuantity}.`,
-        "warning",
-      );
-      return;
-    }
-
+  const handleUpdateRequestStatus = async (status: Extract<StockAdjustmentStatus, "InProgress" | "Cancelled">) => {
+    if (!selectedRequest?.id) return;
     try {
-      setVerifySubmitting(true);
-
-      await stockAdjustmentService.verifyAdjustment(
-        selectedAdjustmentDetail.id,
-        {
-          adjustmentDetails: verifyPayloadDetails.map((item) => ({
-            detailId: item.detailId,
-            approvedQuantity: item.approvedQuantity,
-            note: item.note,
-          })),
-        },
-      );
-
-      showToast("Duyệt request thành công", "success");
-      handleCloseVerifyDialog();
-      void loadAdjustments();
+      setDetailSubmitting(true);
+      await stockAdjustmentService.updateAdjustmentStatus(selectedRequest.id, { status });
+      setSelectedRequest(await stockAdjustmentService.getAdjustmentById(selectedRequest.id));
+      void loadRequests();
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Không thể duyệt request";
-      showToast(message, "error");
+      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 c\u1eadp nh\u1eadt tr\u1ea1ng th\u00e1i", "error");
     } finally {
-      setVerifySubmitting(false);
+      setDetailSubmitting(false);
     }
   };
 
-  const handleUpdateAdjustmentStatus = async (
-    nextStatus: Extract<StockAdjustmentStatus, "InProgress" | "Cancelled">,
-  ) => {
-    if (!selectedAdjustmentDetail?.id) {
-      return;
-    }
-
+  const handleVerifyRequest = async () => {
+    if (!selectedRequest?.id || selectedRequest.status !== "InProgress") return;
+    const detailMap = new Map((selectedRequest.adjustmentDetails || [])
+      .filter((item): item is StockAdjustmentDetailResponse & { id: string } => Boolean(item.id))
+      .map((item) => [item.id, item]));
+    const payload = verifyDrafts
+      .filter((item) => detailMap.has(item.detailId))
+      .map((item) => ({ detailId: item.detailId, approvedQuantity: toInt(item.approvedQuantity, 0), note: item.note.trim() || null }));
     try {
-      setStatusSubmitting(true);
-
-      await stockAdjustmentService.updateAdjustmentStatus(
-        selectedAdjustmentDetail.id,
-        { status: nextStatus },
-      );
-
-      const latestDetail = await stockAdjustmentService.getAdjustmentById(
-        selectedAdjustmentDetail.id,
-      );
-
-      setSelectedAdjustmentDetail(latestDetail);
-
-      if (nextStatus === "InProgress") {
-        showToast("Yêu cầu đã chuyển sang Đang xử lý", "success");
-      } else {
-        showToast("Yều cầu đã được hủy", "success");
-      }
-
-      void loadAdjustments();
+      setDetailSubmitting(true);
+      await stockAdjustmentService.verifyAdjustment(selectedRequest.id, { adjustmentDetails: payload });
+      setSelectedRequest(await stockAdjustmentService.getAdjustmentById(selectedRequest.id));
+      void loadRequests();
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể cập nhật trạng thái yêu cầu";
-      showToast(message, "error");
+      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 duy\u1ec7t y\u00eau c\u1ea7u", "error");
     } finally {
-      setStatusSubmitting(false);
+      setDetailSubmitting(false);
     }
   };
-
-  const handleCopyVariantId = async (variantId?: string) => {
-    if (!variantId) {
-      showToast("Không có mã sản phẩm để sao chép", "warning");
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(variantId);
-      showToast("Đã sao chép mã sản phẩm", "success");
-    } catch {
-      showToast("Không thể sao chép mã sản phẩm", "error");
-    }
-  };
-
-  const summaryCards = [
-    {
-      title: "Tổng sản phẩm",
-      value: summary?.totalVariants ?? 0,
-      icon: <CategoryIcon color="primary" />,
-    },
-    {
-      title: "Tổng tồn khả dụng",
-      value: summary?.totalStockQuantity ?? 0,
-      icon: <Inventory2Icon color="success" />,
-    },
-    {
-      title: "Sản phẩm sắp hết",
-      value: summary?.lowStockVariantsCount ?? 0,
-      icon: <WarningAmberIcon color="warning" />,
-    },
-    {
-      title: "Tổng lô",
-      value: summary?.totalBatches ?? 0,
-      icon: <ViewListIcon color="info" />,
-    },
-    {
-      title: "Lô hết hạn",
-      value: summary?.expiredBatchesCount ?? 0,
-      icon: <WarningAmberIcon color="error" />,
-    },
-    {
-      title: "Lô sắp hết hạn",
-      value: summary?.expiringSoonCount ?? 0,
-      icon: <WarningAmberIcon sx={{ color: "#f59e0b" }} />,
-    },
-  ];
 
   return (
     <AdminLayout>
-      <Box>
-        <Paper sx={{ mb: 3 }}>
-          <Tabs
-            value={activeTab}
-            onChange={(_, value: InventoryTab) => setActiveTab(value)}
-            variant="fullWidth"
-          >
-            <Tab value="inventory" label="Kho hàng" />
-            <Tab
-              value="adjustments"
-              label={
-                isAdmin ? (
-                  <Badge
-                    color="error"
-                    badgeContent={pendingAdjustmentCount}
-                    invisible={pendingAdjustmentCount <= 0}
-                    sx={{
-                      "& .MuiBadge-badge": {
-                        right: -16,
-                      },
-                    }}
-                  >
-                    Điều chỉnh số lượng
-                  </Badge>
-                ) : (
-                  "Điều chỉnh số lượng"
-                )
-              }
-            />
-          </Tabs>
+      <Stack spacing={2.5}>
+        <Paper sx={{ p: 3, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
+          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1}>
+            <Box>
+              <Typography variant="h5" fontWeight={700}>{"Qu\u1ea3n l\u00fd t\u1ed3n kho 2.0"}</Typography>
+              <Typography color="text.secondary">{"C\u1eeda s\u1ed5 thao t\u00e1c \u0111\u1eb9p h\u01a1n, m\u00e0u s\u1eafc r\u00f5 h\u01a1n v\u00e0 d\u1ec5 s\u1eed d\u1ee5ng h\u01a1n."}</Typography>
+            </Box>
+            <Button variant="outlined" color="error" startIcon={<RefreshIcon />} onClick={() => { void loadSummary(); if (tab === "inventory") void loadStocks(); if (tab === "requests") void loadRequests(); }}>
+              {"L\u00e0m m\u1edbi"}
+            </Button>
+          </Stack>
         </Paper>
 
-        {activeTab === "inventory" && (
-          <>
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "repeat(2, 1fr)",
-                  lg: "repeat(3, 1fr)",
-                },
-                gap: 2,
-                mb: 3,
-              }}
-            >
-              {summaryCards.map((card) => (
-                <Paper key={card.title} sx={{ p: 2.5, borderRadius: 2 }}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={1.5}
-                    mb={1}
-                  >
-                    {card.icon}
-                    <Typography variant="body2" color="text.secondary">
-                      {card.title}
-                    </Typography>
-                  </Stack>
-                  {summaryLoading ? (
-                    <Skeleton variant="text" width={80} height={40} />
-                  ) : (
-                    <Typography variant="h5" fontWeight={700}>
-                      {card.value}
-                    </Typography>
-                  )}
-                </Paper>
-              ))}
-            </Box>
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2,1fr)", lg: "repeat(4,1fr)" }, gap: 2 }}>
+          {cards.map((card) => (
+            <Card key={card.label} sx={{ borderRadius: 2.5, border: "1px solid", borderColor: "divider" }}>
+              <CardContent>
+                <Stack direction="row" alignItems="center" justifyContent="space-between">
+                  <Typography variant="body2" color="text.secondary">{card.label}</Typography>
+                  {card.icon}
+                </Stack>
+                {summaryLoading ? <Skeleton sx={{ mt: 1 }} width={80} /> : <Typography variant="h4" fontWeight={700}>{new Intl.NumberFormat("vi-VN").format(card.value)}</Typography>}
+              </CardContent>
+            </Card>
+          ))}
+        </Box>
 
-            <Paper variant="outlined" sx={{ mb: 3 }}>
+        <Paper sx={{ borderRadius: 2.5, overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
+          <Tabs value={tab} onChange={(_, value: InventoryTab) => setTab(value)} sx={{ px: 1, borderBottom: "1px solid", borderColor: "divider" }}>
+            <Tab value="inventory" label={"T\u1ed3n kho"} />
+            <Tab value="requests" label={"Y\u00eau c\u1ea7u \u0111i\u1ec1u ch\u1ec9nh"} />
+          </Tabs>
+          {tab === "inventory" ? (
+            <Stack spacing={2} sx={{ p: 2 }}>
               <Tabs
-                value={selectedCategoryTab}
-                onChange={(_, value: InventoryCategoryTab) =>
-                  setSelectedCategoryTab(value)
-                }
+                value={categoryTab}
+                onChange={(_, value: CategoryTab) => {
+                  setCategoryTab(value);
+                  setStockPage(0);
+                }}
                 variant="scrollable"
                 scrollButtons="auto"
-                allowScrollButtonsMobile
               >
-                {INVENTORY_CATEGORY_TAB_ITEMS.map((tab) => (
-                  <Tab key={tab.key} value={tab.key} label={tab.label} />
+                {CATEGORY_OPTIONS.map((item) => (
+                  <Tab key={item.key} value={item.key} label={item.label} />
                 ))}
               </Tabs>
-            </Paper>
 
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: "1fr 220px 240px auto",
-                  },
-                  gap: 2,
-                  alignItems: "center",
-                }}
-              >
+              <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
                 <TextField
                   fullWidth
-                  label="Tìm SKU hoặc Batch code"
-                  placeholder="Nhập SKU hoặc Batch code"
+                  size="small"
+                  placeholder={"T\u00ecm theo SKU"}
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
-                      handleSearch();
+                      setSearchQuery(searchInput.trim());
+                      setStockPage(0);
                     }
                   }}
                   InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton onClick={handleSearch} edge="end">
-                          <SearchIcon />
-                        </IconButton>
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
                       </InputAdornment>
                     ),
                   }}
                 />
-
-                <FormControl fullWidth>
-                  <InputLabel>Lọc trạng thái</InputLabel>
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <InputLabel>{"Tr\u1ea1ng th\u00e1i"}</InputLabel>
                   <Select
+                    label={"Tr\u1ea1ng th\u00e1i"}
                     value={stockStatusFilter}
-                    label="Lọc trạng thái"
                     onChange={(event) => {
-                      setStockStatusFilter(
-                        event.target.value as StockStatusFilter,
-                      );
-                      setPage(0);
+                      setStockStatusFilter(event.target.value as StockStatusFilter);
+                      setStockPage(0);
                     }}
                   >
-                    <MenuItem value="">Tất cả</MenuItem>
-                    <MenuItem value="OutOfStock">Hết hàng</MenuItem>
-                    <MenuItem value="LowStock">Sắp hết</MenuItem>
-                    <MenuItem value="Normal">Bình thường</MenuItem>
+                    <MenuItem value="">{"T\u1ea5t c\u1ea3"}</MenuItem>
+                    <MenuItem value="Normal">{"B\u00ecnh th\u01b0\u1eddng"}</MenuItem>
+                    <MenuItem value="LowStock">{"S\u1eafp h\u1ebft"}</MenuItem>
+                    <MenuItem value="OutOfStock">{"H\u1ebft h\u00e0ng"}</MenuItem>
                   </Select>
                 </FormControl>
-
-                <FormControl fullWidth>
-                  <InputLabel>Hạn dùng</InputLabel>
-                  <Select
-                    value={expiryDaysFilter}
-                    label="Hạn dùng"
-                    onChange={(event) => {
-                      setExpiryDaysFilter(
-                        event.target.value as ExpiryDaysFilter,
-                      );
-                      setPage(0);
-                    }}
-                  >
-                    {EXPIRY_FILTER_OPTIONS.map((option) => (
-                      <MenuItem
-                        key={option.value || "all-expiry"}
-                        value={option.value}
-                      >
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-
                 <Button
-                  variant="outlined"
-                  startIcon={<ClearIcon />}
-                  onClick={handleClearFilters}
-                  sx={{ height: 56 }}
+                  variant="contained"
+                  color="error"
+                  onClick={() => {
+                    setSearchQuery(searchInput.trim());
+                    setStockPage(0);
+                  }}
                 >
-                  Xóa lọc
+                  {"L\u1ecdc"}
                 </Button>
-              </Box>
-            </Paper>
+              </Stack>
 
-            <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 260px)' }}>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Ảnh</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Sản phẩm</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã SKU / Số Lô</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã sản phẩm</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Còn lại</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="right">Ngưỡng thấp / NSX - HSD</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Trạng thái</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loading ? (
+              {stockError ? <Alert severity="error">{stockError}</Alert> : null}
+
+              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                <Table size="small">
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                        <CircularProgress />
-                      </TableCell>
+                      <TableCell sx={{ minWidth: 260 }}>{"S\u1ea3n ph\u1ea9m"}</TableCell>
+                      <TableCell>SKU</TableCell>
+                      <TableCell>{"M\u00e3 t\u1ed3n kho / L\u00f4 h\u00e0ng"}</TableCell>
+                      <TableCell>{"Dung t\u00edch / N\u1ed3ng \u0111\u1ed9"}</TableCell>
+                      <TableCell align="right">{"T\u1ed5ng / Nh\u1eadp"}</TableCell>
+                      <TableCell align="right">{"Kh\u1ea3 d\u1ee5ng"}</TableCell>
+                      <TableCell align="right">{"Ng\u01b0\u1ee1ng / C\u00f2n l\u1ea1i"}</TableCell>
+                      <TableCell>{"Ng\u00e0y s\u1ea3n xu\u1ea5t / H\u1ea1n d\u00f9ng"}</TableCell>
+                      <TableCell>{"Tr\u1ea1ng th\u00e1i"}</TableCell>
+                      <TableCell align="right">{"Thao t\u00e1c"}</TableCell>
                     </TableRow>
-                  ) : error ? (
-                    <TableRow>
-                      <TableCell colSpan={7}>
-                        <Alert severity="error">{error}</Alert>
-                      </TableCell>
-                    </TableRow>
-                  ) : stocks.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Không có dữ liệu tồn kho phù hợp.
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    stocks.map((stock, stockIndex) => {
-                      const currentVariantId = stock.variantId || "";
-                      const batchState = currentVariantId
-                        ? batchByVariantId[currentVariantId]
-                        : undefined;
+                  </TableHead>
+                  <TableBody>
+                    {stockLoading ? (
+                      Array.from({ length: 8 }).map((_, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell colSpan={10}>
+                            <Skeleton />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : stocks.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={10}>{"Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u"}</TableCell>
+                      </TableRow>
+                    ) : (
+                      stocks.map((stock) => {
+                        const stockKey = getStockKey(stock);
+                        const batches = stockBatchMap[stockKey] || [];
+                        const status = stockChip(stock.status);
 
-                      return (
-                        <Fragment key={stock.id || stock.variantId}>
-                          {stockIndex > 0 && (
-                            <TableRow>
-                              <TableCell
-                                colSpan={7}
-                                sx={{
-                                  p: 0,
-                                  borderBottom: "none",
-                                  bgcolor: "background.default",
-                                }}
-                              >
-                                <Box sx={{ height: 10 }} />
-                              </TableCell>
-                            </TableRow>
-                          )}
-
-                          <TableRow
-                            hover
-                            sx={{
-                              bgcolor: "background.paper",
-                              "& td": {
-                                borderBottom: "none",
-                              },
-                            }}
-                          >
-                            <TableCell>
-                              <Box
-                                sx={{
-                                  width: 52,
-                                  height: 52,
-                                  borderRadius: 1.5,
-                                  overflow: "hidden",
-                                  border: "1px solid",
-                                  borderColor: "divider",
-                                  bgcolor: "grey.100",
-                                  display: "grid",
-                                  placeItems: "center",
-                                }}
-                              >
-                                {stock.variantImageUrl ? (
-                                  <Box
-                                    component="img"
-                                    src={stock.variantImageUrl}
-                                    alt={
-                                      stock.productName ||
-                                      stock.variantSku ||
-                                      "Variant image"
-                                    }
-                                    sx={{
-                                      width: "100%",
-                                      height: "100%",
-                                      objectFit: "cover",
-                                      display: "block",
-                                    }}
-                                  />
-                                ) : (
-                                  <Typography
-                                    variant="caption"
-                                    color="text.disabled"
-                                    sx={{ fontSize: 11 }}
-                                  >
-                                    Ảnh
-                                  </Typography>
-                                )}
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              <Typography variant="body2" fontWeight={600}>
-                                {stock.productName || "N/A"}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {stock.concentrationName || ""}
-                                {stock.volumeMl ? ` • ${stock.volumeMl}ml` : ""}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>{stock.variantSku || "N/A"}</TableCell>
-                            <TableCell>
-                              <Stack
-                                direction="row"
-                                spacing={0.5}
-                                alignItems="center"
-                              >
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    display: "inline-block",
-                                    maxWidth: 150,
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    cursor: stock.variantId
-                                      ? "pointer"
-                                      : "default",
-                                    textDecoration: stock.variantId
-                                      ? "underline"
-                                      : "none",
-                                    textDecorationStyle: "dotted",
-                                  }}
-                                  title={stock.variantId || ""}
-                                  onClick={() =>
-                                    handleCopyVariantId(
-                                      stock.variantId || undefined,
-                                    )
-                                  }
-                                >
-                                  {stock.variantId || "N/A"}
-                                </Typography>
-                                {stock.variantId && (
-                                  <IconButton
-                                    size="small"
-                                    onClick={() =>
-                                      handleCopyVariantId(
-                                        stock.variantId || undefined,
-                                      )
-                                    }
-                                    sx={{ p: 0.25 }}
-                                  >
-                                    <ContentCopyIcon sx={{ fontSize: 14 }} />
-                                  </IconButton>
-                                )}
-                              </Stack>
-                            </TableCell>
-                            <TableCell align="right">
-                              {stock.availableQuantity ?? 0}
-                            </TableCell>
-                            <TableCell align="right">
-                              {(() => {
-                                const stockId = stock.id;
-                                const isEditing =
-                                  editingThreshold?.stockId === stockId;
-                                const isSaving = savingThreshold === stockId;
-
-                                if (isEditing && editingThreshold && stockId) {
-                                  return (
-                                    <TextField
-                                      autoFocus
-                                      size="small"
-                                      type="number"
-                                      value={editingThreshold.value}
-                                      onChange={(e) =>
-                                        setEditingThreshold({
-                                          stockId,
-                                          value: e.target.value,
-                                        })
-                                      }
-                                      onBlur={() =>
-                                        handleSaveThreshold(
-                                          stockId,
-                                          editingThreshold.value,
-                                        )
-                                      }
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                          handleSaveThreshold(
-                                            stockId,
-                                            editingThreshold.value,
-                                          );
-                                        } else if (e.key === "Escape") {
-                                          setEditingThreshold(null);
-                                        }
-                                      }}
-                                      sx={{ width: 80 }}
-                                      inputProps={{ min: 0, step: 1 }}
-                                    />
-                                  );
-                                }
-
-                                return (
+                        return (
+                          <Fragment key={stockKey}>
+                            <TableRow hover sx={{ bgcolor: "grey.50" }}>
+                              <TableCell>
+                                <Stack direction="row" spacing={1.5} alignItems="center">
                                   <Box
                                     sx={{
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
-                                      cursor: stockId ? "pointer" : "default",
-                                      px: 0.5,
-                                      py: 0.25,
-                                      borderRadius: 1,
-                                      "&:hover": stockId
-                                        ? {
-                                            bgcolor: "action.hover",
-                                            outline: "1px dashed",
-                                            outlineColor: "primary.main",
-                                          }
-                                        : {},
-                                    }}
-                                    title={stockId ? "Nhấn để chỉnh ngưỡng thấp" : undefined}
-                                    onClick={() => {
-                                      if (!stockId) return;
-                                      setEditingThreshold({
-                                        stockId,
-                                        value: String(
-                                          stock.lowStockThreshold ?? 0,
-                                        ),
-                                      });
+                                      width: 52,
+                                      height: 52,
+                                      borderRadius: 2,
+                                      overflow: "hidden",
+                                      bgcolor: "grey.100",
+                                      border: "1px solid",
+                                      borderColor: "divider",
+                                      flexShrink: 0,
                                     }}
                                   >
-                                    {isSaving ? (
-                                      <CircularProgress size={14} />
+                                    {stock.variantImageUrl ? (
+                                      <Box
+                                        component="img"
+                                        src={stock.variantImageUrl}
+                                        alt={stock.productName || stock.variantSku}
+                                        sx={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                      />
                                     ) : (
-                                      <Typography
-                                        variant="body2"
-                                        color={
-                                          stock.status === "LowStock" ||
-                                          stock.status === "OutOfStock"
-                                            ? "warning.main"
-                                            : "text.primary"
-                                        }
-                                        fontWeight={500}
-                                      >
-                                        {stock.lowStockThreshold ?? 0}
-                                      </Typography>
+                                      <Stack alignItems="center" justifyContent="center" sx={{ width: "100%", height: "100%" }}>
+                                        <InventoryIcon color="disabled" fontSize="small" />
+                                      </Stack>
                                     )}
                                   </Box>
-                                );
-                              })()}
-                            </TableCell>
-                            <TableCell align="center">
-                              {(() => {
-                                const status = getStockStatus(stock);
-                                return (
-                                  <Chip
-                                    size="small"
-                                    color={status.color}
-                                    label={status.label}
-                                  />
-                                );
-                              })()}
-                            </TableCell>
-                          </TableRow>
+                                  <Box>
+                                    <Typography fontWeight={700}>{stock.productName || "-"}</Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                      {stock.concentrationName || "-"} - {stock.volumeMl ?? 0}ml
+                                    </Typography>
+                                  </Box>
+                                </Stack>
+                              </TableCell>
+                              <TableCell>{stock.variantSku || "-"}</TableCell>
+                              <TableCell>
+                                <Typography variant="caption" color="text.secondary">
+                                  {stock.id || stock.variantId || "-"}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>{stock.volumeMl ?? 0}ml / {stock.concentrationName || "-"}</TableCell>
+                              <TableCell align="right">{stock.totalQuantity ?? 0}</TableCell>
+                              <TableCell align="right">{stock.availableQuantity ?? 0}</TableCell>
+                              <TableCell align="right">{stock.lowStockThreshold ?? 0}</TableCell>
+                              <TableCell>-</TableCell>
+                              <TableCell>
+                                <Chip size="small" color={status.color} label={status.label} />
+                              </TableCell>
+                              <TableCell align="right">
+                                <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                                  <Button size="small" onClick={() => void openBatchDialog(stock.variantId)}>
+                                    {"Xem l\u00f4"}
+                                  </Button>
+                                  {isAdmin || isStaff ? (
+                                    <Button size="small" color="error" onClick={() => openCreateDialog(stock.variantId)}>
+                                      {"T\u1ea1o y\u00eau c\u1ea7u"}
+                                    </Button>
+                                  ) : null}
+                                </Stack>
+                              </TableCell>
+                            </TableRow>
 
-                          {batchState?.loading ? (
-                            <TableRow>
-                              <TableCell
-                                colSpan={7}
-                                sx={{
-                                  bgcolor: "grey.50",
-                                  borderBottom: "none",
-                                  borderLeft: "3px solid",
-                                  borderColor: "grey.300",
-                                }}
-                              >
-                                <Box
-                                  sx={{
-                                    py: 1.5,
-                                    display: "flex",
-                                    justifyContent: "center",
-                                  }}
-                                >
-                                  <CircularProgress size={20} />
-                                </Box>
-                              </TableCell>
-                            </TableRow>
-                          ) : batchState?.error ? (
-                            <TableRow>
-                              <TableCell
-                                colSpan={7}
-                                sx={{
-                                  bgcolor: "grey.50",
-                                  borderBottom: "none",
-                                  borderLeft: "3px solid",
-                                  borderColor: "grey.300",
-                                }}
-                              >
-                                <Alert severity="error">
-                                  {batchState.error}
-                                </Alert>
-                              </TableCell>
-                            </TableRow>
-                          ) : !batchState || batchState.items.length === 0 ? (
-                            <TableRow>
-                              <TableCell
-                                colSpan={7}
-                                sx={{
-                                  bgcolor: "grey.50",
-                                  borderBottom: "none",
-                                  borderLeft: "3px solid",
-                                  borderColor: "grey.300",
-                                }}
-                              >
-                                <Alert severity="info">
-                                  Chưa có lô cho sản phẩm này.
-                                </Alert>
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            batchState.items.map((batch) => (
-                              <TableRow
-                                key={batch.id}
-                                sx={{
-                                  bgcolor: "grey.50",
-                                  "& td": {
-                                    borderBottom: "none",
-                                  },
-                                  "& td:first-of-type": {
-                                    borderLeft: "3px solid",
-                                    borderColor: "grey.300",
-                                  },
-                                  "&:hover": { bgcolor: "grey.100" },
-                                }}
-                              >
-                                <TableCell>
-                                  <Chip
-                                    size="small"
-                                    label="Batch"
-                                    variant="outlined"
-                                  />
-                                </TableCell>
-                                <TableCell>
-                                  <Typography variant="body2" fontWeight={600}>
-                                    {stock.productName || "N/A"}
-                                  </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    Lô của SKU {stock.variantSku || "N/A"}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell>
-                                  {batch.batchCode || "N/A"}
-                                </TableCell>
-                                <TableCell>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.disabled"
-                                  >
-                                    -
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="right">
-                                  {batch.availableQuantity ?? 0}
-                                </TableCell>
-                                <TableCell align="right">
-                                  <Typography variant="body2">
-                                    NSX: {formatDate(batch.manufactureDate)}
-                                  </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    HSD: {formatDate(batch.expiryDate)}
-                                  </Typography>
-                                </TableCell>
-                                <TableCell align="center">
-                                  <Stack
-                                    direction="row"
-                                    spacing={1}
-                                    justifyContent="center"
-                                    alignItems="center"
-                                    flexWrap="wrap"
-                                  >
-                                    {batch.isExpired ? (
-                                      <Chip
-                                        size="small"
-                                        color="error"
-                                        label="Hết hạn"
-                                      />
-                                    ) : (batch.daysUntilExpiry ?? 9999) <=
-                                      60 ? (
-                                      <Chip
-                                        size="small"
-                                        color="warning"
-                                        variant="outlined"
-                                        label={`Còn ${formatDaysToYMD(batch.daysUntilExpiry ?? 0)}`}
-                                      />
-                                    ) : (
-                                      <Chip
-                                        size="small"
-                                        color="success"
-                                        variant="outlined"
-                                        label={`Còn ${formatDaysToYMD(batch.daysUntilExpiry ?? 0)}`}
-                                      />
-                                    )}
-                                    {isStaff && (
-                                      <Button
-                                        size="small"
-                                        variant="outlined"
-                                        startIcon={<AddIcon />}
-                                        onClick={() =>
-                                          openCreateRequestDialog({
-                                            variantId:
-                                              stock.variantId || undefined,
-                                            batchId: batch.id || undefined,
-                                            reason: "Damage",
-                                          })
-                                        }
-                                        disabled={!stock.variantId || !batch.id}
-                                      >
-                                        Tạo yêu cầu
-                                      </Button>
-                                    )}
-                                  </Stack>
+                            {stockBatchLoading && batches.length === 0 ? (
+                              <TableRow key={`${stockKey}-batch-loading`}>
+                                <TableCell colSpan={10} sx={{ pl: 9 }}>
+                                  <Skeleton width="45%" />
                                 </TableCell>
                               </TableRow>
-                            ))
-                          )}
-
-                          <TableRow>
-                            <TableCell
-                              colSpan={8}
-                              sx={{
-                                p: 0,
-                                borderBottom: "none",
-                                bgcolor: "background.default",
-                              }}
-                            >
-                              <Box sx={{ height: 6 }} />
-                            </TableCell>
-                          </TableRow>
-                        </Fragment>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+                            ) : batches.length === 0 ? (
+                              <TableRow key={`${stockKey}-empty-batch`}>
+                                <TableCell colSpan={10} sx={{ pl: 9, color: "text.secondary" }}>
+                                  {"Ch\u01b0a c\u00f3 l\u00f4 h\u00e0ng cho s\u1ea3n ph\u1ea9m n\u00e0y"}
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              batches.map((batch) => {
+                                const expiry = batchExpiryChip(batch);
+                                return (
+                                  <TableRow key={batch.id || `${stockKey}-${batch.batchCode}`}>
+                                    <TableCell sx={{ pl: 9 }}>
+                                      <Chip size="small" variant="outlined" label="Batch" />
+                                    </TableCell>
+                                    <TableCell>
+                                      <Typography variant="caption" color="text.secondary">
+                                        {"L\u00f4 c\u1ee7a SKU"} {batch.variantSku || stock.variantSku || "-"}
+                                      </Typography>
+                                    </TableCell>
+                                    <TableCell>{batch.batchCode || "-"}</TableCell>
+                                    <TableCell>{batch.volumeMl ?? stock.volumeMl ?? 0}ml / {batch.concentrationName || stock.concentrationName || "-"}</TableCell>
+                                    <TableCell align="right">{batch.importQuantity ?? 0}</TableCell>
+                                    <TableCell align="right">{batch.availableQuantity ?? 0}</TableCell>
+                                    <TableCell align="right">{batch.remainingQuantity ?? 0}</TableCell>
+                                    <TableCell>
+                                      <Typography variant="caption" display="block">NSX: {formatDate(batch.manufactureDate)}</Typography>
+                                      <Typography variant="caption" color="text.secondary" display="block">HSD: {formatDate(batch.expiryDate)}</Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                      <Chip size="small" variant="outlined" color={expiry.color} label={expiry.label} />
+                                    </TableCell>
+                                    <TableCell align="right">
+                                      {isAdmin || isStaff ? (
+                                        <Button size="small" color="error" onClick={() => openCreateDialog(stock.variantId, batch.id)}>
+                                          {"T\u1ea1o y\u00eau c\u1ea7u"}
+                                        </Button>
+                                      ) : null}
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })
+                            )}
+                          </Fragment>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
               <TablePagination
                 component="div"
-                count={totalCount}
-                page={page}
-                onPageChange={(_, nextPage) => setPage(nextPage)}
-                rowsPerPage={rowsPerPage}
+                count={stockTotalCount}
+                page={stockPage}
+                onPageChange={(_, page) => setStockPage(page)}
+                rowsPerPage={stockRowsPerPage}
                 onRowsPerPageChange={(event) => {
-                  setRowsPerPage(Number(event.target.value));
-                  setPage(0);
+                  setStockRowsPerPage(toInt(event.target.value, 10));
+                  setStockPage(0);
                 }}
                 rowsPerPageOptions={[10, 20, 50]}
-                labelRowsPerPage="Dòng mỗi trang:"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} của ${count}`
-                }
               />
-            </TableContainer>
-          </>
-        )}
-
-        {activeTab === "adjustments" && (
-          <>
-            <Paper sx={{ p: 3, mb: 3 }}>
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: isStaff ? "1fr 1fr auto" : "1fr 1fr",
-                  },
-                  gap: 2,
-                }}
-              >
-                <FormControl fullWidth>
-                  <InputLabel>Trạng thái</InputLabel>
+            </Stack>
+          ) : (
+            <Stack spacing={2} sx={{ p: 2 }}>
+              <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <InputLabel>{"Tr\u1ea1ng th\u00e1i"}</InputLabel>
                   <Select
-                    value={adjustmentStatusFilter}
-                    label="Trạng thái"
+                    label={"Tr\u1ea1ng th\u00e1i"}
+                    value={requestStatusFilter}
                     onChange={(event) => {
-                      setAdjustmentStatusFilter(
-                        event.target.value as StockAdjustmentStatus | "",
-                      );
-                      setAdjustmentPage(0);
+                      setRequestStatusFilter(event.target.value as StockAdjustmentStatus | "");
+                      setRequestPage(0);
                     }}
                   >
                     {ADJUSTMENT_STATUS_OPTIONS.map((status) => (
                       <MenuItem key={status || "all"} value={status}>
-                        {status ? statusLabelMap[status] : "Tất cả"}
+                        {status ? STATUS_LABELS[status] : "T\u1ea5t c\u1ea3"}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
-
-                <FormControl fullWidth>
-                  <InputLabel>Lý do</InputLabel>
+                <FormControl size="small" sx={{ minWidth: 180 }}>
+                  <InputLabel>{"L\u00fd do"}</InputLabel>
                   <Select
-                    value={adjustmentReasonFilter}
-                    label="Lý do"
+                    label={"L\u00fd do"}
+                    value={requestReasonFilter}
                     onChange={(event) => {
-                      setAdjustmentReasonFilter(
-                        event.target.value as StockAdjustmentReason | "",
-                      );
-                      setAdjustmentPage(0);
+                      setRequestReasonFilter(event.target.value as StockAdjustmentReason | "");
+                      setRequestPage(0);
                     }}
                   >
-                    <MenuItem value="">Tất cả</MenuItem>
+                    <MenuItem value="">{"T\u1ea5t c\u1ea3"}</MenuItem>
                     {ADJUSTMENT_REASON_OPTIONS.map((reason) => (
                       <MenuItem key={reason} value={reason}>
-                        {reasonLabelMap[reason]}
+                        {REASON_LABELS[reason]}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
-              </Box>
-            </Paper>
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setRequestStatusFilter("");
+                    setRequestReasonFilter("");
+                    setRequestPage(0);
+                  }}
+                >
+                  {"\u0110\u1eb7t l\u1ea1i"}
+                </Button>
+              </Stack>
 
-            <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 260px)' }}>
-              <Table stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Mã yêu cầu</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Người tạo</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Ngày tạo</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }}>Lý do</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Số lượng điều chỉnh</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Trạng thái</TableCell>
-                    <TableCell sx={{ bgcolor: "grey.50" }} align="center">Thao tác</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {adjustmentsLoading ? (
+              {requestError ? <Alert severity="error">{requestError}</Alert> : null}
+
+              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                <Table size="small">
+                  <TableHead>
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                        <CircularProgress />
-                      </TableCell>
+                      <TableCell>{"M\u00e3 y\u00eau c\u1ea7u"}</TableCell>
+                      <TableCell>{"L\u00fd do"}</TableCell>
+                      <TableCell>{"Tr\u1ea1ng th\u00e1i"}</TableCell>
+                      <TableCell>{"Ng\u01b0\u1eddi t\u1ea1o"}</TableCell>
+                      <TableCell align="right">{"S\u1ed1 d\u00f2ng"}</TableCell>
+                      <TableCell>{"Ng\u00e0y t\u1ea1o"}</TableCell>
+                      <TableCell align="right">{"Thao t\u00e1c"}</TableCell>
                     </TableRow>
-                  ) : adjustmentsError ? (
-                    <TableRow>
-                      <TableCell colSpan={7}>
-                        <Alert severity="error">{adjustmentsError}</Alert>
-                      </TableCell>
-                    </TableRow>
-                  ) : adjustments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Chưa có yêu cầu điều chỉnh số lượng.
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    adjustments.map((item) => (
-                      <TableRow key={item.id} hover>
-                        <TableCell>{item.id?.slice(0, 8) || "N/A"}</TableCell>
-                        <TableCell>{item.createdByName || "N/A"}</TableCell>
-                        <TableCell>{formatDate(item.createdAt)}</TableCell>
-                        <TableCell>
-                          {item.reason ? reasonLabelMap[item.reason] : "N/A"}
-                        </TableCell>
-                        <TableCell align="center">
-                          {item.totalItems ?? 0}
-                        </TableCell>
-                        <TableCell align="center">
-                          {item.status ? (
-                            <Chip
-                              size="small"
-                              color={
-                                item.status === "Completed"
-                                  ? "success"
-                                  : item.status === "Cancelled"
-                                    ? "error"
-                                    : "warning"
-                              }
-                              label={statusLabelMap[item.status]}
-                            />
-                          ) : (
-                            "N/A"
-                          )}
-                        </TableCell>
-                        <TableCell align="center">
-                          {isAdmin ? (
-                            <Button
-                              size="small"
-                              variant={
-                                item.status === "Pending" ||
-                                item.status === "InProgress"
-                                  ? "contained"
-                                  : "outlined"
-                              }
-                              onClick={() => handleOpenVerifyDialog(item.id)}
-                              disabled={verifyLoading}
-                            >
-                              Xem chi tiết
-                            </Button>
-                          ) : isStaff ? (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              onClick={() => handleOpenVerifyDialog(item.id)}
-                              disabled={verifyLoading}
-                            >
-                              Xem chi tiết
-                            </Button>
-                          ) : (
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              -
-                            </Typography>
-                          )}
-                        </TableCell>
+                  </TableHead>
+                  <TableBody>
+                    {requestLoading ? (
+                      Array.from({ length: 8 }).map((_, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell colSpan={7}>
+                            <Skeleton />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : requests.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7}>{"Ch\u01b0a c\u00f3 y\u00eau c\u1ea7u"}</TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      requests.map((item) => (
+                        <TableRow hover key={item.id}>
+                          <TableCell>{item.id || "-"}</TableCell>
+                          <TableCell>{item.reason ? REASON_LABELS[item.reason] : "-"}</TableCell>
+                          <TableCell>
+                            <Chip size="small" color={requestChip(item.status)} label={item.status ? STATUS_LABELS[item.status] : "-"} />
+                          </TableCell>
+                          <TableCell>{item.createdByName || "-"}</TableCell>
+                          <TableCell align="right">{item.adjustmentDetails?.length ?? 0}</TableCell>
+                          <TableCell>{formatDateTime(item.createdAt || item.adjustmentDate)}</TableCell>
+                          <TableCell align="right">
+                            <Button size="small" onClick={() => void openRequestDetail(item.id)}>
+                              {"Chi ti\u1ebft"}
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
               <TablePagination
                 component="div"
-                count={adjustmentTotalCount}
-                page={adjustmentPage}
-                onPageChange={(_, nextPage) => setAdjustmentPage(nextPage)}
-                rowsPerPage={adjustmentRowsPerPage}
+                count={requestTotalCount}
+                page={requestPage}
+                onPageChange={(_, page) => setRequestPage(page)}
+                rowsPerPage={requestRowsPerPage}
                 onRowsPerPageChange={(event) => {
-                  setAdjustmentRowsPerPage(Number(event.target.value));
-                  setAdjustmentPage(0);
+                  setRequestRowsPerPage(toInt(event.target.value, 10));
+                  setRequestPage(0);
                 }}
                 rowsPerPageOptions={[10, 20, 50]}
-                labelRowsPerPage="Dòng mỗi trang:"
-                labelDisplayedRows={({ from, to, count }) =>
-                  `${from}-${to} của ${count}`
-                }
-              />
-            </TableContainer>
-
-            <Dialog
-              open={verifyDialogOpen}
-              onClose={handleCloseVerifyDialog}
-              fullWidth
-              maxWidth="xl"
-            >
-              <DialogTitle>
-                {isAdmin
-                  ? "Duyệt yêu cầu điều chỉnh số lượng"
-                  : "Chi tiết yêu cầu điều chỉnh số lượng"}
-              </DialogTitle>
-              <DialogContent>
-                {!selectedAdjustmentDetail ? (
-                  <CircularProgress />
-                ) : (
-                  <Stack spacing={2} sx={{ mt: 1 }}>
-                    <Grid container spacing={1.5}>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Mã yêu cầu: {selectedAdjustmentDetail.id}
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Trạng thái:{" "}
-                          {
-                            statusLabelMap[
-                              selectedAdjustmentDetail.status || "Pending"
-                            ]
-                          }
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Người tạo:{" "}
-                          {selectedAdjustmentDetail.createdByName || "N/A"}
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Người duyệt:{" "}
-                          {selectedAdjustmentDetail.verifiedByName || "N/A"}
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Lý do:{" "}
-                          {
-                            reasonLabelMap[
-                              selectedAdjustmentDetail.reason || "Other"
-                            ]
-                          }
-                        </Typography>
-                      </Grid>
-                      <Grid size={{ xs: 12, md: 6 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Ngày điều chỉnh:{" "}
-                          {formatDate(selectedAdjustmentDetail.adjustmentDate)}
-                        </Typography>
-                      </Grid>
-                      <Grid size={12}>
-                        <Alert severity="info" sx={{ py: 0.5 }}>
-                          Ghi chú yêu cầu:{" "}
-                          {selectedAdjustmentDetail.note || "N/A"}
-                        </Alert>
-                      </Grid>
-                    </Grid>
-
-                    <TableContainer sx={{ maxHeight: 420, overflowX: "auto" }}>
-                      <Table
-                        size="small"
-                        stickyHeader
-                        sx={{
-                          tableLayout: "fixed",
-                          minWidth: isAdmin ? 1550 : 1160,
-                        }}
-                      >
-                        <TableHead>
-                          <TableRow>
-                            <TableCell sx={{ width: 190 }}>
-                              Chi tiết ID
-                            </TableCell>
-                            <TableCell sx={{ width: 260 }}>Sản phẩm</TableCell>
-                            <TableCell sx={{ width: 170 }}>SKU</TableCell>
-                            <TableCell sx={{ width: 190 }}>Batch</TableCell>
-                            <TableCell align="center" sx={{ width: 110 }}>
-                              SL yêu cầu
-                            </TableCell>
-                            <TableCell sx={{ width: 240 }}>
-                              Ghi chú yêu cầu
-                            </TableCell>
-                            {isAdmin && (
-                              <TableCell align="center" sx={{ width: 190 }}>
-                                SL duyệt
-                              </TableCell>
-                            )}
-                            {isAdmin && (
-                              <TableCell sx={{ width: 300 }}>
-                                Ghi chú duyệt
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {(
-                            selectedAdjustmentDetail.adjustmentDetails || []
-                          ).map((detail, index) => {
-                            const detailId = detail.id || "";
-                            const draft = verifyDetailDrafts.find(
-                              (item) => item.detailId === detailId,
-                            );
-                            const maxApprovedQuantity = Math.max(
-                              0,
-                              detail.adjustmentQuantity ?? 0,
-                            );
-                            const currentApprovedQuantity = Math.min(
-                              maxApprovedQuantity,
-                              Math.max(
-                                0,
-                                Number.parseInt(
-                                  draft?.approvedQuantity || "0",
-                                  10,
-                                ) || 0,
-                              ),
-                            );
-                            const canEditVerify =
-                              isAdmin &&
-                              selectedAdjustmentDetail.status === "InProgress";
-                            const disableVerifyEditing =
-                              !isAdmin ||
-                              !detailId ||
-                              selectedAdjustmentDetail.status !==
-                                "InProgress" ||
-                              verifySubmitting ||
-                              statusSubmitting;
-
-                            return (
-                              <TableRow key={detail.id || index}>
-                                <TableCell
-                                  sx={{
-                                    fontFamily: "monospace",
-                                    verticalAlign: "top",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {detail.id || "N/A"}
-                                </TableCell>
-                                <TableCell
-                                  sx={{
-                                    verticalAlign: "top",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {detail.productName || "N/A"}
-                                </TableCell>
-                                <TableCell
-                                  sx={{
-                                    fontFamily: "monospace",
-                                    verticalAlign: "top",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {detail.variantSku || "N/A"}
-                                </TableCell>
-                                <TableCell
-                                  sx={{
-                                    fontFamily: "monospace",
-                                    verticalAlign: "top",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {detail.batchCode || "N/A"}
-                                </TableCell>
-                                <TableCell
-                                  align="center"
-                                  sx={{ verticalAlign: "top" }}
-                                >
-                                  {detail.adjustmentQuantity ?? 0}
-                                </TableCell>
-                                <TableCell
-                                  sx={{
-                                    verticalAlign: "top",
-                                    wordBreak: "break-word",
-                                  }}
-                                >
-                                  {detail.note || "N/A"}
-                                </TableCell>
-                                {isAdmin && (
-                                  <TableCell
-                                    align="center"
-                                    sx={{ verticalAlign: "top" }}
-                                  >
-                                    {canEditVerify ? (
-                                      <Stack
-                                        direction="row"
-                                        spacing={1}
-                                        alignItems="center"
-                                        justifyContent="center"
-                                      >
-                                        <IconButton
-                                          size="small"
-                                          onClick={() =>
-                                            detailId &&
-                                            handleVerifyQuantityStep(
-                                              detailId,
-                                              -1,
-                                              maxApprovedQuantity,
-                                            )
-                                          }
-                                          disabled={
-                                            disableVerifyEditing ||
-                                            currentApprovedQuantity <= 0
-                                          }
-                                        >
-                                          <RemoveIcon fontSize="small" />
-                                        </IconButton>
-                                        <TextField
-                                          size="small"
-                                          value={String(
-                                            currentApprovedQuantity,
-                                          )}
-                                          slotProps={{
-                                            input: {
-                                              readOnly: true,
-                                            },
-                                          }}
-                                          sx={{ width: 90 }}
-                                        />
-                                        <IconButton
-                                          size="small"
-                                          onClick={() =>
-                                            detailId &&
-                                            handleVerifyQuantityStep(
-                                              detailId,
-                                              1,
-                                              maxApprovedQuantity,
-                                            )
-                                          }
-                                          disabled={
-                                            disableVerifyEditing ||
-                                            currentApprovedQuantity >=
-                                              maxApprovedQuantity
-                                          }
-                                        >
-                                          <AddIcon fontSize="small" />
-                                        </IconButton>
-                                      </Stack>
-                                    ) : (
-                                      <Typography variant="body2">
-                                        {detail.approvedQuantity ?? 0}
-                                      </Typography>
-                                    )}
-                                  </TableCell>
-                                )}
-                                {isAdmin && (
-                                  <TableCell sx={{ verticalAlign: "top" }}>
-                                    {canEditVerify ? (
-                                      <TextField
-                                        size="small"
-                                        value={draft?.note || ""}
-                                        onChange={(event) =>
-                                          detailId &&
-                                          handleVerifyDetailDraftChange(
-                                            detailId,
-                                            "note",
-                                            event.target.value,
-                                          )
-                                        }
-                                        fullWidth
-                                        placeholder="Nhập ghi chú cho phần duyệt"
-                                        disabled={disableVerifyEditing}
-                                      />
-                                    ) : (
-                                      <Typography
-                                        variant="body2"
-                                        sx={{ wordBreak: "break-word" }}
-                                      >
-                                        {detail.note || "N/A"}
-                                      </Typography>
-                                    )}
-                                  </TableCell>
-                                )}
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  </Stack>
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={handleCloseVerifyDialog}>Đóng</Button>
-                {isAdmin && selectedAdjustmentDetail?.status === "Pending" && (
-                  <Button
-                    variant="outlined"
-                    color="warning"
-                    startIcon={<PlayArrowIcon />}
-                    onClick={() => handleUpdateAdjustmentStatus("InProgress")}
-                    disabled={statusSubmitting || verifySubmitting}
-                  >
-                    {statusSubmitting ? "Đang xử lý..." : "Bắt đầu duyệt"}
-                  </Button>
-                )}
-                {isAdmin &&
-                  selectedAdjustmentDetail?.status === "InProgress" && (
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      startIcon={<CancelIcon />}
-                      onClick={() => handleUpdateAdjustmentStatus("Cancelled")}
-                      disabled={statusSubmitting || verifySubmitting}
-                    >
-                      {statusSubmitting ? "Đang xử lý..." : "Hủy yêu cầu"}
-                    </Button>
-                  )}
-                {isAdmin &&
-                  selectedAdjustmentDetail?.status === "InProgress" && (
-                    <Button
-                      variant="contained"
-                      onClick={handleVerifyAdjustment}
-                      disabled={
-                        verifySubmitting ||
-                        statusSubmitting ||
-                        !selectedAdjustmentDetail ||
-                        verifyDetailDrafts.length === 0 ||
-                        selectedAdjustmentDetail.status !== "InProgress"
-                      }
-                    >
-                      {verifySubmitting ? "Đang duyệt..." : "Xác nhận duyệt"}
-                    </Button>
-                  )}
-              </DialogActions>
-            </Dialog>
-          </>
-        )}
-
-        <Dialog
-          open={createDialogOpen}
-          onClose={() => setCreateDialogOpen(false)}
-          fullWidth
-          maxWidth="sm"
-        >
-          <DialogTitle>Tạo yêu cầu điều chỉnh sô lượng sản phẩm</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              {!isStaff && (
-                <>
-                  <TextField
-                    label="Mã sản phẩm"
-                    value={createPayload.variantId}
-                    onChange={(event) =>
-                      setCreatePayload((current) => ({
-                        ...current,
-                        variantId: event.target.value,
-                      }))
-                    }
-                    fullWidth
-                  />
-                  <TextField
-                    label="Mã lô"
-                    value={createPayload.batchId}
-                    onChange={(event) =>
-                      setCreatePayload((current) => ({
-                        ...current,
-                        batchId: event.target.value,
-                      }))
-                    }
-                    fullWidth
-                  />
-                </>
-              )}
-              <Box>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 1 }}
-                >
-                  Số lượng điều chỉnh
-                </Typography>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <IconButton
-                    onClick={() => handleCreateQuantityStep(-1)}
-                    disabled={
-                      createSubmitting ||
-                      (Number.parseInt(createPayload.adjustmentQuantity, 10) ||
-                        1) <= 1
-                    }
-                  >
-                    <RemoveIcon />
-                  </IconButton>
-                  <TextField
-                    value={createPayload.adjustmentQuantity}
-                    slotProps={{
-                      input: {
-                        readOnly: true,
-                      },
-                    }}
-                    sx={{ width: 120 }}
-                  />
-                  <IconButton
-                    onClick={() => handleCreateQuantityStep(1)}
-                    disabled={createSubmitting}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </Stack>
-              </Box>
-              <FormControl fullWidth>
-                <InputLabel>Lý do</InputLabel>
-                <Select
-                  value={createPayload.reason}
-                  label="Lý do"
-                  onChange={(event) =>
-                    setCreatePayload((current) => ({
-                      ...current,
-                      reason: event.target.value as StockAdjustmentReason,
-                    }))
-                  }
-                >
-                  {ADJUSTMENT_REASON_OPTIONS.map((reason) => (
-                    <MenuItem key={reason} value={reason}>
-                      {reasonLabelMap[reason]}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Ghi chú"
-                value={createPayload.note}
-                onChange={(event) =>
-                  setCreatePayload((current) => ({
-                    ...current,
-                    note: event.target.value,
-                  }))
-                }
-                multiline
-                minRows={2}
-                fullWidth
               />
             </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setCreateDialogOpen(false)}>Hủy</Button>
-            <LoadingButton
-              onClick={handleCreateAdjustment}
-              variant="contained"
-              disabled={
-                createSubmitting ||
-                (isStaff &&
-                  (!createPayload.variantId.trim() ||
-                    !createPayload.batchId.trim()))
-              }
-              loading={createSubmitting}
-            >
-              Tạo yêu cầu
-            </LoadingButton>
-          </DialogActions>
-        </Dialog>
-      </Box>
+          )}
+        </Paper>
+      </Stack>
+
+      <Dialog open={batchDialogOpen} onClose={() => setBatchDialogOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ pb: 1 }}>{"Danh s\u00e1ch l\u00f4 h\u00e0ng"}</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {batchLoading ? <Skeleton height={80} /> : batchItems.length === 0 ? <Alert severity="info">{"Kh\u00f4ng c\u00f3 l\u00f4 h\u00e0ng cho bi\u1ebfn th\u1ec3 n\u00e0y"}</Alert> : (
+            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>{"M\u00e3 l\u00f4 h\u00e0ng"}</TableCell>
+                    <TableCell align="right">{"Nh\u1eadp"}</TableCell>
+                    <TableCell align="right">{"C\u00f2n l\u1ea1i"}</TableCell>
+                    <TableCell align="right">{"Kh\u1ea3 d\u1ee5ng"}</TableCell>
+                    <TableCell>HSD</TableCell>
+                    <TableCell align="right">{"Thao t\u00e1c"}</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {batchItems.map((item) => (
+                    <TableRow key={item.id || item.batchCode}>
+                      <TableCell>{item.batchCode || "-"}</TableCell>
+                      <TableCell align="right">{item.importQuantity ?? 0}</TableCell>
+                      <TableCell align="right">{item.remainingQuantity ?? 0}</TableCell>
+                      <TableCell align="right">{item.availableQuantity ?? 0}</TableCell>
+                      <TableCell>{formatDateTime(item.expiryDate)}</TableCell>
+                      <TableCell align="right">
+                        {isAdmin || isStaff ? (
+                          <Button size="small" color="error" onClick={() => { openCreateDialog(batchVariantId, item.id); setBatchDialogOpen(false); }}>
+                            {"T\u1ea1o y\u00eau c\u1ea7u"}
+                          </Button>
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setBatchDialogOpen(false)}>{"\u0110\u00f3ng"}</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle sx={{ pb: 1 }}>{"T\u1ea1o y\u00eau c\u1ea7u \u0111i\u1ec1u ch\u1ec9nh t\u1ed3n kho"}</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          <Stack spacing={1.5}>
+            <TextField label={"M\u00e3 bi\u1ebfn th\u1ec3"} value={createPayload.variantId} onChange={(event) => setCreatePayload((prev) => ({ ...prev, variantId: event.target.value }))} fullWidth />
+            <TextField label={"M\u00e3 l\u00f4 h\u00e0ng"} value={createPayload.batchId} onChange={(event) => setCreatePayload((prev) => ({ ...prev, batchId: event.target.value }))} fullWidth />
+            <TextField label={"S\u1ed1 l\u01b0\u1ee3ng"} type="number" value={createPayload.adjustmentQuantity} onChange={(event) => setCreatePayload((prev) => ({ ...prev, adjustmentQuantity: event.target.value }))} fullWidth />
+            <FormControl fullWidth>
+              <InputLabel>{"L\u00fd do"}</InputLabel>
+              <Select label={"L\u00fd do"} value={createPayload.reason} onChange={(event) => setCreatePayload((prev) => ({ ...prev, reason: event.target.value as StockAdjustmentReason }))}>
+                {ADJUSTMENT_REASON_OPTIONS.map((reason) => <MenuItem key={reason} value={reason}>{REASON_LABELS[reason]}</MenuItem>)}
+              </Select>
+            </FormControl>
+            <TextField multiline minRows={3} label={"Ghi ch\u00fa"} value={createPayload.note} onChange={(event) => setCreatePayload((prev) => ({ ...prev, note: event.target.value }))} fullWidth />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setCreateDialogOpen(false)}>{"H\u1ee7y"}</Button>
+          <LoadingButton loading={createSubmitting} variant="contained" color="error" onClick={handleCreateRequest}>{"T\u1ea1o y\u00eau c\u1ea7u"}</LoadingButton>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={detailDialogOpen} onClose={() => setDetailDialogOpen(false)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ pb: 1 }}>{"Chi ti\u1ebft y\u00eau c\u1ea7u"}</DialogTitle>
+        <DialogContent sx={{ pt: 1 }}>
+          {detailLoading ? <Skeleton height={120} /> : !selectedRequest ? <Alert severity="warning">{"Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u"}</Alert> : (
+            <Stack spacing={1.5}>
+              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: "grey.50" }}>
+                <Typography variant="subtitle2">{"M\u00e3"}: {selectedRequest.id || "-"}</Typography>
+                <Typography variant="body2" color="text.secondary">{"L\u00fd do"}: {selectedRequest.reason ? REASON_LABELS[selectedRequest.reason] : "-"} | {"Tr\u1ea1ng th\u00e1i"}: {selectedRequest.status ? STATUS_LABELS[selectedRequest.status] : "-"}</Typography>
+                <Typography variant="body2" color="text.secondary">{"Ng\u00e0y t\u1ea1o"}: {formatDateTime(selectedRequest.createdAt || selectedRequest.adjustmentDate)}</Typography>
+              </Paper>
+              {(selectedRequest.adjustmentDetails || []).map((detail) => (
+                <Paper key={detail.id || detail.batchId || detail.productVariantId} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+                  <Stack spacing={1}>
+                    <Typography variant="subtitle2">SKU: {detail.variantSku || "-"} | {"L\u00f4 h\u00e0ng"}: {detail.batchCode || "-"}</Typography>
+                    <Typography variant="body2" color="text.secondary">{"Y\u00eau c\u1ea7u"}: {detail.adjustmentQuantity ?? 0} | {"\u0110\u00e3 duy\u1ec7t"}: {detail.approvedQuantity ?? 0}</Typography>
+                    {selectedRequest.status === "InProgress" && detail.id ? (
+                      <>
+                        <Divider />
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                          <TextField size="small" type="number" label={"S\u1ed1 l\u01b0\u1ee3ng duy\u1ec7t"} value={verifyDrafts.find((item) => item.detailId === detail.id)?.approvedQuantity || "0"} onChange={(event) => setVerifyDrafts((prev) => prev.map((item) => item.detailId === detail.id ? { ...item, approvedQuantity: event.target.value } : item))} />
+                          <TextField size="small" fullWidth label={"Ghi ch\u00fa duy\u1ec7t"} value={verifyDrafts.find((item) => item.detailId === detail.id)?.note || ""} onChange={(event) => setVerifyDrafts((prev) => prev.map((item) => item.detailId === detail.id ? { ...item, note: event.target.value } : item))} />
+                        </Stack>
+                      </>
+                    ) : null}
+                  </Stack>
+                </Paper>
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          {selectedRequest?.status === "Pending" && (isAdmin || isStaff) ? <LoadingButton loading={detailSubmitting} variant="outlined" color="warning" onClick={() => void handleUpdateRequestStatus("InProgress")}>{"Chuy\u1ec3n x\u1eed l\u00fd"}</LoadingButton> : null}
+          {selectedRequest?.status === "InProgress" && (isAdmin || isStaff) ? <LoadingButton loading={detailSubmitting} variant="contained" color="success" onClick={handleVerifyRequest}>{"Duy\u1ec7t y\u00eau c\u1ea7u"}</LoadingButton> : null}
+          <Button onClick={() => setDetailDialogOpen(false)}>{"\u0110\u00f3ng"}</Button>
+        </DialogActions>
+      </Dialog>
     </AdminLayout>
   );
 };
