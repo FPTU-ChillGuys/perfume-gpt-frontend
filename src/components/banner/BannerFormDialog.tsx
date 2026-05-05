@@ -63,6 +63,20 @@ const linkTypeOptions: { value: BannerLinkType; label: string }[] = [
   { value: "Brand", label: "Thương hiệu" },
 ];
 
+const toLocalDatetimeString = (isoDate?: string | null) => {
+  if (!isoDate) return "";
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return "";
+  // Adjust by +7 hours as per user request/consistency with other pages
+  d.setHours(d.getHours() + 7);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const hours = String(d.getHours()).padStart(2, "0");
+  const minutes = String(d.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 export const BannerFormDialog = ({
   open,
   initialData,
@@ -129,12 +143,8 @@ export const BannerFormDialog = ({
           position: initialData.position,
           displayOrder: initialData.displayOrder,
           isActive: initialData.isActive,
-          startDate: initialData.startDate
-            ? initialData.startDate.slice(0, 16)
-            : "",
-          endDate: initialData.endDate
-            ? initialData.endDate.slice(0, 16)
-            : "",
+          startDate: toLocalDatetimeString(initialData.startDate),
+          endDate: toLocalDatetimeString(initialData.endDate),
           linkType: initialData.linkType,
           linkTarget: initialData.linkTarget || "",
         });
@@ -604,6 +614,12 @@ export const BannerFormDialog = ({
                 onChange={(_event, newValue) => {
                   setSelectedCampaign(newValue);
                   handleChange("linkTarget", newValue?.id || "");
+                  if (newValue?.startDate) {
+                    handleChange("startDate", toLocalDatetimeString(newValue.startDate));
+                  }
+                  if (newValue?.endDate) {
+                    handleChange("endDate", toLocalDatetimeString(newValue.endDate));
+                  }
                 }}
                 renderInput={(params) => (
                   <TextField

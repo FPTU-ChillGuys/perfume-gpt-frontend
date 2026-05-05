@@ -65,6 +65,7 @@ import {
 } from "@/services/posService";
 
 import { orderService, type OrderInvoice } from "@/services/orderService";
+import { storePolicyService } from "@/services/storePolicyService";
 import type { OrderResponse } from "@/types/order";
 import { addressService } from "@/services/addressService";
 import type {
@@ -348,6 +349,20 @@ export const CounterCheckoutStaffPage = () => {
     useState(false);
   const [bopisCashReceived, setBopisCashReceived] = useState("");
   const [bopisCashMode, setBopisCashMode] = useState<"normal" | "deposit">("normal");
+
+  const [stopSellingBeforeExpiryDays, setStopSellingBeforeExpiryDays] = useState(0);
+
+  useEffect(() => {
+    const fetchPolicy = async () => {
+      try {
+        const policy = await storePolicyService.getCurrentPolicy();
+        setStopSellingBeforeExpiryDays(policy.stopSellingBeforeExpiryDays ?? 0);
+      } catch (error) {
+        console.error("Failed to fetch store policy", error);
+      }
+    };
+    fetchPolicy();
+  }, []);
 
   // Cash Payment Dialog states
   const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
@@ -4287,6 +4302,7 @@ export const CounterCheckoutStaffPage = () => {
             setModalCurrentBatchCode(undefined);
           }}
           onSelectBatch={handleSelectBatch}
+          stopSellingBeforeExpiryDays={stopSellingBeforeExpiryDays}
         />
 
         {/* Dialog 1: Xác nhận tiền mặt */}

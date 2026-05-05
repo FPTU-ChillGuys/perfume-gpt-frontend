@@ -73,7 +73,7 @@ export const StaffReturnRequestModal = ({ open, onClose, order, onSuccess, force
 
   const [returnMethod, setReturnMethod] = useState<"shipping" | "in-store">("shipping");
   const [approvedRefundAmount, setApprovedRefundAmount] = useState<string>("");
-  const [isRestocked, setIsRestocked] = useState(true);
+  const [isRestocked, setIsRestocked] = useState(false);
   const [inspectionNote, setInspectionNote] = useState("");
 
   const [returnItemQuantities, setReturnItemQuantities] = useState<Record<string, number>>({});
@@ -116,7 +116,7 @@ export const StaffReturnRequestModal = ({ open, onClose, order, onSuccess, force
   const resetReturnDialogState = () => {
     setReturnMethod("shipping");
     setApprovedRefundAmount("");
-    setIsRestocked(true);
+    setIsRestocked(false);
     setInspectionNote("");
     setReturnItemQuantities({});
     setReturnReason("DamagedProduct");

@@ -21,9 +21,10 @@ interface BatchSelectionModalProps {
   batches: PosBatchDetail[];
   onClose: () => void;
   onSelectBatch: (batch: PosBatchDetail) => void;
+  stopSellingBeforeExpiryDays?: number;
 }
 
-const formatExpiryLabel = (batch: PosBatchDetail) => {
+const formatExpiryLabel = (batch: PosBatchDetail, stopSellingBeforeExpiryDays = 0) => {
   if (batch.isExpired) return "Đã hết hạn";
 
   if (typeof batch.daysUntilExpiry !== "number") {
@@ -32,6 +33,10 @@ const formatExpiryLabel = (batch: PosBatchDetail) => {
 
   if (batch.daysUntilExpiry < 0) return "Đã hết hạn";
   if (batch.daysUntilExpiry === 0) return "Hết hạn hôm nay";
+  
+  if (batch.daysUntilExpiry <= stopSellingBeforeExpiryDays) {
+    return `Cận ngày hết hạn (Còn ${batch.daysUntilExpiry} ngày)`;
+  }
 
   return `Còn ${batch.daysUntilExpiry} ngày`;
 };
@@ -52,6 +57,7 @@ export const BatchSelectionModal = ({
   batches,
   onClose,
   onSelectBatch,
+  stopSellingBeforeExpiryDays = 0,
 }: BatchSelectionModalProps) => {
   const title = mode === "switch" ? "Đổi batch cho sản phẩm" : "Chọn batch";
 
@@ -92,7 +98,8 @@ export const BatchSelectionModal = ({
             {batches.map((batch) => {
               const remaining = Number(batch.remainingQuantity ?? 0);
               const isCurrent = currentBatchCode === batch.batchCode;
-              const disabled = remaining <= 0 || Boolean(batch.isExpired);
+              const isCloseToExpiry = (batch.daysUntilExpiry ?? 9999) <= stopSellingBeforeExpiryDays;
+              const disabled = remaining <= 0 || Boolean(batch.isExpired) || isCloseToExpiry;
               const actionDisabled =
                 disabled || (mode === "switch" && isCurrent);
 
@@ -138,8 +145,8 @@ export const BatchSelectionModal = ({
                         />
                         <Chip
                           size="small"
-                          color={batch.isExpired ? "error" : "info"}
-                          label={formatExpiryLabel(batch)}
+                          color={batch.isExpired || isCloseToExpiry ? "error" : "info"}
+                          label={formatExpiryLabel(batch, stopSellingBeforeExpiryDays)}
                         />
                         {isCurrent && (
                           <Chip

@@ -13091,6 +13091,10 @@ export interface components {
             /** Format: uuid */
             id?: string;
             name: string;
+            /** Format: date-time */
+            startDate?: string;
+            /** Format: date-time */
+            endDate?: string;
         };
         CampaignPromotionItemResponse: {
             /** Format: uuid */
