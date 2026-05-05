@@ -99,8 +99,9 @@ export const AdminConversationsPage = () => {
             let matchesSearch = true;
             if (searchTerm) {
                 const idMatches = conv.userId?.toLowerCase().includes(searchTerm.toLowerCase());
+                const userNameMatches = conv.userName?.toLowerCase().includes(searchTerm.toLowerCase());
                 const logIdMatches = conv.id?.toLowerCase().includes(searchTerm.toLowerCase());
-                matchesSearch = !!(idMatches || logIdMatches);
+                matchesSearch = !!(idMatches || userNameMatches || logIdMatches);
             }
 
             let matchesFromDate = true;
@@ -151,8 +152,8 @@ export const AdminConversationsPage = () => {
                     >
                         <TextField
                             fullWidth
-                            label="Tìm kiếm Conv ID / User ID"
-                            placeholder="Nhập ID..."
+                            label="Tìm kiếm User ID"
+                            placeholder="Nhập User ID..."
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             onKeyPress={(e) => {
@@ -206,11 +207,9 @@ export const AdminConversationsPage = () => {
                 <TableContainer component={Paper}>
                     <Table>
                         <TableHead>
-                            <TableRow sx={{ bgcolor: "grey.50" }}>
-                                <TableCell>Conversation ID</TableCell>
-                                <TableCell>User ID</TableCell>
+                                <TableRow sx={{ bgcolor: "grey.50" }}>
+                                <TableCell>Người dùng</TableCell>
                                 <TableCell align="center">Tổng số tin nhắn</TableCell>
-                                <TableCell>Ngày tạo</TableCell>
                                 <TableCell>Cập nhật cuối</TableCell>
                                 <TableCell align="center">Thao tác</TableCell>
                             </TableRow>
@@ -218,13 +217,13 @@ export const AdminConversationsPage = () => {
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                                         <CircularProgress />
                                     </TableCell>
                                 </TableRow>
                             ) : paginatedConversations.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
+                                    <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
                                         <Typography variant="body2" color="text.secondary">
                                             Không có hội thoại nào phù hợp
                                         </Typography>
@@ -234,22 +233,12 @@ export const AdminConversationsPage = () => {
                                 paginatedConversations.map((conv) => (
                                     <TableRow key={conv.id} hover>
                                         <TableCell>
-                                            <Typography variant="body2" fontWeight={500}>
-                                                {conv.id?.substring(0, 8)}...
-                                            </Typography>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" color={conv.userId ? "textPrimary" : "textSecondary"}>
-                                                {conv.userId ? `${conv.userId.substring(0, 8)}...` : "Khách"}
+                                            <Typography variant="body2" color={conv.userName ? "textPrimary" : "textSecondary"}>
+                                                {conv.userName ?? "Khách"}
                                             </Typography>
                                         </TableCell>
                                         <TableCell align="center">
                                             {conv.messages?.length || 0}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Typography variant="body2" noWrap>
-                                                {formatDate(conv.createdAt)}
-                                            </Typography>
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" noWrap>

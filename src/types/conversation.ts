@@ -10,6 +10,7 @@ export interface AdminConversation {
     createdAt: string;
     updatedAt: string;
     userId: string;
+    userName?: string;
     messages: ServerMessage[];
 }
 
