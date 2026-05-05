@@ -86,9 +86,21 @@ export const CreateImportStockTab: React.FC = () => {
           // Set items from restock suggestions
           setItems(importItems);
 
-          // Clear the importData param from URL after processing
+          // Auto-calculate expectedArrivalDate from leadTime param
+          const leadTimeParam = searchParams.get("leadTime");
+          if (leadTimeParam) {
+            const leadDays = parseInt(leadTimeParam, 10);
+            if (!isNaN(leadDays) && leadDays > 0) {
+              const arrivalDate = new Date();
+              arrivalDate.setDate(arrivalDate.getDate() + leadDays);
+              setExpectedArrivalDate(arrivalDate.toISOString().split("T")[0]);
+            }
+          }
+
+          // Clear the importData and leadTime params from URL after processing
           const newParams = new URLSearchParams(searchParams.toString());
           newParams.delete("importData");
+          newParams.delete("leadTime");
           setSearchParams(newParams, { replace: true });
 
           // Set hasProcessed flag to avoid re-processing

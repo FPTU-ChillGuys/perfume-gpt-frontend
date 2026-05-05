@@ -65,22 +65,27 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
             return;
         }
 
-        // Create import data structure
         const importData = sourceData.map((variant) => ({
             variantId: variant.id,
             quantity: variant.suggestedRestockQuantity,
             price: variant.negotiatedPrice || variant.basePrice,
         }));
 
-        // Encode to base64 for URL
+        const leadTimes = sourceData
+            .map((v) => v.estimatedLeadTimeDays)
+            .filter((d): d is number => typeof d === 'number' && d > 0);
+        const maxLeadTime = leadTimes.length > 0 ? Math.max(...leadTimes) : 0;
+
         const encodedData = btoa(JSON.stringify(importData));
 
         let url = `/admin/import-stock?importData=${encodedData}&tab=1`;
         if (supplierId) {
             url += `&supplierId=${supplierId}`;
         }
+        if (maxLeadTime > 0) {
+            url += `&leadTime=${maxLeadTime}`;
+        }
 
-        // Navigate to import stock page with tab 1 (Create Import Stock)
         navigate(url);
     };
 
