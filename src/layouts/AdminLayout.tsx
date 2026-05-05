@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Collapse,
@@ -314,6 +314,20 @@ const menuGroups: SidebarMenuGroup[] = [
 ];
 
 export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
+  const sidebarScrollRef = useRef<HTMLUListElement>(null);
+
+  // Restore scroll position
+  useEffect(() => {
+    const savedScroll = sessionStorage.getItem("admin-sidebar-scroll");
+    if (savedScroll && sidebarScrollRef.current) {
+      sidebarScrollRef.current.scrollTop = parseInt(savedScroll, 10);
+    }
+  }, []);
+
+  const handleSidebarScroll = (e: React.UIEvent<HTMLUListElement>) => {
+    sessionStorage.setItem("admin-sidebar-scroll", e.currentTarget.scrollTop.toString());
+  };
+
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -623,6 +637,8 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Navigation Menu */}
       <List
+        ref={sidebarScrollRef}
+        onScroll={handleSidebarScroll}
         sx={{
           px: 1,
           py: 2,

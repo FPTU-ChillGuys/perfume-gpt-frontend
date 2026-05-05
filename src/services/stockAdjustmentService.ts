@@ -69,6 +69,13 @@ class StockAdjustmentService {
         body: payload,
       });
 
+      if (response.error) {
+        const errorData = response.error as any;
+        const message = errorData?.message || errorData?.title || "Không thể tạo yêu cầu";
+        const details = errorData?.errors ? Object.entries(errorData.errors).map(([k, v]) => `${k}: ${v}`).join(", ") : "";
+        throw new Error(details ? `${message} (${details})` : message);
+      }
+
       if (!response.data?.success) {
         throw new Error(
           response.data?.message || "Failed to create adjustment",

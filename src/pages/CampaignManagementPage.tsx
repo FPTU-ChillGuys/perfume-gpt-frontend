@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -26,6 +26,7 @@ import {
   TableHead,
   TablePagination,
   TableRow,
+  Stack,
   TextField,
   Tooltip,
   Typography,
@@ -38,6 +39,7 @@ import {
   SwapHoriz as StatusIcon,
   PlayArrow as PlayArrowIcon,
   Pause as PauseIcon,
+  SwapHoriz as SwapHorizIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import { useToast } from "@/hooks/useToast";
@@ -408,7 +410,10 @@ export const CampaignManagementPage = () => {
                             align="center"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {campaign.status === "Active" ? (
+                            {campaign.status === "Completed" || campaign.status === "Cancelled" ? (
+                              // Không hiện nút thay đổi trạng thái nếu đã hoàn thành hoặc đã hủy
+                              <Box sx={{ width: 34 }} />
+                            ) : campaign.status === "Active" ? (
                               <Tooltip title="Tạm dừng">
                                 <IconButton
                                   size="small"
@@ -422,20 +427,21 @@ export const CampaignManagementPage = () => {
                                 </IconButton>
                               </Tooltip>
                             ) : campaign.status === "Paused" ? (
-                              <Tooltip title="Tiếp tục">
+                              <Tooltip title="Thay đổi trạng thái">
                                 <IconButton
                                   size="small"
-                                  color="success"
-                                  onClick={() =>
-                                    void handleTogglePausePlay(campaign)
-                                  }
+                                  color="primary"
+                                  onClick={() => {
+                                    setStatusDialogCampaign(campaign);
+                                    setStatusChangeValue(campaign.status || "Paused");
+                                  }}
                                   disabled={isUpdatingStatus}
                                 >
-                                  <PlayArrowIcon fontSize="small" />
+                                  <StatusIcon fontSize="small" />
                                 </IconButton>
                               </Tooltip>
                             ) : (
-                              <Tooltip title="\u0110\u1ED5i tr\u1EA1ng th\u00E1i">
+                              <Tooltip title="Thay đổi trạng thái">
                                 <IconButton
                                   size="small"
                                   color="primary"
@@ -445,6 +451,7 @@ export const CampaignManagementPage = () => {
                                       campaign.status || "Upcoming",
                                     );
                                   }}
+                                  disabled={isUpdatingStatus}
                                 >
                                   <StatusIcon fontSize="small" />
                                 </IconButton>
@@ -545,11 +552,13 @@ export const CampaignManagementPage = () => {
                   >
                     {(
                       Object.keys(CAMPAIGN_STATUS_LABEL) as CampaignStatus[]
-                    ).map((s) => (
-                      <MenuItem key={s} value={s}>
-                        {CAMPAIGN_STATUS_LABEL[s]}
-                      </MenuItem>
-                    ))}
+                    )
+                      .filter((s) => s !== "Upcoming")
+                      .map((s) => (
+                        <MenuItem key={s} value={s}>
+                          {CAMPAIGN_STATUS_LABEL[s]}
+                        </MenuItem>
+                      ))}
                   </Select>
                 </FormControl>
               </DialogContent>
