@@ -1,6 +1,12 @@
 import { aiApiInstance } from "@/lib/api";
 import type { AiAcceptanceRecord } from "@/types/chatbot";
 
+interface AcceptanceRates {
+    acceptanceRate: number;
+    rejectionRate: number;
+    pendingRate: number;
+}
+
 class AiAcceptanceService {
     /**
      * Get all AI acceptance records
@@ -41,6 +47,25 @@ class AiAcceptanceService {
             console.error("Error fetching AI acceptance rate:", error);
             throw new Error(
                 error.response?.data?.message || error.message || "Failed to get AI acceptance rate"
+            );
+        }
+    }
+
+    async getAllRates(contextType?: string): Promise<AcceptanceRates> {
+        try {
+            const response = await aiApiInstance.GET("/ai-acceptance/rates", {
+                params: {
+                    query: contextType ? { contextType: contextType as any } : {}
+                }
+            });
+            if (!response.data?.success) {
+                throw new Error(response.data?.message || "Failed to get AI acceptance rates");
+            }
+            return response.data.data;
+        } catch (error: any) {
+            console.error("Error fetching AI acceptance rates:", error);
+            throw new Error(
+                error.response?.data?.message || error.message || "Failed to get AI acceptance rates"
             );
         }
     }

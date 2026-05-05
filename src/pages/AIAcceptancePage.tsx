@@ -12,8 +12,9 @@ export const AIAcceptancePage = () => {
     const { showToast } = useToast();
     const [records, setRecords] = useState<AiAcceptanceRecord[]>([]);
     const [loading, setLoading] = useState(true);
-    const [rateAccepted, setRateAccepted] = useState<number | null>(null);
-    const [rateRejected, setRateRejected] = useState<number | null>(null);
+    const [rateAccepted, setRateAccepted] = useState(0);
+    const [rateRejected, setRateRejected] = useState(0);
+    const [ratePending, setRatePending] = useState(0);
     const [rateLoading, setRateLoading] = useState(true);
 
     // Pagination
@@ -34,14 +35,14 @@ export const AIAcceptancePage = () => {
         setLoading(true);
         setRateLoading(true);
         try {
-            const [allRecords, accepted, rejected] = await Promise.all([
+            const [allRecords, rates] = await Promise.all([
                 aiAcceptanceService.getAllAcceptanceStatus(),
-                aiAcceptanceService.getAcceptanceRate(true),
-                aiAcceptanceService.getAcceptanceRate(false),
+                aiAcceptanceService.getAllRates(),
             ]);
             setRecords(allRecords);
-            setRateAccepted(accepted);
-            setRateRejected(rejected);
+            setRateAccepted(rates.acceptanceRate);
+            setRateRejected(rates.rejectionRate);
+            setRatePending(rates.pendingRate);
         } catch (error) {
             console.error("Failed to load AI acceptance data:", error);
             showToast("Không thể tải dữ liệu AI Acceptance.", "error");
@@ -68,8 +69,9 @@ export const AIAcceptancePage = () => {
             || r.id?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus =
             filterStatus === "all" ||
-            (filterStatus === "accepted" && r.isAccepted) ||
-            (filterStatus === "rejected" && !r.isAccepted);
+            (filterStatus === "accepted" && r.status === 'accepted') ||
+            (filterStatus === "rejected" && r.status === 'rejected') ||
+            (filterStatus === "pending" && r.status === 'pending');
         return matchesSearch && matchesStatus;
     }), [records, searchTerm, filterStatus]);
 
@@ -78,8 +80,9 @@ export const AIAcceptancePage = () => {
         return filteredRecords.slice(start, start + rowsPerPage);
     }, [filteredRecords, page, rowsPerPage]);
 
-    const totalAccepted = records.filter((r) => r.isAccepted).length;
-    const totalRejected = records.filter((r) => !r.isAccepted).length;
+    const totalAccepted = records.filter((r) => r.status === 'accepted').length;
+    const totalRejected = records.filter((r) => r.status === 'rejected').length;
+    const totalPending = records.filter((r) => r.status === 'pending').length;
 
     return (
         <AdminLayout>
@@ -93,8 +96,10 @@ export const AIAcceptancePage = () => {
                     totalRecords={records.length}
                     totalAccepted={totalAccepted}
                     totalRejected={totalRejected}
+                    totalPending={totalPending}
                     rateAccepted={rateAccepted}
                     rateRejected={rateRejected}
+                    ratePending={ratePending}
                 />
 
                 <AIAcceptanceFilters

@@ -16,7 +16,9 @@ import {
     Paper,
     Box,
     Chip,
+    Tooltip,
 } from "@mui/material";
+import { Warning as WarningIcon } from "@mui/icons-material";
 import type { RestockAIVariant } from "@/types/inventory";
 
 interface RestockDetailDialogProps {
@@ -65,22 +67,27 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
             return;
         }
 
-        // Create import data structure
         const importData = sourceData.map((variant) => ({
             variantId: variant.id,
             quantity: variant.suggestedRestockQuantity,
             price: variant.negotiatedPrice || variant.basePrice,
         }));
 
-        // Encode to base64 for URL
+        const leadTimes = sourceData
+            .map((v) => v.estimatedLeadTimeDays)
+            .filter((d): d is number => typeof d === 'number' && d > 0);
+        const maxLeadTime = leadTimes.length > 0 ? Math.max(...leadTimes) : 0;
+
         const encodedData = btoa(JSON.stringify(importData));
 
         let url = `/admin/import-stock?importData=${encodedData}&tab=1`;
         if (supplierId) {
             url += `&supplierId=${supplierId}`;
         }
+        if (maxLeadTime > 0) {
+            url += `&leadTime=${maxLeadTime}`;
+        }
 
-        // Navigate to import stock page with tab 1 (Create Import Stock)
         navigate(url);
     };
 
@@ -110,6 +117,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                     <TableCell align="right"><strong>Giá Thương Lượng</strong></TableCell>
                                     <TableCell align="center"><strong>Tồn kho</strong></TableCell>
                                     <TableCell align="center"><strong>Thời gian giao hàng dự kiến</strong></TableCell>
+                                    <TableCell align="center"><strong>Slow Stock</strong></TableCell>
                                     <TableCell align="center"><strong>Gợi ý nhập</strong></TableCell>
                                 </TableRow>
                             </TableHead>
@@ -118,7 +126,7 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                     <React.Fragment key={supplier}>
                                         {/* Group Header Row */}
                                         <TableRow sx={{ bgcolor: "primary.light", opacity: 0.9 }}>
-                                            <TableCell colSpan={8} sx={{ py: 0.5, px: 2 }}>
+                                            <TableCell colSpan={9} sx={{ py: 0.5, px: 2 }}>
                                                 <Box display="flex" alignItems="center" justifyContent="space-between">
                                                     <Typography variant="subtitle2" color="white" fontWeight="bold">
                                                         Nhà cung cấp: {supplier} ({items.length} sản phẩm)
@@ -163,6 +171,28 @@ export const RestockDetailDialog: React.FC<RestockDetailDialogProps> = ({
                                                 <TableCell align="center">{row.totalQuantity}</TableCell>
                                                 <TableCell align="center">
                                                     {row.estimatedLeadTimeDays ? `${row.estimatedLeadTimeDays} ngày` : "—"}
+                                                </TableCell>
+                                                <TableCell align="center">
+                                                    {row.slowStockRisk ? (
+                                                        <Tooltip title={
+                                                            row.slowStockRisk === 'CRITICAL' ? 'Cần xử lý ngay' :
+                                                            row.slowStockRisk === 'HIGH' ? 'Rủi ro cao' :
+                                                            'Rủi ro trung bình'
+                                                        }>
+                                                            <Chip
+                                                                icon={<WarningIcon fontSize="small" />}
+                                                                label={row.slowStockRisk}
+                                                                size="small"
+                                                                color={
+                                                                    row.slowStockRisk === 'CRITICAL' ? 'error' :
+                                                                    row.slowStockRisk === 'HIGH' ? 'warning' :
+                                                                    'default'
+                                                                }
+                                                            />
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <Typography variant="caption" color="text.disabled">—</Typography>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <Typography
