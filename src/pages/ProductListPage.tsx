@@ -55,9 +55,9 @@ type FilterMeta = {
 };
 
 const HOME_SOURCE_LABELS: Record<HomeSource, string> = {
-  bestsellers: "Bestsellers",
-  "new-arrivals": "New Arrivals",
-  trending: "Trending (Weekly)",
+  bestsellers: "Sản phẩm bán chạy",
+  "new-arrivals": "Sản phẩm mới",
+  trending: "Xu hướng hàng tuần",
 };
 
 const PRICE_RANGE_MIN = 0;

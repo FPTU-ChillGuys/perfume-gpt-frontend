@@ -8,6 +8,11 @@ import cashIcon from "../../assets/cash.png";
 import vnpayIcon from "../../assets/vnpay.jpg";
 import momoIcon from "../../assets/momo.png";
 import payosIcon from "../../assets/payos.png";
+import phuocPix from "../../assets/PhuocPix.png";
+import thanhPix from "../../assets/ThanhPix.png";
+import khoaPix from "../../assets/KhoaPix.png";
+import quanPix from "../../assets/QuanPix.png";
+import nguyenPix from "../../assets/NguyenPix.png";
 
 export const Footer = () => {
   return (
@@ -131,10 +136,29 @@ export const Footer = () => {
 
       {/* Copyright */}
       <div className="border-t border-gray-300">
-        <div className="container mx-auto px-4 py-4">
-          <p className="text-center text-gray-600 text-sm">
-            © 2026 PerfumeGPT. Made by <strong>ChillGuys</strong>.
-          </p>
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center gap-4">
+              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={quanPix} alt="Quan" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Quan" />
+              </div>
+              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={phuocPix} alt="Phuoc" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Phuoc" />
+              </div>
+              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={khoaPix} alt="Khoa" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Khoa" />
+              </div>
+              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={thanhPix} alt="Thanh" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Thanh" />
+              </div>
+              <div className="group relative w-12 h-12 rounded-full border border-gray-200 bg-white shadow-sm flex items-center justify-center overflow-hidden hover:scale-110 transition-transform duration-300">
+                <img src={nguyenPix} alt="Nguyen" className="w-10 h-10 object-contain [image-rendering:pixelated]" title="Nguyen" />
+              </div>
+            </div>
+            <p className="text-center text-gray-600 text-sm">
+              © 2026 PerfumeGPT. Made by <strong>ChillGuys</strong>.
+            </p>
+          </div>
         </div>
       </div>
     </footer>
