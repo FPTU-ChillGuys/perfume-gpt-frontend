@@ -473,8 +473,10 @@ const ProductQuickViewDialog = ({
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                minHeight: 320,
+                height: { xs: 280, md: 320 },
+                width: "100%",
                 bgcolor: "background.paper",
+                boxSizing: "border-box",
               }}
             >
               {heroImage ? (
@@ -491,7 +493,15 @@ const ProductQuickViewDialog = ({
             </Box>
           </Box>
 
-          <Box flex={1} minWidth={0}>
+          <Box 
+            flex={1} 
+            minWidth={0}
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              minHeight: { md: 450 }
+            }}
+          >
             <Typography variant="h5" fontWeight={600} gutterBottom>
               {fastLook.name}
             </Typography>
@@ -690,58 +700,70 @@ const ProductQuickViewDialog = ({
               </Box>
             )}
 
-            <Stack direction="column" spacing={1} mt={2}>
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="baseline"
-                flexWrap="nowrap"
-                sx={{ overflow: "hidden" }}
-              >
-                <Typography
-                  variant="h4"
-                  fontWeight={700}
-                  color="error"
-                  sx={{ whiteSpace: "nowrap", fontSize: { xs: "1.5rem", sm: "2.125rem" } }}
+            <Box sx={{ mt: 2, minHeight: 90, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <Stack direction="column" spacing={0.5}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="baseline"
+                  flexWrap="nowrap"
+                  sx={{ overflow: "hidden" }}
                 >
-                  {selectedVariantPrice
-                    ? currencyFormatter.format(selectedVariantPrice)
-                    : "Liên hệ"}
-                </Typography>
-                {hasRetailPriceComparison && (
                   <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{ textDecoration: "line-through", whiteSpace: "nowrap", fontSize: { xs: "0.9rem", sm: "1rem" } }}
+                    variant="h4"
+                    fontWeight={700}
+                    color="error"
+                    sx={{
+                      whiteSpace: "nowrap",
+                      fontSize: { xs: "1.5rem", sm: "2.125rem" },
+                    }}
                   >
-                    {currencyFormatter.format(selectedVariantRetailPrice)}
+                    {selectedVariantPrice
+                      ? currencyFormatter.format(selectedVariantPrice)
+                      : "Liên hệ"}
                   </Typography>
-                )}
-              </Stack>
-              {hasRetailPriceComparison && savingAmount > 0 && (
-                <Typography
-                  variant="body2"
-                  color="success.main"
-                  fontWeight={600}
+                  {hasRetailPriceComparison && (
+                    <Typography
+                      variant="body1"
+                      color="text.secondary"
+                      sx={{
+                        textDecoration: "line-through",
+                        whiteSpace: "nowrap",
+                        fontSize: { xs: "0.9rem", sm: "1rem" },
+                      }}
+                    >
+                      {currencyFormatter.format(selectedVariantRetailPrice)}
+                    </Typography>
+                  )}
+                </Stack>
+                {/* Tiết kiệm line - Reserve space to prevent jump */}
+                <Box sx={{ height: 20 }}>
+                  {hasRetailPriceComparison && savingAmount > 0 && (
+                    <Typography
+                      variant="body2"
+                      color="success.main"
+                      fontWeight={600}
+                    >
+                      {`Tiết kiệm ${currencyFormatter.format(savingAmount)} (${formatSavingPercent(savingPercent)})`}
+                    </Typography>
+                  )}
+                </Box>
+                <Button
+                  startIcon={<InfoIcon />}
+                  variant="text"
+                  size="small"
+                  sx={{
+                    textTransform: "none",
+                    p: 0,
+                    minWidth: 0,
+                    alignSelf: "flex-start",
+                  }}
+                  onClick={handleViewDetail}
                 >
-                  {`Tiết kiệm ${currencyFormatter.format(savingAmount)} (${formatSavingPercent(savingPercent)})`}
-                </Typography>
-              )}
-              <Button
-                startIcon={<InfoIcon />}
-                variant="text"
-                size="small"
-                sx={{
-                  textTransform: "none",
-                  p: 0,
-                  minWidth: 0,
-                  alignSelf: "flex-start",
-                }}
-                onClick={handleViewDetail}
-              >
-                Xem chi tiết sản phẩm
-              </Button>
-            </Stack>
+                  Xem chi tiết sản phẩm
+                </Button>
+              </Stack>
+            </Box>
 
             {isBackOfficeRole ? (
               <Typography variant="body2" color="text.secondary" mt={3}>
@@ -798,7 +820,16 @@ const ProductQuickViewDialog = ({
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers>{renderContent()}</DialogContent>
+      <DialogContent 
+        dividers 
+        sx={{ 
+          minHeight: { xs: "auto", md: 500 },
+          display: "flex",
+          flexDirection: "column"
+        }}
+      >
+        {renderContent()}
+      </DialogContent>
     </Dialog>
   );
 };

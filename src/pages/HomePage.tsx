@@ -238,10 +238,10 @@ export const HomePage = () => {
       {/* Completely hide the section while loading or if it's empty. */}
       {!isTrendingLoading && trendingProducts.length > 0 && (
         <ProductSection
-          title="Sản phẩm thịnh hành"
+          title="Xu hướng hàng tuần"
           products={trendingProducts}
           isLoading={false}
-          viewMoreHref="/products?source=trending&sourceLabel=Trending%20%28Weekly%29"
+          viewMoreHref="/products?source=trending"
         />
       )}
 
@@ -249,14 +249,14 @@ export const HomePage = () => {
         title="Sản phẩm mới"
         products={newArrivals}
         isLoading={isLoading}
-        viewMoreHref="/products?source=new-arrivals&sourceLabel=New%20Arrivals"
+        viewMoreHref="/products?source=new-arrivals"
       />
 
       <ProductSection
-        title="Bán chạy nhất"
+        title="Sản phẩm bán chạy"
         products={bestsellers}
         isLoading={isLoading}
-        viewMoreHref="/products?source=bestsellers&sourceLabel=Bestsellers"
+        viewMoreHref="/products?source=bestsellers"
       />
 
       <FeatureSection />

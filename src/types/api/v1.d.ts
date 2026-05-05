@@ -15228,6 +15228,8 @@ export interface components {
             /** Format: int32 */
             batchExpiringSoonThresholdInDays?: number;
             /** Format: int32 */
+            newTagThresholdInDays?: number;
+            /** Format: int32 */
             stopSellingBeforeExpiryDays?: number;
             /** Format: int32 */
             clearanceBufferDays?: number;
@@ -15525,6 +15527,8 @@ export interface components {
             orderRewardPointsInDays?: number;
             /** Format: int32 */
             batchExpiringSoonThresholdInDays?: number;
+            /** Format: int32 */
+            newTagThresholdInDays?: number;
             /** Format: int32 */
             stopSellingBeforeExpiryDays?: number;
             /** Format: int32 */

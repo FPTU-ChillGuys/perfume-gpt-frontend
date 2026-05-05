@@ -20,11 +20,19 @@ import {
 } from "@mui/material";
 import {
   Menu as MenuIcon,
-  Dashboard as DashboardIcon,
+  Web as WebIcon,
+  Store as StoreIcon,
+  SpaceDashboard as SpaceDashboardIcon,
   Inventory as InventoryIcon,
+  Report as ReportIcon,
+  LocalFlorist as LocalFloristIcon,
+  Verified as VerifiedIcon,
+  Extension as ExtensionIcon,
+  SettingsSuggest as SettingsSuggestIcon,
   LocalShipping as ShipmentIcon,
   Campaign as CampaignIcon,
   Assessment as ReportsIcon,
+  Celebration as CelebrationIcon,
   People as PeopleIcon,
   Logout as LogoutIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -43,10 +51,10 @@ import {
   Quiz as SurveyIcon,
   Feed as FeedIcon,
   Chat as ChatIcon,
+  Warehouse as WareHouseIcon,
   ThumbsUpDown as ThumbsUpDownIcon,
   LocalOffer as LocalOfferIcon,
   AccountBalanceWallet as AccountBalanceWalletIcon,
-  Badge as BadgeIcon,
   Policy as PolicyIcon,
 } from "@mui/icons-material";
 import { Link as RouterLink, useNavigate, useLocation } from "react-router-dom";
@@ -79,18 +87,18 @@ const menuGroups: SidebarMenuGroup[] = [
   {
     key: "overview",
     text: "Tổng quan",
-    icon: <DashboardIcon />,
+    icon: <StoreIcon />,
     roles: ["admin", "staff"],
     items: [
       {
         text: "Trang chủ",
-        icon: <DashboardIcon />,
+        icon: <SpaceDashboardIcon />,
         path: "/admin/dashboard",
         roles: ["admin"],
       },
       {
         text: "Trang chủ",
-        icon: <DashboardIcon />,
+        icon: <SpaceDashboardIcon />,
         path: "/staff/dashboard",
         roles: ["staff"],
       },
@@ -99,7 +107,7 @@ const menuGroups: SidebarMenuGroup[] = [
   {
     key: "orders",
     text: "Đơn hàng",
-    icon: <ShoppingCartIcon />,
+    icon: <LocalFloristIcon />,
     roles: ["admin", "staff"],
     items: [
       {
@@ -143,7 +151,7 @@ const menuGroups: SidebarMenuGroup[] = [
   {
     key: "inventory",
     text: "Kho hàng",
-    icon: <InventoryIcon />,
+    icon: <WareHouseIcon />,
     roles: ["admin", "staff"],
     items: [
       {
@@ -172,7 +180,7 @@ const menuGroups: SidebarMenuGroup[] = [
       },
       {
         text: "Báo cáo",
-        icon: <ReportsIcon />,
+        icon: <ReportIcon />,
         path: "/admin/inventory-report-logs",
         roles: ["admin"],
       },
@@ -234,7 +242,7 @@ const menuGroups: SidebarMenuGroup[] = [
       },
       {
         text: "Chiến dịch khuyến mãi",
-        icon: <CampaignIcon />,
+        icon: <CelebrationIcon />,
         path: "/admin/campaigns",
         roles: ["admin"],
       },
@@ -258,7 +266,7 @@ const menuGroups: SidebarMenuGroup[] = [
       },
       {
         text: "Thuộc tính sản phẩm",
-        icon: <CategoryIcon />,
+        icon: <ExtensionIcon />,
         path: "/admin/attributes",
         roles: ["admin"],
       },
@@ -273,13 +281,13 @@ const menuGroups: SidebarMenuGroup[] = [
     items: [
       {
         text: "Cấu hình AI",
-        icon: <BotIcon />,
+        icon: <SettingsSuggestIcon />,
         path: "/admin/instructions",
         roles: ["admin"],
       },
       {
         text: "Chấp thuận gợi ý từ AI",
-        icon: <ThumbsUpDownIcon />,
+        icon: <VerifiedIcon />,
         path: "/admin/ai-acceptance",
         roles: ["admin"],
       },
@@ -596,7 +604,8 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           <Typography
             variant="h6"
             noWrap
-            component="div"
+            component={RouterLink}
+            to="/"
             color="primary"
             fontWeight="bold"
           >
@@ -744,7 +753,7 @@ export const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               sx={{ py: 1.5 }}
             >
               <ListItemIcon>
-                <DashboardIcon fontSize="small" />
+                <WebIcon fontSize="small" />
               </ListItemIcon>
               <Typography variant="body2">Website</Typography>
             </MenuItem>

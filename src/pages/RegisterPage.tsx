@@ -22,6 +22,7 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { authService } from "../services/authService";
 import { LoadingButton } from "@/components/common/LoadingButton";
 
+
 export const RegisterPage = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -479,12 +480,17 @@ export const RegisterPage = () => {
       <Box
         component="footer"
         sx={{
-          py: 1.5,
+          py: 2,
           textAlign: "center",
           borderTop: 1,
           borderColor: "divider",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 1.5,
         }}
       >
+
         <Typography variant="caption" color="text.secondary">
           © 2026 PerfumeGPT. Made by <strong>ChillGuys</strong>.
         </Typography>

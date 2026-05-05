@@ -1,10 +1,18 @@
 import { useState, useEffect } from "react";
 import { Fab, Zoom } from "@mui/material";
 import { KeyboardArrowUp } from "@mui/icons-material";
+import { useLocation } from "react-router-dom";
 
 export const ScrollToTop = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const { pathname } = useLocation();
 
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  // Show button when scrolled down
   useEffect(() => {
     const toggleVisibility = () => {
       if (window.scrollY > 300) {

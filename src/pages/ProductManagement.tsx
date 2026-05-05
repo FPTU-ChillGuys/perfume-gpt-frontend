@@ -355,7 +355,7 @@ const ProductManagement = () => {
                                     variant="caption"
                                     color="text.secondary"
                                   >
-                                    No Image
+                                    Không có ảnh
                                   </Typography>
                                 </Box>
                               )}
