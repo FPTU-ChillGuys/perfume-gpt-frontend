@@ -8,8 +8,11 @@ export interface AiAcceptanceRecord {
     id: string;
     createdAt: string;
     updatedAt: string;
-    userId: string;
     isAccepted: boolean;
+    status: 'accepted' | 'rejected' | 'pending';
+    visibleAfterAt?: string;
+    contextType?: string | null;
+    sourceRefId?: string | null;
 }
 
 export interface AiAcceptanceResponse {

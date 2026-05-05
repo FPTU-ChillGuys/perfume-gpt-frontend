@@ -11,7 +11,7 @@ import {
     TableRow,
     Typography,
 } from "@mui/material";
-import { CheckCircle as CheckCircleIcon, Cancel as CancelIcon } from "@mui/icons-material";
+import { CheckCircle as CheckCircleIcon, Cancel as CancelIcon, HourglassEmpty as HourglassEmptyIcon } from "@mui/icons-material";
 import type { AiAcceptanceRecord } from "@/types/chatbot";
 
 const formatDate = (dateStr?: string) => {
@@ -44,6 +44,7 @@ export const AIAcceptanceTable = ({
                 <TableRow sx={{ bgcolor: "grey.50" }}>
                     <TableCell>Record ID</TableCell>
                     <TableCell align="center">Trạng thái</TableCell>
+                    <TableCell align="center">Có hiệu lực sau</TableCell>
                     <TableCell>Ngày tạo</TableCell>
                     <TableCell>Cập nhật cuối</TableCell>
                 </TableRow>
@@ -51,13 +52,13 @@ export const AIAcceptanceTable = ({
             <TableBody>
                 {loading ? (
                     <TableRow>
-                        <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                             <CircularProgress />
                         </TableCell>
                     </TableRow>
                 ) : records.length === 0 ? (
                     <TableRow>
-                        <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                             <Typography variant="body2" color="text.secondary">
                                 Không có bản ghi nào phù hợp
                             </Typography>
@@ -72,7 +73,7 @@ export const AIAcceptanceTable = ({
                                 </Typography>
                             </TableCell>
                             <TableCell align="center">
-                                {record.isAccepted ? (
+                                {record.status === 'accepted' ? (
                                     <Chip
                                         icon={<CheckCircleIcon />}
                                         label="Chấp nhận"
@@ -80,7 +81,7 @@ export const AIAcceptanceTable = ({
                                         size="small"
                                         variant="outlined"
                                     />
-                                ) : (
+                                ) : record.status === 'rejected' ? (
                                     <Chip
                                         icon={<CancelIcon />}
                                         label="Từ chối"
@@ -88,7 +89,20 @@ export const AIAcceptanceTable = ({
                                         size="small"
                                         variant="outlined"
                                     />
+                                ) : (
+                                    <Chip
+                                        icon={<HourglassEmptyIcon />}
+                                        label="Chưa xác định"
+                                        color="warning"
+                                        size="small"
+                                        variant="outlined"
+                                    />
                                 )}
+                            </TableCell>
+                            <TableCell align="center">
+                                <Typography variant="body2" noWrap>
+                                    {formatDate(record.visibleAfterAt)}
+                                </Typography>
                             </TableCell>
                             <TableCell>
                                 <Typography variant="body2" noWrap>
