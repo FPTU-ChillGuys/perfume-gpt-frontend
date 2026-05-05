@@ -352,7 +352,7 @@ export default function ManageProductVariantsDialog({
       setVariants(productDetail?.variants || []);
     } catch (err: any) {
       console.error("Error fetching variants:", err);
-      setError(err.message || "Không thể tải danh sách variant");
+      setError(err.message || "Không thể tải danh sách biến thể");
     } finally {
       setLoadingVariants(false);
     }
@@ -813,7 +813,7 @@ export default function ManageProductVariantsDialog({
       showToast(`Đã tải ${newImages.length} ảnh biến thể`, "success");
     } catch (err: any) {
       console.error("Error uploading variant image:", err);
-      const message = err.message || "Không thể tải ảnh variant";
+      const message = err.message || "Không thể tải ảnh biến thể";
       setError(message);
       showToast(message, "error");
     } finally {
@@ -965,12 +965,12 @@ export default function ManageProductVariantsDialog({
     try {
       setSaving(true);
       await productService.createProductVariant(payload);
-      showToast("Đã thêm variant mới", "success");
+      showToast("Đã thêm biến thể mới", "success");
       await fetchVariants();
       resetFormToCreateMode();
     } catch (err: any) {
       console.error("Error creating variant:", err);
-      const message = err.message || "Không thể tạo variant";
+      const message = err.message || "Không thể tạo biến thể";
       setError(message);
       showToast(message, "error");
     } finally {
@@ -1021,7 +1021,7 @@ export default function ManageProductVariantsDialog({
       resetFormToCreateMode();
     } catch (err: any) {
       console.error("Error updating variant:", err);
-      const message = err.message || "Không thể cập nhật variant";
+      const message = err.message || "Không thể cập nhật biến thể";
       setError(message);
       showToast(message, "error");
     } finally {
@@ -1140,7 +1140,7 @@ export default function ManageProductVariantsDialog({
                       textAlign: "center",
                     }}
                   >
-                    No Image
+                    Không có ảnh
                   </Box>
                 )}
               </Box>
@@ -1224,7 +1224,7 @@ export default function ManageProductVariantsDialog({
                       textTransform: "none",
                     }}
                   >
-                    Xoá variant
+                    Xoá biến thể
                   </Button>
                 </Stack>
               </Box>
@@ -1239,7 +1239,7 @@ export default function ManageProductVariantsDialog({
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
       <DialogTitle sx={{ pr: 6 }}>
         <Typography variant="h6" fontWeight={600} component="span">
-          Quản lý variant
+          Quản lý biến thể
         </Typography>
         {product?.name && (
           <Typography
@@ -1269,7 +1269,7 @@ export default function ManageProductVariantsDialog({
 
         {!product ? (
           <Typography color="text.secondary">
-            Vui lòng chọn sản phẩm để quản lý variant
+            Vui lòng chọn sản phẩm để quản lý biến thể
           </Typography>
         ) : (
           <Stack spacing={3}>
@@ -1282,13 +1282,13 @@ export default function ManageProductVariantsDialog({
               >
                 <Box>
                   <Typography variant="subtitle1" fontWeight={600}>
-                    Danh sách variant
+                    Danh sách biến thể
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Tổng cộng {variants.length} biến thể
+                    Tổng cộng {variants.length} biến thể
                   </Typography>
                   <Typography variant="caption" color="primary.main">
-                    Chọn trực tiếp một variant để chỉnh sửa
+                    Chọn trực tiếp một biến thể để chỉnh sửa
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={1}>
@@ -1327,7 +1327,7 @@ export default function ManageProductVariantsDialog({
                 >
                   <Box>
                     <Typography variant="subtitle1" fontWeight={600}>
-                      {isEditMode ? "Chỉnh sửa variant" : "Thêm variant mới"}
+                      {isEditMode ? "Chỉnh sửa biến thể" : "Thêm biến thể mới"}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {isEditMode
@@ -1360,10 +1360,10 @@ export default function ManageProductVariantsDialog({
                   <Box>
                     <Box mb={2}>
                       <Typography variant="subtitle2" fontWeight={600}>
-                        Ảnh variant
+                        Ảnh biến thể
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Thêm ảnh cho variant này
+                        Thêm ảnh cho biến thể này
                       </Typography>
                     </Box>
 
@@ -1806,7 +1806,7 @@ export default function ManageProductVariantsDialog({
                   <Box>
                     <Box mb={2}>
                       <Typography variant="subtitle2" fontWeight={600}>
-                        Thông tin variant
+                        Thông tin biến thể
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         Điền thông tin chi tiết
@@ -1945,7 +1945,7 @@ export default function ManageProductVariantsDialog({
                       )}
                       <Box>
                         <TextField
-                          label="Loại variant"
+                          label="Loại biến thể"
                           name="type"
                           select
                           value={formValues.type}
@@ -2138,18 +2138,18 @@ export default function ManageProductVariantsDialog({
                     }
                     disabled={saving}
                   >
-                    {isEditMode ? "Lưu thay đổi" : "Thêm variant"}
+                    {isEditMode ? "Lưu thay đổi" : "Thêm biến thể"}
                   </Button>
                 </Box>
               </Paper>
             ) : (
               <Paper variant="outlined" sx={{ p: 3 }}>
                 <Typography variant="subtitle1" fontWeight={600} mb={1}>
-                  Chi tiết variant
+                  Chi tiết biến thể
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Chọn một variant trong danh sách để chỉnh sửa, hoặc bấm "Thêm
-                  variant" để tạo mới.
+                  Chọn một biến thể trong danh sách để chỉnh sửa, hoặc bấm "Thêm
+                  biến thể" để tạo mới.
                 </Typography>
               </Paper>
             )}
@@ -2159,10 +2159,10 @@ export default function ManageProductVariantsDialog({
 
       <ConfirmDialog
         open={deleteDialog.open}
-        title="Xoá variant"
+        title="Xoá biến thể"
         description={
           deleteDialog.variant
-            ? `Bạn có chắc chắn muốn xoá variant "${
+            ? `Bạn có chắc chắn muốn xoá biến thể "${
                 deleteDialog.variant.sku || deleteDialog.variant.id || ""
               }"? Hành động này không thể hoàn tác.`
             : undefined
