@@ -104,6 +104,16 @@ const formatCurrencyInput = (value: number): string => {
   return new Intl.NumberFormat("vi-VN").format(value);
 };
 
+const formatVoucherCode = (code: string) => {
+  return code
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, "");
+};
+
 interface VoucherForm {
   code: string;
   discountType: "Percentage" | "FixedAmount";
@@ -711,9 +721,7 @@ export const AdminVouchersPage = () => {
                   onChange={(e) =>
                     setForm({
                       ...form,
-                      code: e.target.value
-                        .toUpperCase()
-                        .replace(/[^A-Z0-9_-]/g, ""),
+                      code: formatVoucherCode(e.target.value),
                     })
                   }
                   size="small"

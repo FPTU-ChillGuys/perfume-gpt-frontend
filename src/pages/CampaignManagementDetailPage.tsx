@@ -156,6 +156,16 @@ const parseNumberVN = (value: string): string => {
   return value.replace(/\./g, "");
 };
 
+const formatVoucherCode = (code: string) => {
+  return code
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, "");
+};
+
 const toLocalDatetimeString = (isoDate?: string | null) => {
   if (!isoDate) return "";
   const d = new Date(isoDate);
@@ -1964,7 +1974,7 @@ export const CampaignManagementDetailPage = () => {
                   required
                   value={voucherForm.code}
                   onChange={(e) =>
-                    setVoucherForm({ ...voucherForm, code: e.target.value })
+                    setVoucherForm({ ...voucherForm, code: formatVoucherCode(e.target.value) })
                   }
                 />
                 <Box

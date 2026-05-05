@@ -53,6 +53,16 @@ const parseNumberVN = (value: string): string => {
   return value.replace(/\./g, "");
 };
 
+const formatVoucherCode = (code: string) => {
+  return code
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, "");
+};
+
 // ─── Props ──────────────────────────────────────────────────────────
 type VoucherFormProps = {
   vouchers: CampaignVoucherDraft[];
@@ -189,7 +199,7 @@ export const VoucherForm = ({
                     placeholder="VD: FLASH30"
                     value={voucher.code}
                     onChange={(e) =>
-                      updateField(voucher.key, "code", e.target.value)
+                      updateField(voucher.key, "code", formatVoucherCode(e.target.value))
                     }
                     fullWidth
                   />
