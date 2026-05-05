@@ -181,6 +181,7 @@ export default function CreateProductDialog({
 
   const [creatingBrand, setCreatingBrand] = useState(false);
   const [creatingOlfactory, setCreatingOlfactory] = useState(false);
+  const [bulkCreatingOlfactory, setBulkCreatingOlfactory] = useState(false);
   const [creatingScentNote, setCreatingScentNote] = useState(false);
   const [bulkCreatingScentNotes, setBulkCreatingScentNotes] = useState<
     Record<NoteType, boolean>
@@ -191,6 +192,7 @@ export default function CreateProductDialog({
   });
   const [creatingAttribute, setCreatingAttribute] = useState(false);
   const [creatingStyleValue, setCreatingStyleValue] = useState(false);
+  const [bulkCreatingStyleValues, setBulkCreatingStyleValues] = useState(false);
   const [creatingAttributeValues, setCreatingAttributeValues] = useState<
     Record<number, boolean>
   >({});
@@ -453,6 +455,75 @@ export default function CreateProductDialog({
     }
   };
 
+  const parseQuickNames = (value: string) =>
+    value
+      .split(/[,;\n\r]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .filter(
+        (item, index, list) =>
+          list.findIndex(
+            (candidate) =>
+              normalizeSearchText(candidate) === normalizeSearchText(item),
+          ) === index,
+      );
+
+  const handleApplyQuickOlfactoryFamilies = async () => {
+    const names = parseQuickNames(newOlfactoryName);
+    if (names.length === 0) {
+      showToast("Nhập danh sách nhóm hương trước khi thêm", "warning");
+      return;
+    }
+
+    try {
+      setBulkCreatingOlfactory(true);
+      const createdOrMatched: OlfactoryLookupItem[] = [];
+      const missingNames: string[] = [];
+
+      names.forEach((familyName) => {
+        const matched = olfactoryOptions.find(
+          (option) =>
+            normalizeSearchText(option.name) === normalizeSearchText(familyName),
+        );
+        if (matched) {
+          createdOrMatched.push(matched);
+          return;
+        }
+        missingNames.push(familyName);
+      });
+
+      if (missingNames.length > 0) {
+        const createdFamilies = await Promise.all(
+          missingNames.map((familyName) =>
+            olfactoryService.createOlfactoryFamily(familyName),
+          ),
+        );
+        createdOrMatched.push(...createdFamilies);
+        setOlfactoryOptions((prev) =>
+          createdFamilies.reduce(
+            (nextOptions, family) => appendUniqueById(nextOptions, family),
+            prev,
+          ),
+        );
+      }
+
+      setSelectedOlfactoryFamilies((prev) =>
+        createdOrMatched.reduce(
+          (nextFamilies, family) => appendUniqueById(nextFamilies, family),
+          prev,
+        ),
+      );
+      setNewOlfactoryName("");
+      showToast(`Đã thêm ${createdOrMatched.length} nhóm hương`, "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể nhập nhanh nhóm hương";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setBulkCreatingOlfactory(false);
+    }
+  };
+
   const handleCreateScentNote = async (type: NoteType) => {
     const name = (newScentNoteNames[type] || "").trim();
     if (!name) {
@@ -483,19 +554,6 @@ export default function CreateProductDialog({
     }
   };
 
-  const parseQuickScentNoteNames = (value: string) =>
-    value
-      .split(/[,;\n\r]+/)
-      .map((item) => item.trim())
-      .filter(Boolean)
-      .filter(
-        (item, index, list) =>
-          list.findIndex(
-            (candidate) =>
-              normalizeSearchText(candidate) === normalizeSearchText(item),
-          ) === index,
-      );
-
   const setScentNotesByType = (
     type: NoteType,
     updater: (prev: ScentNoteLookupItem[]) => ScentNoteLookupItem[],
@@ -512,7 +570,7 @@ export default function CreateProductDialog({
   };
 
   const handleApplyQuickScentNotes = async (type: NoteType) => {
-    const names = parseQuickScentNoteNames(newScentNoteNames[type] || "");
+    const names = parseQuickNames(newScentNoteNames[type] || "");
     if (names.length === 0) {
       showToast("Nhập danh sách nốt hương trước khi thêm", "warning");
       return;
@@ -641,6 +699,69 @@ export default function CreateProductDialog({
       showToast(message, "error");
     } finally {
       setCreatingStyleValue(false);
+    }
+  };
+
+  const handleApplyQuickStyleValues = async () => {
+    const styleAttributeId = styleAttribute?.id;
+    if (!styleAttributeId) {
+      showToast("Chưa có attribute Phong cách", "warning");
+      return;
+    }
+
+    const names = parseQuickNames(newStyleValueName);
+    if (names.length === 0) {
+      showToast("Nhập danh sách phong cách trước khi thêm", "warning");
+      return;
+    }
+
+    try {
+      setBulkCreatingStyleValues(true);
+      const createdOrMatched: AttributeValueLookupItem[] = [];
+      const missingNames: string[] = [];
+
+      names.forEach((styleName) => {
+        const matched = styleValueOptions.find(
+          (option) =>
+            normalizeSearchText(option.value) === normalizeSearchText(styleName),
+        );
+        if (matched) {
+          createdOrMatched.push(matched);
+          return;
+        }
+        missingNames.push(styleName);
+      });
+
+      if (missingNames.length > 0) {
+        const createdValues = await Promise.all(
+          missingNames.map((styleName) =>
+            attributeService.createAttributeValue(styleAttributeId, styleName),
+          ),
+        );
+        createdOrMatched.push(...createdValues);
+        setStyleValueOptions((prev) =>
+          createdValues.reduce(
+            (nextOptions, styleValue) =>
+              appendUniqueById(nextOptions, styleValue),
+            prev,
+          ),
+        );
+      }
+
+      setSelectedStyleValues((prev) =>
+        createdOrMatched.reduce(
+          (nextValues, styleValue) => appendUniqueById(nextValues, styleValue),
+          prev,
+        ),
+      );
+      setNewStyleValueName("");
+      showToast(`Đã thêm ${createdOrMatched.length} phong cách`, "success");
+    } catch (err: any) {
+      const message = err.message || "Không thể nhập nhanh phong cách";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setBulkCreatingStyleValues(false);
     }
   };
 
@@ -1028,7 +1149,9 @@ export default function CreateProductDialog({
     setNewStyleValueName("");
     setNewAttributeValueNames({});
     setNewScentNoteNames({ Top: "", Heart: "", Base: "" });
+    setBulkCreatingOlfactory(false);
     setBulkCreatingScentNotes({ Top: false, Heart: false, Base: false });
+    setBulkCreatingStyleValues(false);
     setCreatingAttributeValues({});
     setError(null);
   };
@@ -1514,17 +1637,26 @@ export default function CreateProductDialog({
                               creatingOlfactory,
                               handleCreateOlfactoryFamily,
                             )}
-                            loading={loadingOlfactory}
-                            disabled={loading}
+                            loading={loadingOlfactory || bulkCreatingOlfactory}
+                            disabled={loading || bulkCreatingOlfactory}
                             renderInput={(params) => (
                               <TextField
                                 {...params}
                                 inputRef={olfactoryInputRef}
                                 size="small"
-                                placeholder="Chọn nhóm hương"
+                                placeholder="Chọn hoặc dán nhiều nhóm hương rồi nhấn Enter"
                                 inputProps={{
                                   ...params.inputProps,
                                   onKeyDown: (event) => {
+                                    if (
+                                      event.key === "Enter" &&
+                                      /[,;\n\r]+/.test(newOlfactoryName)
+                                    ) {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      void handleApplyQuickOlfactoryFamilies();
+                                      return;
+                                    }
                                     (
                                       params.inputProps.onKeyDown as
                                         | ((
@@ -1552,7 +1684,7 @@ export default function CreateProductDialog({
                                   ...params.InputProps,
                                   endAdornment: (
                                     <>
-                                      {loadingOlfactory ? (
+                                      {loadingOlfactory || bulkCreatingOlfactory ? (
                                         <CircularProgress size={18} />
                                       ) : null}
                                       {params.InputProps.endAdornment}
@@ -1562,6 +1694,9 @@ export default function CreateProductDialog({
                               />
                             )}
                           />
+                          <Typography variant="caption" color="text.secondary">
+                            Có thể dán nhiều nhóm hương bằng dấu phẩy rồi nhấn Enter.
+                          </Typography>
                         </TableCell>
                       </TableRow>
 
@@ -1587,8 +1722,14 @@ export default function CreateProductDialog({
                               creatingStyleValue,
                               handleCreateStyleValue,
                             )}
-                            loading={loadingStyleValues}
-                            disabled={loading || !styleAttribute}
+                            loading={
+                              loadingStyleValues || bulkCreatingStyleValues
+                            }
+                            disabled={
+                              loading ||
+                              !styleAttribute ||
+                              bulkCreatingStyleValues
+                            }
                             renderInput={(params) => (
                               <TextField
                                 {...params}
@@ -1597,6 +1738,15 @@ export default function CreateProductDialog({
                                 inputProps={{
                                   ...params.inputProps,
                                   onKeyDown: (event) => {
+                                    if (
+                                      event.key === "Enter" &&
+                                      /[,;\n\r]+/.test(newStyleValueName)
+                                    ) {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      void handleApplyQuickStyleValues();
+                                      return;
+                                    }
                                     (
                                       params.inputProps.onKeyDown as
                                         | ((
@@ -1622,14 +1772,15 @@ export default function CreateProductDialog({
                                 }}
                                 placeholder={
                                   styleAttribute
-                                    ? "Chọn phong cách"
+                                    ? "Chọn hoặc dán nhiều phong cách rồi nhấn Enter"
                                     : "Chưa tìm thấy thuộc tính Phong cách"
                                 }
                                 InputProps={{
                                   ...params.InputProps,
                                   endAdornment: (
                                     <>
-                                      {loadingStyleValues ? (
+                                      {loadingStyleValues ||
+                                      bulkCreatingStyleValues ? (
                                         <CircularProgress size={18} />
                                       ) : null}
                                       {params.InputProps.endAdornment}
@@ -1639,6 +1790,9 @@ export default function CreateProductDialog({
                               />
                             )}
                           />
+                          <Typography variant="caption" color="text.secondary">
+                            Có thể dán nhiều phong cách bằng dấu phẩy rồi nhấn Enter.
+                          </Typography>
                         </TableCell>
                       </TableRow>
 
