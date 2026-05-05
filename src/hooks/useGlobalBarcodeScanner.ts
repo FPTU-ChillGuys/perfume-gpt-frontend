@@ -26,7 +26,7 @@ interface UseGlobalBarcodeScannerOptions {
  */
 export function useGlobalBarcodeScanner({
   onDetected,
-  charIntervalMs = 40,
+  charIntervalMs = 20,
   minLength = 5,
   cooldownMs = 1500,
   enabled = true,
@@ -50,6 +50,9 @@ export function useGlobalBarcodeScanner({
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip processing if the user is using an IME (e.g., Vietnamese Telex/VNI)
+      if (e.isComposing || e.key === "Process") return;
+
       const now = Date.now();
 
       // --- Enter: attempt to flush the buffer as a barcode ---
@@ -111,10 +114,11 @@ export function useGlobalBarcodeScanner({
       resetTimerRef.current = setTimeout(clearBuffer, charIntervalMs * 3);
     };
 
-    // Use capture phase so we intercept before any React handler.
-    document.addEventListener("keydown", handleKeyDown, true);
+    // Use bubble phase (false) instead of capture phase (true) to allow 
+    // input handlers to process events first.
+    document.addEventListener("keydown", handleKeyDown, false);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown, true);
+      document.removeEventListener("keydown", handleKeyDown, false);
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
     };
   }, [enabled, charIntervalMs, minLength, cooldownMs]);
