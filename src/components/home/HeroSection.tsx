@@ -133,7 +133,7 @@ const mapBannerToSlide = (banner: Banner): HeroSlide => {
   // altText is used as the slide description (not the overline label)
   const description =
     banner.altText?.trim() ||
-    "Khám phá hương thơm được tuyển chọn dành riêng cho bạn.";
+    "Trải nghiệm nghệ thuật hương thơm đỉnh cao cùng PerfumeGPT. Khám phá bộ sưu tập nước hoa chính hãng được tuyển chọn kỹ lưỡng, mang đến sự tinh tế, sang trọng và phong cách độc đáo cho mọi khoảnh khắc trong cuộc sống của bạn.";
   return {
     id: banner.id,
     label: "PERFUMEGPT", // overline is always the brand name
