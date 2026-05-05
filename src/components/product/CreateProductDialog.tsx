@@ -23,6 +23,7 @@ import {
   TableContainer,
   TableRow,
   Paper,
+  Stack,
 } from "@mui/material";
 import {
   X,
@@ -181,6 +182,13 @@ export default function CreateProductDialog({
   const [creatingBrand, setCreatingBrand] = useState(false);
   const [creatingOlfactory, setCreatingOlfactory] = useState(false);
   const [creatingScentNote, setCreatingScentNote] = useState(false);
+  const [bulkCreatingScentNotes, setBulkCreatingScentNotes] = useState<
+    Record<NoteType, boolean>
+  >({
+    Top: false,
+    Heart: false,
+    Base: false,
+  });
   const [creatingAttribute, setCreatingAttribute] = useState(false);
   const [creatingStyleValue, setCreatingStyleValue] = useState(false);
   const [creatingAttributeValues, setCreatingAttributeValues] = useState<
@@ -472,6 +480,94 @@ export default function CreateProductDialog({
       showToast(message, "error");
     } finally {
       setCreatingScentNote(false);
+    }
+  };
+
+  const parseQuickScentNoteNames = (value: string) =>
+    value
+      .split(/[,;\n\r]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .filter(
+        (item, index, list) =>
+          list.findIndex(
+            (candidate) =>
+              normalizeSearchText(candidate) === normalizeSearchText(item),
+          ) === index,
+      );
+
+  const setScentNotesByType = (
+    type: NoteType,
+    updater: (prev: ScentNoteLookupItem[]) => ScentNoteLookupItem[],
+  ) => {
+    if (type === "Top") {
+      setTopNotes(updater);
+      return;
+    }
+    if (type === "Heart") {
+      setHeartNotes(updater);
+      return;
+    }
+    setBaseNotes(updater);
+  };
+
+  const handleApplyQuickScentNotes = async (type: NoteType) => {
+    const names = parseQuickScentNoteNames(newScentNoteNames[type] || "");
+    if (names.length === 0) {
+      showToast("Nhập danh sách nốt hương trước khi thêm", "warning");
+      return;
+    }
+
+    try {
+      setBulkCreatingScentNotes((prev) => ({ ...prev, [type]: true }));
+      const createdOrMatched: ScentNoteLookupItem[] = [];
+      const missingNames: string[] = [];
+
+      names.forEach((noteName) => {
+        const matched = scentNoteOptions.find(
+          (option) =>
+            normalizeSearchText(option.name) === normalizeSearchText(noteName),
+        );
+        if (matched) {
+          createdOrMatched.push(matched);
+          return;
+        }
+        missingNames.push(noteName);
+      });
+
+      if (missingNames.length > 0) {
+        const createdNotes = await Promise.all(
+          missingNames.map((noteName) => scentNoteService.createScentNote(noteName)),
+        );
+        createdOrMatched.push(...createdNotes);
+        setScentNoteOptions((prev) =>
+          createdNotes.reduce(
+            (nextOptions, note) => appendUniqueById(nextOptions, note),
+            prev,
+          ),
+        );
+      }
+
+      setScentNotesByType(type, (prev) =>
+        createdOrMatched.reduce(
+          (nextNotes, note) => appendUniqueById(nextNotes, note),
+          prev,
+        ),
+      );
+      setNewScentNoteNames((prev) => ({ ...prev, [type]: "" }));
+      showToast(
+        `Đã thêm ${createdOrMatched.length} nốt hương vào ${
+          SCENT_NOTE_ROWS.find((row) => row.type === type)?.label.toLowerCase() ||
+          "tầng hương"
+        }`,
+        "success",
+      );
+    } catch (err: any) {
+      const message = err.message || "Không thể nhập nhanh nốt hương";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setBulkCreatingScentNotes((prev) => ({ ...prev, [type]: false }));
     }
   };
 
@@ -932,6 +1028,7 @@ export default function CreateProductDialog({
     setNewStyleValueName("");
     setNewAttributeValueNames({});
     setNewScentNoteNames({ Top: "", Heart: "", Base: "" });
+    setBulkCreatingScentNotes({ Top: false, Heart: false, Base: false });
     setCreatingAttributeValues({});
     setError(null);
   };
@@ -1551,90 +1648,111 @@ export default function CreateProductDialog({
                             {row.label}
                           </TableCell>
                           <TableCell>
-                            <Autocomplete
-                              multiple
-                              options={scentNoteOptions}
-                              getOptionLabel={(option) => option.name || ""}
-                              value={
-                                row.type === "Top"
-                                  ? topNotes
-                                  : row.type === "Heart"
-                                    ? heartNotes
-                                    : baseNotes
-                              }
-                              inputValue={newScentNoteNames[row.type] || ""}
-                              onInputChange={(_, value) =>
-                                setNewScentNoteNames((prev) => ({
-                                  ...prev,
-                                  [row.type]: value,
-                                }))
-                              }
-                              noOptionsText={renderCreateNoOptions(
-                                newScentNoteNames[row.type] || "",
-                                creatingScentNote,
-                                () => handleCreateScentNote(row.type),
-                              )}
-                              onChange={(_, value) => {
-                                if (row.type === "Top") {
-                                  setTopNotes(value);
-                                  return;
+                            <Stack spacing={1}>
+                              <Autocomplete
+                                multiple
+                                options={scentNoteOptions}
+                                getOptionLabel={(option) => option.name || ""}
+                                value={
+                                  row.type === "Top"
+                                    ? topNotes
+                                    : row.type === "Heart"
+                                      ? heartNotes
+                                      : baseNotes
                                 }
-                                if (row.type === "Heart") {
-                                  setHeartNotes(value);
-                                  return;
+                                inputValue={newScentNoteNames[row.type] || ""}
+                                onInputChange={(_, value) =>
+                                  setNewScentNoteNames((prev) => ({
+                                    ...prev,
+                                    [row.type]: value,
+                                  }))
                                 }
-                                setBaseNotes(value);
-                              }}
-                              loading={loadingScentNotes}
-                              disabled={loading}
-                              renderInput={(params) => (
-                                <TextField
-                                  {...params}
-                                  inputRef={(node) => {
-                                    scentNoteInputRefs.current[row.type] = node;
-                                  }}
-                                  size="small"
-                                  inputProps={{
-                                    ...params.inputProps,
-                                    onKeyDown: (event) => {
-                                      (
-                                        params.inputProps.onKeyDown as
-                                          | ((
-                                              e: KeyboardEvent<
-                                                | HTMLInputElement
-                                                | HTMLTextAreaElement
-                                              >,
-                                            ) => void)
-                                          | undefined
-                                      )?.(event);
-                                      handleCreateOnEnter(
-                                        event,
-                                        newScentNoteNames[row.type] || "",
-                                        creatingScentNote,
-                                        hasSearchMatch(
+                                noOptionsText={renderCreateNoOptions(
+                                  newScentNoteNames[row.type] || "",
+                                  creatingScentNote,
+                                  () => handleCreateScentNote(row.type),
+                                )}
+                                onChange={(_, value) => {
+                                  if (row.type === "Top") {
+                                    setTopNotes(value);
+                                    return;
+                                  }
+                                  if (row.type === "Heart") {
+                                    setHeartNotes(value);
+                                    return;
+                                  }
+                                  setBaseNotes(value);
+                                }}
+                                loading={
+                                  loadingScentNotes ||
+                                  bulkCreatingScentNotes[row.type]
+                                }
+                                disabled={loading || bulkCreatingScentNotes[row.type]}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    inputRef={(node) => {
+                                      scentNoteInputRefs.current[row.type] = node;
+                                    }}
+                                    size="small"
+                                    inputProps={{
+                                      ...params.inputProps,
+                                      onKeyDown: (event) => {
+                                        if (
+                                          event.key === "Enter" &&
+                                          /[,;\n\r]+/.test(
+                                            newScentNoteNames[row.type] || "",
+                                          )
+                                        ) {
+                                          event.preventDefault();
+                                          event.stopPropagation();
+                                          void handleApplyQuickScentNotes(row.type);
+                                          return;
+                                        }
+                                        (
+                                          params.inputProps.onKeyDown as
+                                            | ((
+                                                e: KeyboardEvent<
+                                                  | HTMLInputElement
+                                                  | HTMLTextAreaElement
+                                                >,
+                                              ) => void)
+                                            | undefined
+                                        )?.(event);
+                                        handleCreateOnEnter(
+                                          event,
                                           newScentNoteNames[row.type] || "",
-                                          scentNoteOptions,
-                                          (item) => item.name,
-                                        ),
-                                        () => handleCreateScentNote(row.type),
-                                      );
-                                    },
-                                  }}
-                                  placeholder={`Chọn ${row.label.toLowerCase()}`}
-                                  InputProps={{
-                                    ...params.InputProps,
-                                    endAdornment: (
-                                      <>
-                                        {loadingScentNotes ? (
-                                          <CircularProgress size={18} />
-                                        ) : null}
-                                        {params.InputProps.endAdornment}
-                                      </>
-                                    ),
-                                  }}
-                                />
-                              )}
-                            />
+                                          creatingScentNote,
+                                          hasSearchMatch(
+                                            newScentNoteNames[row.type] || "",
+                                            scentNoteOptions,
+                                            (item) => item.name,
+                                          ),
+                                          () => handleCreateScentNote(row.type),
+                                        );
+                                      },
+                                    }}
+                                    placeholder={`Chọn hoặc dán nhiều ${row.label.toLowerCase()} rồi nhấn Enter`}
+                                    InputProps={{
+                                      ...params.InputProps,
+                                      endAdornment: (
+                                        <>
+                                          {loadingScentNotes ||
+                                          bulkCreatingScentNotes[row.type] ? (
+                                            <CircularProgress size={18} />
+                                          ) : null}
+                                          {params.InputProps.endAdornment}
+                                        </>
+                                      ),
+                                    }}
+                                  />
+                                )}
+                              />
+                              <Typography variant="caption" color="text.secondary">
+                                Dán nhiều nốt hương bằng dấu phẩy rồi nhấn Enter.
+                                Ví dụ: Tiêu hồng, Quả lý chua đen, Táo xanh.
+                              </Typography>
+                            </Stack>
                           </TableCell>
                         </TableRow>
                       ))}

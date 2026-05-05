@@ -28,10 +28,10 @@ export const LogDetailModal = ({ open, onClose, selectedLog }: LogDetailModalPro
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle sx={{ fontWeight: "bold" }}>Chi tiết Log: {selectedLog.id}</DialogTitle>
+            <DialogTitle sx={{ fontWeight: "bold" }}>Chi tiết Log</DialogTitle>
             <DialogContent dividers>
                 <Typography variant="subtitle1" gutterBottom>
-                    <strong>User ID:</strong> {selectedLog.userId || "Khach"}
+                    <strong>User ID:</strong> {selectedLog.userName ?? "Khách"}
                 </Typography>
 
                 <Typography variant="subtitle1" gutterBottom>

@@ -153,13 +153,14 @@ export const UserLogsManagementPage = () => {
             if (searchTerm) {
                 // Support searching by ids, event type, content, and metadata payload.
                 const idMatches = log.userId?.toLowerCase().includes(searchTerm.toLowerCase());
+                const userNameMatches = log.userName?.toLowerCase().includes(searchTerm.toLowerCase());
                 const logIdMatches = log.id?.toLowerCase().includes(searchTerm.toLowerCase());
                 const eventTypeMatches = log.eventType?.toLowerCase().includes(searchTerm.toLowerCase());
                 const contentMatches = log.contentText?.toLowerCase().includes(searchTerm.toLowerCase());
                 const metadataMatches = JSON.stringify(log.metadata || {})
                     .toLowerCase()
                     .includes(searchTerm.toLowerCase());
-                matchesSearch = !!(idMatches || logIdMatches || eventTypeMatches || contentMatches || metadataMatches);
+                matchesSearch = !!(idMatches || userNameMatches || logIdMatches || eventTypeMatches || contentMatches || metadataMatches);
             }
 
             let matchesFromDate = true;
@@ -196,12 +197,13 @@ export const UserLogsManagementPage = () => {
             if (searchTerm) {
                 const normalizedSearch = searchTerm.toLowerCase();
                 const userIdMatches = summary.userId?.toLowerCase().includes(normalizedSearch);
+                const userNameMatches = summary.userName?.toLowerCase().includes(normalizedSearch);
                 const idMatches = summary.id?.toLowerCase().includes(normalizedSearch);
                 const logSummaryMatches = summary.logSummary?.toLowerCase().includes(normalizedSearch);
                 const featureSnapshotMatches = JSON.stringify(summary.featureSnapshot || {})
                     .toLowerCase()
                     .includes(normalizedSearch);
-                matchesSearch = !!(userIdMatches || idMatches || logSummaryMatches || featureSnapshotMatches);
+                matchesSearch = !!(userIdMatches || userNameMatches || idMatches || logSummaryMatches || featureSnapshotMatches);
             }
 
             let matchesFromDate = true;
@@ -254,8 +256,8 @@ export const UserLogsManagementPage = () => {
                     >
                         <TextField
                             fullWidth
-                            label={tabValue === 0 ? "Tìm kiếm Log ID / User ID" : "Tìm kiếm Summary ID / User ID"}
-                            placeholder={tabValue === 0 ? "Nhập ID..." : "Nhập ID hoặc nội dung tóm tắt..."}
+                            label={tabValue === 0 ? "Tìm kiếm User ID" : "Tìm kiếm User ID"}
+                            placeholder={tabValue === 0 ? "Nhập User ID..." : "Nhập User ID hoặc nội dung tóm tắt..."}
                             value={searchInput}
                             onChange={(e) => setSearchInput(e.target.value)}
                             onKeyDown={(e) => {
@@ -311,11 +313,9 @@ export const UserLogsManagementPage = () => {
                         <Table>
                             <TableHead>
                                 <TableRow sx={{ bgcolor: "grey.50" }}>
-                                    <TableCell>Log ID</TableCell>
-                                    <TableCell>User ID</TableCell>
+                                    <TableCell>Người dùng</TableCell>
                                     <TableCell align="center">Loại sự kiện</TableCell>
                                     <TableCell align="center">Entity</TableCell>
-                                    <TableCell>Nội dung</TableCell>
                                     <TableCell>Ngày tạo log</TableCell>
                                     <TableCell>Cập nhật cuối</TableCell>
                                     <TableCell align="center">Thao tác</TableCell>
@@ -324,13 +324,13 @@ export const UserLogsManagementPage = () => {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                                             <CircularProgress />
                                         </TableCell>
                                     </TableRow>
                                 ) : paginatedLogs.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
+                                        <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                                             <Typography variant="body2" color="text.secondary">
                                                 Không có log nào phù hợp
                                             </Typography>
@@ -340,13 +340,8 @@ export const UserLogsManagementPage = () => {
                                     paginatedLogs.map((log) => (
                                         <TableRow key={log.id} hover>
                                             <TableCell>
-                                                <Typography variant="body2" fontWeight={500}>
-                                                    {log.id?.substring(0, 8)}...
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" color={log.userId ? "textPrimary" : "textSecondary"}>
-                                                    {log.userId ? `${log.userId.substring(0, 8)}...` : "Khách"}
+                                                <Typography variant="body2" color={log.userName ? "textPrimary" : "textSecondary"}>
+                                                    {log.userName ?? "Khách"}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell align="center">
@@ -354,11 +349,6 @@ export const UserLogsManagementPage = () => {
                                             </TableCell>
                                             <TableCell align="center">
                                                 {log.entityType || "N/A"}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" noWrap>
-                                                    {log.contentText || "-"}
-                                                </Typography>
                                             </TableCell>
                                             <TableCell>
                                                 <Typography variant="body2" noWrap>
@@ -404,10 +394,8 @@ export const UserLogsManagementPage = () => {
                         <Table>
                             <TableHead>
                                 <TableRow sx={{ bgcolor: "grey.50" }}>
-                                    <TableCell>Summary ID</TableCell>
-                                    <TableCell>User ID</TableCell>
+                                    <TableCell>Người dùng</TableCell>
                                     <TableCell align="right">Tổng event</TableCell>
-                                    <TableCell>Nội dung tóm tắt</TableCell>
                                     <TableCell>Ngày tạo</TableCell>
                                     <TableCell>Cập nhật cuối</TableCell>
                                     <TableCell align="center">Thao tác</TableCell>
@@ -416,13 +404,13 @@ export const UserLogsManagementPage = () => {
                             <TableBody>
                                 {summaryLoading ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                                             <CircularProgress />
                                         </TableCell>
                                     </TableRow>
                                 ) : paginatedSummaries.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                                        <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                                             <Typography variant="body2" color="text.secondary">
                                                 Không có bản tóm tắt nào phù hợp
                                             </Typography>
@@ -432,27 +420,13 @@ export const UserLogsManagementPage = () => {
                                     paginatedSummaries.map((summary) => (
                                         <TableRow key={summary.id} hover>
                                             <TableCell>
-                                                <Typography variant="body2" fontWeight={500}>
-                                                    {summary.id?.substring(0, 8)}...
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
                                                 <Typography variant="body2">
-                                                    {summary.userId ? `${summary.userId.substring(0, 8)}...` : "N/A"}
+                                                    {summary.userName ?? "Khách"}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell align="right">
                                                 <Typography variant="body2">
                                                     {summary.totalEvents ?? 0}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography
-                                                    variant="body2"
-                                                    noWrap
-                                                    sx={{ maxWidth: 520 }}
-                                                >
-                                                    {summary.logSummary || "-"}
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
@@ -518,10 +492,7 @@ export const UserLogsManagementPage = () => {
                     {selectedSummary && (
                         <>
                             <Typography variant="subtitle2" gutterBottom>
-                                <strong>Summary ID:</strong> {selectedSummary.id}
-                            </Typography>
-                            <Typography variant="subtitle2" gutterBottom>
-                                <strong>User ID:</strong> {selectedSummary.userId || "N/A"}
+                                <strong>User ID:</strong> {selectedSummary.userName ?? "Khách"}
                             </Typography>
                             <Typography variant="subtitle2" gutterBottom>
                                 <strong>Tổng event:</strong> {selectedSummary.totalEvents ?? 0}

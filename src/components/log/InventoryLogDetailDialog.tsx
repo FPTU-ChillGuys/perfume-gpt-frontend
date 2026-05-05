@@ -81,9 +81,6 @@ export const InventoryLogDetailDialog = ({ open, onClose, log }: InventoryLogDet
                             <Typography variant="h6" fontWeight="bold">
                                 Chi tiết Log Báo cáo Tồn kho
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                ID: {log.id}
-                            </Typography>
                         </Box>
                     </Box>
                     <Tooltip title={isFullscreen ? "Thu nhỏ" : "Phóng to"}>
