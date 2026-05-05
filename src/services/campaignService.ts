@@ -32,6 +32,8 @@ export type UpdateCampaignVoucherRequest =
 export type CampaignLookupItem = {
   id: string;
   name: string;
+  startDate?: string;
+  endDate?: string;
 };
 
 type BaseResponseString = components["schemas"]["BaseResponseOfstring"];
