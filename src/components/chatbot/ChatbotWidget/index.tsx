@@ -57,6 +57,7 @@ export default function ChatbotWidget() {
   const [textToSpeak, setTextToSpeak] = useState<string | null>(null);
   const [aiSpeaking, setAiSpeaking] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Settings states
   const [voiceEnabled, setVoiceEnabled] = useState(() => {
@@ -394,19 +395,21 @@ export default function ChatbotWidget() {
       handle=".chat-widget-handle"
       bounds="body"
       nodeRef={draggableNodeRef}
-      disabled={isMobile}
+      disabled={isMobile || isExpanded}
     >
       <Box
         ref={draggableNodeRef}
         sx={{
           position: "fixed",
-          bottom: 24,
-          right: 24,
           zIndex: 1300,
           display: "flex",
           flexDirection: "column",
           alignItems: "flex-end",
-          pointerEvents: "none", // Let clicks pass through the empty area
+          pointerEvents: "none",
+          ...(isExpanded
+            ? { top: 0, left: 0, right: 0, bottom: 0 }
+            : { bottom: 24, right: 24 }
+          ),
         }}
       >
         {/* Chat Window */}
@@ -415,23 +418,23 @@ export default function ChatbotWidget() {
             elevation={10}
             className="chat-widget-handle"
             sx={{
-              mb: 2, // Replaces the 96px bottom gap (24px bottom + 56px icon + 16px margin)
+              mb: isExpanded ? 0 : 2,
               pointerEvents: "auto",
-              cursor: "move", // Indicate draggability
-              width: {
+              cursor: isExpanded ? "default" : "move",
+              width: isExpanded ? "100%" : {
                 xs: "calc(100vw - 32px)",
                 sm: "65vw",
                 md: "60vw",
                 lg: "55vw",
               },
-              maxWidth: 700,
-              minWidth: 320,
-              height: { xs: "70vh", sm: "72vh" },
+              maxWidth: isExpanded ? "none" : 700,
+              minWidth: isExpanded ? "unset" : 320,
+              height: isExpanded ? "100%" : { xs: "70vh", sm: "72vh" },
               display: "flex",
               flexDirection: "column",
-              borderRadius: 3,
+              borderRadius: isExpanded ? 0 : 3,
               overflow: "hidden",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+              boxShadow: isExpanded ? "none" : "0 20px 60px rgba(0,0,0,0.2)",
               animation: "slideUp 0.25s ease-out",
               "@keyframes slideUp": {
                 from: { opacity: 0, transform: "translateY(20px)" },
@@ -443,9 +446,11 @@ export default function ChatbotWidget() {
             onSettingsClick={(e) => setSettingsAnchor(e.currentTarget)}
             onHistoryClick={() => setHistoryOpen((prev) => !prev)}
             onNewConversation={handleNewConversation}
-            onClose={() => setOpen(false)}
+            onClose={() => { setOpen(false); setIsExpanded(false); }}
             isStaffMode={isStaffMode}
             historyOpen={historyOpen}
+            isExpanded={isExpanded}
+            onToggleExpand={() => setIsExpanded((prev) => !prev)}
           />
 
           <Menu
@@ -551,6 +556,7 @@ export default function ChatbotWidget() {
       )}
 
       {/* Toggle Button */}
+      {!isExpanded && (
       <Tooltip title={open ? "Đóng chat" : "Hỏi PerfumeGPT"} placement="left">
         <Box sx={{ pointerEvents: "auto", cursor: "move" }} className="chat-widget-handle">
           <IconButton
@@ -585,10 +591,11 @@ export default function ChatbotWidget() {
               sx={{ width: 32, height: 32, objectFit: "contain" }}
             />
           )}
-          </IconButton>
-        </Box>
-      </Tooltip>
-      </Box>
-    </Draggable>
+           </IconButton>
+         </Box>
+       </Tooltip>
+      )}
+       </Box>
+     </Draggable>
   );
 }
