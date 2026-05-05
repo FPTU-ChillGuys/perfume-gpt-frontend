@@ -90,14 +90,20 @@ class CartService {
   }
 
   async getCartItemCount(): Promise<number> {
-    try {
-      const items = await this.getItems();
-      // Tính tổng quantity của tất cả items
-      return items.reduce((total, item) => total + (item.quantity ?? 0), 0);
-    } catch (error: any) {
-      console.error("Error fetching cart item count:", error);
-      return 0;
+    const maxRetries = 2;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const items = await this.getItems();
+        return items.reduce((total, item) => total + (item.quantity ?? 0), 0);
+      } catch (error: any) {
+        if (attempt === maxRetries) {
+          console.error("Error fetching cart item count after retries:", error);
+          return 0;
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
     }
+    return 0;
   }
 
   async getTotals(

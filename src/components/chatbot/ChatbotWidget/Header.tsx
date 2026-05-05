@@ -4,6 +4,8 @@ import {
   Settings as SettingsIcon,
   History as HistoryIcon,
   AddComment as AddCommentIcon,
+  Fullscreen as FullscreenIcon,
+  FullscreenExit as FullscreenExitIcon,
 } from "@mui/icons-material";
 import AiLogo from "@/assets/AI_LOGO.png";
 
@@ -14,6 +16,8 @@ interface ChatHeaderProps {
   onClose: () => void;
   isStaffMode?: boolean;
   historyOpen?: boolean;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
 }
 
 export function ChatHeader({
@@ -23,6 +27,8 @@ export function ChatHeader({
   onClose,
   isStaffMode = false,
   historyOpen = false,
+  isExpanded = false,
+  onToggleExpand,
 }: ChatHeaderProps) {
   return (
     <Box
@@ -109,6 +115,20 @@ export function ChatHeader({
       >
         <SettingsIcon fontSize="small" />
       </IconButton>
+
+      <Tooltip title={isExpanded ? "Thu nhỏ" : "Phóng to"} arrow>
+        <IconButton
+          size="small"
+          onClick={onToggleExpand}
+          sx={{
+            color: "rgba(255,255,255,0.8)",
+            "&:hover": { color: "#fff", bgcolor: "rgba(255,255,255,0.1)" },
+            mr: 0.5,
+          }}
+        >
+          {isExpanded ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+        </IconButton>
+      </Tooltip>
 
       <IconButton
         size="small"
