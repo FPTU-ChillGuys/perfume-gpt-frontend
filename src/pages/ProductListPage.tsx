@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal, Loader2, X } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2, X, ChevronDown, ChevronUp } from "lucide-react";
 import { MainLayout } from "../layouts/MainLayout";
 import {
   ProductCard,
@@ -234,6 +234,9 @@ export const ProductListPage = () => {
     searchParams.get("volume") || "all",
   );
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [isBrandExpanded, setIsBrandExpanded] = useState(true);
+  const [showAllBrands, setShowAllBrands] = useState(false);
+  const [isVolumeExpanded, setIsVolumeExpanded] = useState(true);
 
   useEffect(() => {
     if (isMobileFilterOpen) {
@@ -1189,38 +1192,118 @@ export const ProductListPage = () => {
               </div>
 
               <div className="space-y-4">
-                <label className="block text-sm font-medium text-slate-700">
-                  Thương hiệu
-                  <select
-                    value={selectedBrandId}
-                    onChange={(event) => setSelectedBrandId(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-900"
+                <div className="border-b border-slate-100 pb-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsBrandExpanded(!isBrandExpanded)}
+                    className="flex w-full items-center justify-between py-2 text-sm font-semibold text-slate-900"
                   >
-                    <option value="all">Tất cả thương hiệu</option>
-                    {brandOptions.map((brand) => (
-                      <option key={brand.id} value={brand.id}>
-                        {brand.name || `Brand #${brand.id}`}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    Thương hiệu
+                    {isBrandExpanded ? (
+                      <ChevronUp size={18} className="text-slate-400" />
+                    ) : (
+                      <ChevronDown size={18} className="text-slate-400" />
+                    )}
+                  </button>
+
+                  <div
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      isBrandExpanded
+                        ? "grid-rows-[1fr] opacity-100 mt-2"
+                        : "grid-rows-[0fr] opacity-0"
+                    }`}
+                  >
+                    <div className="overflow-hidden space-y-2">
+                      <div
+                        onClick={() => setSelectedBrandId("all")}
+                        className="flex cursor-pointer items-center gap-2 group"
+                      >
+                        <div
+                          className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                            selectedBrandId === "all"
+                              ? "border-slate-900 bg-slate-900"
+                              : "border-slate-200 group-hover:border-slate-400"
+                          }`}
+                        >
+                          {selectedBrandId === "all" && (
+                            <div className="h-2 w-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span
+                          className={`text-sm transition-colors ${
+                            selectedBrandId === "all"
+                              ? "font-semibold text-slate-900"
+                              : "text-slate-600 group-hover:text-slate-900"
+                          }`}
+                        >
+                          Tất cả thương hiệu
+                        </span>
+                      </div>
+
+                      {(showAllBrands ? brandOptions : brandOptions.slice(0, 8)).map(
+                        (brand) => (
+                          <div
+                            key={brand.id}
+                            onClick={() => setSelectedBrandId(String(brand.id))}
+                            className="flex cursor-pointer items-center gap-2 group"
+                          >
+                            <div
+                              className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                                selectedBrandId === String(brand.id)
+                                  ? "border-slate-900 bg-slate-900"
+                                  : "border-slate-200 group-hover:border-slate-400"
+                              }`}
+                            >
+                              {selectedBrandId === String(brand.id) && (
+                                <div className="h-2 w-2 rounded-full bg-white" />
+                              )}
+                            </div>
+                            <span
+                              className={`text-sm transition-colors ${
+                                selectedBrandId === String(brand.id)
+                                  ? "font-semibold text-slate-900"
+                                  : "text-slate-600 group-hover:text-slate-900"
+                              }`}
+                            >
+                              {brand.name}
+                            </span>
+                          </div>
+                        ),
+                      )}
+
+                      {brandOptions.length > 8 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowAllBrands(!showAllBrands)}
+                          className="mt-2 text-sm font-medium text-slate-500 hover:text-slate-900"
+                        >
+                          {showAllBrands ? "Thu gọn" : "Xem thêm"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
                 <div>
                   <p className="text-sm font-medium text-slate-700">
                     Mức giá (đ)
                   </p>
-                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 px-3 py-3">
-                    <div className="relative h-8 px-2">
-                      <div className="absolute left-3 right-3 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-300" />
-                      <div className="absolute left-3 right-3 top-1/2 h-1 -translate-y-1/2">
+                  <div className="mt-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+                    <div className="relative h-6 w-full">
+                      {/* Background Track */}
+                      <div className="absolute inset-x-2 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-300" />
+                      
+                      {/* Active Range Highlight */}
+                      <div className="absolute inset-x-2 top-1/2 h-1 -translate-y-1/2">
                         <div
-                          className="absolute inset-y-0 rounded-xs bg-rose-500"
+                          className="absolute inset-y-0 rounded-full bg-rose-500"
                           style={{
                             left: `${selectedMinPercent}%`,
                             right: `${100 - selectedMaxPercent}%`,
                           }}
                         />
                       </div>
+
                       <input
                         type="range"
                         min={PRICE_RANGE_MIN}
@@ -1230,7 +1313,7 @@ export const ProductListPage = () => {
                         onChange={(event) =>
                           handleMinPriceChange(Number(event.target.value))
                         }
-                        className="pointer-events-none absolute left-3 top-1 z-10 h-6 w-[calc(100%-1.5rem)] appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-slate-900 [&::-webkit-slider-thumb]:shadow [&::-moz-range-track]:h-1 [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-slate-900"
+                        className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-10 h-6 w-full appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:-mt-2 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-slate-900 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-track]:h-1 [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-slate-900"
                       />
                       <input
                         type="range"
@@ -1241,31 +1324,95 @@ export const ProductListPage = () => {
                         onChange={(event) =>
                           handleMaxPriceChange(Number(event.target.value))
                         }
-                        className="pointer-events-none absolute left-3 top-1 z-20 h-6 w-[calc(100%-1.5rem)] appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-slate-900 [&::-webkit-slider-thumb]:shadow [&::-moz-range-track]:h-1 [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-slate-900"
+                        className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 z-20 h-6 w-full appearance-none bg-transparent [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:-mt-2 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-slate-900 [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-track]:h-1 [&::-moz-range-track]:bg-transparent [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-slate-900"
                       />
                     </div>
-                    <p className="mt-1 text-sm text-slate-700">
+                    <p className="mt-4 text-sm font-medium text-slate-700">
                       {formatVndCompact(selectedMinPrice)} -{" "}
                       {formatVndCompact(selectedMaxPrice)}
                     </p>
                   </div>
                 </div>
 
-                <label className="block text-sm font-medium text-slate-700">
-                  Dung tích (ml)
-                  <select
-                    value={selectedVolume}
-                    onChange={(event) => setSelectedVolume(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-slate-900"
+                <div className="border-b border-slate-100 pb-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsVolumeExpanded(!isVolumeExpanded)}
+                    className="flex w-full items-center justify-between py-2 text-sm font-semibold text-slate-900"
                   >
-                    <option value="all">Tất cả dung tích</option>
-                    {availableVolumes.map((volume) => (
-                      <option key={volume} value={String(volume)}>
-                        {volume} ml
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    Dung tích (ml)
+                    {isVolumeExpanded ? (
+                      <ChevronUp size={18} className="text-slate-400" />
+                    ) : (
+                      <ChevronDown size={18} className="text-slate-400" />
+                    )}
+                  </button>
+
+                  <div
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      isVolumeExpanded
+                        ? "grid-rows-[1fr] opacity-100 mt-2"
+                        : "grid-rows-[0fr] opacity-0"
+                    }`}
+                  >
+                    <div className="overflow-hidden space-y-2">
+                      <div
+                        onClick={() => setSelectedVolume("all")}
+                        className="flex cursor-pointer items-center gap-2 group"
+                      >
+                        <div
+                          className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                            selectedVolume === "all"
+                              ? "border-slate-900 bg-slate-900"
+                              : "border-slate-200 group-hover:border-slate-400"
+                          }`}
+                        >
+                          {selectedVolume === "all" && (
+                            <div className="h-2 w-2 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <span
+                          className={`text-sm transition-colors ${
+                            selectedVolume === "all"
+                              ? "font-semibold text-slate-900"
+                              : "text-slate-600 group-hover:text-slate-900"
+                          }`}
+                        >
+                          Tất cả dung tích
+                        </span>
+                      </div>
+
+                      {availableVolumes.map((volume) => (
+                        <div
+                          key={volume}
+                          onClick={() => setSelectedVolume(String(volume))}
+                          className="flex cursor-pointer items-center gap-2 group"
+                        >
+                          <div
+                            className={`flex h-5 w-5 items-center justify-center rounded-full border-2 transition-colors ${
+                              selectedVolume === String(volume)
+                                ? "border-slate-900 bg-slate-900"
+                                : "border-slate-200 group-hover:border-slate-400"
+                            }`}
+                          >
+                            {selectedVolume === String(volume) && (
+                              <div className="h-2 w-2 rounded-full bg-white" />
+                            )}
+                          </div>
+                          <span
+                            className={`text-sm transition-colors ${
+                              selectedVolume === String(volume)
+                                ? "font-semibold text-slate-900"
+                                : "text-slate-600 group-hover:text-slate-900"
+                            }`}
+                          >
+                            {volume} ml
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
                 <button
                   type="button"
@@ -1283,14 +1430,6 @@ export const ProductListPage = () => {
 
             <div className="lg:col-start-2 lg:row-start-1">
               <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-                <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="text-sm text-slate-500">
-                    {effectiveTotalCount > 0
-                      ? `Hiển thị ${Math.max(startItem, 1)} - ${Math.max(endItem, 0)} trong tổng ${effectiveTotalCount} sản phẩm`
-                      : "Chưa có sản phẩm để hiển thị"}
-                  </div>
-                </div>
-
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="relative w-full md:max-w-md">
                     <Search
@@ -1419,22 +1558,29 @@ export const ProductListPage = () => {
               </div>
 
               <div className="mt-10 flex flex-col items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white/80 px-6 py-4 shadow-sm md:flex-row">
-                <div className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2
-                        size={16}
-                        className="animate-spin text-slate-400"
-                      />
-                      Đang tải trang {page}
-                    </span>
-                  ) : effectiveTotalPages > 0 ? (
-                    <>
-                      Trang {page} / {Math.max(effectiveTotalPages, 1)}
-                    </>
-                  ) : (
-                    <>Trang {page}</>
-                  )}
+                <div className="flex flex-col md:flex-row items-center gap-4 text-sm font-semibold text-slate-600">
+                  <div className="text-xs font-normal text-slate-400 order-2 md:order-1">
+                    {effectiveTotalCount > 0
+                      ? `Hiển thị ${Math.max(startItem, 1)} - ${Math.max(endItem, 0)} trong tổng ${effectiveTotalCount} sản phẩm`
+                      : "Chưa có sản phẩm để hiển thị"}
+                  </div>
+                  <div className="flex items-center gap-2 border-l border-slate-100 pl-4 order-1 md:order-2">
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2
+                          size={16}
+                          className="animate-spin text-slate-400"
+                        />
+                        Đang tải trang {page}
+                      </span>
+                    ) : effectiveTotalPages > 0 ? (
+                      <>
+                        Trang {page} / {Math.max(effectiveTotalPages, 1)}
+                      </>
+                    ) : (
+                      <>Trang {page}</>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
