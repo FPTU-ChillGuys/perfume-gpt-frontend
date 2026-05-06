@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  IconButton,
   InputAdornment,
   InputLabel,
   MenuItem,
@@ -30,14 +31,16 @@ import {
   TableRow,
   TextField,
   Typography,
+  Grid,
 } from "@mui/material";
 import {
-  Refresh as RefreshIcon,
   Search as SearchIcon,
   Inventory2 as InventoryIcon,
   WarningAmber as WarningIcon,
   Layers as LayersIcon,
   PendingActions as PendingIcon,
+  ContentCopy as CopyIcon,
+  Close as CloseIcon,
 } from "@mui/icons-material";
 import { AdminLayout } from "@/layouts/AdminLayout";
 import {
@@ -62,27 +65,27 @@ type StockStatusFilter = NonNullable<StockResponse["status"]> | "";
 type CategoryTab = "all" | "women" | "men" | "unisex" | "niche";
 
 const REASON_LABELS: Record<StockAdjustmentReason, string> = {
-  Damage: "H\u01b0 h\u1ea1i",
-  Expired: "H\u1ebft h\u1ea1n",
-  Theft: "Th\u1ea5t tho\u00e1t",
-  Loss: "M\u1ea5t m\u00e1t",
-  Found: "T\u00ecm th\u1ea5y",
-  Correction: "\u0110i\u1ec1u ch\u1ec9nh",
-  Return: "Ho\u00e0n tr\u1ea3",
-  Other: "Kh\u00e1c",
+  Damage: "Hư hại",
+  Expired: "Hết hạn",
+  Theft: "Thất thoát",
+  Loss: "Mất mát",
+  Found: "Tìm thấy",
+  Correction: "Điều chỉnh",
+  Return: "Hoàn trả",
+  Other: "Khác",
 };
 
 const STATUS_LABELS: Record<StockAdjustmentStatus, string> = {
-  Pending: "Ch\u1edd duy\u1ec7t",
-  InProgress: "\u0110ang x\u1eed l\u00fd",
-  Completed: "Ho\u00e0n th\u00e0nh",
-  Cancelled: "\u0110\u00e3 h\u1ee7y",
+  Pending: "Chờ duyệt",
+  InProgress: "Đang xử lý",
+  Completed: "Hoàn thành",
+  Cancelled: "Đã hủy",
 };
 
 const CATEGORY_OPTIONS: Array<{ key: CategoryTab; label: string; id?: number }> = [
-  { key: "all", label: "T\u1ea5t c\u1ea3" },
-  { key: "women", label: "N\u01b0\u1edbc hoa n\u1eef", id: 1 },
-  { key: "men", label: "N\u01b0\u1edbc hoa nam", id: 2 },
+  { key: "all", label: "Tất cả" },
+  { key: "women", label: "Nước hoa nữ", id: 1 },
+  { key: "men", label: "Nước hoa nam", id: 2 },
   { key: "unisex", label: "Unisex", id: 3 },
   { key: "niche", label: "Niche", id: 4 },
 ];
@@ -107,9 +110,9 @@ const ADJUSTMENT_STATUS_OPTIONS: Array<StockAdjustmentStatus | ""> = [
 ];
 
 const stockChip = (status?: StockResponse["status"]) => {
-  if (status === "OutOfStock") return { label: "H\u1ebft h\u00e0ng", color: "error" as const };
-  if (status === "LowStock") return { label: "S\u1eafp h\u1ebft", color: "warning" as const };
-  return { label: "B\u00ecnh th\u01b0\u1eddng", color: "success" as const };
+  if (status === "OutOfStock") return { label: "Hết hàng", color: "error" as const };
+  if (status === "LowStock") return { label: "Sắp hết", color: "warning" as const };
+  return { label: "Bình thường", color: "success" as const };
 };
 
 const requestChip = (status?: StockAdjustmentStatus) => {
@@ -121,7 +124,11 @@ const requestChip = (status?: StockAdjustmentStatus) => {
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return "-";
-  const date = new Date(value);
+  let dateStr = value;
+  if (dateStr.includes("T") && !dateStr.endsWith("Z") && !dateStr.includes("+")) {
+    dateStr += "Z";
+  }
+  const date = new Date(dateStr);
   if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("vi-VN", {
     day: "2-digit",
@@ -130,6 +137,7 @@ const formatDateTime = (value?: string | null) => {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: "Asia/Ho_Chi_Minh",
   }).format(date);
 };
 
@@ -137,11 +145,10 @@ const formatDate = (value?: string | null) => {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("vi-VN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
 };
 
 const toInt = (value: string, fallback = 0) => {
@@ -153,13 +160,45 @@ const getStockKey = (stock: StockResponse) => stock.variantId || stock.id || sto
 
 const batchExpiryChip = (batch: BatchDetailResponse) => {
   if (batch.isExpired || (typeof batch.daysUntilExpiry === "number" && batch.daysUntilExpiry < 0)) {
-    return { label: "\u0110\u00e3 h\u1ebft h\u1ea1n", color: "error" as const };
+    return { label: "Đã hết hạn", color: "error" as const };
   }
-  if (typeof batch.daysUntilExpiry === "number") {
-    if (batch.daysUntilExpiry <= 30) return { label: `C\u00f2n ${batch.daysUntilExpiry} ng\u00e0y`, color: "warning" as const };
-    return { label: `C\u00f2n ${batch.daysUntilExpiry} ng\u00e0y`, color: "success" as const };
+
+  const getRemainingTime = (expiryDateStr?: string | null) => {
+    if (!expiryDateStr) return null;
+    const expiry = new Date(expiryDateStr);
+    const now = new Date();
+    if (expiry <= now) return "Đã hết hạn";
+
+    let years = expiry.getFullYear() - now.getFullYear();
+    let months = expiry.getMonth() - now.getMonth();
+    let days = expiry.getDate() - now.getDate();
+
+    if (days < 0) {
+      months--;
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      days += lastDayOfMonth;
+    }
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    const parts = [];
+    if (years > 0) parts.push(`${years} năm`);
+    if (months > 0) parts.push(`${months} tháng`);
+    if (days > 0) parts.push(`${days} ngày`);
+
+    return parts.length > 0 ? `Còn ${parts.join(" ")}` : "Hôm nay hết hạn";
+  };
+
+  const remainingLabel = getRemainingTime(batch.expiryDate);
+
+  if (remainingLabel) {
+    const color = (typeof batch.daysUntilExpiry === "number" && batch.daysUntilExpiry <= 30) ? ("warning" as const) : ("success" as const);
+    return { label: remainingLabel, color };
   }
-  return { label: "\u0110ang b\u00e1n", color: "success" as const };
+
+  return { label: "Đang bán", color: "success" as const };
 };
 
 export const InventoryManagementPage = () => {
@@ -167,6 +206,7 @@ export const InventoryManagementPage = () => {
   const { showToast } = useToast();
   const isAdmin = user?.role === "admin";
   const isStaff = user?.role === "staff";
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const [tab, setTab] = useState<InventoryTab>("inventory");
   const [summary, setSummary] = useState<InventorySummaryResponse | null>(null);
@@ -180,10 +220,32 @@ export const InventoryManagementPage = () => {
   const [stockPage, setStockPage] = useState(0);
   const [stockRowsPerPage, setStockRowsPerPage] = useState(10);
   const [stockTotalCount, setStockTotalCount] = useState(0);
+
+  const [editingStockId, setEditingStockId] = useState<string | null>(null);
+  const [editingThreshold, setEditingThreshold] = useState<string>("");
+  const [thresholdUpdating, setThresholdUpdating] = useState(false);
+
+  const handleUpdateThreshold = async (stockId: string) => {
+    try {
+      setThresholdUpdating(true);
+      const threshold = toInt(editingThreshold, 0);
+      await inventoryService.updateStock(stockId, threshold);
+      showToast("Cập nhật ngưỡng cảnh báo thành công", "success");
+      setEditingStockId(null);
+      void loadStocks();
+    } catch (error: any) {
+      showToast(error.message, "error");
+    } finally {
+      setThresholdUpdating(false);
+    }
+  };
   const [categoryTab, setCategoryTab] = useState<CategoryTab>("all");
   const [stockStatusFilter, setStockStatusFilter] = useState<StockStatusFilter>("");
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [batchCodeInput, setBatchCodeInput] = useState("");
+  const [batchCodeQuery, setBatchCodeQuery] = useState("");
+  const [daysUntilExpiryFilter, setDaysUntilExpiryFilter] = useState<number | "">("");
 
   const [requests, setRequests] = useState<StockAdjustmentResponse[]>([]);
   const [requestLoading, setRequestLoading] = useState(false);
@@ -194,19 +256,18 @@ export const InventoryManagementPage = () => {
   const [requestStatusFilter, setRequestStatusFilter] = useState<StockAdjustmentStatus | "">("");
   const [requestReasonFilter, setRequestReasonFilter] = useState<StockAdjustmentReason | "">("");
 
-  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
-  const [batchLoading, setBatchLoading] = useState(false);
-  const [batchItems, setBatchItems] = useState<BatchDetailResponse[]>([]);
-  const [batchVariantId, setBatchVariantId] = useState("");
-
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createPayload, setCreatePayload] = useState({
     variantId: "",
     batchId: "",
+    productName: "",
+    batchCode: "",
     adjustmentQuantity: "1",
     reason: "Damage" as StockAdjustmentReason,
     note: "",
+    importQuantity: 0,
+    remainingQuantity: 0,
   });
 
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -222,7 +283,7 @@ export const InventoryManagementPage = () => {
       setSummaryLoading(true);
       setSummary(await inventoryService.getSummary());
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i t\u1ed5ng quan", "error");
+      showToast(error instanceof Error ? error.message : "Không thể tải tổng quan", "error");
     } finally {
       setSummaryLoading(false);
     }
@@ -237,6 +298,8 @@ export const InventoryManagementPage = () => {
       const result = await inventoryService.getStock({
         CategoryId: categoryId,
         SKU: searchQuery || undefined,
+        BatchCode: batchCodeQuery || undefined,
+        DaysUntilExpiry: daysUntilExpiryFilter !== "" ? Number(daysUntilExpiryFilter) : undefined,
         StockStatus: stockStatusFilter || undefined,
         PageNumber: stockPage + 1,
         PageSize: stockRowsPerPage,
@@ -263,13 +326,18 @@ export const InventoryManagementPage = () => {
         });
         setStockBatchMap(nextBatchMap);
       }
+      
+      // Scroll to table container after loading new page
+      setTimeout(() => {
+        tableRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 100);
     } catch (error) {
-      setStockError(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i t\u1ed3n kho");
+      setStockError(error instanceof Error ? error.message : "Không thể tải tồn kho");
     } finally {
       setStockLoading(false);
       setStockBatchLoading(false);
     }
-  }, [categoryTab, searchQuery, stockPage, stockRowsPerPage, stockStatusFilter]);
+  }, [categoryTab, searchQuery, batchCodeQuery, daysUntilExpiryFilter, stockStatusFilter, stockPage, stockRowsPerPage]);
 
   const loadRequests = useCallback(async () => {
     try {
@@ -284,7 +352,7 @@ export const InventoryManagementPage = () => {
       setRequests((result.items as StockAdjustmentResponse[]) || []);
       setRequestTotalCount(result.totalCount || 0);
     } catch (error) {
-      setRequestError(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i danh s\u00e1ch y\u00eau c\u1ea7u");
+      setRequestError(error instanceof Error ? error.message : "Không thể tải danh sách yêu cầu");
     } finally {
       setRequestLoading(false);
     }
@@ -304,38 +372,50 @@ export const InventoryManagementPage = () => {
 
   const cards = useMemo(
     () => [
-      { label: "T\u1ed5ng bi\u1ebfn th\u1ec3", value: summary?.totalVariants ?? 0, icon: <InventoryIcon color="primary" fontSize="small" /> },
-      { label: "S\u1eafp h\u1ebft h\u00e0ng", value: summary?.lowStockVariantsCount ?? 0, icon: <WarningIcon color="warning" fontSize="small" /> },
-      { label: "T\u1ed5ng l\u00f4 h\u00e0ng", value: summary?.totalBatches ?? 0, icon: <LayersIcon color="info" fontSize="small" /> },
-      { label: "Y\u00eau c\u1ea7u ch\u1edd duy\u1ec7t", value: requests.filter((item) => item.status === "Pending").length, icon: <PendingIcon color="warning" fontSize="small" /> },
+      { label: "Tổng biến thể", value: summary?.totalVariants ?? 0, icon: <InventoryIcon color="primary" fontSize="small" /> },
+      { label: "Sắp hết hàng", value: summary?.lowStockVariantsCount ?? 0, icon: <WarningIcon color="warning" fontSize="small" /> },
+      { label: "Tổng lô hàng", value: summary?.totalBatches ?? 0, icon: <LayersIcon color="info" fontSize="small" /> },
+      { label: "Yêu cầu chờ duyệt", value: requests.filter((item) => item.status === "Pending").length, icon: <PendingIcon color="warning" fontSize="small" /> },
     ],
     [requests, summary],
   );
 
-  const openBatchDialog = async (variantId?: string) => {
-    if (!variantId) return;
-    setBatchVariantId(variantId);
-    setBatchDialogOpen(true);
-    try {
-      setBatchLoading(true);
-      setBatchItems(await inventoryService.getBatchesByVariant(variantId));
-    } catch (error) {
-      setBatchItems([]);
-      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i l\u00f4 h\u00e0ng", "error");
-    } finally {
-      setBatchLoading(false);
-    }
-  };
-
-  const openCreateDialog = (variantId?: string, batchId?: string) => {
-    setCreatePayload({ variantId: variantId || "", batchId: batchId || "", adjustmentQuantity: "1", reason: "Damage", note: "" });
+  const openCreateDialog = (variantId?: string, batchId?: string, productName?: string, batchCode?: string, importQuantity?: number, remainingQuantity?: number) => {
+    setCreatePayload({
+      variantId: variantId || "",
+      batchId: batchId || "",
+      productName: productName || "",
+      batchCode: batchCode || "",
+      adjustmentQuantity: "1",
+      reason: "Damage",
+      note: "",
+      importQuantity: importQuantity ?? 0,
+      remainingQuantity: remainingQuantity ?? 0,
+    });
     setCreateDialogOpen(true);
   };
 
   const handleCreateRequest = async () => {
-    const quantity = toInt(createPayload.adjustmentQuantity, 0);
-    if (!createPayload.variantId.trim() || !createPayload.batchId.trim() || quantity <= 0) {
-      showToast("M\u00e3 bi\u1ebfn th\u1ec3, m\u00e3 l\u00f4 h\u00e0ng v\u00e0 s\u1ed1 l\u01b0\u1ee3ng ph\u1ea3i h\u1ee3p l\u1ec7", "warning");
+    let quantity = toInt(createPayload.adjustmentQuantity, 0);
+    
+    // Auto negate for loss-related reasons if user entered a positive number
+    const negativeReasons: StockAdjustmentReason[] = ["Damage", "Expired", "Theft", "Loss"];
+    if (negativeReasons.includes(createPayload.reason) && quantity > 0) {
+      quantity = -quantity;
+    }
+
+    if (!createPayload.variantId.trim() || !createPayload.batchId.trim() || quantity === 0) {
+      showToast("Mã biến thể, mã lô hàng và số lượng (khác 0) phải hợp lệ", "warning");
+      return;
+    }
+
+    const finalQuantity = createPayload.remainingQuantity + quantity;
+    if (finalQuantity < 0) {
+      showToast(`Số lượng sau điều chỉnh không thể nhỏ hơn 0 (Tồn hiện tại: ${createPayload.remainingQuantity}, Yêu cầu: ${quantity})`, "warning");
+      return;
+    }
+    if (finalQuantity > createPayload.importQuantity) {
+      showToast(`Số lượng sau điều chỉnh không được vượt quá số lượng nhập kho (${createPayload.importQuantity})`, "warning");
       return;
     }
     try {
@@ -352,10 +432,10 @@ export const InventoryManagementPage = () => {
         }],
       });
       setCreateDialogOpen(false);
-      showToast("T\u1ea1o y\u00eau c\u1ea7u th\u00e0nh c\u00f4ng", "success");
+      showToast("Tạo yêu cầu thành công", "success");
       if (tab === "requests") void loadRequests();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea1o y\u00eau c\u1ea7u", "error");
+      showToast(error instanceof Error ? error.message : "Không thể tạo yêu cầu", "error");
     } finally {
       setCreateSubmitting(false);
     }
@@ -376,7 +456,7 @@ export const InventoryManagementPage = () => {
         })));
       setDetailDialogOpen(true);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 t\u1ea3i chi ti\u1ebft", "error");
+      showToast(error instanceof Error ? error.message : "Không thể tải chi tiết", "error");
     } finally {
       setDetailLoading(false);
     }
@@ -390,7 +470,7 @@ export const InventoryManagementPage = () => {
       setSelectedRequest(await stockAdjustmentService.getAdjustmentById(selectedRequest.id));
       void loadRequests();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 c\u1eadp nh\u1eadt tr\u1ea1ng th\u00e1i", "error");
+      showToast(error instanceof Error ? error.message : "Không thể cập nhật trạng thái", "error");
     } finally {
       setDetailSubmitting(false);
     }
@@ -403,14 +483,36 @@ export const InventoryManagementPage = () => {
       .map((item) => [item.id, item]));
     const payload = verifyDrafts
       .filter((item) => detailMap.has(item.detailId))
-      .map((item) => ({ detailId: item.detailId, approvedQuantity: toInt(item.approvedQuantity, 0), note: item.note.trim() || null }));
+      .map((item) => {
+        let approvedQuantity = toInt(item.approvedQuantity, 0);
+        
+        // Auto negate for loss-related reasons if user entered a positive number
+        const negativeReasons: StockAdjustmentReason[] = ["Damage", "Expired", "Theft", "Loss"];
+        if (selectedRequest.reason && negativeReasons.includes(selectedRequest.reason) && approvedQuantity > 0) {
+          approvedQuantity = -approvedQuantity;
+        }
+
+        const detailItem = detailMap.get(item.detailId);
+        const importQty = (detailItem as any)?.importQuantity ?? 0;
+        const remainingQty = (detailItem as any)?.remainingQuantity ?? 0;
+        const finalQty = remainingQty + approvedQuantity;
+
+        if (finalQty < 0) {
+          throw new Error(`Sản phẩm ${detailItem?.productName || ""}: Số lượng duyệt làm tồn kho nhỏ hơn 0 (Tồn thực tế: ${remainingQty})`);
+        }
+        if (finalQty > importQty) {
+          throw new Error(`Sản phẩm ${detailItem?.productName || ""}: Số lượng duyệt vượt quá số lượng nhập kho (${importQty})`);
+        }
+
+        return { detailId: item.detailId, approvedQuantity, note: item.note.trim() || null };
+      });
     try {
       setDetailSubmitting(true);
       await stockAdjustmentService.verifyAdjustment(selectedRequest.id, { adjustmentDetails: payload });
       setSelectedRequest(await stockAdjustmentService.getAdjustmentById(selectedRequest.id));
       void loadRequests();
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "Kh\u00f4ng th\u1ec3 duy\u1ec7t y\u00eau c\u1ea7u", "error");
+      showToast(error instanceof Error ? error.message : "Không thể duyệt yêu cầu", "error");
     } finally {
       setDetailSubmitting(false);
     }
@@ -419,27 +521,35 @@ export const InventoryManagementPage = () => {
   return (
     <AdminLayout>
       <Stack spacing={2.5}>
-        <Paper sx={{ p: 3, borderRadius: 3, border: "1px solid", borderColor: "divider" }}>
-          <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={1}>
-            <Box>
-              <Typography variant="h5" fontWeight={700}>{"Qu\u1ea3n l\u00fd t\u1ed3n kho 2.0"}</Typography>
-              <Typography color="text.secondary">{"C\u1eeda s\u1ed5 thao t\u00e1c \u0111\u1eb9p h\u01a1n, m\u00e0u s\u1eafc r\u00f5 h\u01a1n v\u00e0 d\u1ec5 s\u1eed d\u1ee5ng h\u01a1n."}</Typography>
-            </Box>
-            <Button variant="outlined" color="error" startIcon={<RefreshIcon />} onClick={() => { void loadSummary(); if (tab === "inventory") void loadStocks(); if (tab === "requests") void loadRequests(); }}>
-              {"L\u00e0m m\u1edbi"}
-            </Button>
-          </Stack>
-        </Paper>
-
         <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2,1fr)", lg: "repeat(4,1fr)" }, gap: 2 }}>
           {cards.map((card) => (
-            <Card key={card.label} sx={{ borderRadius: 2.5, border: "1px solid", borderColor: "divider" }}>
-              <CardContent>
+            <Card key={card.label} sx={{ 
+              borderRadius: 4, 
+              border: "1px solid", 
+              borderColor: "grey.200",
+              boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+              background: "linear-gradient(to bottom right, #ffffff, #fcfcfc)",
+              transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              "&:hover": { 
+                transform: "translateY(-4px)", 
+                boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+                borderColor: "primary.light"
+              }
+            }}>
+              <CardContent sx={{ p: 2.5, "&:last-child": { pb: 2.5 } }}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between">
-                  <Typography variant="body2" color="text.secondary">{card.label}</Typography>
-                  {card.icon}
+                  <Stack spacing={0.5}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 1 }}>{card.label}</Typography>
+                    {summaryLoading ? (
+                      <Skeleton width={80} height={32} />
+                    ) : (
+                      <Typography variant="h5" fontWeight={900} color="text.primary">
+                        {new Intl.NumberFormat("vi-VN").format(card.value)}
+                      </Typography>
+                    )}
+                  </Stack>
+                  <Box sx={{ p: 1.5, borderRadius: 3, bgcolor: "grey.50", display: "flex", color: "primary.main" }}>{card.icon}</Box>
                 </Stack>
-                {summaryLoading ? <Skeleton sx={{ mt: 1 }} width={80} /> : <Typography variant="h4" fontWeight={700}>{new Intl.NumberFormat("vi-VN").format(card.value)}</Typography>}
               </CardContent>
             </Card>
           ))}
@@ -447,8 +557,8 @@ export const InventoryManagementPage = () => {
 
         <Paper sx={{ borderRadius: 2.5, overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
           <Tabs value={tab} onChange={(_, value: InventoryTab) => setTab(value)} sx={{ px: 1, borderBottom: "1px solid", borderColor: "divider" }}>
-            <Tab value="inventory" label={"T\u1ed3n kho"} />
-            <Tab value="requests" label={"Y\u00eau c\u1ea7u \u0111i\u1ec1u ch\u1ec9nh"} />
+            <Tab value="inventory" label="Kho" />
+            <Tab value="requests" label="Yêu cầu điều chỉnh" />
           </Tabs>
           {tab === "inventory" ? (
             <Stack spacing={2} sx={{ p: 2 }}>
@@ -470,7 +580,7 @@ export const InventoryManagementPage = () => {
                 <TextField
                   fullWidth
                   size="small"
-                  placeholder={"T\u00ecm theo SKU"}
+                  placeholder="Tìm theo SKU"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                   onKeyDown={(event) => {
@@ -488,19 +598,48 @@ export const InventoryManagementPage = () => {
                   }}
                 />
                 <FormControl size="small" sx={{ minWidth: 180 }}>
-                  <InputLabel>{"Tr\u1ea1ng th\u00e1i"}</InputLabel>
+                  <InputLabel>Trạng thái</InputLabel>
                   <Select
-                    label={"Tr\u1ea1ng th\u00e1i"}
+                    label="Trạng thái"
                     value={stockStatusFilter}
                     onChange={(event) => {
                       setStockStatusFilter(event.target.value as StockStatusFilter);
                       setStockPage(0);
                     }}
                   >
-                    <MenuItem value="">{"T\u1ea5t c\u1ea3"}</MenuItem>
-                    <MenuItem value="Normal">{"B\u00ecnh th\u01b0\u1eddng"}</MenuItem>
-                    <MenuItem value="LowStock">{"S\u1eafp h\u1ebft"}</MenuItem>
-                    <MenuItem value="OutOfStock">{"H\u1ebft h\u00e0ng"}</MenuItem>
+                    <MenuItem value="">Tất cả</MenuItem>
+                    <MenuItem value="Normal">Bình thường</MenuItem>
+                    <MenuItem value="LowStock">Sắp hết</MenuItem>
+                    <MenuItem value="OutOfStock">Hết hàng</MenuItem>
+                  </Select>
+                </FormControl>
+                <TextField
+                  size="small"
+                  sx={{ minWidth: 160 }}
+                  placeholder="Mã lô hàng"
+                  value={batchCodeInput}
+                  onChange={(event) => setBatchCodeInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      setBatchCodeQuery(batchCodeInput.trim());
+                      setStockPage(0);
+                    }
+                  }}
+                />
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>Hạn sử dụng</InputLabel>
+                  <Select
+                    label="Hạn sử dụng"
+                    value={daysUntilExpiryFilter}
+                    onChange={(event) => {
+                      setDaysUntilExpiryFilter(event.target.value as number | "");
+                      setStockPage(0);
+                    }}
+                  >
+                    <MenuItem value="">Tất cả</MenuItem>
+                    <MenuItem value={30}>Trong 30 ngày</MenuItem>
+                    <MenuItem value={60}>Trong 60 ngày</MenuItem>
+                    <MenuItem value={90}>Trong 90 ngày</MenuItem>
                   </Select>
                 </FormControl>
                 <Button
@@ -508,53 +647,71 @@ export const InventoryManagementPage = () => {
                   color="error"
                   onClick={() => {
                     setSearchQuery(searchInput.trim());
+                    setBatchCodeQuery(batchCodeInput.trim());
                     setStockPage(0);
                   }}
                 >
-                  {"L\u1ecdc"}
+                  Lọc
                 </Button>
               </Stack>
 
               {stockError ? <Alert severity="error">{stockError}</Alert> : null}
 
-              <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-                <Table size="small">
+              <TableContainer ref={tableRef} component={Paper} elevation={0} sx={{ 
+                borderRadius: 4, 
+                border: "1px solid", 
+                borderColor: "grey.200", 
+                maxHeight: "calc(100vh - 320px)",
+                overflow: "auto",
+                boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)"
+              }}>
+                <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ minWidth: 260 }}>{"S\u1ea3n ph\u1ea9m"}</TableCell>
-                      <TableCell>SKU</TableCell>
-                      <TableCell>{"M\u00e3 t\u1ed3n kho / L\u00f4 h\u00e0ng"}</TableCell>
-                      <TableCell>{"Dung t\u00edch / N\u1ed3ng \u0111\u1ed9"}</TableCell>
-                      <TableCell align="right">{"T\u1ed5ng / Nh\u1eadp"}</TableCell>
-                      <TableCell align="right">{"Kh\u1ea3 d\u1ee5ng"}</TableCell>
-                      <TableCell align="right">{"Ng\u01b0\u1ee1ng / C\u00f2n l\u1ea1i"}</TableCell>
-                      <TableCell>{"Ng\u00e0y s\u1ea3n xu\u1ea5t / H\u1ea1n d\u00f9ng"}</TableCell>
-                      <TableCell>{"Tr\u1ea1ng th\u00e1i"}</TableCell>
-                      <TableCell align="right">{"Thao t\u00e1c"}</TableCell>
+                      <TableCell sx={{ minWidth: 260, bgcolor: "grey.50", zIndex: 11, py: 2, fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", color: "grey.600" }}>Sản phẩm</TableCell>
+                      <TableCell sx={{ bgcolor: "grey.50", zIndex: 11, py: 2, fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", color: "grey.600" }}>SKU</TableCell>
+                      <TableCell align="right" sx={{ bgcolor: "grey.50", zIndex: 11, py: 2, fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", color: "grey.600" }}>Khả dụng</TableCell>
+                      <TableCell align="right" sx={{ bgcolor: "grey.50", zIndex: 11, py: 2, fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", color: "grey.600" }}>Ngưỡng báo</TableCell>
+                      <TableCell sx={{ bgcolor: "grey.50", zIndex: 11, py: 2, fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", color: "grey.600" }}>Trạng thái</TableCell>
+                      <TableCell align="right" sx={{ bgcolor: "grey.50", zIndex: 11, py: 2, fontWeight: 800, textTransform: "uppercase", fontSize: "0.75rem", color: "grey.600" }}>Thao tác</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {stockLoading ? (
                       Array.from({ length: 8 }).map((_, idx) => (
                         <TableRow key={idx}>
-                          <TableCell colSpan={10}>
+                          <TableCell colSpan={6}>
                             <Skeleton />
                           </TableCell>
                         </TableRow>
                       ))
                     ) : stocks.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={10}>{"Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u"}</TableCell>
+                        <TableCell colSpan={6}>Không có dữ liệu</TableCell>
                       </TableRow>
                     ) : (
-                      stocks.map((stock) => {
+                      stocks.map((stock, index) => {
                         const stockKey = getStockKey(stock);
+                        const isEven = index % 2 === 0;
+                        const groupBg = "white";
                         const batches = stockBatchMap[stockKey] || [];
                         const status = stockChip(stock.status);
 
                         return (
                           <Fragment key={stockKey}>
-                            <TableRow hover sx={{ bgcolor: "grey.50" }}>
+                            <TableRow
+                              hover
+                              sx={{
+                                bgcolor: groupBg,
+                                borderTop: "16px solid #f1f5f9",
+                                "& .MuiTableCell-root": { 
+                                  py: 3, 
+                                  borderTop: "2px solid #000", // Đường kẻ màu đen rõ rệt
+                                  borderBottom: "1px solid", 
+                                  borderColor: "divider" 
+                                }
+                              }}
+                            >
                               <TableCell>
                                 <Stack direction="row" spacing={1.5} alignItems="center">
                                   <Box
@@ -591,74 +748,129 @@ export const InventoryManagementPage = () => {
                                 </Stack>
                               </TableCell>
                               <TableCell>{stock.variantSku || "-"}</TableCell>
-                              <TableCell>
-                                <Typography variant="caption" color="text.secondary">
-                                  {stock.id || stock.variantId || "-"}
-                                </Typography>
-                              </TableCell>
-                              <TableCell>{stock.volumeMl ?? 0}ml / {stock.concentrationName || "-"}</TableCell>
-                              <TableCell align="right">{stock.totalQuantity ?? 0}</TableCell>
                               <TableCell align="right">{stock.availableQuantity ?? 0}</TableCell>
-                              <TableCell align="right">{stock.lowStockThreshold ?? 0}</TableCell>
-                              <TableCell>-</TableCell>
+                              <TableCell
+                                align="right"
+                                sx={{
+                                  cursor: "pointer",
+                                  "&:hover": { bgcolor: "action.hover" },
+                                  transition: "background-color 0.2s",
+                                }}
+                                onClick={() => {
+                                  if (stock.id && editingStockId !== stock.id) {
+                                    setEditingStockId(stock.id);
+                                    setEditingThreshold(String(stock.lowStockThreshold || 0));
+                                  }
+                                }}
+                              >
+                                 {editingStockId === stock.id ? (
+                                   <Stack direction="row" spacing={0.5} alignItems="center" justifyContent="flex-end" onClick={(e) => e.stopPropagation()}>
+                                     <TextField
+                                       size="small"
+                                       type="number"
+                                       value={editingThreshold}
+                                       onChange={(e) => setEditingThreshold(e.target.value)}
+                                       variant="standard"
+                                       InputProps={{
+                                         disableUnderline: true,
+                                         sx: {
+                                           fontSize: "0.875rem",
+                                           "& input": { textAlign: "right", p: 0 },
+                                         },
+                                       }}
+                                       sx={{ width: 60 }}
+                                       autoFocus
+                                       onKeyDown={(e) => {
+                                         if (e.key === "Enter" && stock.id) void handleUpdateThreshold(stock.id);
+                                         if (e.key === "Escape") setEditingStockId(null);
+                                       }}
+                                       onBlur={() => setEditingStockId(null)}
+                                     />
+                                   </Stack>
+                                 ) : (
+                                   <Typography variant="body2">{stock.lowStockThreshold ?? 0}</Typography>
+                                 )}
+                              </TableCell>
                               <TableCell>
                                 <Chip size="small" color={status.color} label={status.label} />
                               </TableCell>
-                              <TableCell align="right">
-                                <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                                  <Button size="small" onClick={() => void openBatchDialog(stock.variantId)}>
-                                    {"Xem l\u00f4"}
-                                  </Button>
-                                  {isAdmin || isStaff ? (
-                                    <Button size="small" color="error" onClick={() => openCreateDialog(stock.variantId)}>
-                                      {"T\u1ea1o y\u00eau c\u1ea7u"}
-                                    </Button>
-                                  ) : null}
-                                </Stack>
-                              </TableCell>
+                              <TableCell align="right" />
                             </TableRow>
 
                             {stockBatchLoading && batches.length === 0 ? (
                               <TableRow key={`${stockKey}-batch-loading`}>
-                                <TableCell colSpan={10} sx={{ pl: 9 }}>
+                                <TableCell colSpan={6} sx={{ pl: 9 }}>
                                   <Skeleton width="45%" />
                                 </TableCell>
                               </TableRow>
                             ) : batches.length === 0 ? (
                               <TableRow key={`${stockKey}-empty-batch`}>
-                                <TableCell colSpan={10} sx={{ pl: 9, color: "text.secondary" }}>
-                                  {"Ch\u01b0a c\u00f3 l\u00f4 h\u00e0ng cho s\u1ea3n ph\u1ea9m n\u00e0y"}
+                                <TableCell colSpan={6} sx={{ pl: 9, color: "text.secondary" }}>
+                                  Chưa có lô hàng cho sản phẩm này
                                 </TableCell>
                               </TableRow>
                             ) : (
                               batches.map((batch) => {
                                 const expiry = batchExpiryChip(batch);
+                                const isBatchExpired = batch.isExpired || (typeof batch.daysUntilExpiry === "number" && batch.daysUntilExpiry < 0);
+                                const isOutOfStock = (batch.availableQuantity ?? 0) <= 0;
+
                                 return (
-                                  <TableRow key={batch.id || `${stockKey}-${batch.batchCode}`}>
+                                  <TableRow
+                                    key={batch.id || `${stockKey}-${batch.batchCode}`}
+                                    sx={{
+                                      bgcolor: isBatchExpired ? "#fff5f5" : "grey.100",
+                                      "& .MuiTableCell-root": { py: 1.5, borderBottom: "1px solid white" },
+                                      ...(isBatchExpired && { borderLeft: "4px solid #f44336" }),
+                                    }}
+                                  >
                                     <TableCell sx={{ pl: 9 }}>
-                                      <Chip size="small" variant="outlined" label="Batch" />
+                                      <Stack direction="row" spacing={0.5} alignItems="center">
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            fontFamily: "'Courier New', Courier, monospace",
+                                            fontWeight: 900,
+                                            color: "text.primary",
+                                            letterSpacing: "1px",
+                                            fontSize: "1rem",
+                                          }}
+                                        >
+                                          {batch.batchCode || "-"}
+                                        </Typography>
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => {
+                                            if (batch.batchCode) {
+                                              void navigator.clipboard.writeText(batch.batchCode);
+                                              showToast("Đã sao chép mã lô", "success");
+                                            }
+                                          }}
+                                          sx={{ p: 0.5 }}
+                                        >
+                                          <CopyIcon sx={{ fontSize: "0.9rem" }} />
+                                        </IconButton>
+                                      </Stack>
                                     </TableCell>
                                     <TableCell>
                                       <Typography variant="caption" color="text.secondary">
-                                        {"L\u00f4 c\u1ee7a SKU"} {batch.variantSku || stock.variantSku || "-"}
+                                        SKU: {batch.variantSku || stock.variantSku || "-"}
                                       </Typography>
                                     </TableCell>
-                                    <TableCell>{batch.batchCode || "-"}</TableCell>
-                                    <TableCell>{batch.volumeMl ?? stock.volumeMl ?? 0}ml / {batch.concentrationName || stock.concentrationName || "-"}</TableCell>
-                                    <TableCell align="right">{batch.importQuantity ?? 0}</TableCell>
-                                    <TableCell align="right">{batch.availableQuantity ?? 0}</TableCell>
-                                    <TableCell align="right">{batch.remainingQuantity ?? 0}</TableCell>
-                                    <TableCell>
+                                    <TableCell align="right" sx={{ color: isOutOfStock ? "error.main" : "inherit", fontWeight: isOutOfStock ? 900 : "inherit" }}>
+                                      {batch.availableQuantity ?? 0}
+                                    </TableCell>
+                                    <TableCell align="right">
                                       <Typography variant="caption" display="block">NSX: {formatDate(batch.manufactureDate)}</Typography>
                                       <Typography variant="caption" color="text.secondary" display="block">HSD: {formatDate(batch.expiryDate)}</Typography>
                                     </TableCell>
                                     <TableCell>
-                                      <Chip size="small" variant="outlined" color={expiry.color} label={expiry.label} />
+                                      <Chip size="small" variant="outlined" color={expiry.color} label={expiry.label} sx={{ fontWeight: isBatchExpired ? 700 : "inherit" }} />
                                     </TableCell>
                                     <TableCell align="right">
                                       {isAdmin || isStaff ? (
-                                        <Button size="small" color="error" onClick={() => openCreateDialog(stock.variantId, batch.id)}>
-                                          {"T\u1ea1o y\u00eau c\u1ea7u"}
+                                        <Button size="small" color="error" onClick={() => openCreateDialog(stock.variantId, batch.id, stock.productName, batch.batchCode, batch.importQuantity, batch.remainingQuantity)}>
+                                          Tạo yêu cầu
                                         </Button>
                                       ) : null}
                                     </TableCell>
@@ -691,9 +903,9 @@ export const InventoryManagementPage = () => {
             <Stack spacing={2} sx={{ p: 2 }}>
               <Stack direction={{ xs: "column", md: "row" }} spacing={1}>
                 <FormControl size="small" sx={{ minWidth: 180 }}>
-                  <InputLabel>{"Tr\u1ea1ng th\u00e1i"}</InputLabel>
+                  <InputLabel>Trạng thái</InputLabel>
                   <Select
-                    label={"Tr\u1ea1ng th\u00e1i"}
+                    label="Trạng thái"
                     value={requestStatusFilter}
                     onChange={(event) => {
                       setRequestStatusFilter(event.target.value as StockAdjustmentStatus | "");
@@ -702,22 +914,22 @@ export const InventoryManagementPage = () => {
                   >
                     {ADJUSTMENT_STATUS_OPTIONS.map((status) => (
                       <MenuItem key={status || "all"} value={status}>
-                        {status ? STATUS_LABELS[status] : "T\u1ea5t c\u1ea3"}
+                        {status ? STATUS_LABELS[status] : "Tất cả"}
                       </MenuItem>
                     ))}
                   </Select>
                 </FormControl>
                 <FormControl size="small" sx={{ minWidth: 180 }}>
-                  <InputLabel>{"L\u00fd do"}</InputLabel>
+                  <InputLabel>Lý do</InputLabel>
                   <Select
-                    label={"L\u00fd do"}
+                    label="Lý do"
                     value={requestReasonFilter}
                     onChange={(event) => {
                       setRequestReasonFilter(event.target.value as StockAdjustmentReason | "");
                       setRequestPage(0);
                     }}
                   >
-                    <MenuItem value="">{"T\u1ea5t c\u1ea3"}</MenuItem>
+                    <MenuItem value="">Tất cả</MenuItem>
                     {ADJUSTMENT_REASON_OPTIONS.map((reason) => (
                       <MenuItem key={reason} value={reason}>
                         {REASON_LABELS[reason]}
@@ -733,7 +945,7 @@ export const InventoryManagementPage = () => {
                     setRequestPage(0);
                   }}
                 >
-                  {"\u0110\u1eb7t l\u1ea1i"}
+                  Đặt lại
                 </Button>
               </Stack>
 
@@ -743,44 +955,39 @@ export const InventoryManagementPage = () => {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>{"M\u00e3 y\u00eau c\u1ea7u"}</TableCell>
-                      <TableCell>{"L\u00fd do"}</TableCell>
-                      <TableCell>{"Tr\u1ea1ng th\u00e1i"}</TableCell>
-                      <TableCell>{"Ng\u01b0\u1eddi t\u1ea1o"}</TableCell>
-                      <TableCell align="right">{"S\u1ed1 d\u00f2ng"}</TableCell>
-                      <TableCell>{"Ng\u00e0y t\u1ea1o"}</TableCell>
-                      <TableCell align="right">{"Thao t\u00e1c"}</TableCell>
+                      <TableCell>Ngày tạo</TableCell>
+                      <TableCell>Lý do</TableCell>
+                      <TableCell>Trạng thái</TableCell>
+                      <TableCell>Người tạo</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {requestLoading ? (
                       Array.from({ length: 8 }).map((_, idx) => (
                         <TableRow key={idx}>
-                          <TableCell colSpan={7}>
+                          <TableCell colSpan={4}>
                             <Skeleton />
                           </TableCell>
                         </TableRow>
                       ))
                     ) : requests.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7}>{"Ch\u01b0a c\u00f3 y\u00eau c\u1ea7u"}</TableCell>
+                        <TableCell colSpan={4}>Không có dữ liệu</TableCell>
                       </TableRow>
                     ) : (
                       requests.map((item) => (
-                        <TableRow hover key={item.id}>
-                          <TableCell>{item.id || "-"}</TableCell>
+                        <TableRow
+                          hover
+                          key={item.id}
+                          onClick={() => void openRequestDetail(item.id)}
+                          sx={{ cursor: "pointer" }}
+                        >
+                          <TableCell sx={{ fontWeight: 500 }}>{formatDateTime(item.createdAt || item.adjustmentDate)}</TableCell>
                           <TableCell>{item.reason ? REASON_LABELS[item.reason] : "-"}</TableCell>
                           <TableCell>
                             <Chip size="small" color={requestChip(item.status)} label={item.status ? STATUS_LABELS[item.status] : "-"} />
                           </TableCell>
                           <TableCell>{item.createdByName || "-"}</TableCell>
-                          <TableCell align="right">{item.adjustmentDetails?.length ?? 0}</TableCell>
-                          <TableCell>{formatDateTime(item.createdAt || item.adjustmentDate)}</TableCell>
-                          <TableCell align="right">
-                            <Button size="small" onClick={() => void openRequestDetail(item.id)}>
-                              {"Chi ti\u1ebft"}
-                            </Button>
-                          </TableCell>
                         </TableRow>
                       ))
                     )}
@@ -794,7 +1001,7 @@ export const InventoryManagementPage = () => {
                 page={requestPage}
                 onPageChange={(_, page) => setRequestPage(page)}
                 rowsPerPage={requestRowsPerPage}
-                onRowsPerPageChange={(event) => {
+                onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
                   setRequestRowsPerPage(toInt(event.target.value, 10));
                   setRequestPage(0);
                 }}
@@ -805,105 +1012,224 @@ export const InventoryManagementPage = () => {
         </Paper>
       </Stack>
 
-      <Dialog open={batchDialogOpen} onClose={() => setBatchDialogOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle sx={{ pb: 1 }}>{"Danh s\u00e1ch l\u00f4 h\u00e0ng"}</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          {batchLoading ? <Skeleton height={80} /> : batchItems.length === 0 ? <Alert severity="info">{"Kh\u00f4ng c\u00f3 l\u00f4 h\u00e0ng cho bi\u1ebfn th\u1ec3 n\u00e0y"}</Alert> : (
-            <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>{"M\u00e3 l\u00f4 h\u00e0ng"}</TableCell>
-                    <TableCell align="right">{"Nh\u1eadp"}</TableCell>
-                    <TableCell align="right">{"C\u00f2n l\u1ea1i"}</TableCell>
-                    <TableCell align="right">{"Kh\u1ea3 d\u1ee5ng"}</TableCell>
-                    <TableCell>HSD</TableCell>
-                    <TableCell align="right">{"Thao t\u00e1c"}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {batchItems.map((item) => (
-                    <TableRow key={item.id || item.batchCode}>
-                      <TableCell>{item.batchCode || "-"}</TableCell>
-                      <TableCell align="right">{item.importQuantity ?? 0}</TableCell>
-                      <TableCell align="right">{item.remainingQuantity ?? 0}</TableCell>
-                      <TableCell align="right">{item.availableQuantity ?? 0}</TableCell>
-                      <TableCell>{formatDateTime(item.expiryDate)}</TableCell>
-                      <TableCell align="right">
-                        {isAdmin || isStaff ? (
-                          <Button size="small" color="error" onClick={() => { openCreateDialog(batchVariantId, item.id); setBatchDialogOpen(false); }}>
-                            {"T\u1ea1o y\u00eau c\u1ea7u"}
-                          </Button>
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setBatchDialogOpen(false)}>{"\u0110\u00f3ng"}</Button>
-        </DialogActions>
-      </Dialog>
+      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" } }}>
+        <DialogTitle sx={{ p: 3, pb: 1, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <Typography variant="h6" fontWeight={800}>Tạo yêu cầu điều chỉnh</Typography>
+          <IconButton onClick={() => setCreateDialogOpen(false)} size="small" sx={{ color: "grey.400" }}><CloseIcon /></IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, pt: 1 }}>
+          <Stack spacing={2.5}>
+            <Box sx={{ p: 2, bgcolor: "grey.50", borderRadius: 3, border: "1px solid", borderColor: "grey.200" }}>
+              <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ textTransform: "uppercase", letterSpacing: 1 }}>Sản phẩm điều chỉnh</Typography>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mt: 0.5 }}>{createPayload.productName || "Không xác định"}</Typography>
+              <Divider sx={{ my: 1.5, opacity: 0.6 }} />
+              <Grid container spacing={2}>
+                <Grid size={4}>
+                  <Typography variant="caption" color="text.secondary" display="block">Lô hàng</Typography>
+                  <Typography variant="body2" sx={{ fontFamily: "monospace", fontWeight: 700, color: "primary.main" }}>{createPayload.batchCode || "-"}</Typography>
+                </Grid>
+                <Grid size={4}>
+                  <Typography variant="caption" color="text.secondary" display="block">Số lượng nhập</Typography>
+                  <Typography variant="body2" fontWeight={700}>{createPayload.importQuantity}</Typography>
+                </Grid>
+                <Grid size={4}>
+                  <Typography variant="caption" color="text.secondary" display="block">Tồn thực tế</Typography>
+                  <Typography variant="body2" fontWeight={700} color="success.main">{createPayload.remainingQuantity}</Typography>
+                </Grid>
+              </Grid>
+            </Box>
 
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle sx={{ pb: 1 }}>{"T\u1ea1o y\u00eau c\u1ea7u \u0111i\u1ec1u ch\u1ec9nh t\u1ed3n kho"}</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          <Stack spacing={1.5}>
-            <TextField label={"M\u00e3 bi\u1ebfn th\u1ec3"} value={createPayload.variantId} onChange={(event) => setCreatePayload((prev) => ({ ...prev, variantId: event.target.value }))} fullWidth />
-            <TextField label={"M\u00e3 l\u00f4 h\u00e0ng"} value={createPayload.batchId} onChange={(event) => setCreatePayload((prev) => ({ ...prev, batchId: event.target.value }))} fullWidth />
-            <TextField label={"S\u1ed1 l\u01b0\u1ee3ng"} type="number" value={createPayload.adjustmentQuantity} onChange={(event) => setCreatePayload((prev) => ({ ...prev, adjustmentQuantity: event.target.value }))} fullWidth />
+            <TextField
+              label="Số lượng điều chỉnh"
+              type="number"
+              variant="outlined"
+              value={createPayload.adjustmentQuantity}
+              onChange={(event) => setCreatePayload((prev) => ({ ...prev, adjustmentQuantity: event.target.value }))}
+              fullWidth
+              helperText="Có thể nhập số âm để giảm tồn kho. Hệ thống sẽ tự động chuyển âm cho các lý do thất thoát."
+              slotProps={{ input: { sx: { fontWeight: 600, fontSize: "1.1rem" } } }}
+            />
             <FormControl fullWidth>
-              <InputLabel>{"L\u00fd do"}</InputLabel>
-              <Select label={"L\u00fd do"} value={createPayload.reason} onChange={(event) => setCreatePayload((prev) => ({ ...prev, reason: event.target.value as StockAdjustmentReason }))}>
+              <InputLabel>Lý do điều chỉnh</InputLabel>
+              <Select label="Lý do điều chỉnh" value={createPayload.reason} onChange={(event) => setCreatePayload((prev) => ({ ...prev, reason: event.target.value as StockAdjustmentReason }))}>
                 {ADJUSTMENT_REASON_OPTIONS.map((reason) => <MenuItem key={reason} value={reason}>{REASON_LABELS[reason]}</MenuItem>)}
               </Select>
             </FormControl>
-            <TextField multiline minRows={3} label={"Ghi ch\u00fa"} value={createPayload.note} onChange={(event) => setCreatePayload((prev) => ({ ...prev, note: event.target.value }))} fullWidth />
+            <TextField multiline minRows={3} label="Ghi chú chi tiết" placeholder="Vui lòng nhập lý do cụ thể..." value={createPayload.note} onChange={(event) => setCreatePayload((prev) => ({ ...prev, note: event.target.value }))} fullWidth />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setCreateDialogOpen(false)}>{"H\u1ee7y"}</Button>
-          <LoadingButton loading={createSubmitting} variant="contained" color="error" onClick={handleCreateRequest}>{"T\u1ea1o y\u00eau c\u1ea7u"}</LoadingButton>
+        <DialogActions sx={{ p: 3, pt: 0 }}>
+          <Button onClick={() => setCreateDialogOpen(false)} sx={{ color: "grey.600", fontWeight: 600 }}>Hủy</Button>
+          <LoadingButton loading={createSubmitting} variant="contained" color="error" onClick={handleCreateRequest} sx={{ borderRadius: 2, px: 4, py: 1, fontWeight: 700, boxShadow: 2 }}>Tạo yêu cầu</LoadingButton>
         </DialogActions>
       </Dialog>
-
-      <Dialog open={detailDialogOpen} onClose={() => setDetailDialogOpen(false)} fullWidth maxWidth="md">
-        <DialogTitle sx={{ pb: 1 }}>{"Chi ti\u1ebft y\u00eau c\u1ea7u"}</DialogTitle>
-        <DialogContent sx={{ pt: 1 }}>
-          {detailLoading ? <Skeleton height={120} /> : !selectedRequest ? <Alert severity="warning">{"Kh\u00f4ng c\u00f3 d\u1eef li\u1ec7u"}</Alert> : (
-            <Stack spacing={1.5}>
-              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, bgcolor: "grey.50" }}>
-                <Typography variant="subtitle2">{"M\u00e3"}: {selectedRequest.id || "-"}</Typography>
-                <Typography variant="body2" color="text.secondary">{"L\u00fd do"}: {selectedRequest.reason ? REASON_LABELS[selectedRequest.reason] : "-"} | {"Tr\u1ea1ng th\u00e1i"}: {selectedRequest.status ? STATUS_LABELS[selectedRequest.status] : "-"}</Typography>
-                <Typography variant="body2" color="text.secondary">{"Ng\u00e0y t\u1ea1o"}: {formatDateTime(selectedRequest.createdAt || selectedRequest.adjustmentDate)}</Typography>
-              </Paper>
-              {(selectedRequest.adjustmentDetails || []).map((detail) => (
-                <Paper key={detail.id || detail.batchId || detail.productVariantId} variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-                  <Stack spacing={1}>
-                    <Typography variant="subtitle2">SKU: {detail.variantSku || "-"} | {"L\u00f4 h\u00e0ng"}: {detail.batchCode || "-"}</Typography>
-                    <Typography variant="body2" color="text.secondary">{"Y\u00eau c\u1ea7u"}: {detail.adjustmentQuantity ?? 0} | {"\u0110\u00e3 duy\u1ec7t"}: {detail.approvedQuantity ?? 0}</Typography>
-                    {selectedRequest.status === "InProgress" && detail.id ? (
-                      <>
-                        <Divider />
-                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                          <TextField size="small" type="number" label={"S\u1ed1 l\u01b0\u1ee3ng duy\u1ec7t"} value={verifyDrafts.find((item) => item.detailId === detail.id)?.approvedQuantity || "0"} onChange={(event) => setVerifyDrafts((prev) => prev.map((item) => item.detailId === detail.id ? { ...item, approvedQuantity: event.target.value } : item))} />
-                          <TextField size="small" fullWidth label={"Ghi ch\u00fa duy\u1ec7t"} value={verifyDrafts.find((item) => item.detailId === detail.id)?.note || ""} onChange={(event) => setVerifyDrafts((prev) => prev.map((item) => item.detailId === detail.id ? { ...item, note: event.target.value } : item))} />
-                        </Stack>
-                      </>
-                    ) : null}
+ 
+      <Dialog open={detailDialogOpen} onClose={() => setDetailDialogOpen(false)} fullWidth maxWidth="md" PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}>
+        <DialogTitle sx={{ p: 3, pb: 2, display: "flex", justifyContent: "space-between", alignItems: "flex-start", bgcolor: "grey.50", borderBottom: "1px solid", borderColor: "divider" }}>
+          <Stack spacing={0.5}>
+            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: "uppercase", letterSpacing: 1.5 }}>
+              Chi tiết yêu cầu
+            </Typography>
+            <Typography variant="h5" fontWeight={900} color="text.primary">
+              {selectedRequest?.reason ? REASON_LABELS[selectedRequest.reason] : "Điều chỉnh kho"}
+            </Typography>
+          </Stack>
+          <IconButton onClick={() => setDetailDialogOpen(false)} size="small" sx={{ color: "grey.400" }}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          {detailLoading ? (
+            <Box sx={{ p: 4 }}><Skeleton height={200} /></Box>
+          ) : !selectedRequest ? (
+            <Box sx={{ p: 4 }}><Alert severity="warning">Không tìm thấy dữ liệu yêu cầu</Alert></Box>
+          ) : (
+            <Box>
+              {/* Header Meta Info */}
+              <Grid container sx={{ p: 3, bgcolor: "white" }}>
+                <Grid size={4}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ p: 1, borderRadius: 2, bgcolor: `${requestChip(selectedRequest.status)}.50`, color: `${requestChip(selectedRequest.status)}.main` }}>
+                      <PendingIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" display="block">Trạng thái</Typography>
+                      <Chip
+                        label={STATUS_LABELS[selectedRequest.status || "Pending"]}
+                        color={requestChip(selectedRequest.status)}
+                        size="small"
+                        sx={{ fontWeight: 800, height: 24 }}
+                      />
+                    </Box>
                   </Stack>
-                </Paper>
-              ))}
-            </Stack>
+                </Grid>
+                <Grid size={4}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ p: 1, borderRadius: 2, bgcolor: "grey.100", color: "grey.600" }}>
+                      <SearchIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" display="block">Người tạo</Typography>
+                      <Typography variant="body2" fontWeight={700}>{selectedRequest.createdByName || "Hệ thống"}</Typography>
+                    </Box>
+                  </Stack>
+                </Grid>
+                <Grid size={4}>
+                  <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Box sx={{ p: 1, borderRadius: 2, bgcolor: "grey.100", color: "grey.600" }}>
+                      <WarningIcon />
+                    </Box>
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" display="block">Ngày tạo</Typography>
+                      <Typography variant="body2" fontWeight={700}>{formatDateTime(selectedRequest.createdAt || selectedRequest.adjustmentDate)}</Typography>
+                    </Box>
+                  </Stack>
+                </Grid>
+              </Grid>
+
+              <Divider />
+
+              {/* Items Table */}
+              <Box sx={{ p: 3 }}>
+                <TableContainer component={Paper} elevation={0} sx={{ border: "1px solid", borderColor: "grey.200", borderRadius: 3, overflow: "hidden" }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: "grey.50" }}>
+                        <TableCell sx={{ py: 1.5, fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "grey.600" }}>Sản phẩm / SKU</TableCell>
+                        <TableCell sx={{ py: 1.5, fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "grey.600" }}>Lô hàng</TableCell>
+                        <TableCell align="right" sx={{ py: 1.5, fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "grey.600" }}>Nhập</TableCell>
+                        <TableCell align="right" sx={{ py: 1.5, fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "grey.600" }}>Tồn</TableCell>
+                        <TableCell align="right" sx={{ py: 1.5, fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "grey.600" }}>Yêu cầu</TableCell>
+                        {selectedRequest.status !== "Pending" && (
+                          <TableCell align="right" sx={{ py: 1.5, fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "grey.600" }}>Đã duyệt</TableCell>
+                        )}
+                        {selectedRequest.status === "InProgress" && isAdmin && (
+                          <TableCell sx={{ py: 1.5, fontWeight: 800, fontSize: "0.75rem", textTransform: "uppercase", color: "grey.600", minWidth: 150 }}>Duyệt số lượng</TableCell>
+                        )}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {(selectedRequest.adjustmentDetails || []).map((detail) => (
+                        <TableRow key={detail.id || detail.batchId || detail.productVariantId} hover>
+                          <TableCell sx={{ py: 2 }}>
+                            <Typography variant="body2" fontWeight={700} sx={{ mb: 0.5 }}>{detail.productName || "-"}</Typography>
+                            <Typography variant="caption" sx={{ fontFamily: "monospace", bgcolor: "grey.100", px: 0.8, py: 0.2, borderRadius: 1, color: "grey.600" }}>{detail.variantSku || "-"}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontFamily: "monospace", fontWeight: 700, color: "primary.main" }}>{detail.batchCode || "-"}</Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" fontWeight={600} color="text.secondary">{ (detail as any).importQuantity ?? "-" }</Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" fontWeight={700} color="text.primary">{ (detail as any).remainingQuantity ?? "-" }</Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <Typography variant="body2" color={Number(detail.adjustmentQuantity) < 0 ? "error.main" : "success.main"} fontWeight={900}>{detail.adjustmentQuantity ?? 0}</Typography>
+                          </TableCell>
+                          {selectedRequest.status !== "Pending" && (
+                            <TableCell align="right">
+                              <Typography variant="body2" color="success.main" fontWeight={900}>{detail.approvedQuantity ?? 0}</Typography>
+                            </TableCell>
+                          )}
+                          {selectedRequest.status === "InProgress" && isAdmin && detail.id ? (
+                            <TableCell>
+                              <Stack spacing={1} sx={{ py: 1 }}>
+                                <TextField
+                                  size="small"
+                                  type="number"
+                                  placeholder="SL"
+                                  value={verifyDrafts.find((item) => item.detailId === detail.id)?.approvedQuantity || ""}
+                                  onChange={(event) =>
+                                    setVerifyDrafts((prev) =>
+                                      prev.map((item) =>
+                                        item.detailId === detail.id ? { ...item, approvedQuantity: event.target.value } : item
+                                      )
+                                    )
+                                  }
+                                  slotProps={{ input: { sx: { fontWeight: 700, textAlign: "right" } } }}
+                                  fullWidth
+                                />
+                                <TextField
+                                  size="small"
+                                  placeholder="Ghi chú duyệt..."
+                                  value={verifyDrafts.find((item) => item.detailId === detail.id)?.note || ""}
+                                  onChange={(event) =>
+                                    setVerifyDrafts((prev) =>
+                                      prev.map((item) =>
+                                        item.detailId === detail.id ? { ...item, note: event.target.value } : item
+                                      )
+                                    )
+                                  }
+                                  fullWidth
+                                />
+                              </Stack>
+                            </TableCell>
+                          ) : null}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+
+                {selectedRequest.note && (
+                  <Box sx={{ mt: 3, p: 2, bgcolor: "blue.50", borderRadius: 3, borderLeft: "4px solid", borderColor: "blue.400" }}>
+                    <Typography variant="caption" color="blue.700" fontWeight={800} sx={{ textTransform: "uppercase", mb: 0.5, display: "block" }}>Ghi chú yêu cầu</Typography>
+                    <Typography variant="body2" color="blue.900">{selectedRequest.note}</Typography>
+                  </Box>
+                )}
+              </Box>
+            </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          {selectedRequest?.status === "Pending" && (isAdmin || isStaff) ? <LoadingButton loading={detailSubmitting} variant="outlined" color="warning" onClick={() => void handleUpdateRequestStatus("InProgress")}>{"Chuy\u1ec3n x\u1eed l\u00fd"}</LoadingButton> : null}
-          {selectedRequest?.status === "InProgress" && (isAdmin || isStaff) ? <LoadingButton loading={detailSubmitting} variant="contained" color="success" onClick={handleVerifyRequest}>{"Duy\u1ec7t y\u00eau c\u1ea7u"}</LoadingButton> : null}
-          <Button onClick={() => setDetailDialogOpen(false)}>{"\u0110\u00f3ng"}</Button>
+        <DialogActions sx={{ p: 3, bgcolor: "grey.50", borderTop: "1px solid", borderColor: "divider" }}>
+          <Button onClick={() => setDetailDialogOpen(false)} sx={{ color: "grey.600", fontWeight: 600 }}>Đóng</Button>
+          {selectedRequest?.status === "Pending" && isAdmin && (
+            <LoadingButton loading={detailSubmitting} variant="contained" color="warning" onClick={() => void handleUpdateRequestStatus("InProgress")} sx={{ borderRadius: 2, fontWeight: 700 }}>Bắt đầu xử lý</LoadingButton>
+          )}
+          {selectedRequest?.status === "InProgress" && isAdmin && (
+            <LoadingButton loading={detailSubmitting} variant="contained" color="success" onClick={handleVerifyRequest} sx={{ borderRadius: 2, px: 4, fontWeight: 700, boxShadow: "0 4px 12px rgba(46, 125, 50, 0.2)" }}>Hoàn tất duyệt</LoadingButton>
+          )}
         </DialogActions>
       </Dialog>
     </AdminLayout>

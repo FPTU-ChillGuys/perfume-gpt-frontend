@@ -27,6 +27,7 @@ import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/hooks/useAuth";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import type { ProductFastLook } from "@/types/product";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 interface ProductQuickViewDialogProps {
   open: boolean;
@@ -776,23 +777,23 @@ const ProductQuickViewDialog = ({
               </Typography>
             ) : (
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2} mt={3}>
-                <Button
+                <LoadingButton
                   variant="outlined"
                   onClick={() => handleAddToCart(false)}
-                  disabled={isAdding}
+                  loading={isAdding}
                   fullWidth
                 >
-                  {isAdding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
-                </Button>
-                <Button
+                  Thêm vào giỏ hàng
+                </LoadingButton>
+                <LoadingButton
                   variant="contained"
                   color="error"
                   onClick={() => handleAddToCart(true)}
-                  disabled={isAdding}
+                  loading={isAdding}
                   fullWidth
                 >
-                  {isAdding ? "Đang xử lý..." : "Mua ngay"}
-                </Button>
+                  Mua ngay
+                </LoadingButton>
               </Stack>
             )}
           </Box>

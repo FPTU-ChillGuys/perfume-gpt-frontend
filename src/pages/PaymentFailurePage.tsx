@@ -95,10 +95,11 @@ const resolveInitialPaymentMethod = (
   return deliveryMethod === "PickupInStore" ? "CashInStore" : "CashOnDelivery";
 };
 
-const formatCurrency = (value?: string | number) => {
-  const numValue =
-    typeof value === "string" ? parseInt(value) / 100 : Number(value ?? 0);
-  return new Intl.NumberFormat("vi-VN").format(numValue) + "đ";
+const formatCurrency = (value?: string | number, isVnPay = false) => {
+  if (!value) return "0đ";
+  const numValue = Number(value);
+  const finalValue = isVnPay ? numValue / 100 : numValue;
+  return new Intl.NumberFormat("vi-VN").format(finalValue) + "đ";
 };
 
 const formatDateTime = (dateStr?: string) => {
@@ -112,7 +113,9 @@ const formatDateTime = (dateStr?: string) => {
   return `${day}/${month}/${year} ${hour}:${minute}:${second}`;
 };
 
-const getErrorMessage = (responseCode?: string | null) => {
+const getErrorMessage = (responseCode?: string | null, message?: string | null) => {
+  if (message && message !== "Successful.") return message;
+
   const errorMessages: Record<string, string> = {
     "07": "Giao dịch bị nghi ngờ gian lận",
     "09": "Thẻ chưa đăng ký dịch vụ Internet Banking",
@@ -248,14 +251,18 @@ export const PaymentFailurePage = () => {
   }, [deliveryMethod]);
 
   const orderCode = searchParams.get("orderCode");
-  const orderId =  searchParams.get("orderId") || searchParams.get("orderId");
-  const paymentId = searchParams.get("paymentId"); // Get paymentId from URL params
-  const amount = searchParams.get("vnp_Amount");
+  const orderId =  searchParams.get("orderId");
+  const paymentId = searchParams.get("paymentId") || searchParams.get("vnp_TxnRef") || searchParams.get("requestId");
+
+  // Unified payment info extraction
+  const isVnPay = searchParams.has("vnp_ResponseCode");
+  const amount = searchParams.get("vnp_Amount") || searchParams.get("amount");
   const bankCode = searchParams.get("vnp_BankCode");
   const payDate = searchParams.get("vnp_PayDate");
-  const responseCode = searchParams.get("vnp_ResponseCode");
-  const transactionNo = searchParams.get("vnp_TransactionNo");
-  const orderInfo = searchParams.get("vnp_OrderInfo");
+  const responseCode = searchParams.get("vnp_ResponseCode") || searchParams.get("resultCode");
+  const transactionNo = searchParams.get("vnp_TransactionNo") || searchParams.get("transId");
+  const orderInfo = searchParams.get("vnp_OrderInfo") || searchParams.get("orderInfo");
+  const message = searchParams.get("message");
 
   const decodedOrderInfo = decodeURIComponent(orderInfo || "");
   const hasPosSessionInOrderInfo = /PosSessionId\s*:/i.test(decodedOrderInfo);
@@ -313,7 +320,7 @@ export const PaymentFailurePage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
-  const errorMessage = getErrorMessage(responseCode);
+  const errorMessage = getErrorMessage(responseCode, message);
 
   const getPaymentMethodLabel = (method: PaymentMethod) =>
     PAYMENT_METHODS.find((item) => item.value === method)?.label || method;
@@ -498,7 +505,7 @@ export const PaymentFailurePage = () => {
                   <Box display="flex" justifyContent="space-between" mb={1}>
                     <Typography color="text.secondary">Số tiền:</Typography>
                     <Typography fontWeight={700} color="error">
-                      {formatCurrency(amount)}
+                      {formatCurrency(amount, isVnPay)}
                     </Typography>
                   </Box>
                 )}
@@ -665,7 +672,7 @@ export const PaymentFailurePage = () => {
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography color="text.secondary">Số tiền:</Typography>
                   <Typography fontWeight={700} color="error">
-                    {formatCurrency(amount)}
+                    {formatCurrency(amount, isVnPay)}
                   </Typography>
                 </Box>
               )}

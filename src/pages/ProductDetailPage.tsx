@@ -53,6 +53,7 @@ import type {
   ReviewResponse,
   ReviewStatisticsResponse,
 } from "@/types/review";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 const currencyFormatter = new Intl.NumberFormat("vi-VN", {
   style: "currency",
@@ -2300,21 +2301,21 @@ const ProductDetailPage = () => {
               {/* Action buttons */}
               {!isSelectedVariantOutOfStock && !isBackOfficeRole && (
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                  <Button
+                  <LoadingButton
                     variant="outlined"
                     onClick={() => handleAddToCart(false)}
-                    disabled={isAdding}
+                    loading={isAdding}
                   >
-                    {isAdding ? "Đang thêm..." : "Thêm vào giỏ"}
-                  </Button>
-                  <Button
+                    Thêm vào giỏ
+                  </LoadingButton>
+                  <LoadingButton
                     variant="contained"
                     color="error"
                     onClick={() => handleAddToCart(true)}
-                    disabled={isAdding}
+                    loading={isAdding}
                   >
-                    {isAdding ? "Đang xử lý..." : "Mua ngay"}
-                  </Button>
+                    Mua ngay
+                  </LoadingButton>
                 </Stack>
               )}
 
@@ -2558,11 +2559,11 @@ const ProductDetailPage = () => {
 
             {/* Add to Cart Button */}
             {!isSelectedVariantOutOfStock && !isBackOfficeRole && (
-              <Button
+              <LoadingButton
                 variant="contained"
                 color="error"
                 onClick={() => handleAddToCart(false)}
-                disabled={isAdding}
+                loading={isAdding}
                 sx={{
                   textTransform: "none",
                   fontWeight: 600,
@@ -2572,8 +2573,8 @@ const ProductDetailPage = () => {
                   minWidth: { xs: "auto", sm: 160 },
                 }}
               >
-                {isAdding ? "Đang thêm..." : "Thêm vào giỏ hàng"}
-              </Button>
+                Thêm vào giỏ hàng
+              </LoadingButton>
             )}
           </Box>
         </Container>

@@ -207,7 +207,7 @@ export const ContentManagementPage = () => {
     Promise.all([
       productService.lookupProducts(),
       productService.getProductVariants(),
-      campaignService.getActiveCampaigns(),
+      campaignService.getCampaignLookup(),
       brandService.getBrandsLookup(),
     ])
       .then(([products, variants, campaigns, brands]) => {

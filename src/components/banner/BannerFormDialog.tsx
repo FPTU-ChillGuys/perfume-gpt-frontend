@@ -227,7 +227,7 @@ export const BannerFormDialog = ({
     const loadCampaigns = async () => {
       try {
         setCampaignLoading(true);
-        const items = await campaignService.getActiveCampaigns();
+        const items = await campaignService.getCampaignLookup();
         if (!cancelled) {
           setCampaignOptions(items);
           if (

@@ -724,6 +724,29 @@ class CampaignService {
       throw new Error(error.message || "Failed to fetch active campaigns");
     }
   }
+
+  async getCampaignLookup(): Promise<CampaignLookupItem[]> {
+    try {
+      const response = await apiInstance.GET("/api/campaigns/lookup");
+
+      if (response.error) {
+        throw new Error("Failed to fetch campaign lookup");
+      }
+
+      const data = response.data as any;
+
+      if (data?.success !== undefined) {
+        return (data.payload as CampaignLookupItem[]) || [];
+      }
+      if (Array.isArray(data)) {
+        return data as CampaignLookupItem[];
+      }
+      return [];
+    } catch (error: any) {
+      console.error("Failed to fetch campaign lookup:", error);
+      throw new Error(error.message || "Failed to fetch campaign lookup");
+    }
+  }
 }
 
 export const campaignService = new CampaignService();

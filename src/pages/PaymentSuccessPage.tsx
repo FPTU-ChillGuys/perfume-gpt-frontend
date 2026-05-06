@@ -18,10 +18,11 @@ import { CheckCircle } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { POS_HUB_URL, useSignalR } from "@/hooks/useSignalR";
 
-const formatCurrency = (value?: string | number) => {
-  const numValue =
-    typeof value === "string" ? parseInt(value) / 100 : Number(value ?? 0);
-  return new Intl.NumberFormat("vi-VN").format(numValue) + "đ";
+const formatCurrency = (value?: string | number, isVnPay = false) => {
+  if (!value) return "0đ";
+  const numValue = Number(value);
+  const finalValue = isVnPay ? numValue / 100 : numValue;
+  return new Intl.NumberFormat("vi-VN").format(finalValue) + "đ";
 };
 
 const formatDateTime = (dateStr?: string) => {
@@ -60,36 +61,40 @@ export const PaymentSuccessPage = () => {
   }, []);
   const orderCode = searchParams.get("orderCode");
   const orderId = searchParams.get("orderId");
-  const paymentId =
-    searchParams.get("paymentId") || searchParams.get("vnp_TxnRef");
-  const orderInfo = searchParams.get("vnp_OrderInfo");
+  const orderType = searchParams.get("orderType");
+  const source = searchParams.get("source");
+  const isCheckoutSuccess = source === "checkout";
+
+  // Unified payment info extraction
+  const isVnPay = searchParams.has("vnp_ResponseCode");
+  const amount = searchParams.get("vnp_Amount") || searchParams.get("amount");
+  const bankCode = searchParams.get("vnp_BankCode");
+  const cardType = searchParams.get("vnp_CardType");
+  const payDate = searchParams.get("vnp_PayDate");
+  const responseCode = searchParams.get("vnp_ResponseCode") || searchParams.get("resultCode");
+  const transactionNo = searchParams.get("vnp_TransactionNo") || searchParams.get("transId");
+  const orderInfo = searchParams.get("vnp_OrderInfo") || searchParams.get("orderInfo");
+  const paymentId = searchParams.get("paymentId") || searchParams.get("vnp_TxnRef") || searchParams.get("requestId");
+
   const decodedOrderInfo = decodeURIComponent(orderInfo || "");
   const posSessionIdFromOrderInfo = extractPosSessionIdFromOrderInfo(orderInfo);
   const posSessionId =
     searchParams.get("sessionId") ||
     searchParams.get("posSessionId") ||
     posSessionIdFromOrderInfo;
-  const orderType = searchParams.get("orderType");
-  const responseCode = searchParams.get("vnp_ResponseCode");
-  const source = searchParams.get("source");
-  const isCheckoutSuccess = source === "checkout";
-  const isInStoreOrder =
-    Boolean(posSessionId) ||
-    /pickupinstore/i.test(orderType || "") ||
-    /pickupinstore/i.test(decodedOrderInfo);
-  const amount = searchParams.get("vnp_Amount");
-  const bankCode = searchParams.get("vnp_BankCode");
-  const cardType = searchParams.get("vnp_CardType");
-  const payDate = searchParams.get("vnp_PayDate");
-  const transactionNo = searchParams.get("vnp_TransactionNo");
 
   const { isConnected, notifyPaymentSuccess } = useSignalR({
     hubUrl: POS_HUB_URL,
     sessionId: posSessionId,
   });
 
+  const isInStoreOrder =
+    Boolean(posSessionId) ||
+    /pickupinstore/i.test(orderType || "") ||
+    /pickupinstore/i.test(decodedOrderInfo);
+
   useEffect(() => {
-    const isSuccess = !responseCode || responseCode === "00";
+    const isSuccess = !responseCode || responseCode === "00" || responseCode === "0";
 
     if (
       !isSuccess ||
@@ -244,7 +249,7 @@ export const PaymentSuccessPage = () => {
             <Box display="flex" justifyContent="space-between" mb={1}>
               <Typography color="text.secondary">Số tiền:</Typography>
               <Typography fontWeight={700} color="error">
-                {formatCurrency(amount)}
+                {formatCurrency(amount, isVnPay)}
               </Typography>
             </Box>
           )}
