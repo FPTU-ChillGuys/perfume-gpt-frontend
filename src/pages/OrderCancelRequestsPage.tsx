@@ -555,23 +555,25 @@ export const OrderCancelRequestsPage = () => {
               <Tab label="Từ chối" />
             </Tabs>
 
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={isMyRequestsOnly}
-                  onChange={(e) => {
-                    setIsMyRequestsOnly(e.target.checked);
-                    setPage(0);
-                  }}
-                  color="primary"
-                />
-              }
-              label={
-                <Typography variant="body2" fontWeight={500}>
-                  Yêu cầu của tôi
-                </Typography>
-              }
-            />
+            {user?.role === "staff" && (
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={isMyRequestsOnly}
+                    onChange={(e) => {
+                      setIsMyRequestsOnly(e.target.checked);
+                      setPage(0);
+                    }}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Typography variant="body2" fontWeight={500}>
+                    Yêu cầu của tôi
+                  </Typography>
+                }
+              />
+            )}
           </Box>
         </Paper>
 
