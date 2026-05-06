@@ -365,7 +365,7 @@ export default function ChatbotWidget() {
 
   const handleToggleExpand = useCallback(() => {
     if (isExpanded) {
-      setDragPos({ x: savedPosRef.current.x, y: savedPosRef.current.y });
+      setDragPos({ x: Math.min(savedPosRef.current.x, 0), y: Math.min(savedPosRef.current.y, 0) });
     } else {
       savedPosRef.current = { x: dragPos.x, y: dragPos.y };
       setDragPos({ x: 0, y: 0 });
@@ -414,6 +414,7 @@ export default function ChatbotWidget() {
   const handleNavigate = useCallback(
     (productId: string, variantId?: string) => {
       setOpen(false);
+      setIsExpanded(false);
       const params = new URLSearchParams();
       if (variantId) params.set("variantId", variantId);
       const qs = params.toString();
@@ -502,7 +503,7 @@ export default function ChatbotWidget() {
             onNewConversation={handleNewConversation}
             onClose={() => { 
               if (isExpanded) {
-                setDragPos({ x: savedPosRef.current.x, y: savedPosRef.current.y });
+                setDragPos({ x: Math.min(savedPosRef.current.x, 0), y: Math.min(savedPosRef.current.y, 0) });
               }
               setOpen(false); 
               setIsExpanded(false); 
