@@ -317,16 +317,20 @@ export default function ChatbotWidget() {
     };
   }, [clearSilenceTimer]);
 
-  const handleSend = useCallback(async () => {
-    void sendMessageText(input);
-  }, [input, sendMessageText]);
+  // Ref to read current input without triggering dependency changes
+  const inputRef = useRef(input);
+  inputRef.current = input;
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleSend = useCallback(async () => {
+    void sendMessageText(inputRef.current);
+  }, [sendMessageText]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void sendMessageText(inputRef.current);
     }
-  };
+  }, [sendMessageText]);
 
   const handleVoiceInput = useCallback(async () => {
     if (listening) {
@@ -416,6 +420,26 @@ export default function ChatbotWidget() {
       navigate(`/products/${productId}${qs ? `?${qs}` : ""}`);
     },
     [navigate],
+  );
+
+  // Memoized renderMessage — prevents re-creating all MessageBubbles on every keystroke
+  const renderMessage = useCallback(
+    (msg: ChatMessage, idx: number, isLastMessage: boolean) => (
+      <MessageBubble
+        key={idx}
+        msg={msg}
+        onAddToCart={handleAddToCart}
+        onNavigate={handleNavigate}
+        onSuggestionClick={sendMessageText}
+        isLastMessage={isLastMessage}
+      />
+    ),
+    [handleAddToCart, handleNavigate, sendMessageText],
+  );
+
+  const renderTypingIndicator = useCallback(
+    () => <TypingIndicator />,
+    [],
   );
 
   return (
@@ -557,20 +581,11 @@ export default function ChatbotWidget() {
               <ChatMessages
                 messages={messages}
                 loading={loading}
-                onMessageClick={(s) => setInput(s)}
+                onMessageClick={setInput}
                 messagesEndRef={messagesEndRef}
                 isStaffMode={isStaffMode}
-                renderMessage={(msg, idx, isLastMessage) => (
-                  <MessageBubble
-                    key={idx}
-                    msg={msg}
-                    onAddToCart={handleAddToCart}
-                    onNavigate={handleNavigate}
-                    onSuggestionClick={sendMessageText}
-                    isLastMessage={isLastMessage}
-                  />
-                )}
-                renderTypingIndicator={() => <TypingIndicator />}
+                renderMessage={renderMessage}
+                renderTypingIndicator={renderTypingIndicator}
               />
 
               <ChatInput
