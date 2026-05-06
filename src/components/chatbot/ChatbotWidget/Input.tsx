@@ -84,7 +84,6 @@ export function ChatInput({
         value={input}
         onChange={(e) => onInputChange(e.target.value)}
         onKeyDown={onKeyDown}
-        disabled={loading}
         sx={{
           "& .MuiOutlinedInput-root": {
             borderRadius: 3,
@@ -114,7 +113,7 @@ export function ChatInput({
         <span>
           <IconButton
             onClick={conversationActive ? onConversationToggle : (isInputEmpty ? onConversationToggle : onSend)}
-            disabled={loading && !conversationActive}
+            disabled={loading && !conversationActive && !isInputEmpty}
             sx={{
               bgcolor: "#dc2626",
               color: "#fff",

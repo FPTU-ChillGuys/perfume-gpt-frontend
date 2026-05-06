@@ -58,6 +58,8 @@ export default function ChatbotWidget() {
   const [aiSpeaking, setAiSpeaking] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const savedPosRef = useRef({ x: 0, y: 0 });
 
   // Settings states
   const [voiceEnabled, setVoiceEnabled] = useState(() => {
@@ -315,16 +317,20 @@ export default function ChatbotWidget() {
     };
   }, [clearSilenceTimer]);
 
-  const handleSend = useCallback(async () => {
-    void sendMessageText(input);
-  }, [input, sendMessageText]);
+  // Ref to read current input without triggering dependency changes
+  const inputRef = useRef(input);
+  inputRef.current = input;
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleSend = useCallback(async () => {
+    void sendMessageText(inputRef.current);
+  }, [sendMessageText]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void sendMessageText(inputRef.current);
     }
-  };
+  }, [sendMessageText]);
 
   const handleVoiceInput = useCallback(async () => {
     if (listening) {
@@ -356,6 +362,16 @@ export default function ChatbotWidget() {
     setHistoryOpen(false);
     window.speechSynthesis.cancel();
   }, []);
+
+  const handleToggleExpand = useCallback(() => {
+    if (isExpanded) {
+      setDragPos({ x: savedPosRef.current.x, y: savedPosRef.current.y });
+    } else {
+      savedPosRef.current = { x: dragPos.x, y: dragPos.y };
+      setDragPos({ x: 0, y: 0 });
+    }
+    setIsExpanded((prev) => !prev);
+  }, [isExpanded, dragPos]);
 
   const handleAddToCart = useCallback(
     async (variantId: string, productName: string, aiAcceptanceId?: string) => {
@@ -406,12 +422,34 @@ export default function ChatbotWidget() {
     [navigate],
   );
 
+  // Memoized renderMessage — prevents re-creating all MessageBubbles on every keystroke
+  const renderMessage = useCallback(
+    (msg: ChatMessage, idx: number, isLastMessage: boolean) => (
+      <MessageBubble
+        key={idx}
+        msg={msg}
+        onAddToCart={handleAddToCart}
+        onNavigate={handleNavigate}
+        onSuggestionClick={sendMessageText}
+        isLastMessage={isLastMessage}
+      />
+    ),
+    [handleAddToCart, handleNavigate, sendMessageText],
+  );
+
+  const renderTypingIndicator = useCallback(
+    () => <TypingIndicator />,
+    [],
+  );
+
   return (
     <Draggable
       handle=".chat-widget-handle"
       bounds="body"
       nodeRef={draggableNodeRef}
       disabled={isMobile || isExpanded}
+      position={isExpanded ? { x: 0, y: 0 } : dragPos}
+      onStop={(_e, data) => setDragPos({ x: data.x, y: data.y })}
     >
       <Box
         ref={draggableNodeRef}
@@ -462,11 +500,17 @@ export default function ChatbotWidget() {
             onSettingsClick={(e) => setSettingsAnchor(e.currentTarget)}
             onHistoryClick={() => setHistoryOpen((prev) => !prev)}
             onNewConversation={handleNewConversation}
-            onClose={() => { setOpen(false); setIsExpanded(false); }}
+            onClose={() => { 
+              if (isExpanded) {
+                setDragPos({ x: savedPosRef.current.x, y: savedPosRef.current.y });
+              }
+              setOpen(false); 
+              setIsExpanded(false); 
+            }}
             isStaffMode={isStaffMode}
             historyOpen={historyOpen}
             isExpanded={isExpanded}
-            onToggleExpand={() => setIsExpanded((prev) => !prev)}
+            onToggleExpand={handleToggleExpand}
           />
 
           <Menu
@@ -537,20 +581,11 @@ export default function ChatbotWidget() {
               <ChatMessages
                 messages={messages}
                 loading={loading}
-                onMessageClick={(s) => setInput(s)}
+                onMessageClick={setInput}
                 messagesEndRef={messagesEndRef}
                 isStaffMode={isStaffMode}
-                renderMessage={(msg, idx, isLastMessage) => (
-                  <MessageBubble
-                    key={idx}
-                    msg={msg}
-                    onAddToCart={handleAddToCart}
-                    onNavigate={handleNavigate}
-                    onSuggestionClick={sendMessageText}
-                    isLastMessage={isLastMessage}
-                  />
-                )}
-                renderTypingIndicator={() => <TypingIndicator />}
+                renderMessage={renderMessage}
+                renderTypingIndicator={renderTypingIndicator}
               />
 
               <ChatInput

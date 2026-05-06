@@ -1,11 +1,61 @@
-import { Box, Avatar, Typography } from "@mui/material";
+import { Box, Avatar, Typography, Divider, Chip } from "@mui/material";
 import { Person as PersonIcon } from "@mui/icons-material";
 import ReactMarkdown from "react-markdown";
+import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import AiLogo from "@/assets/AI_LOGO.png";
 import { parseAssistantPayload } from "./helpers";
 import { ProductCard } from "./ProductCard";
 import type { ChatMessage } from "@/types/chatbot";
+
+const MARKDOWN_COMPONENTS: Components = {
+  h1: ({ children }) => (
+    <Typography variant="h6" sx={{ fontWeight: 700, mt: 2, mb: 1 }}>
+      {children}
+    </Typography>
+  ),
+  h2: ({ children }) => (
+    <Typography variant="subtitle1" sx={{ fontWeight: 700, mt: 2, mb: 1 }}>
+      {children}
+    </Typography>
+  ),
+  h3: ({ children }) => (
+    <Typography variant="subtitle2" sx={{ fontWeight: 700, mt: 1.5, mb: 0.5 }}>
+      {children}
+    </Typography>
+  ),
+  strong: ({ children }) => (
+    <Typography
+      component="span"
+      sx={{ fontWeight: 700, color: "#dc2626" }}
+    >
+      {children}
+    </Typography>
+  ),
+  em: ({ children }) => (
+    <Typography
+      component="span"
+      sx={{ fontStyle: "italic", color: "#6b7280" }}
+    >
+      {children}
+    </Typography>
+  ),
+  hr: () => <Divider sx={{ my: 2, borderColor: "#fecaca" }} />,
+  code: ({ children }) => (
+    <Chip
+      label={children}
+      size="small"
+      sx={{
+        bgcolor: "#fce7f3",
+        color: "#be185d",
+        fontSize: "0.8rem",
+        fontFamily: "monospace",
+        height: "auto",
+        "& .MuiChip-label": { px: 1, py: 0.25 },
+      }}
+    />
+  ),
+};
 
 interface MessageBubbleProps {
   msg: ChatMessage;
@@ -75,23 +125,19 @@ export function MessageBubble({
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Box
           sx={{
-            background: "#f8f9fa",
+            background: "linear-gradient(135deg, #fef2f2 0%, #fff1f2 50%, #f8f9fa 100%)",
             border: "1px solid #e9ecef",
+            borderLeft: "3px solid #fda4af",
             borderRadius: "18px 18px 18px 4px",
             px: 2,
-            py: 1,
+            py: 1.5,
             mb: payload.products?.length > 0 ? 1 : 0,
-            "& > p": { lineHeight: 1.6, mb: 1, margin: 0 },
+            boxShadow: "0 1px 4px rgba(251,113,133,0.1)",
+            "& > p": { lineHeight: 1.8, mb: 1.5, margin: 0, wordBreak: "break-word" },
             "& > p:last-child": { mb: 0 },
             "& ul, & ol": { pl: 2, mb: 1 },
-            "& li": { mb: 0.5 },
-            "& code": {
-              bgcolor: "#e9ecef",
-              px: 0.5,
-              py: 0.25,
-              borderRadius: 0.5,
-              fontFamily: "monospace",
-            },
+            "& li": { mb: 1.5 },
+            "& h1, & h2, & h3": { fontWeight: 700, mt: 2, mb: 1 },
             "& pre": {
               bgcolor: "#2d3748",
               color: "#e2e8f0",
@@ -105,8 +151,6 @@ export function MessageBubble({
               p: 0,
               m: 0,
             },
-            "& strong": { fontWeight: 700 },
-            "& em": { fontStyle: "italic" },
             "& a": {
               color: "#dc2626",
               textDecoration: "underline",
@@ -114,7 +158,10 @@ export function MessageBubble({
             },
           }}
         >
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={MARKDOWN_COMPONENTS}
+          >
             {payload.message}
           </ReactMarkdown>
         </Box>
