@@ -52,7 +52,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     authService.logout();
     setUser(null);
-    void conversationStorage.clear();
+    void conversationStorage.clear().catch(() => {});
     showToast("Đăng xuất thành công!", "success");
     window.location.href = "/";
   };

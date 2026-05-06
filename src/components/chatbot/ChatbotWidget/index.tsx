@@ -30,6 +30,7 @@ import { chatbotService } from "@/services/ai/chatbotService";
 import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { cartService } from "@/services/cartService";
 import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
 import { authService } from "@/services/authService";
 import { getOrCreateGuestUserId } from "@/utils/guestUserId";
 import { conversationStorage } from "@/utils/conversationStorage";
@@ -49,6 +50,7 @@ import { ChatHistoryPanel } from "./ChatHistoryPanel";
 // ─── Main Widget ─────────────────────────────────────────────────────────────
 
 export default function ChatbotWidget() {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -126,19 +128,36 @@ export default function ChatbotWidget() {
     authService.getCurrentUser()?.id ?? getOrCreateGuestUserId(),
   );
   const [restored, setRestored] = useState(false);
+  const prevAuthUserId = useRef<string | null>(null);
 
   // Restore latest conversation from Dexie on mount
   useEffect(() => {
     if (restored) return;
-    conversationStorage.getLatest().then((record) => {
+    conversationStorage.getLatest(user?.id).then((record) => {
       if (record) {
         conversationId.current = record.id;
         setMessages(record.messages);
       }
       setRestored(true);
-      void conversationSync.syncFromServer();
-    });
-  }, [restored]);
+      prevAuthUserId.current = user?.id ?? null;
+      void conversationSync.syncFromServer().catch(() => {});
+    }).catch(() => {});
+  }, [restored, user?.id]);
+
+  // Re-sync when auth state changes (e.g. user logs in)
+  useEffect(() => {
+    if (!restored) return;
+    const currentAuthId = user?.id ?? null;
+    if (currentAuthId === prevAuthUserId.current) return;
+    prevAuthUserId.current = currentAuthId;
+    void conversationSync.syncFromServer().catch(() => {});
+    void conversationStorage.getLatest(user?.id).then((record) => {
+      if (record) {
+        conversationId.current = record.id;
+        setMessages(record.messages);
+      }
+    }).catch(() => {});
+  }, [user?.id, restored]);
 
   const clearSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
@@ -208,7 +227,7 @@ export default function ChatbotWidget() {
         const finalMessages = [...updatedMessages, aiMsg];
         setMessages(finalMessages);
 
-        void conversationStorage.save(conversationId.current, finalMessages);
+        void conversationStorage.save(conversationId.current, finalMessages, { userId: user?.id }).catch(() => {});
 
         const payload = parseAssistantPayload(data.aiMessage.message);
         setTextToSpeak(payload.message);
@@ -572,7 +591,7 @@ export default function ChatbotWidget() {
                 setMessages(chatMsgs);
                 void conversationStorage.save(conversation.id, chatMsgs, {
                   lastMessagePreview: chatMsgs[0]?.message ?? "",
-                });
+                }).catch(() => {});
                 setHistoryOpen(false);
               }}
               onNewChat={handleNewConversation}
