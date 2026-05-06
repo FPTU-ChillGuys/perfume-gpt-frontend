@@ -58,6 +58,8 @@ export default function ChatbotWidget() {
   const [aiSpeaking, setAiSpeaking] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const savedPosRef = useRef({ x: 0, y: 0 });
 
   // Settings states
   const [voiceEnabled, setVoiceEnabled] = useState(() => {
@@ -357,6 +359,16 @@ export default function ChatbotWidget() {
     window.speechSynthesis.cancel();
   }, []);
 
+  const handleToggleExpand = useCallback(() => {
+    if (isExpanded) {
+      setDragPos({ x: savedPosRef.current.x, y: savedPosRef.current.y });
+    } else {
+      savedPosRef.current = { x: dragPos.x, y: dragPos.y };
+      setDragPos({ x: 0, y: 0 });
+    }
+    setIsExpanded((prev) => !prev);
+  }, [isExpanded, dragPos]);
+
   const handleAddToCart = useCallback(
     async (variantId: string, productName: string, aiAcceptanceId?: string) => {
       // Auth guard — giống ProductDetailPage
@@ -412,6 +424,8 @@ export default function ChatbotWidget() {
       bounds="body"
       nodeRef={draggableNodeRef}
       disabled={isMobile || isExpanded}
+      position={isExpanded ? { x: 0, y: 0 } : dragPos}
+      onStop={(_e, data) => setDragPos({ x: data.x, y: data.y })}
     >
       <Box
         ref={draggableNodeRef}
@@ -462,11 +476,17 @@ export default function ChatbotWidget() {
             onSettingsClick={(e) => setSettingsAnchor(e.currentTarget)}
             onHistoryClick={() => setHistoryOpen((prev) => !prev)}
             onNewConversation={handleNewConversation}
-            onClose={() => { setOpen(false); setIsExpanded(false); }}
+            onClose={() => { 
+              if (isExpanded) {
+                setDragPos({ x: savedPosRef.current.x, y: savedPosRef.current.y });
+              }
+              setOpen(false); 
+              setIsExpanded(false); 
+            }}
             isStaffMode={isStaffMode}
             historyOpen={historyOpen}
             isExpanded={isExpanded}
-            onToggleExpand={() => setIsExpanded((prev) => !prev)}
+            onToggleExpand={handleToggleExpand}
           />
 
           <Menu
