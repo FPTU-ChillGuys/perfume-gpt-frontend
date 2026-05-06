@@ -13,13 +13,8 @@ import {
   Card,
   CardContent,
   Checkbox,
-  Alert,
   Chip,
   TextField,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Stack,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -29,8 +24,6 @@ import {
   ShoppingCart,
   CheckCircle,
   RadioButtonUnchecked,
-  LocalOffer,
-  Close as CloseIcon,
 } from "@mui/icons-material";
 import { MainLayout } from "@/layouts/MainLayout";
 import { cartService } from "@/services/cartService";

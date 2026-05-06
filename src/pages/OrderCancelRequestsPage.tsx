@@ -25,6 +25,8 @@ import {
   Tooltip,
   Stack,
   Divider,
+  FormControlLabel,
+  Switch,
   IconButton,
 } from "@mui/material";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
@@ -177,6 +179,7 @@ export const OrderCancelRequestsPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isMyRequestsOnly, setIsMyRequestsOnly] = useState(false);
 
   // Detail + process dialog
   const [selected, setSelected] = useState<OrderCancelRequest | null>(null);
@@ -210,7 +213,7 @@ export const OrderCancelRequestsPage = () => {
         PageNumber: page + 1,
         PageSize: rowsPerPage,
       };
-      const result = await (user?.role === "staff"
+      const result = await (isMyRequestsOnly
         ? orderService.getMyCancelRequests(params)
         : orderService.getAllCancelRequests(params));
       setRequests(result.items);
@@ -220,7 +223,7 @@ export const OrderCancelRequestsPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [statusFilter, page, rowsPerPage, user?.role]);
+  }, [statusFilter, page, rowsPerPage, user?.role, isMyRequestsOnly]);
 
   useEffect(() => {
     load();
@@ -519,7 +522,14 @@ export const OrderCancelRequestsPage = () => {
       <Box>
         <Paper sx={{ mb: 3, overflow: "hidden" }}>
           <Box
-            sx={{ borderBottom: "1px solid", borderColor: "divider", px: 2 }}
+            sx={{
+              borderBottom: "1px solid",
+              borderColor: "divider",
+              px: 2,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
           >
             <Tabs
               value={tabIndex}
@@ -544,6 +554,24 @@ export const OrderCancelRequestsPage = () => {
               <Tab label="Đã duyệt" />
               <Tab label="Từ chối" />
             </Tabs>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isMyRequestsOnly}
+                  onChange={(e) => {
+                    setIsMyRequestsOnly(e.target.checked);
+                    setPage(0);
+                  }}
+                  color="primary"
+                />
+              }
+              label={
+                <Typography variant="body2" fontWeight={500}>
+                  Yêu cầu của tôi
+                </Typography>
+              }
+            />
           </Box>
         </Paper>
 

@@ -1129,23 +1129,14 @@ export const OrderManagementDetailPage = () => {
       setError(null);
       const [data, cancelRequests, returnRequests] = await Promise.all([
         orderService.getOrderById(orderId),
-        user?.role === "staff"
-          ? orderService
-              .getMyCancelRequests({
-                PageNumber: 1,
-                PageSize: 100,
-                SortBy: "CreatedAt",
-                SortOrder: "desc",
-              })
-              .catch(() => null)
-          : orderService
-              .getAllCancelRequests({
-                PageNumber: 1,
-                PageSize: 100,
-                SortBy: "CreatedAt",
-                SortOrder: "desc",
-              })
-              .catch(() => null),
+        orderService
+          .getAllCancelRequests({
+            PageNumber: 1,
+            PageSize: 100,
+            SortBy: "CreatedAt",
+            SortOrder: "desc",
+          })
+          .catch(() => null),
         orderService
           .getAllReturnRequests({
             PageNumber: 1,
@@ -3123,7 +3114,7 @@ export const OrderManagementDetailPage = () => {
                                 sx={{ minWidth: 160 }}
                               >
                                 {hasBlockingCancelRequest
-                                  ? "Đã hủy đơn"
+                                  ? "Đã tạo yêu cầu hủy"
                                   : "Hủy đơn hàng"}
                               </Button>
                             </Stack>
