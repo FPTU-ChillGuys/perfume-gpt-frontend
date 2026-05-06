@@ -133,7 +133,7 @@ export function MessageBubble({
             py: 1.5,
             mb: payload.products?.length > 0 ? 1 : 0,
             boxShadow: "0 1px 4px rgba(251,113,133,0.1)",
-            "& > p": { lineHeight: 1.6, mb: 1.5, margin: 0 },
+            "& > p": { lineHeight: 1.8, mb: 1.5, margin: 0, wordBreak: "break-word" },
             "& > p:last-child": { mb: 0 },
             "& ul, & ol": { pl: 2, mb: 1 },
             "& li": { mb: 1.5 },
