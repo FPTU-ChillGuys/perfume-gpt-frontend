@@ -79,6 +79,7 @@ export interface ChatV11AiMessage {
 export interface ChatV11ResponseData {
     conversationId: string;
     aiMessage: ChatV11AiMessage;
+    aiAcceptanceId?: string;
 }
 
 export interface ChatV11Response {
