@@ -795,19 +795,21 @@ const PaymentDonutChart = ({
   const active = distribution.filter((item) => item.transactionsCount > 0);
   const total = active.reduce((sum, item) => sum + item.amount, 0);
 
-  // Build conic-gradient segments
-  let currentAngle = 0;
-  const segments = active.map((item, index) => {
-    const pct = total > 0 ? item.amount / total : 1 / active.length;
-    const startAngle = currentAngle;
-    const endAngle = currentAngle + pct * 360;
-    currentAngle = endAngle;
-    const color =
-      PAYMENT_METHOD_COLORS[item.paymentMethod] ??
-      DEFAULT_COLORS[index % DEFAULT_COLORS.length] ??
-      "#94a3b8";
-    return { ...item, color, startAngle, endAngle, pct };
-  });
+  // Build conic-gradient segments using reduce to avoid let reassignment
+  const segments = active.reduce(
+    (acc: ({ startAngle: number; endAngle: number; pct: number; color: string } & PaymentMethodItem)[], item, index) => {
+      const pct = total > 0 ? item.amount / total : 1 / active.length;
+      const prevAngle = acc.length > 0 ? acc[acc.length - 1]!.endAngle : 0;
+      const startAngle = prevAngle;
+      const endAngle = prevAngle + pct * 360;
+      const color =
+        PAYMENT_METHOD_COLORS[item.paymentMethod] ??
+        DEFAULT_COLORS[index % DEFAULT_COLORS.length] ??
+        "#94a3b8";
+      return [...acc, { ...item, color, startAngle, endAngle, pct }];
+    },
+    []
+  );
 
   const gradientStops =
     active.length > 0
@@ -918,7 +920,7 @@ const PaymentDonutChart = ({
                   {(seg.pct * 100).toFixed(1)}%
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ ml: 0.75 }}>
-                  {seg.transactionsCount} GD
+                  {seg.transactionsCount} GD
                 </Typography>
               </Box>
             </Box>
@@ -953,6 +955,7 @@ const AdminDashboard = () => {
   const [aiRecords, setAiRecords] = useState<AiAcceptanceRecord[]>([]);
   const [rateAccepted, setRateAccepted] = useState<number | null>(null);
   const [rateRejected, setRateRejected] = useState<number | null>(null);
+  const [ratePending, setRatePending] = useState<number | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [monthRevenueSummary, setMonthRevenueSummary] =
     useState<RevenueSummary | null>(null);
@@ -979,10 +982,9 @@ const AdminDashboard = () => {
         ToDate: monthRange.to,
       }),
       aiAcceptanceService.getAllAcceptanceStatus(),
-      aiAcceptanceService.getAcceptanceRate(true),
-      aiAcceptanceService.getAcceptanceRate(false),
+      aiAcceptanceService.getAllRates(),
     ])
-      .then(([todayRev, top, inv, monthRev, aiData, accepted, rejected]) => {
+      .then(([todayRev, top, inv, monthRev, aiData, rates]) => {
         if (!active) {
           return;
         }
@@ -996,8 +998,9 @@ const AdminDashboard = () => {
         setInventorySummary(inv);
         setMonthRevenueSummary(monthRev);
         setAiRecords(aiData);
-        setRateAccepted(accepted);
-        setRateRejected(rejected);
+        setRateAccepted(rates.acceptanceRate);
+        setRateRejected(rates.rejectionRate);
+        setRatePending(rates.pendingRate);
       })
       .catch((err: any) => {
         if (!active) {
@@ -1363,7 +1366,7 @@ const AdminDashboard = () => {
                       color: "#10b981",
                       bg: "#ecfdf5",
                       progress: rateAccepted ?? 0,
-                      subtext: `${aiRecords.filter(r => r.isAccepted).length} bản ghi`,
+                      subtext: `${aiRecords.filter(r => r.status === 'accepted').length} bản ghi`,
                     },
                     {
                       label: "Tỷ lệ từ chối",
@@ -1372,7 +1375,16 @@ const AdminDashboard = () => {
                       color: "#f43f5e",
                       bg: "#fff1f2",
                       progress: rateRejected ?? 0,
-                      subtext: `${aiRecords.filter(r => !r.isAccepted).length} bản ghi`,
+                      subtext: `${aiRecords.filter(r => r.status === 'rejected').length} bản ghi`,
+                    },
+                    {
+                      label: "Tỷ lệ chưa xác định",
+                      value: ratePending !== null ? `${ratePending.toFixed(1)}%` : "0%",
+                      icon: <Timeline />,
+                      color: "#f59e0b",
+                      bg: "#fffbeb",
+                      progress: ratePending ?? 0,
+                      subtext: `${aiRecords.filter(r => r.status === 'pending').length} bản ghi`,
                     },
                   ].map((item) => (
                     <Box
