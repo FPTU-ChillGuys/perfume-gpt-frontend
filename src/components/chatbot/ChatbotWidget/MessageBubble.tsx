@@ -60,7 +60,7 @@ const MARKDOWN_COMPONENTS: Components = {
 interface MessageBubbleProps {
   msg: ChatMessage;
   onAddToCart: (variantId: string, productName: string, aiAcceptanceId?: string) => void;
-  onNavigate: (productId: string, variantId?: string) => void;
+  onNavigate: (productId: string, variantId?: string, aiAcceptanceId?: string) => void;
   onSuggestionClick?: (question: string) => void;
   isLastMessage?: boolean;
 }
