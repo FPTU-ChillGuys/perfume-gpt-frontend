@@ -431,11 +431,12 @@ export default function ChatbotWidget() {
   );
 
   const handleNavigate = useCallback(
-    (productId: string, variantId?: string) => {
+    (productId: string, variantId?: string, aiAcceptanceId?: string) => {
       setOpen(false);
       setIsExpanded(false);
       const params = new URLSearchParams();
       if (variantId) params.set("variantId", variantId);
+      if (aiAcceptanceId) params.set("aiAcceptanceId", aiAcceptanceId);
       const qs = params.toString();
       navigate(`/products/${productId}${qs ? `?${qs}` : ""}`);
     },
