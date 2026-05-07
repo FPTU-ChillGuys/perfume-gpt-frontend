@@ -27,17 +27,21 @@ export const conversationSync = {
             const items = response.data?.items ?? [];
 
             const now = Date.now();
-            const localItems: ActiveConversation[] = items.map((item) => ({
-                id: item.id,
-                userId: item.userId,
-                messages: (item.messages || []).map(serverMessageToChatMessage),
-                updatedAt: new Date(item.updatedAt).getTime(),
-                syncedAt: now,
-                messageCount: item.messages?.length ?? 0,
-                lastMessagePreview: extractPreview(item.messages || []),
-            }));
+            const localItems: ActiveConversation[] = items
+                .map((item) => ({
+                    id: item.id,
+                    userId: item.userId ?? "",
+                    messages: (item.messages || []).map(serverMessageToChatMessage),
+                    updatedAt: new Date(item.updatedAt).getTime() || Date.now(),
+                    syncedAt: now,
+                    messageCount: item.messages?.length ?? 0,
+                    lastMessagePreview: extractPreview(item.messages || []),
+                }))
+                .filter((item) => typeof item.id === "string" && item.id.trim() !== "" && Number.isFinite(item.updatedAt));
 
-            await conversationStorage.bulkUpsert(localItems);
+            if (localItems.length > 0) {
+                await conversationStorage.bulkUpsert(localItems);
+            }
             return localItems;
         } catch {
             return null;

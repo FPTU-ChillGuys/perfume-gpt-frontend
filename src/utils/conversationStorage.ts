@@ -38,25 +38,29 @@ export const conversationStorage = {
             lastMessagePreview?: string;
         }
     ): Promise<void> {
-        const messageCount = options?.messageCount ?? messages.length;
-        const lastMessagePreview =
-            options?.lastMessagePreview ??
-            (() => {
-                const firstUserMsg = messages.find((m) => m.sender === "user");
-                const msg = firstUserMsg?.message;
-                if (msg && msg.length > 60) return msg.slice(0, 60);
-                return msg ?? "";
-            })();
+        try {
+            const messageCount = options?.messageCount ?? messages.length;
+            const lastMessagePreview =
+                options?.lastMessagePreview ??
+                (() => {
+                    const firstUserMsg = messages.find((m) => m.sender === "user");
+                    const msg = firstUserMsg?.message;
+                    if (msg && msg.length > 60) return msg.slice(0, 60);
+                    return msg ?? "";
+                })();
 
-        await db.conversations.put({
-            id: conversationId,
-            userId: options?.userId ?? "",
-            messages,
-            updatedAt: Date.now(),
-            syncedAt: options?.syncedAt,
-            messageCount,
-            lastMessagePreview,
-        });
+            await db.conversations.put({
+                id: conversationId,
+                userId: options?.userId ?? "",
+                messages,
+                updatedAt: Date.now(),
+                syncedAt: options?.syncedAt,
+                messageCount,
+                lastMessagePreview,
+            });
+        } catch {
+            // IndexedDB errors are non-critical — swallow at source
+        }
     },
 
     async load(conversationId: string): Promise<ActiveConversation | null> {
@@ -74,7 +78,11 @@ export const conversationStorage = {
     },
 
     async bulkUpsert(conversations: ActiveConversation[]): Promise<void> {
-        await db.conversations.bulkPut(conversations);
+        try {
+            await db.conversations.bulkPut(conversations);
+        } catch {
+            // IndexedDB errors are non-critical — swallow at source
+        }
     },
 
     async deleteByUserId(userId: string): Promise<void> {
@@ -86,11 +94,12 @@ export const conversationStorage = {
         await db.conversations.bulkDelete(ids);
     },
 
-    async getLatest(): Promise<ActiveConversation | null> {
-        const latest = await db.conversations
-            .orderBy("updatedAt")
-            .reverse()
-            .first();
+    async getLatest(userId?: string): Promise<ActiveConversation | null> {
+        let collection = db.conversations.orderBy("updatedAt").reverse();
+        if (userId) {
+            collection = collection.filter((c) => c.userId === userId || c.userId === "");
+        }
+        const latest = await collection.first();
         return latest ?? null;
     },
 

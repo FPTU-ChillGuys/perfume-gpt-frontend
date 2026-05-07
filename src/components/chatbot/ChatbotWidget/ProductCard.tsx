@@ -10,7 +10,7 @@ import { formatPrice } from "./helpers";
 interface ProductCardProps {
   product: ChatProduct;
   onAddToCart: (variantId: string, productName: string, aiAcceptanceId?: string) => void;
-  onNavigate: (productId: string, variantId?: string) => void;
+  onNavigate: (productId: string, variantId?: string, aiAcceptanceId?: string) => void;
   hideAddToCart?: boolean;
 }
 
@@ -39,7 +39,7 @@ export function ProductCard({
   };
 
   const handleCardClick = async () => {
-    onNavigate(product.id, selectedVariant?.id);
+    onNavigate(product.id, selectedVariant?.id, product.aiAcceptanceId);
   };
 
   return (
