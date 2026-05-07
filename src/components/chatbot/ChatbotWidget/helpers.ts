@@ -12,17 +12,18 @@ export function parseAssistantPayload(raw: string): AssistantPayload {
         name: item.name,
         brandName: item.brandName,
         primaryImage: item.primaryImage,
-        categoryName: item.brandName, // Use brandName as categoryName fallback
-        description: "", // Not provided by new schema
-        attributes: [], // Not provided by new schema
+        categoryName: item.brandName,
+        description: "",
+        attributes: [],
+        aiAcceptanceId: (item as any).aiAcceptanceId,
         variants: item.variants?.map(v => ({
           id: v.id,
           sku: v.sku,
           volumeMl: v.volumeMl,
           basePrice: v.basePrice,
-          type: "", // Not provided
-          status: "", // Not provided
-          concentrationName: "", // Not provided
+          type: "",
+          status: "",
+          concentrationName: "",
           totalQuantity: null,
           reservedQuantity: null,
         })) || [],
