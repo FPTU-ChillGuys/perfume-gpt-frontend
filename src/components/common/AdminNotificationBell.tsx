@@ -388,7 +388,8 @@ export const AdminNotificationBell = () => {
               {notifications.map((notif, idx) => {
                 const cfg = getTypeConfig(notif.referenceType);
                 return (
-                  <Box key={notif.id}>
+                  <Box key={`${notif.id}-${idx}`}>
+
                     <Box
                       onClick={() => handleMarkRead(notif.id)}
                       sx={{
