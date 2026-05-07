@@ -59,7 +59,7 @@ export const BatchSelectionModal = ({
   onSelectBatch,
   stopSellingBeforeExpiryDays = 0,
 }: BatchSelectionModalProps) => {
-  const title = mode === "switch" ? "Đổi batch cho sản phẩm" : "Chọn batch";
+  const title = mode === "switch" ? "Đổi lô cho sản phẩm" : "Chọn lô";
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -87,11 +87,11 @@ export const BatchSelectionModal = ({
         {loading ? (
           <Stack direction="row" spacing={1} alignItems="center" py={2}>
             <CircularProgress size={18} />
-            <Typography variant="body2">Đang tải danh sách batch...</Typography>
+            <Typography variant="body2">Đang tải danh sách lô...</Typography>
           </Stack>
         ) : batches.length === 0 ? (
           <Typography variant="body2" color="text.secondary">
-            Không có batch phù hợp để bán.
+            Không có lô phù hợp để bán.
           </Typography>
         ) : (
           <Stack spacing={1.25}>
@@ -122,7 +122,7 @@ export const BatchSelectionModal = ({
                   >
                     <Box>
                       <Typography variant="caption" color="text.secondary">
-                        Mã batch
+                        Mã lô
                       </Typography>
                       <Typography
                         variant="h6"
@@ -152,7 +152,7 @@ export const BatchSelectionModal = ({
                           <Chip
                             size="small"
                             color="primary"
-                            label="Batch đang chọn"
+                            label="Lô đang chọn"
                           />
                         )}
                       </Stack>
@@ -174,8 +174,8 @@ export const BatchSelectionModal = ({
                       onClick={() => onSelectBatch(batch)}
                     >
                       {mode === "switch"
-                        ? "Đổi sang batch này"
-                        : "Thêm batch này"}
+                        ? "Đổi sang lô này"
+                        : "Thêm lô này"}
                     </Button>
                   </Stack>
                 </Box>

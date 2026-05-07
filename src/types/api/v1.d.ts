@@ -2321,9 +2321,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
                     };
                 };
                 default: {
@@ -2368,9 +2368,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
                     };
                 };
                 default: {
@@ -2415,9 +2415,9 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
-                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
-                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignLookupItem"];
+                        "text/plain": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "application/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
+                        "text/json": components["schemas"]["BaseResponseOfListOfCampaignResponse"];
                     };
                 };
                 default: {
@@ -12551,13 +12551,6 @@ export interface components {
             errors?: null | string[];
             errorType?: null | components["schemas"]["ResponseErrorType"];
         };
-        BaseResponseOfListOfCampaignLookupItem: {
-            payload?: null | components["schemas"]["CampaignLookupItem"][];
-            success?: boolean;
-            message?: string;
-            errors?: null | string[];
-            errorType?: null | components["schemas"]["ResponseErrorType"];
-        };
         BaseResponseOfListOfCampaignPromotionItemResponse: {
             payload?: null | components["schemas"]["CampaignPromotionItemResponse"][];
             success?: boolean;
@@ -13219,15 +13212,6 @@ export interface components {
             /** Format: int32 */
             totalProcessed?: number;
             hasError?: boolean;
-        };
-        CampaignLookupItem: {
-            /** Format: uuid */
-            id?: string;
-            name: string;
-            /** Format: date-time */
-            startDate?: string;
-            /** Format: date-time */
-            endDate?: string;
         };
         CampaignPromotionItemResponse: {
             /** Format: uuid */

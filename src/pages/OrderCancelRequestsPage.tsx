@@ -89,7 +89,7 @@ const PAYMENT_METHOD_LABELS: Record<NonNullable<PaymentMethod>, string> = {
   CashInStore: "Thanh toán tại quầy",
   VnPay: "Thanh toán qua VNPay",
   Momo: "Thanh toán qua MoMo",
-  ExternalBankTransfer: "Chuyển khoản ngân hàng",
+  ExternalBankTransfer: "Chuyển khoản thủ công",
   PayOs: "Thanh toán qua PayOS",
 };
 
@@ -121,7 +121,7 @@ const REFUND_METHOD_OPTIONS: {
   },
   {
     value: "ExternalBankTransfer",
-    label: "External Bank Transfer",
+    label: "Chuyển khoản thủ công",
     iconSrc: transferLogo,
   },
 ];

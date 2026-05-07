@@ -767,7 +767,7 @@ export const ContentManagementPage = () => {
             ) : (
               <Grid container spacing={2}>
                 {banners.map((banner, index) => (
-                  <Grid size={{ xs: 12, md: 4 }} key={banner.id}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={banner.id}>
                     <Paper
                       elevation={0}
                       sx={{
@@ -783,10 +783,11 @@ export const ContentManagementPage = () => {
                       <Box
                         sx={{
                           position: "relative",
-                          pt: "60%",
-                          backgroundImage: `linear-gradient(120deg, rgba(15,23,42,0.6), rgba(15,23,42,0.3)), url(${banner.imageUrl})`,
+                          pt: "52%",
+                          backgroundImage: `linear-gradient(120deg, rgba(15,23,42,0.6), rgba(15,23,42,0.3)), url("${banner.imageUrl || FALLBACK_BANNER_IMAGE}")`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
+                          backgroundColor: "grey.100",
                         }}
                       >
                         <Chip
@@ -803,7 +804,17 @@ export const ContentManagementPage = () => {
                         <Chip
                           label={`#${banner.displayOrder}`}
                           size="small"
-                          sx={{ position: "absolute", top: 12, right: 12 }}
+                          sx={{
+                            position: "absolute",
+                            top: 12,
+                            right: 12,
+                            fontWeight: 800,
+                            bgcolor: "rgba(15, 23, 42, 0.8)",
+                            color: "white",
+                            backdropFilter: "blur(4px)",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            fontSize: "0.75rem",
+                          }}
                         />
                         <Chip
                           label={banner.position}
@@ -832,13 +843,13 @@ export const ContentManagementPage = () => {
                       </Box>
                       <Box
                         sx={{
-                          p: 2,
+                          p: 1.5,
                           flexGrow: 1,
                           display: "flex",
                           flexDirection: "column",
                         }}
                       >
-                        <Stack direction="row" spacing={0.5} sx={{ mb: 1 }}>
+                        <Stack direction="row" spacing={0.5} sx={{ mb: 0.5 }}>
                           <Chip
                             size="small"
                             label={LINK_TYPE_LABELS[banner.linkType] ?? banner.linkType}

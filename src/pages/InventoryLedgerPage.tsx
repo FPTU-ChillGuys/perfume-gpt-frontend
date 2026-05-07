@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Box,
@@ -121,49 +121,64 @@ const SummaryCard = ({
   <Paper
     elevation={0}
     sx={{
-      p: 2.5,
+      p: 2,
       border: "1px solid",
-      borderColor: "grey.100",
+      borderColor: "grey.200",
       borderRadius: 3,
       height: "100%",
       display: "flex",
       flexDirection: "column",
       gap: 1,
-      bgcolor: bgColor,
+      bgcolor: "background.paper",
+      transition: "all 0.3s ease",
+      "&:hover": {
+        transform: "translateY(-2px)",
+        boxShadow: "0 8px 16px -8px rgba(0,0,0,0.1)",
+        borderColor: color,
+      },
     }}
   >
     <Stack direction="row" justifyContent="space-between" alignItems="center">
-      <Typography variant="body2" color="text.secondary" fontWeight={500}>
+      <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ letterSpacing: 0.5, textTransform: "uppercase", fontSize: "0.65rem" }}>
         {title}
       </Typography>
       <Box
         sx={{
-          width: 36,
-          height: 36,
-          borderRadius: 2,
+          width: 32,
+          height: 32,
+          borderRadius: "10px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          bgcolor: color,
+          background: `linear-gradient(135deg, ${color} 0%, ${valueColor || color} 100%)`,
           color: "white",
-          boxShadow: "0 6px 14px rgba(0,0,0,0.12)",
+          boxShadow: `0 4px 8px ${color}33`,
         }}
       >
-        {icon}
+        {React.cloneElement(icon as React.ReactElement<any>, { 
+          sx: { fontSize: 18 } 
+        })}
       </Box>
     </Stack>
-    {loading ? (
-      <Skeleton variant="text" width={80} height={40} />
-    ) : (
-      <Typography variant="h5" fontWeight={700} sx={{ color: valueColor }}>
-        {value}
-      </Typography>
-    )}
-    {subtitle && (
-      <Typography variant="caption" color="text.secondary">
-        {subtitle}
-      </Typography>
-    )}
+    <Box>
+      {loading ? (
+        <Skeleton variant="text" width={100} height={32} />
+      ) : (
+        <Typography variant="h5" fontWeight={800} sx={{ color: "text.primary", letterSpacing: -0.5 }}>
+          {value}
+        </Typography>
+      )}
+      {subtitle && (
+        <Typography variant="caption" sx={{ color: "text.secondary", display: "block", mt: 0.25, fontWeight: 500, fontSize: '0.7rem' }}>
+          {subtitle}
+        </Typography>
+      )}
+    </Box>
+    
+    {/* Subtle indicator bar */}
+    <Box sx={{ mt: 'auto', pt: 1 }}>
+      <Box sx={{ height: 4, width: 40, borderRadius: 2, bgcolor: bgColor }} />
+    </Box>
   </Paper>
 );
 
@@ -182,7 +197,7 @@ export const InventoryLedgerPage = () => {
   const [variantFilter, setVariantFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
   const [statsLoading, setStatsLoading] = useState(true);
   const [overallStats, setOverallStats] = useState({
@@ -311,11 +326,11 @@ export const InventoryLedgerPage = () => {
       <Box sx={{ px: { xs: 2, md: 3 }, py: 3 }}>
         <Grid container spacing={2.5}>
           <Grid size={{ xs: 12, lg: 3.5 }}>
-            <Stack spacing={2}>
+            <Stack spacing={1.5}>
               <Paper
                 elevation={0}
                 sx={{
-                  p: 2.2,
+                  p: 1.5,
                   border: "1px solid",
                   borderColor: "grey.200",
                   borderRadius: 3,
@@ -323,34 +338,39 @@ export const InventoryLedgerPage = () => {
                   color: "white",
                 }}
               >
-                <Stack direction="row" alignItems="center" spacing={1.25} sx={{ mb: 1 }}>
-                  <InventoryIcon fontSize="small" />
-                  <Typography variant="subtitle1" fontWeight={700}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                  <InventoryIcon sx={{ fontSize: 18 }} />
+                  <Typography variant="subtitle2" fontWeight={700}>
                     Sổ kho
                   </Typography>
                 </Stack>
-                <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.75)" }}>
-                  Giao diện tập trung vào số liệu cốt lõi và thao tác lọc nhanh.
+                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.4 }}>
+                  Số liệu cốt lõi và thao tác lọc nhanh.
                 </Typography>
                 <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
                   <Tooltip title="Tải lại">
                     <IconButton
+                      size="small"
                       onClick={fetchLedger}
                       disabled={loading}
-                      sx={{ bgcolor: "rgba(255,255,255,0.12)", color: "white" }}
+                      sx={{ bgcolor: "rgba(255,255,255,0.1)", color: "white", p: 0.5 }}
                     >
-                      <RefreshIcon fontSize="small" />
+                      <RefreshIcon sx={{ fontSize: 16 }} />
                     </IconButton>
                   </Tooltip>
                   <Button
                     size="small"
                     variant={showFilters ? "contained" : "outlined"}
-                    startIcon={<FilterListIcon />}
+                    startIcon={<FilterListIcon sx={{ fontSize: 16 }} />}
                     onClick={() => setShowFilters((prev) => !prev)}
                     sx={{
+                      fontSize: '0.7rem',
+                      py: 0.1,
+                      px: 1,
+                      minHeight: 28,
                       color: "white",
-                      borderColor: "rgba(255,255,255,0.35)",
-                      bgcolor: showFilters ? "rgba(255,255,255,0.18)" : "transparent",
+                      borderColor: "rgba(255,255,255,0.3)",
+                      bgcolor: showFilters ? "rgba(255,255,255,0.15)" : "transparent",
                     }}
                   >
                     Bộ lọc
@@ -361,21 +381,21 @@ export const InventoryLedgerPage = () => {
               <SummaryCard
                 title="Tăng / Giảm tồn"
                 value={`+${overallStats.increase.toLocaleString("vi-VN")} / -${overallStats.decrease.toLocaleString("vi-VN")}`}
-                subtitle="Đã bù trừ theo biến động thực tế"
-                icon={<TrendingUpIcon fontSize="small" />}
-                color="#16a34a"
-                bgColor="#f0fdf4"
-                valueColor="#166534"
+                subtitle="Biến động thực tế trong kỳ"
+                icon={<TrendingUpIcon />}
+                color="#10b981"
+                bgColor="#10b98122"
+                valueColor="#059669"
                 loading={statsLoading}
               />
               <SummaryCard
                 title="Biến động ròng"
                 value={formatQuantityChange(overallStats.netChange)}
-                subtitle="Tổng thay đổi số lượng"
-                icon={<TrendingDownIcon fontSize="small" />}
-                color={overallStats.netChange >= 0 ? "#0891b2" : "#e11d48"}
-                bgColor={overallStats.netChange >= 0 ? "#ecfeff" : "#fff1f2"}
-                valueColor={overallStats.netChange >= 0 ? "#155e75" : "#9f1239"}
+                subtitle="Tổng hợp thay đổi số lượng"
+                icon={overallStats.netChange >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
+                color={overallStats.netChange >= 0 ? "#3b82f6" : "#ef4444"}
+                bgColor={overallStats.netChange >= 0 ? "#3b82f622" : "#ef444422"}
+                valueColor={overallStats.netChange >= 0 ? "#2563eb" : "#dc2626"}
                 loading={statsLoading}
               />
 
@@ -383,24 +403,29 @@ export const InventoryLedgerPage = () => {
                 <Paper
                   elevation={0}
                   sx={{
-                    p: 2,
+                    p: 1.5,
                     border: "1px solid",
                     borderColor: "grey.200",
                     borderRadius: 3,
                     bgcolor: "#fafafa",
                   }}
                 >
-                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 1.5 }}>
-                    <Typography variant="subtitle2" fontWeight={700}>
+                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
+                    <Typography variant="caption" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                       Bộ lọc
                     </Typography>
                     {hasActiveFilters && (
-                      <Button size="small" startIcon={<ClearIcon />} onClick={handleClearFilters}>
+                      <Button 
+                        size="small" 
+                        variant="text"
+                        onClick={handleClearFilters}
+                        sx={{ fontSize: '0.65rem', p: 0, minWidth: 0 }}
+                      >
                         Xóa
                       </Button>
                     )}
                   </Stack>
-                  <Stack spacing={1.5}>
+                  <Stack spacing={1.25}>
                     <FormControl fullWidth size="small">
                       <InputLabel>Loại biến động</InputLabel>
                       <Select

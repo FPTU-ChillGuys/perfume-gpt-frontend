@@ -37,6 +37,7 @@ import {
   brandService,
   type BrandLookupItem,
 } from "@/services/brandService";
+import { LoadingButton } from "@/components/common/LoadingButton";
 
 interface BannerFormDialogProps {
   open: boolean;
@@ -614,6 +615,12 @@ export const BannerFormDialog = ({
                 onChange={(_event, newValue) => {
                   setSelectedCampaign(newValue);
                   handleChange("linkTarget", newValue?.id || "");
+                  if (newValue?.name) {
+                    handleChange("title", newValue.name);
+                  }
+                  if (newValue?.description) {
+                    handleChange("altText", newValue.description);
+                  }
                   if (newValue?.startDate) {
                     handleChange("startDate", toLocalDatetimeString(newValue.startDate));
                   }
@@ -797,13 +804,14 @@ export const BannerFormDialog = ({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Hủy</Button>
-        <Button
+        <LoadingButton
           onClick={handleSubmit}
           variant="contained"
+          loading={isSaving}
           disabled={isSaving}
         >
-          {isSaving ? "Đang lưu..." : "Lưu banner"}
-        </Button>
+          Lưu
+        </LoadingButton>
       </DialogActions>
     </Dialog>
   );

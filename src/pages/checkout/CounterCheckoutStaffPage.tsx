@@ -1035,7 +1035,7 @@ export const CounterCheckoutStaffPage = () => {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể tải danh sách batch",
+          : "Không thể tải danh sách lô",
         "error",
       );
       setIsBatchModalOpen(false);
@@ -1046,7 +1046,7 @@ export const CounterCheckoutStaffPage = () => {
 
   const handleEditBatchInCart = async (item: PosCartItem) => {
     if (!item.variantId) {
-      showToast("Không thể đổi batch cho sản phẩm này", "warning");
+      showToast("Không thể đổi lô cho sản phẩm này", "warning");
       return;
     }
 
@@ -1073,7 +1073,7 @@ export const CounterCheckoutStaffPage = () => {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể tải danh sách batch",
+          : "Không thể tải danh sách lô",
         "error",
       );
       setIsBatchModalOpen(false);
@@ -1085,7 +1085,7 @@ export const CounterCheckoutStaffPage = () => {
 
   const handleAddAnotherBatchInCart = async (group: GroupedCartItem) => {
     if (!group.variantId) {
-      showToast("Không thể thêm batch cho sản phẩm này", "warning");
+      showToast("Không thể thêm lô cho sản phẩm này", "warning");
       return;
     }
 
@@ -1112,7 +1112,7 @@ export const CounterCheckoutStaffPage = () => {
       showToast(
         error instanceof Error
           ? error.message
-          : "Không thể tải danh sách batch",
+          : "Không thể tải danh sách lô",
         "error",
       );
       setIsBatchModalOpen(false);
@@ -1236,7 +1236,7 @@ export const CounterCheckoutStaffPage = () => {
     });
 
     if (outOfStockWarning) {
-      showToast("Số lượng đã đạt tối đa theo tồn kho của batch", "warning");
+      showToast("Số lượng đã đạt tối đa theo tồn kho của lô", "warning");
     }
 
     setIsBatchModalOpen(false);
@@ -1265,7 +1265,7 @@ export const CounterCheckoutStaffPage = () => {
     });
 
     if (outOfStockWarning) {
-      showToast("Không thể vượt quá số lượng còn lại của batch", "warning");
+      showToast("Không thể vượt quá số lượng còn lại của lô", "warning");
     }
   };
 
@@ -2781,7 +2781,7 @@ export const CounterCheckoutStaffPage = () => {
                                       }
                                       sx={{ py: 0, minHeight: 24 }}
                                     >
-                                      + Batch khác
+                                      + Lô khác
                                     </Button>
                                   </Stack>
                                 }
@@ -2852,7 +2852,7 @@ export const CounterCheckoutStaffPage = () => {
                                   variant="body2"
                                   color="text.secondary"
                                 >
-                                  Batch: {item.batchCode}
+                                  Lô: {item.batchCode}
                                   <Button
                                     size="small"
                                     variant="text"
@@ -3184,8 +3184,15 @@ export const CounterCheckoutStaffPage = () => {
                               variant="outlined"
                               size="small"
                               onClick={() => handleOpenBatchModal(variant)}
+                              sx={{
+                                minWidth: 60,
+                                px: 1.25,
+                                py: 0.5,
+                                fontSize: "0.75rem",
+                                borderRadius: 1.5
+                              }}
                             >
-                              Add
+                              Thêm
                             </Button>
                           }
                           sx={{ pr: 10 }}

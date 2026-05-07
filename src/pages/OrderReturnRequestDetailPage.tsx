@@ -80,7 +80,7 @@ const REFUND_METHOD_OPTIONS: {
   },
   {
     value: "ExternalBankTransfer",
-    label: "External Bank Transfer",
+    label: "Chuyển khoản thủ công",
     iconSrc: transfer,
   },
 ];
@@ -89,7 +89,7 @@ const REFUND_METHOD_LABEL: Record<ReturnRefundMethod, string> = {
   VnPay: "VNPay",
   Momo: "MoMo",
   CashInStore: "Cash In Store",
-  ExternalBankTransfer: "External Bank Transfer",
+  ExternalBankTransfer: "Chuyển khoản thủ công",
 };
 
 const MIN_MANUAL_TRANSACTION_REFERENCE_LENGTH = 6;
