@@ -272,7 +272,8 @@ export const NotificationBell = ({
               {pagedItems.map((notif, idx) => {
                 const cfg = getTypeConfig(notif.referenceType);
                 return (
-                  <Box key={notif.id}>
+                  <Box key={`${notif.id}-${idx}`}>
+
                     <Box
                       onClick={() => handleItemClick(notif)}
                       sx={{

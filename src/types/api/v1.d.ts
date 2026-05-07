@@ -5392,7 +5392,46 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateCancelRequest"];
+                    "text/json": components["schemas"]["UpdateCancelRequest"];
+                    "application/*+json": components["schemas"]["UpdateCancelRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponseOfstring"];
+                        "application/json": components["schemas"]["BaseResponseOfstring"];
+                        "text/json": components["schemas"]["BaseResponseOfstring"];
+                    };
+                };
+                default: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BaseResponse"];
+                        "application/json": components["schemas"]["BaseResponse"];
+                        "text/json": components["schemas"]["BaseResponse"];
+                    };
+                };
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;
@@ -15197,7 +15236,7 @@ export interface components {
             shippedDate?: null | string;
         };
         /** @enum {string} */
-        ShippingStatus: "UnAssigned" | "ReadyToPick" | "Delivering" | "Delivered" | "Cancelled" | "Returning" | "Returned";
+        ShippingStatus: "UnAssigned" | "ReadyToPick" | "Delivering" | "Delivered" | "Cancelled" | "Returning" | "Returned" | "Damaged" | "Lost";
         /** @enum {string} */
         ShippingType: "Forward" | "Return";
         StaffCancelOrderRequest: {
@@ -15507,6 +15546,16 @@ export interface components {
             /** Format: int32 */
             maxUsagePerUser?: null | number;
             isMemberOnly?: boolean;
+        };
+        UpdateCancelRequest: {
+            reason?: components["schemas"]["CancelOrderReason"];
+            staffNote?: null | string;
+            isRefundRequired?: boolean;
+            /** Format: decimal */
+            refundAmount?: null | number;
+            refundBankName?: null | string;
+            refundAccountNumber?: null | string;
+            refundAccountName?: null | string;
         };
         UpdateCartItemRequest: {
             /** Format: int32 */

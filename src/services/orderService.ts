@@ -52,6 +52,8 @@ export type ProcessCancelRequestBody = Omit<
   refundMethod?: PaymentMethod | null;
   manualTransactionReference?: string | null;
 };
+export type UpdateCancelRequest = components["schemas"]["UpdateCancelRequest"];
+
 
 export interface PagedCancelRequests {
   items: OrderCancelRequest[];
@@ -702,6 +704,34 @@ class OrderService {
       );
     }
   }
+
+  async updateCancelRequest(
+    id: string,
+    body: UpdateCancelRequest,
+  ): Promise<string> {
+    try {
+      const response = await apiInstance.PUT("/api/ordercancelrequests/{id}", {
+        params: { path: { id } },
+        body,
+      });
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.message || "Failed to update cancel request",
+        );
+      }
+
+      return response.data.message || "Cập nhật thành công";
+    } catch (error: any) {
+      console.error("Error updating cancel request:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update cancel request",
+      );
+    }
+  }
+
 
   async getAllReturnRequests(
     params?: GetOrderReturnRequestsParams,
