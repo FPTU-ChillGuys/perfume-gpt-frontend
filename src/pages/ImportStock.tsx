@@ -27,9 +27,14 @@ const ImportStock: React.FC = () => {
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam) {
-      const newParams = new URLSearchParams(searchParams.toString());
-      newParams.delete("tab");
-      setSearchParams(newParams, { replace: true });
+      setSearchParams(
+        (prev) => {
+          const newParams = new URLSearchParams(prev);
+          newParams.delete("tab");
+          return newParams;
+        },
+        { replace: true },
+      );
     }
   }, [searchParams, setSearchParams]);
 

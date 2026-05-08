@@ -98,10 +98,15 @@ export const CreateImportStockTab: React.FC = () => {
           }
 
           // Clear the importData and leadTime params from URL after processing
-          const newParams = new URLSearchParams(searchParams.toString());
-          newParams.delete("importData");
-          newParams.delete("leadTime");
-          setSearchParams(newParams, { replace: true });
+          setSearchParams(
+            (prev) => {
+              const newParams = new URLSearchParams(prev);
+              newParams.delete("importData");
+              newParams.delete("leadTime");
+              return newParams;
+            },
+            { replace: true },
+          );
 
           // Set hasProcessed flag to avoid re-processing
           setHasProcessedImportData(true);
