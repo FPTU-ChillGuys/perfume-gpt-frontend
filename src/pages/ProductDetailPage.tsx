@@ -2419,8 +2419,8 @@ const ProductDetailPage = () => {
                   }}
                 />
               ) : (
-                <Typography variant="caption" color="text.disabled">
-                  No image
+                 <Typography variant="caption" color="text.disabled">
+                   Không có hình ảnh
                 </Typography>
               )}
             </Box>
