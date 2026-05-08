@@ -43,6 +43,8 @@ import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewSection } from "@/components/review/ReviewSection";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type {
   MediaResponse,
   PublicProductDetail,
@@ -1302,16 +1304,24 @@ const ProductDetailPage = () => {
           <Typography variant="h6" fontWeight={600} gutterBottom>
             ✨ Tóm tắt các đánh giá bằng AI
           </Typography>
-          <Typography
-            variant="body1"
+          <Box
             sx={{
-              whiteSpace: "pre-wrap",
               lineHeight: 1.7,
               color: "text.primary",
+              "& > p": { lineHeight: 1.7, mb: 1.5, margin: 0 },
+              "& > p:last-child": { mb: 0 },
+              "& ul, & ol": { pl: 2, mb: 1 },
+              "& li": { mb: 0.5 },
+              "& strong": { fontWeight: 700 },
+              "& em": { fontStyle: "italic" },
+              "& h1, & h2, & h3": { fontWeight: 700, mt: 2, mb: 1 },
+              "& a": { color: "#dc2626", textDecoration: "underline", cursor: "pointer" },
             }}
           >
-            {reviewSummary}
-          </Typography>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {reviewSummary}
+            </ReactMarkdown>
+          </Box>
         </Box>
       );
     }
