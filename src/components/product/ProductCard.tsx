@@ -190,7 +190,7 @@ export const ProductCard = ({
         ) : (
           <div className="text-gray-400 text-center p-4">
             <div className="w-24 h-32 mx-auto bg-gray-200 rounded-lg mb-2"></div>
-            <span className="text-sm">No Image</span>
+            <span className="text-sm">Không có hình ảnh</span>
           </div>
         )}
       </Link>
@@ -238,8 +238,8 @@ export const ProductCard = ({
         <p className="mt-1 text-[10px] sm:text-xs text-gray-500 text-center">
           {(numberOfVariants ?? 0) > 0
             ? (numberOfVariants ?? 0) > 1
-              ? `${numberOfVariants} Sizes`
-              : `${numberOfVariants} Size`
+              ? `${numberOfVariants} Dung tích`
+              : `${numberOfVariants} Dung tích`
             : "Chưa có size"}
         </p>
         </div>
