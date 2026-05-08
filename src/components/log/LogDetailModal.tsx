@@ -9,7 +9,7 @@ import {
     Divider,
 } from "@mui/material";
 import type { UserLog } from "@/types/log";
-import { getUserLogEventTypeLabel } from "@/utils/userLogLabels";
+import { getUserLogEventTypeLabel, getUserLogEntityTypeLabel } from "@/utils/userLogLabels";
 
 interface LogDetailModalProps {
     open: boolean;
@@ -25,13 +25,14 @@ const formatDate = (dateStr?: string) => {
 export const LogDetailModal = ({ open, onClose, selectedLog }: LogDetailModalProps) => {
     if (!selectedLog) return null;
         const eventTypeLabel = getUserLogEventTypeLabel(selectedLog.eventType);
+    const entityTypeLabel = getUserLogEntityTypeLabel(selectedLog.entityType);
 
     return (
         <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle sx={{ fontWeight: "bold" }}>Chi tiết Log</DialogTitle>
             <DialogContent dividers>
                 <Typography variant="subtitle1" gutterBottom>
-                    <strong>User ID:</strong> {selectedLog.userName ?? "Khách"}
+                    <strong>Người dùng:</strong> {selectedLog.userName ?? "Khách"}
                 </Typography>
 
                 <Typography variant="subtitle1" gutterBottom>
@@ -39,17 +40,17 @@ export const LogDetailModal = ({ open, onClose, selectedLog }: LogDetailModalPro
                 </Typography>
 
                 <Typography variant="subtitle1" gutterBottom>
-                    <strong>Entity Type:</strong> {selectedLog.entityType || "N/A"}
+                    <strong>Đối tượng:</strong> {entityTypeLabel}
                 </Typography>
 
                 <Typography variant="subtitle1" gutterBottom>
-                    <strong>Entity ID:</strong> {selectedLog.entityId || "N/A"}
+                    <strong>Mã đối tượng:</strong> {selectedLog.entityId || "N/A"}
                 </Typography>
 
                 <Divider sx={{ my: 2 }} />
 
                 <Typography variant="h6" gutterBottom sx={{ mt: 2, fontWeight: 600 }}>
-                    Noi dung
+                    Nội dung
                 </Typography>
                 <Box
                     sx={{
@@ -61,12 +62,12 @@ export const LogDetailModal = ({ open, onClose, selectedLog }: LogDetailModalPro
                     }}
                 >
                     <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
-                        {selectedLog.contentText || "Khong co noi dung"}
+                        {selectedLog.contentText || "Không có nội dung"}
                     </Typography>
                 </Box>
 
                 <Typography variant="h6" gutterBottom sx={{ mt: 3, fontWeight: 600 }}>
-                    Metadata
+                    Dữ liệu mở rộng
                 </Typography>
                 <Box
                     component="pre"
@@ -85,10 +86,10 @@ export const LogDetailModal = ({ open, onClose, selectedLog }: LogDetailModalPro
                 <Divider sx={{ my: 2 }} />
 
                 <Typography variant="body2" color="text.secondary">
-                    Tao luc: {formatDate(selectedLog.createdAt)}
+                    Tạo lúc: {formatDate(selectedLog.createdAt)}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                    Cap nhat luc: {formatDate(selectedLog.updatedAt)}
+                    Cập nhật lúc: {formatDate(selectedLog.updatedAt)}
                 </Typography>
             </DialogContent>
             <DialogActions>

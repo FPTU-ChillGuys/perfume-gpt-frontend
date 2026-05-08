@@ -43,6 +43,8 @@ import { aiAcceptanceService } from "@/services/ai/aiAcceptanceService";
 import { productReviewService } from "@/services/reviewService";
 import { orderService } from "@/services/orderService";
 import { ReviewSection } from "@/components/review/ReviewSection";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type {
   MediaResponse,
   PublicProductDetail,
@@ -1294,24 +1296,92 @@ const ProductDetailPage = () => {
           mt={4}
           p={3}
           borderRadius={2}
-          bgcolor="success.lighter"
-          color="success.darker"
-          border="1px solid"
-          borderColor="success.light"
+          sx={{
+            bgcolor: "rgba(240, 253, 244, 0.7)",
+            border: "1px solid",
+            borderColor: "#bbf7d0",
+            borderLeft: "4px solid #22c55e",
+            boxShadow: "0 2px 8px rgba(22, 163, 74, 0.08)",
+          }}
         >
-          <Typography variant="h6" fontWeight={600} gutterBottom>
-            ✨ Tóm tắt các đánh giá bằng AI
-          </Typography>
           <Typography
-            variant="body1"
+            variant="h6"
+            fontWeight={700}
+            gutterBottom
             sx={{
-              whiteSpace: "pre-wrap",
-              lineHeight: 1.7,
-              color: "text.primary",
+              color: "#15803d",
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              borderBottom: "2px solid #bbf7d0",
+              pb: 1,
+              mb: 2,
             }}
           >
-            {reviewSummary}
+            ⭐ Tóm tắt các đánh giá bằng AI
           </Typography>
+          <Box
+            sx={{
+              lineHeight: 1.8,
+              color: "text.primary",
+              "& > p": {
+                lineHeight: 1.8,
+                mb: 2,
+                margin: 0,
+              },
+              "& ul": {
+                pl: 0,
+                mb: 2,
+                listStyle: "none",
+              },
+              "& > ul > li, & > ol > li": {
+                mb: 1.5,
+                pl: 2,
+                position: "relative",
+                "&::before": {
+                  content: '"•"',
+                  position: "absolute",
+                  left: 0,
+                  color: "#ea580c",
+                  fontWeight: 700,
+                  fontSize: "1.3em",
+                },
+              },
+              "& ul ul": {
+                pl: 3,
+                "& > li::before": {
+                  content: '"◦"',
+                  color: "#0891b2",
+                  fontSize: "1.2em",
+                },
+              },
+              "& strong": {
+                fontWeight: 700,
+                color: "#dc2626",
+              },
+              "& h2, & h3": {
+                fontWeight: 700,
+                fontSize: "1.1rem",
+                color: "#15803d",
+                mt: 3,
+                mb: 1.5,
+                borderBottom: "1px dashed #86efac",
+                pb: 0.5,
+              },
+              "& a": {
+                color: "#2563eb",
+                textDecoration: "underline",
+                cursor: "pointer",
+              },
+              "& em": {
+                fontStyle: "italic",
+              },
+            }}
+          >
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {reviewSummary}
+            </ReactMarkdown>
+          </Box>
         </Box>
       );
     }
@@ -2419,8 +2489,8 @@ const ProductDetailPage = () => {
                   }}
                 />
               ) : (
-                <Typography variant="caption" color="text.disabled">
-                  No image
+                 <Typography variant="caption" color="text.disabled">
+                   Không có hình ảnh
                 </Typography>
               )}
             </Box>

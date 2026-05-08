@@ -54,7 +54,9 @@ export interface UserLog {
     userId?: string | null;
     userName?: string;
     eventType?: "message" | "search" | "survey" | "product" | null;
+    eventTypeLabel?: string;
     entityType?: "conversation" | "search" | "survey" | "product" | null;
+    entityTypeLabel?: string;
     entityId?: string | null;
     contentText?: string | null;
     metadata?: Record<string, any> | null;

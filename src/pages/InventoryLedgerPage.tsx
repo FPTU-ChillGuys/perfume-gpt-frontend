@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Chip,
@@ -210,18 +211,24 @@ export const InventoryLedgerPage = () => {
   const [variantMap, setVariantMap] = useState<Map<string, VariantLookupItem>>(
     new Map(),
   );
+  const [variantOptions, setVariantOptions] = useState<VariantLookupItem[]>([]);
+  const [loadingVariantLookup, setLoadingVariantLookup] = useState(false);
 
   useEffect(() => {
     const load = async () => {
       try {
+        setLoadingVariantLookup(true);
         const items = await productService.getProductVariants();
         const map = new Map<string, VariantLookupItem>();
         for (const item of items) {
           if (item.id) map.set(item.id, item);
         }
+        setVariantOptions(items);
         setVariantMap(map);
       } catch {
         // silently fail
+      } finally {
+        setLoadingVariantLookup(false);
       }
     };
     load();
@@ -324,175 +331,267 @@ export const InventoryLedgerPage = () => {
   return (
     <AdminLayout>
       <Box sx={{ px: { xs: 2, md: 3 }, py: 3 }}>
-        <Grid container spacing={2.5}>
-          <Grid size={{ xs: 12, lg: 3.5 }}>
-            <Stack spacing={1.5}>
-              <Paper
-                elevation={0}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          spacing={2}
+          sx={{ mb: 3 }}
+        >
+          <Box>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Box
                 sx={{
-                  p: 1.5,
-                  border: "1px solid",
-                  borderColor: "grey.200",
-                  borderRadius: 3,
-                  bgcolor: "#0f172a",
+                  width: 44,
+                  height: 44,
+                  borderRadius: 2.5,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor: "#6366f1",
                   color: "white",
                 }}
               >
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-                  <InventoryIcon sx={{ fontSize: 18 }} />
-                  <Typography variant="subtitle2" fontWeight={700}>
-                    Sổ kho
-                  </Typography>
-                </Stack>
-                <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.7)", lineHeight: 1.4 }}>
-                  Số liệu cốt lõi và thao tác lọc nhanh.
+                <InventoryIcon />
+              </Box>
+              <Box>
+                <Typography variant="h5" fontWeight={700}>
+                  Sổ kho
                 </Typography>
-                <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-                  <Tooltip title="Tải lại">
-                    <IconButton
-                      size="small"
-                      onClick={fetchLedger}
-                      disabled={loading}
-                      sx={{ bgcolor: "rgba(255,255,255,0.1)", color: "white", p: 0.5 }}
-                    >
-                      <RefreshIcon sx={{ fontSize: 16 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Button
-                    size="small"
-                    variant={showFilters ? "contained" : "outlined"}
-                    startIcon={<FilterListIcon sx={{ fontSize: 16 }} />}
-                    onClick={() => setShowFilters((prev) => !prev)}
-                    sx={{
-                      fontSize: '0.7rem',
-                      py: 0.1,
-                      px: 1,
-                      minHeight: 28,
-                      color: "white",
-                      borderColor: "rgba(255,255,255,0.3)",
-                      bgcolor: showFilters ? "rgba(255,255,255,0.15)" : "transparent",
+                <Typography variant="body2" color="text.secondary">
+                  Theo dõi biến động nhập, bán và điều chỉnh tồn kho theo thời gian
+                </Typography>
+              </Box>
+            </Stack>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant={showFilters ? "contained" : "outlined"}
+              startIcon={<FilterListIcon />}
+              onClick={() => setShowFilters((prev) => !prev)}
+              size="small"
+            >
+              Bộ lọc
+              {hasActiveFilters && (
+                <Chip
+                  label="!"
+                  size="small"
+                  color="error"
+                  sx={{ ml: 0.5, height: 18, minWidth: 18, fontSize: 11 }}
+                />
+              )}
+            </Button>
+            <Tooltip title="Tải lại">
+              <IconButton onClick={fetchLedger} disabled={loading}>
+                <RefreshIcon />
+              </IconButton>
+            </Tooltip>
+          </Stack>
+        </Stack>
+
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <SummaryCard
+              title="Tăng tồn kho"
+              value={`+${overallStats.increase.toLocaleString("vi-VN")}`}
+              subtitle="Tổng số lượng nhập và cộng thêm"
+              icon={<TrendingUpIcon fontSize="small" />}
+              color="#16a34a"
+              bgColor="#bbf7d0"
+              valueColor="#059669"
+              loading={statsLoading}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <SummaryCard
+              title="Giảm tồn kho"
+              value={`-${overallStats.decrease.toLocaleString("vi-VN")}`}
+              subtitle="Tổng số lượng bán và trừ đi"
+              icon={<TrendingDownIcon fontSize="small" />}
+              color="#dc2626"
+              bgColor="#fecaca"
+              valueColor="#dc2626"
+              loading={statsLoading}
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <SummaryCard
+              title="Biến động ròng"
+              value={formatQuantityChange(overallStats.netChange)}
+              subtitle="Chênh lệch tăng giảm toàn kỳ"
+              icon={<InventoryIcon fontSize="small" />}
+              color={overallStats.netChange >= 0 ? "#0891b2" : "#e11d48"}
+              bgColor={overallStats.netChange >= 0 ? "#bae6fd" : "#fecdd3"}
+              valueColor={overallStats.netChange >= 0 ? "#0e7490" : "#be123c"}
+              loading={statsLoading}
+            />
+          </Grid>
+        </Grid>
+
+        {showFilters && (
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.5,
+              mb: 3,
+              border: "1px solid",
+              borderColor: "grey.200",
+              borderRadius: 3,
+            }}
+          >
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="center"
+              sx={{ mb: 2 }}
+            >
+              <Typography variant="subtitle2" fontWeight={600}>
+                Bộ lọc nâng cao
+              </Typography>
+              {hasActiveFilters && (
+                <Button
+                  size="small"
+                  startIcon={<ClearIcon />}
+                  onClick={handleClearFilters}
+                >
+                  Xóa bộ lọc
+                </Button>
+              )}
+            </Stack>
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Loại biến động</InputLabel>
+                  <Select
+                    label="Loại biến động"
+                    value={typeFilter}
+                    onChange={(e) => {
+                      setTypeFilter(e.target.value as InventoryLedgerType | "");
+                      setPage(0);
                     }}
                   >
-                    Bộ lọc
-                  </Button>
-                </Stack>
-              </Paper>
-
-              <SummaryCard
-                title="Tăng / Giảm tồn"
-                value={`+${overallStats.increase.toLocaleString("vi-VN")} / -${overallStats.decrease.toLocaleString("vi-VN")}`}
-                subtitle="Biến động thực tế trong kỳ"
-                icon={<TrendingUpIcon />}
-                color="#10b981"
-                bgColor="#10b98122"
-                valueColor="#059669"
-                loading={statsLoading}
-              />
-              <SummaryCard
-                title="Biến động ròng"
-                value={formatQuantityChange(overallStats.netChange)}
-                subtitle="Tổng hợp thay đổi số lượng"
-                icon={overallStats.netChange >= 0 ? <TrendingUpIcon /> : <TrendingDownIcon />}
-                color={overallStats.netChange >= 0 ? "#3b82f6" : "#ef4444"}
-                bgColor={overallStats.netChange >= 0 ? "#3b82f622" : "#ef444422"}
-                valueColor={overallStats.netChange >= 0 ? "#2563eb" : "#dc2626"}
-                loading={statsLoading}
-              />
-
-              {showFilters && (
-                <Paper
-                  elevation={0}
-                  sx={{
-                    p: 1.5,
-                    border: "1px solid",
-                    borderColor: "grey.200",
-                    borderRadius: 3,
-                    bgcolor: "#fafafa",
+                    <MenuItem value="">Tất cả</MenuItem>
+                    <MenuItem value="Import">Nhập hàng</MenuItem>
+                    <MenuItem value="Sales">Bán hàng</MenuItem>
+                    <MenuItem value="Adjustment">Điều chỉnh</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Autocomplete
+                  options={variantOptions}
+                  loading={loadingVariantLookup}
+                  value={
+                    variantOptions.find((item) => item.id === variantFilter) ||
+                    null
+                  }
+                  onChange={(_, value) => {
+                    setVariantFilter(value?.id || "");
+                    setPage(0);
                   }}
-                >
-                  <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
-                    <Typography variant="caption" fontWeight={700} sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      Bộ lọc
-                    </Typography>
-                    {hasActiveFilters && (
-                      <Button 
-                        size="small" 
-                        variant="text"
-                        onClick={handleClearFilters}
-                        sx={{ fontSize: '0.65rem', p: 0, minWidth: 0 }}
-                      >
-                        Xóa
-                      </Button>
-                    )}
-                  </Stack>
-                  <Stack spacing={1.25}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel>Loại biến động</InputLabel>
-                      <Select
-                        label="Loại biến động"
-                        value={typeFilter}
-                        onChange={(e) => {
-                          setTypeFilter(e.target.value as InventoryLedgerType | "");
-                          setPage(0);
-                        }}
-                      >
-                        <MenuItem value="">Tất cả</MenuItem>
-                        <MenuItem value="Import">Nhập hàng</MenuItem>
-                        <MenuItem value="Sales">Bán hàng</MenuItem>
-                        <MenuItem value="Adjustment">Điều chỉnh</MenuItem>
-                      </Select>
-                    </FormControl>
+                  getOptionLabel={(option) =>
+                    option.displayName || option.sku || option.id || ""
+                  }
+                  isOptionEqualToValue={(option, value) => option.id === value.id}
+                  renderOption={(props, option) => (
+                    <Box component="li" {...props}>
+                      <Stack>
+                        <Typography variant="body2" fontWeight={600}>
+                          {option.displayName || option.sku || option.id}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {option.sku || "Không có SKU"}
+                        </Typography>
+                      </Stack>
+                    </Box>
+                  )}
+                  renderInput={(params) => (
                     <TextField
-                      label="Variant ID"
-                      placeholder="Nhập variant ID..."
+                      {...params}
+                      label="Biến thể"
+                      placeholder="Chọn biến thể từ danh sách"
                       size="small"
-                      fullWidth
-                      value={variantFilter}
-                      onChange={(e) => {
-                        setVariantFilter(e.target.value);
-                        setPage(0);
-                      }}
                       slotProps={{
                         input: {
+                          ...params.InputProps,
                           startAdornment: (
-                            <InputAdornment position="start">
-                              <SearchIcon fontSize="small" />
-                            </InputAdornment>
+                            <>
+                              <InputAdornment position="start">
+                                <SearchIcon fontSize="small" />
+                              </InputAdornment>
+                              {params.InputProps.startAdornment}
+                            </>
                           ),
                         },
                       }}
                     />
-                    <TextField
-                      label="Từ ngày"
-                      type="datetime-local"
-                      size="small"
-                      fullWidth
-                      value={fromDate}
-                      onChange={(e) => {
-                        setFromDate(e.target.value);
-                        setPage(0);
-                      }}
-                      slotProps={{ inputLabel: { shrink: true } }}
-                    />
-                    <TextField
-                      label="Đến ngày"
-                      type="datetime-local"
-                      size="small"
-                      fullWidth
-                      value={toDate}
-                      onChange={(e) => {
-                        setToDate(e.target.value);
-                        setPage(0);
-                      }}
-                      slotProps={{ inputLabel: { shrink: true } }}
-                    />
-                  </Stack>
-                </Paper>
-              )}
-            </Stack>
-          </Grid>
+                  )}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  label="Từ ngày"
+                  type="datetime-local"
+                  size="small"
+                  fullWidth
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    setPage(0);
+                  }}
+                  slotProps={{
+                    inputLabel: { shrink: true },
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <CalendarIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <TextField
+                  label="Đến ngày"
+                  type="datetime-local"
+                  size="small"
+                  fullWidth
+                  value={toDate}
+                  onChange={(e) => {
+                    setToDate(e.target.value);
+                    setPage(0);
+                  }}
+                  slotProps={{
+                    inputLabel: { shrink: true },
+                    input: {
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <CalendarIcon fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              </Grid>
+            </Grid>
+          </Paper>
+        )}
 
-          <Grid size={{ xs: 12, lg: 8.5 }}>
+        {error && (
+          <Alert
+            severity="error"
+            sx={{ mb: 2, borderRadius: 2 }}
+            action={
+              <Button color="inherit" size="small" onClick={fetchLedger}>
+                Thử lại
+              </Button>
+            }
+          >
+            {error}
+          </Alert>
+        )}
+
             <Paper
               elevation={0}
               sx={{
@@ -539,20 +638,6 @@ export const InventoryLedgerPage = () => {
                   {showDetails ? "Ẩn thông tin phụ" : "Hiện thông tin phụ"}
                 </Button>
               </Stack>
-
-              {error && (
-                <Alert
-                  severity="error"
-                  sx={{ m: 2, borderRadius: 2 }}
-                  action={
-                    <Button color="inherit" size="small" onClick={fetchLedger}>
-                      Thử lại
-                    </Button>
-                  }
-                >
-                  {error}
-                </Alert>
-              )}
 
               <TableContainer sx={{ maxHeight: "74vh" }}>
                 <Table size="small" stickyHeader>
@@ -800,8 +885,6 @@ export const InventoryLedgerPage = () => {
                 }}
               />
             </Paper>
-          </Grid>
-        </Grid>
       </Box>
     </AdminLayout>
   );
