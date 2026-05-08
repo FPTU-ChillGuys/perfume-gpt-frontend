@@ -28,7 +28,7 @@ import { LogDetailModal } from "@/components/log/LogDetailModal";
 import { logService } from "@/services/ai/logService";
 import { useToast } from "@/hooks/useToast";
 import type { UserLog, UserLogSummaryResponse } from "@/types/log";
-import { getUserLogEventTypeLabel } from "@/utils/userLogLabels";
+import { getUserLogEventTypeLabel, getUserLogEntityTypeLabel } from "@/utils/userLogLabels";
 
 const formatDate = (dateStr?: string) => {
     if (!dateStr) return "N/A";
@@ -237,7 +237,7 @@ export const UserLogsManagementPage = () => {
                 <Paper sx={{ mb: 3 }}>
                     <Tabs value={tabValue} onChange={handleTabChange} aria-label="user logs tabs">
                         <Tab label="Log hoạt động" id="user-log-tab-0" aria-controls="user-log-panel-0" />
-                        <Tab label="User log summary" id="user-log-tab-1" aria-controls="user-log-panel-1" />
+                        <Tab label="Tóm tắt log" id="user-log-tab-1" aria-controls="user-log-panel-1" />
                     </Tabs>
                 </Paper>
 
@@ -315,8 +315,8 @@ export const UserLogsManagementPage = () => {
                                 <TableRow sx={{ bgcolor: "grey.50" }}>
                                     <TableCell>Người dùng</TableCell>
                                     <TableCell align="center">Loại sự kiện</TableCell>
-                                    <TableCell align="center">Entity</TableCell>
-                                    <TableCell>Ngày tạo log</TableCell>
+                                    <TableCell align="center">Đối tượng</TableCell>
+                                    <TableCell>Ngày tạo</TableCell>
                                     <TableCell>Cập nhật cuối</TableCell>
                                     <TableCell align="center">Thao tác</TableCell>
                                 </TableRow>
@@ -348,7 +348,7 @@ export const UserLogsManagementPage = () => {
                                                 {getUserLogEventTypeLabel(log.eventType)}
                                             </TableCell>
                                             <TableCell align="center">
-                                                {log.entityType || "N/A"}
+                                                {getUserLogEntityTypeLabel(log.entityType)}
                                             </TableCell>
                                             <TableCell>
                                                 <Typography variant="body2" noWrap>
@@ -395,7 +395,7 @@ export const UserLogsManagementPage = () => {
                             <TableHead>
                                 <TableRow sx={{ bgcolor: "grey.50" }}>
                                     <TableCell>Người dùng</TableCell>
-                                    <TableCell align="right">Tổng event</TableCell>
+                                    <TableCell align="right">Tổng sự kiện</TableCell>
                                     <TableCell>Ngày tạo</TableCell>
                                     <TableCell>Cập nhật cuối</TableCell>
                                     <TableCell align="center">Thao tác</TableCell>
@@ -465,7 +465,7 @@ export const UserLogsManagementPage = () => {
                                 rowsPerPage={summaryRowsPerPage}
                                 onRowsPerPageChange={handleChangeSummaryRowsPerPage}
                                 rowsPerPageOptions={[5, 10, 25, 50, 100]}
-                                labelRowsPerPage="Số summary mỗi trang:"
+                                labelRowsPerPage="Số tóm tắt mỗi trang:"
                                 labelDisplayedRows={({ from, to, count }) => `${from}-${to} của ${count}`}
                             />
                         )}
@@ -486,16 +486,16 @@ export const UserLogsManagementPage = () => {
                 fullWidth
             >
                 <DialogTitle sx={{ fontWeight: "bold" }}>
-                    Chi tiết User Log Summary
+                    Chi tiết Tóm tắt Log
                 </DialogTitle>
                 <DialogContent dividers>
                     {selectedSummary && (
                         <>
                             <Typography variant="subtitle2" gutterBottom>
-                                <strong>User ID:</strong> {selectedSummary.userName ?? "Khách"}
+                                <strong>Người dùng:</strong> {selectedSummary.userName ?? "Khách"}
                             </Typography>
                             <Typography variant="subtitle2" gutterBottom>
-                                <strong>Tổng event:</strong> {selectedSummary.totalEvents ?? 0}
+                                <strong>Tổng sự kiện:</strong> {selectedSummary.totalEvents ?? 0}
                             </Typography>
                             <Typography variant="subtitle2" gutterBottom>
                                 <strong>Ngày tạo:</strong> {formatDate(selectedSummary.createdAt)}
@@ -522,7 +522,7 @@ export const UserLogsManagementPage = () => {
                             </Box>
 
                             <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
-                                Feature Snapshot
+                                Ảnh chụp tính năng
                             </Typography>
                             <Box
                                 component="pre"
