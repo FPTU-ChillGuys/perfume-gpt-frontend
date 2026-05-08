@@ -50,8 +50,11 @@ export const CreateImportStockTab: React.FC = () => {
   const [downloadingTemplate, setDownloadingTemplate] =
     useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [hasProcessedImportData, setHasProcessedImportData] =
-    useState<boolean>(false);
+
+  // Use ref to track whether importData has been processed,
+  // preventing re-processing on re-renders or after form reset.
+  // Unlike useState, ref changes do NOT trigger effect re-runs.
+  const hasProcessedImportDataRef = useRef<boolean>(false);
 
   const showToast = useCallback(
     (
@@ -68,73 +71,77 @@ export const CreateImportStockTab: React.FC = () => {
   };
 
   // Parse import data from URL query params (from restock suggestions)
+  // Uses ref to ensure this only processes once, even if searchParams change
+  // or the component re-renders after form submission.
   useEffect(() => {
+    // Skip if already processed (prevents re-triggering after form reset
+    // or when parent's setSearchParams causes searchParams to update)
+    if (hasProcessedImportDataRef.current) return;
+
     const importDataParam = searchParams.get("importData");
-    const tabParam = searchParams.get("tab");
 
-    if (importDataParam && !hasProcessedImportData) {
-      try {
-        // Decode base64 and parse JSON
-        const decodedData = atob(importDataParam);
-        const importItems = JSON.parse(decodedData) as Array<{
-          variantId: string;
-          quantity: number;
-          price: number;
-        }>;
+    if (!importDataParam) return;
 
-        if (importItems && importItems.length > 0) {
-          // Set items from restock suggestions
-          setItems(importItems);
+    try {
+      // Decode base64 and parse JSON
+      const decodedData = atob(importDataParam);
+      const importItems = JSON.parse(decodedData) as Array<{
+        variantId: string;
+        quantity: number;
+        price: number;
+      }>;
 
-          // Auto-calculate expectedArrivalDate from leadTime param
-          const leadTimeParam = searchParams.get("leadTime");
-          if (leadTimeParam) {
-            const leadDays = parseInt(leadTimeParam, 10);
-            if (!isNaN(leadDays) && leadDays > 0) {
-              const arrivalDate = new Date();
-              arrivalDate.setDate(arrivalDate.getDate() + leadDays);
-              setExpectedArrivalDate(arrivalDate.toISOString().split("T")[0]!);
-            }
+      if (importItems && importItems.length > 0) {
+        // Mark as processed IMMEDIATELY to prevent any re-entry
+        hasProcessedImportDataRef.current = true;
+
+        // Set items from restock suggestions
+        setItems(importItems);
+
+        // Auto-calculate expectedArrivalDate from leadTime param
+        const leadTimeParam = searchParams.get("leadTime");
+        if (leadTimeParam) {
+          const leadDays = parseInt(leadTimeParam, 10);
+          if (!isNaN(leadDays) && leadDays > 0) {
+            const arrivalDate = new Date();
+            arrivalDate.setDate(arrivalDate.getDate() + leadDays);
+            setExpectedArrivalDate(arrivalDate.toISOString().split("T")[0]!);
           }
-
-          // Clear the importData and leadTime params from URL after processing
-          setSearchParams(
-            (prev) => {
-              const newParams = new URLSearchParams(prev);
-              newParams.delete("importData");
-              newParams.delete("leadTime");
-              return newParams;
-            },
-            { replace: true },
-          );
-
-          // Set hasProcessed flag to avoid re-processing
-          setHasProcessedImportData(true);
-
-          // Show success toast
-          showToast(
-            `Đã tải ${importItems.length} sản phẩm từ gợi ý nhập hàng. Bạn có thể chỉnh sửa trước khi tạo đơn.`,
-            "success",
-          );
         }
-      } catch (error) {
-        console.error("Failed to parse import data from URL:", error);
+
+        // Clear ALL import-related params from URL after processing
+        // Uses functional form to avoid overwriting other concurrent URL changes
+        setSearchParams(
+          (prev) => {
+            const newParams = new URLSearchParams(prev);
+            newParams.delete("importData");
+            newParams.delete("leadTime");
+            newParams.delete("supplierId");
+            newParams.delete("tab");
+            return newParams;
+          },
+          { replace: true },
+        );
+
+        // Show success toast
         showToast(
-          "Dữ liệu nhập hàng không hợp lệ. Vui lòng nhập thủ công.",
-          "warning",
+          `Đã tải ${importItems.length} sản phẩm từ gợi ý nhập hàng. Bạn có thể chỉnh sửa trước khi tạo đơn.`,
+          "success",
         );
       }
+    } catch (error) {
+      console.error("Failed to parse import data from URL:", error);
+      // Still mark as processed even on error, to avoid retry loops
+      hasProcessedImportDataRef.current = true;
+      showToast(
+        "Dữ liệu nhập hàng không hợp lệ. Vui lòng nhập thủ công.",
+        "warning",
+      );
     }
-
-    // Handle tab navigation if specified
-    if (tabParam) {
-      const tabValue = parseInt(tabParam, 10);
-      if (!isNaN(tabValue)) {
-        // This will be handled by parent component's tab state
-        // We just need to ensure the tab is active
-      }
-    }
-  }, [searchParams, hasProcessedImportData, showToast, setSearchParams]);
+    // Only depend on searchParams and setSearchParams.
+    // showToast is stable (useCallback with []), setSearchParams is stable from React Router.
+    // hasProcessedImportDataRef is a ref, so it doesn't need to be in deps.
+  }, [searchParams, setSearchParams, showToast]);
 
   // Load suppliers on mount
   useEffect(() => {
@@ -167,6 +174,7 @@ export const CreateImportStockTab: React.FC = () => {
     };
 
     loadSuppliers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only load suppliers on mount; supplierId from URL is read once
   }, [showToast]);
 
   // Load catalog items when supplier changes
@@ -502,7 +510,21 @@ export const CreateImportStockTab: React.FC = () => {
       // Reset form after successful creation
       setItems([]);
       setExpectedArrivalDate(getTodayIsoDate()!);
-      setHasProcessedImportData(false);
+      // Keep ref as true to prevent import data effect from re-triggering
+      hasProcessedImportDataRef.current = true;
+
+      // Clear all import-related URL params to prevent re-processing
+      setSearchParams(
+        (prev) => {
+          const newParams = new URLSearchParams(prev);
+          newParams.delete("importData");
+          newParams.delete("leadTime");
+          newParams.delete("supplierId");
+          return newParams;
+        },
+        { replace: true },
+      );
+
       if (suppliers.length > 0) {
         setSelectedSupplierId(suppliers[0]!.id!);
       }

@@ -24,6 +24,7 @@ const ImportStock: React.FC = () => {
   };
 
   // Clear tab param from URL after initial load
+  // Only run once on mount to avoid overwriting child component URL changes
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     if (tabParam) {
@@ -36,7 +37,8 @@ const ImportStock: React.FC = () => {
         { replace: true },
       );
     }
-  }, [searchParams, setSearchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AdminLayout>
